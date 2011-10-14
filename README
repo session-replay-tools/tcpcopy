@@ -1,0 +1,106 @@
+Name:
+    tcpcopy
+    It is a request replication tool and is mainly for testing tasks using netlink and raw sockets
+
+
+Description:
+    It can help you find bugs in your online project without actually being online. 
+    And it can alo be used to test the stress that a system could endure.
+
+    For example, if your system already has "memcached" subsystem and you want to 
+    use "membase" to replace it, tcpcopy can assist you to test "membase". While your 
+    old memcached system is still running online, tcpcopy could copy the flow of packets 
+    from memcached to membase. From the point view of membase, the flow is accessing 
+    membase(just like membase online), and it will not affect memcached at all except 
+    network bandwidth and a little cpu load.
+
+
+Functionalities£º
+    1) Distributed Stress Test
+        You can use online data to test the stress that your target machine can endure. It is better 
+        than apache ab tool and you can find bugs that only occur during high-stress situations.
+    2) Hot Backup
+        It is very suitable for backup tasks if connections are short-lived and the request loss rate
+        is very low(1/100000).
+    3) Normal Online Test
+        You can find whether the new system is stable and find bugs that only occur in actual 
+        online environments.
+    4) Comparison Test
+        For example, you can use tcpcopy to compare the performances of apache and nginx.
+
+
+Characteristics£º
+    1)real time
+    2)realistic
+    3)efficient
+    4)easy to use
+    5)distributed
+    6)significant
+
+
+How to use tcpcopy?
+    preparing steps:
+      1) download souce code
+        ( svn checkout http://tcpcopy.googlecode.com/svn/trunk/ tcpcopy )
+      2)./configure
+      3)make
+      4)make install
+
+    running steps:
+      the target machine(root privilege):
+          modprobe ip_queue (if not running)
+          iptables -I OUTPUT -p tcp --sport port -j QUEUE (if not set)
+          ./interception 
+      online machine(root privilege):
+          ./tcpcopy local_ip1[£ºlocal_ip2£º¡­]  local_port  remote_ip  remote_port 
+ 
+
+An example:
+    Suppose 13 and 14 are online machines, 148 is a target machine which is similar to 
+    the online machines, and 12321 is used both as local port and remote port. We 
+    use tcpcopy to test if 148 can endure two times of current online stress.
+    
+    Using tcpcopy to perform the above test task.
+    the target machine(148)
+       # modprobe ip_queue (if not run up)
+       # iptables -I OUTPUT -p tcp --sport 12321 -j QUEUE (if not set)
+       # ./interception
+    online machine(13):
+       # ./tcpcopy xx.xx.xx.13 12321 xx.xx.xx.148 12321
+    online machine(14):
+       # ./tcpcopy xx.xx.xx.14 12321 xx.xx.xx.148 12321
+
+    Cpu load and memory usage are as follows:
+        13 cpu:
+           11124 adrun 15 0 193m 146m 744 S 18.6 7.3 495:31.56 asyn_server
+           11281 root 15 0 65144 40m 1076 S 12.3 2.0 0:47.89 tcpcopy
+        14 cpu:
+           16855 adrun 15 0 98.7m 55m 744 S 21.6 2.7 487:49.51 asyn_server
+           16429 root 15 0 41156 17m 1076 S 14.0 0.9 0:33.63 tcpcopy
+        148 cpu :
+           25609 root 15 0 76892 59m 764 S 49.6 2.9 63:03.14 asyn_server
+           20184 root 15 0 5624 4232 292 S 17.0 0.2 0:52.82 interception
+
+    Access log analysis:
+        13 online machine: grep 'Tue 11:08' access_0913_11.log |wc -l :89316,  1489 reqs/sec
+        14 online machine: grep 'Tue 11:08' access_0913_11.log |wc -l :89309,  1488 reqs/sec
+        148 test  machine: grep 'Tue 11:08' access_0913_11.log |wc -l :178175, 2969 reqs/sec
+        request loss rate£º
+           (89316+89309-178175)/(89316+89309)=0.25%
+
+    From the above, we can see that the target machine can endure two times of current 
+    online stress.
+    
+    What about the cpu load ?
+    tcpcopy on online machine 13 occupies 12.3% of cpu load, tcpcopy on online 14 
+    occupies 14%£¬and interception on target machine 148 occupies 17%. We can see 
+    that the cpu load is very low here, and so is the memory usage.
+
+
+Attention:
+    1) It is tested on machines running linux (kernal 2.6 or above).
+    2) tcpcopy is similar to udp, so sometimes it may lose requests.
+    3) If you tcpcopy local request, please set lo MTU not more than 1500.
+    4) Interception(tcpcopy server) is single threaded.
+    5) tcpcopy needs root privilege.
+    6) Check error.log if you have trouble and email to me(163.beijing@gmail.com).
