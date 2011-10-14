@@ -15,7 +15,7 @@ Description:
     network bandwidth and a little cpu load.
 
 
-Functionalities£º
+Functionalities:
     1) Distributed Stress Test
         You can use online data to test the stress that your target machine can endure. It is better 
         than apache ab tool and you can find bugs that only occur during high-stress situations.
@@ -29,7 +29,7 @@ Functionalities£º
         For example, you can use tcpcopy to compare the performances of apache and nginx.
 
 
-Characteristics£º
+Characteristics:
     1)real time
     2)realistic
     3)efficient
