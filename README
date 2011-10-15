@@ -41,7 +41,6 @@ Characteristics:
 How to use tcpcopy?
     preparing steps:
       1) download souce code
-        ( svn checkout http://tcpcopy.googlecode.com/svn/trunk/ tcpcopy )
       2)./configure
       3)make
       4)make install
@@ -52,7 +51,7 @@ How to use tcpcopy?
           iptables -I OUTPUT -p tcp --sport port -j QUEUE (if not set)
           ./interception 
       online machine(root privilege):
-          ./tcpcopy local_ip1[£ºlocal_ip2£º¡­]  local_port  remote_ip  remote_port 
+          ./tcpcopy local_ip1[:local_ip2:...] local_port  remote_ip  remote_port 
  
 
 An example:
@@ -85,7 +84,7 @@ An example:
         13 online machine: grep 'Tue 11:08' access_0913_11.log |wc -l :89316,  1489 reqs/sec
         14 online machine: grep 'Tue 11:08' access_0913_11.log |wc -l :89309,  1488 reqs/sec
         148 test  machine: grep 'Tue 11:08' access_0913_11.log |wc -l :178175, 2969 reqs/sec
-        request loss rate£º
+        request loss rate:
            (89316+89309-178175)/(89316+89309)=0.25%
 
     From the above, we can see that the target machine can endure two times of current 
@@ -93,7 +92,7 @@ An example:
     
     What about the cpu load ?
     tcpcopy on online machine 13 occupies 12.3% of cpu load, tcpcopy on online 14 
-    occupies 14%£¬and interception on target machine 148 occupies 17%. We can see 
+    occupies 14% and interception on target machine 148 occupies 17%. We can see 
     that the cpu load is very low here, and so is the memory usage.
 
 
