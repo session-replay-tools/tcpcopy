@@ -102,4 +102,4 @@ Attention:
     3) If you tcpcopy local request, please set lo MTU not more than 1500.
     4) Interception(tcpcopy server) is single threaded.
     5) tcpcopy needs root privilege.
-    6) Check error.log if you have trouble and email to me(163.beijing@gmail.com).
+    6) Check error.log if you have trouble and email to me(163.beijing@gmail.com or wangbin579@gmail.com).
