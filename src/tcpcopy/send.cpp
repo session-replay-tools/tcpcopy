@@ -74,7 +74,7 @@ static unsigned short tcpcsum(unsigned char *iphdr,unsigned short *packet,
 /**
  * sending one ip packet(it will not go through fragmentation))
  */
-uint32_t send_ip_packet(bool isOutput,uint64_t fake_ip_addr,
+uint32_t send_ip_packet(uint64_t fake_ip_addr,
 		unsigned char *data,uint32_t ack_seq,uint32_t* nextSeq)
 {
 	if(! data)
@@ -83,7 +83,7 @@ uint32_t send_ip_packet(bool isOutput,uint64_t fake_ip_addr,
 		return 0;
 	}
 	struct iphdr *ip_header = (struct iphdr *)data;
-	uint32_t size_ip = ip_header->ihl<<2;
+	uint16_t size_ip = ip_header->ihl<<2;
 	struct tcphdr *tcp_header = (struct tcphdr *)(data+size_ip);
 	tcp_header->dest = remote_port;
 	ip_header->daddr = remote_ip;
@@ -116,7 +116,7 @@ uint32_t send_ip_packet(bool isOutput,uint64_t fake_ip_addr,
 		tcp_header->ack_seq = ack_seq;
 	}
 	tcp_header->check = 0;
-	uint32_t size_tcp= tcp_header->doff<<2;
+	uint16_t size_tcp= tcp_header->doff<<2;
 	uint16_t tot_len  = ntohs(ip_header->tot_len);
 	uint16_t contenLen=tot_len-size_ip-size_tcp;
 	if(contenLen>0)
@@ -131,10 +131,7 @@ uint32_t send_ip_packet(bool isOutput,uint64_t fake_ip_addr,
 	//(hopefully for us - it saves us the trouble) and the total length, 
 	//iph->tot_len, of the datagram 
 	ip_header->check = csum((unsigned short *)ip_header,size_ip); 
-	if(isOutput)
-	{
-		outputPacketForDebug(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
-	}
+	outputPacketForDebug(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
 	//the IP layer isn't involved at all. This has one negative effect in result
 	//(although in performance it's better): no IP fragmentation will take place
 	//if needed. This means that a raw packet larger than the MTU of the 

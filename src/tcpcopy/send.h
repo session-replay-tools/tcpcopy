@@ -3,7 +3,7 @@
 
 int send_init();
 int send_close();
-uint32_t send_ip_packet(bool isOutput,uint64_t fake_ip_addr,
+uint32_t send_ip_packet(uint64_t fake_ip_addr,
 		unsigned char *data,uint32_t ack_seq,uint32_t* sendSeq);
 
 

@@ -17,7 +17,7 @@ static char* err_levels[] = {
 
 void initLogInfo()
 {
-	output_level=LOG_WARN;
+	output_level=LOG_DEBUG;
 	file=fopen("error.log","a+");
 }
 

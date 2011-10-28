@@ -49,6 +49,7 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define UNKNOWN_FLAG 3
 #define SERVER_BACKEND_FLAG 4
 #define SELF_FLAG 5
+#define RESPONSE_MTU 1500
 #define RESERVE_CLIENT_FLAG 6
 
 #define FAKE_SYN_BUF_SIZE 52
@@ -62,33 +63,39 @@ struct session_st
 	uint32_t client_ip_addr;
 	uint32_t local_dest_ip_addr;
 	uint16_t virtual_status;
-	uint16_t client_window;
 	uint16_t client_ip_id;
 
 	bool    reset_flag;
 	bool 	isWaitBakendClosed;
 	bool 	isClientClosed;
 	bool 	isWaitResponse;
+	bool 	isPartResponse;
+	bool 	isResponseCompletely;
 	bool 	isTrueWaitResponse;
 	bool 	isWaitPreviousPacket;
 	bool 	isSegContinue;
+	bool 	isRequestComletely;
+	bool    isRequestBegin;
 	bool 	isKeepalive;
 	bool 	confirmed;
-	bool 	chosenOutput;
 	bool 	isTestConnClosed;
 	bool 	isFakedSendingFinToBackend;
 	bool 	isSynIntercepted;
 	bool 	isHalfWayIntercepted;
 	bool 	isStatClosed;
 
-	uint32_t lastAck;
+	uint32_t lastAckFromResponse;
+	uint32_t lastSeqFromResponse;
 	uint32_t lastReqContSeq;
 	uint32_t nextSeq;
+	uint32_t lastAck;
 	dataContainer unsend;
 	dataContainer lostPackets;
 	dataContainer handshakePackets;
 	size_t requestProcessed;
+	size_t responseReceived;
 	time_t lastUpdateTime;
+	time_t lastResponseDispTime;
 	time_t createTime;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)                                                                        
@@ -113,14 +120,16 @@ struct session_st
 		sprintf(buf,"%d.%d.%d.%d",ip0,ip1,ip2,ip3);
 		return inet_addr(buf);
 	}
+
 	void initSession()
 	{
 		lastReqContSeq=0;
 		nextSeq=0;
 		lastAck=0;
+		lastAckFromResponse=0;
+		lastSeqFromResponse=0;
 		virtual_next_sequence=0;
 		client_ip_id=0;
-		client_window=0;
 		initSessionForKeepalive();
 		for(dataIterator iter=handshakePackets.begin();
 				iter!=handshakePackets.end();)
@@ -128,14 +137,12 @@ struct session_st
 			free(*(iter++));
 		}
 		handshakePackets.clear();
-
-
 	}
+
 	void initSessionForKeepalive()
 	{
 		fake_ip_addr=0;
 		isFakedSendingFinToBackend=false;
-		chosenOutput=false;
 		isTestConnClosed=false;
 		isSynIntercepted=false;
 		isHalfWayIntercepted=false;
@@ -147,6 +154,10 @@ struct session_st
 		isClientClosed=false;
 		isKeepalive=false;
 		isWaitResponse=false;
+		isPartResponse=false;
+		isResponseCompletely=false;
+		isRequestComletely=true;
+		isRequestBegin=false;
 		isTrueWaitResponse=false;
 		isSegContinue=false;
 		confirmed=true;
@@ -154,8 +165,12 @@ struct session_st
 		lastReqContSeq=0;
 		nextSeq=0;
 		lastAck=0;
+		lastAckFromResponse=0;
+		lastSeqFromResponse=0;
 		requestProcessed=0;
+		responseReceived=0;
 		lastUpdateTime=time(0);
+		lastResponseDispTime=lastUpdateTime;
 		createTime=time(0);
 
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
@@ -174,6 +189,7 @@ struct session_st
 	{
 		initSession();	
 	}
+
 	~session_st()
 	{
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
@@ -196,6 +212,9 @@ struct session_st
 	}
 	int sendReservedLostPackets();
 	int sendReservedPackets();
+	bool checkPacketLost(struct iphdr *ip_header,
+			struct tcphdr *tcp_header,uint32_t oldSeq);
+	bool checkSendDeadRequests();
 	void update_virtual_status(struct iphdr *ip_header,
 			struct tcphdr* tcp_header);
 	void establishConnectionForNoSynPackets(struct iphdr *ip_header,
