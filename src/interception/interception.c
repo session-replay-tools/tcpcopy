@@ -20,27 +20,34 @@ static void set_sock_no_delay(int sock){
 
 static void formatOutput(int level,struct iphdr *ip_header)
 {
+	struct in_addr srcaddr;
+	struct in_addr destaddr;
+	char sbuf[1024];
+	char dbuf[1024];
+	char *tmpbuf=NULL;
+	size_t size_ip;
+	struct tcphdr *tcp_header=NULL;
+	uint32_t packSize;
+	unsigned int seq;
+	unsigned int ack_seq;
+
 	if(output_level < level)
 	{
 		return;
 	}
-	struct in_addr srcaddr;
-	struct in_addr destaddr;
 	srcaddr.s_addr=ip_header->saddr;
 	destaddr.s_addr=ip_header->daddr;
-	char* tmpbuf=inet_ntoa(srcaddr);
-	char sbuf[1024];
+	tmpbuf=inet_ntoa(srcaddr);
 	memset(sbuf,0,1024);
 	strcpy(sbuf,tmpbuf);
-	char dbuf[1024];
 	memset(dbuf,0,1024);
 	tmpbuf=inet_ntoa(destaddr);
 	strcpy(dbuf,tmpbuf);
-	size_t size_ip = ip_header->ihl<<2;
-	struct tcphdr *tcp_header= (struct tcphdr*)((char *)ip_header+size_ip);
-	uint32_t packSize=ntohs(ip_header->tot_len);
-	unsigned int seq=ntohl(tcp_header->seq);
-	unsigned int ack_seq=ntohl(tcp_header->ack_seq);
+	size_ip = ip_header->ihl<<2;
+	tcp_header= (struct tcphdr*)((char *)ip_header+size_ip);
+	packSize=ntohs(ip_header->tot_len);
+	seq=ntohl(tcp_header->seq);
+	ack_seq=ntohl(tcp_header->ack_seq);
 	{
 		logInfo(level,"%s:%u-->%s:%u,length %u,seq=%u,ack_seq=%u",sbuf,
 				ntohs(tcp_header->source),dbuf,ntohs(tcp_header->dest),
@@ -49,21 +56,23 @@ static void formatOutput(int level,struct iphdr *ip_header)
 
 }
 
-static int seq =1;
+static uint32_t seq =1;
 static unsigned char drop_buffer[128];
+
 static int drop_netlink_packet(unsigned long packet_id)
 {
 	struct nlmsghdr* nl_header=(struct nlmsghdr*)drop_buffer;
+	struct ipq_verdict_msg *ver_data = NULL;
+	struct sockaddr_nl addr;
+
 	nl_header->nlmsg_type=IPQM_VERDICT;
 	nl_header->nlmsg_len=NLMSG_LENGTH(sizeof(struct ipq_verdict_msg));
 	nl_header->nlmsg_flags=(NLM_F_REQUEST);
 	nl_header->nlmsg_pid=getpid();
 	nl_header->nlmsg_seq=seq++;
-	struct ipq_verdict_msg *ver_data = NULL;
 	ver_data=(struct ipq_verdict_msg *)NLMSG_DATA(nl_header);
 	ver_data->value=NF_DROP;
 	ver_data->id=packet_id;
-	struct sockaddr_nl addr;
 	memset(&addr,0,sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
@@ -79,23 +88,29 @@ static int drop_netlink_packet(unsigned long packet_id)
 }
 
 static void interception_process(int fd){
+	int newfd;
+	unsigned long packet_id;
+	struct iphdr *ip_header=NULL;
+	struct copyer_msg_st *c_msg=NULL;
+
 	if(fd == msg_listen_sock){
-		int newfd = accept(msg_listen_sock,NULL,NULL);	
+		newfd = accept(msg_listen_sock,NULL,NULL);	
 		set_sock_no_delay(newfd);
 		if(newfd != -1){
 			select_sever_add(newfd);
 		}
 	}else if(fd == firewall_sock){
-		unsigned long packet_id=0;
-		struct iphdr *ip_header = nl_firewall_recv(firewall_sock,&packet_id);
+		packet_id=0;
+		ip_header = nl_firewall_recv(firewall_sock,&packet_id);
 		router_update(ip_header);
 		{
 			formatOutput(LOG_DEBUG,ip_header);
 		}
-		//drop the packet
+		/* drop the packet */
+		/* if you comment the following,you will boost the tcpcopy server */
 		drop_netlink_packet(packet_id);  	
 	}else{
-		struct copyer_msg_st *c_msg = msg_receiver_recv(fd);
+		c_msg = msg_receiver_recv(fd);
 		if(c_msg){
 			if(c_msg->type == CLIENT_ADD){
 				router_add(c_msg->client_ip,c_msg->client_port,fd);

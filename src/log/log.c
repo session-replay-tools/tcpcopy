@@ -27,25 +27,28 @@ void initLogInfo()
 void logInfo(int level,const char *fmt, ...)
 {
 	va_list args;
+	struct tm localTime;
+	time_t t;
+	char timeStr[32];
+	struct tm* pLocalTime=NULL;
+	char* pTimeStr=NULL;
+	size_t len=0;
 	if(output_level >= level)
 	{
 		if (file) {
-			time_t t;
 			t=time(0);
-			struct tm localTime;
 			fprintf(file,"[%s] ",err_levels[level]);
-			char timeStr[32];
-			struct tm * pLocalTime=localtime_r(&t,&localTime);
+			pLocalTime=localtime_r(&t,&localTime);
 			if(NULL == pLocalTime)
 			{
 				return;
 			}
-			char* pTimeStr=asctime_r(pLocalTime,timeStr);
+			pTimeStr=asctime_r(pLocalTime,timeStr);
 			if(NULL == pTimeStr)
 			{
 				return;
 			}
-			size_t len=strlen(pTimeStr);
+			len=strlen(pTimeStr);
 			pTimeStr[len-1]=':';
 			fprintf(file,"%s",pTimeStr);
 			va_start(args, fmt);

@@ -67,7 +67,7 @@ static void putPacketToPool(const char *packet,int len)
 	{
 		if(diff>RECV_POOL_SIZE)
 		{
-			logInfo(LOG_ERR,"pool is full,read:%lld,write:%lld,nextWPos:%lld",
+			logInfo(LOG_ERR,"pool is full,read:%llu,write:%llu,nextWPos:%llu",
 					readCounter,writeCounter,nextWPos);
 			pthread_cond_wait(&empty, &mutex);
 		}else
@@ -113,7 +113,7 @@ static char* getPacketFromPool()
 	pthread_mutex_unlock (&mutex);
 	if(recvFromPoolPackets%10000==0)
 	{
-		logInfo(LOG_INFO,"recv from pool packets:%lld,put packets in pool:%lld",
+		logInfo(LOG_INFO,"recv from pool packets:%llu,put packets in pool:%llu",
 				recvFromPoolPackets,packetsPutNum);
 	}
 	return recvitem;
@@ -219,12 +219,11 @@ static int retrieve_raw_sockets(int sock)
 		count++;
 		if(rawPackets%10000==0)
 		{
-			printf("receive raw packets:%lld,valid :%lld,total in pool:%lld\n",
+			logInfo(LOG_INFO,"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",
 					rawPackets,rawValidPackets,packetsPutNum);
 		}
 	}
 
-	//printf("this time reads %d packets\n",count);
 	return 0;
 }
 

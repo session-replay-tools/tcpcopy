@@ -35,8 +35,6 @@ static uint64_t totalResponses=0;
 static uint64_t totalRequests=0;
 
 
-
-
 /**
  * output packet info for debug
  */
@@ -106,10 +104,12 @@ void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
  */
 static int clearTimeoutTcpSessions()
 {
-	//we clear old sessions that is never visited for more than one minute
-	//this may be a problem for keepalive connections
-	//so we adopt a naive method to distinguish between short-lived 
-	//and long-lived connections
+	/*
+	 * we clear old sessions that is never visited for more than one minute
+	 * this may be a problem for keepalive connections
+	 * so we adopt a naive method to distinguish between short-lived 
+	 * and long-lived connections
+	 */
 	time_t normalBase=time(0)-60;
 	time_t keepaliveBase=time(0)-1800;
 	time_t tmpBase=0;
@@ -1071,15 +1071,6 @@ void session_st::process_recv(struct iphdr *ip_header,
 	}
 }
 
-
-static double getusec()
-{
-	struct timeval tp;
-	gettimeofday(&tp,NULL);
-	double sec=tp.tv_sec*1000000+(1.0*tp.tv_usec);
-	return sec ;
-}
-
 static bool checkPacketPadding(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
@@ -1162,7 +1153,6 @@ void process(char *packet)
 	uint32_t size_ip;
 	bool reusePort=false;
 	timeCount++;
-	static double timeAdded=0;
 
 	if(timeCount%1000000==0)
 	{

@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include "msg.h"
 #include "../log/log.h"
 
@@ -115,10 +116,11 @@ int msg_receiver_init(){
  */
 int msg_copyer_send(int sock,uint32_t c_ip,uint16_t c_port,uint16_t type){
 	struct copyer_msg_st buf;
+	ssize_t sendlen;
 	buf.client_ip = c_ip;
 	buf.client_port = c_port;
 	buf.type = type;
-	ssize_t sendlen = send(sock,(const void *)&buf,sizeof(buf),0);
+	sendlen = send(sock,(const void *)&buf,sizeof(buf),0);
 	if(sendlen != sizeof(buf)){
 		logInfo(LOG_WARN,"send length:%ld,buffer size:%u",
 				sendlen,sizeof(buf));

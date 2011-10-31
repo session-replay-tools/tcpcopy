@@ -18,6 +18,7 @@ static inline size_t   get_slot(uint64_t key,size_t size){
 }
 
 hash_table *hash_create(size_t size){
+	size_t i =0;
 	hash_table * htable  = (hash_table *)malloc(sizeof(hash_table));
 	if(! htable){
 		perror("cannot malloc memory!");
@@ -29,7 +30,6 @@ hash_table *hash_create(size_t size){
 		perror("cannot malloc memory!");
 		exit(errno);
 	}
-	size_t i =0;
 	for(i=0;i<size;i++){
 		htable->lists[i] = linklist_create();
 	}
@@ -45,12 +45,13 @@ linklist * get_linklist(hash_table *table,uint64_t key){
 
 static lnodeptr  hash_find_node(hash_table *table,uint64_t key){
 	linklist *l = get_linklist(table,key);
+	hash_node *hnode =NULL;
 	lnodeptr node = linklist_first(l);
 	while(node){
-		hash_node *hnode = (hash_node *)node->data;
+		hnode = (hash_node *)node->data;
 		if(hnode->key == key){
 			hnode->access_time = time(NULL);
-			//put the lastest item to the head of the link list
+			/* put the lastest item to the head of the link list */
 			linklist_remove(node);
 			linklist_push(l,node);
 			return node;
@@ -61,24 +62,29 @@ static lnodeptr  hash_find_node(hash_table *table,uint64_t key){
 }
 
 void * hash_find(hash_table *table,uint64_t key){
+	hash_node *hnode=NULL;
 	lnodeptr node = hash_find_node(table,key);
 	if(node != NULL){
-		hash_node *hnode = (hash_node *) node->data;
+		hnode = (hash_node *) node->data;
 		return hnode->data;
 	}
 	return NULL;
 }
 
 void hash_add(hash_table *table,uint64_t key,void *data){
+	hash_node *hnode = NULL;
+	hash_node *newnode =NULL;
+	lnodeptr  pnode = NULL;
+	linklist *l = NULL;
 	lnodeptr node = hash_find_node(table,key);
 	if(node != NULL){
-		hash_node *hnode = (hash_node *) node->data;
+		hnode = (hash_node *) node->data;
 		hnode->data = data;
 		return;
 	}
-	hash_node *newnode = hash_node_malloc(key,data);
-	lnodeptr  pnode = lnode_malloc(newnode);
-	linklist *l = get_linklist(table,key);
+	newnode = hash_node_malloc(key,data);
+	pnode = lnode_malloc(newnode);
+	l = get_linklist(table,key);
 	linklist_push(l,pnode);
 	return;
 }

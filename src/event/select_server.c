@@ -62,11 +62,12 @@ void select_sever_add(int fd){
  * =====================================================================================
  */
 void select_sever_del(int fd){
+	int i=0;
+
 	if(fd <= MAX_FD_VALUE)
 	{
 		FD_CLR(fd,&read_set);
 		max_fd = 0;
-		int i = 0;
 		for(i=0;i<fd_nums;i++){
 			if(valid_fds[i] == fd){
 				int j=i;

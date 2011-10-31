@@ -102,4 +102,6 @@ Attention:
     3) If you tcpcopy local request, please set lo MTU not more than 1500.
     4) Interception(tcpcopy server) is single threaded.
     5) tcpcopy needs root privilege.
-    6) Check error.log if you have trouble and email to me(163.beijing@gmail.com or wangbin579@gmail.com).
+    6) long request(such as upload file) is not working well here(no retransmission when sending packets to the target test server)
+    7) long responses are not well supported now (to be fixed later)
+    8) Check error.log if you have trouble and email to me(163.beijing@gmail.com or wangbin579@gmail.com).

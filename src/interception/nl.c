@@ -33,9 +33,9 @@ static void sock_bind(int sock,int groups){
  * =====================================================================================
  */
 int nl_init(int protocol,int groups){
+	int rcvbuf = 1024*1024;
 	int sock = sock_init(protocol);
 	sock_bind(sock,groups);
-	int rcvbuf = 1024*1024;
 	setsockopt(sock,SOL_SOCKET,SO_RCVBUF,&rcvbuf,sizeof(rcvbuf));
 	return sock;
 }
@@ -47,6 +47,7 @@ int nl_init(int protocol,int groups){
  * =====================================================================================
  */
 void nl_set_mode(int sock,uint8_t mode,size_t range){
+	struct sockaddr_nl addr;
 	struct {
 		struct nlmsghdr head;
 		ipq_peer_msg_t  body;
@@ -56,11 +57,10 @@ void nl_set_mode(int sock,uint8_t mode,size_t range){
 	req.head.nlmsg_flags = NLM_F_REQUEST;
 	req.head.nlmsg_type = IPQM_MODE;
 	req.head.nlmsg_pid = getpid();
-	//here we drop the packet for default because of verdict in ipq_peer_msg_t
-	//set zero
+	/* here we drop the packet for default because of verdict 
+	   in ipq_peer_msg_t set zero*/
 	req.body.msg.mode.value = mode;
 	req.body.msg.mode.range = range;
-	struct sockaddr_nl addr;
 	memset(&addr,0,sizeof(addr));
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
