@@ -3303,7 +3303,7 @@ echo "${ECHO_T}$ac_cv_prog_egrep" >&6
 
 
 
-# Check whether --with-gnu-ld or --without -Wall -pedantic-gnu-ld was given.
+# Check whether --with-gnu-ld or --without-gnu-ld was given.
 if test "${with_gnu_ld+set}" = set; then
   withval="$with_gnu_ld"
   test "$withval" = no || with_gnu_ld=yes
