@@ -52,7 +52,7 @@ static lnodeptr  hash_find_node(hash_table *table,uint64_t key){
 		if(hnode->key == key){
 			hnode->access_time = time(NULL);
 			/* put the lastest item to the head of the link list */
-			linklist_remove(node);
+			(void)linklist_remove(node);
 			linklist_push(l,node);
 			return node;
 		}
@@ -80,13 +80,13 @@ void hash_add(hash_table *table,uint64_t key,void *data){
 	if(node != NULL){
 		hnode = (hash_node *) node->data;
 		hnode->data = data;
-		return;
+	}else
+	{
+		newnode = hash_node_malloc(key,data);
+		pnode = lnode_malloc(newnode);
+		l = get_linklist(table,key);
+		linklist_push(l,pnode);
 	}
-	newnode = hash_node_malloc(key,data);
-	pnode = lnode_malloc(newnode);
-	l = get_linklist(table,key);
-	linklist_push(l,pnode);
-	return;
 }
 
 
@@ -119,6 +119,7 @@ void hash_destory(hash_table *table)
 		if(l!=NULL)
 		{
 			count+=linklist_destory(l);
+			free(l);
 		}
 	}
 	free(table->lists);

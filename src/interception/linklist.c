@@ -48,7 +48,6 @@ static int linklist_clear(linklist *l){
 
 int linklist_destory(linklist *l){
 	int count=linklist_clear(l);
-	free(l);
 	return count;
 }
 

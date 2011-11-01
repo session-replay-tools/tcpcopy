@@ -15,7 +15,7 @@ static struct receiver_msg_st * copy_message(struct receiver_msg_st *msg){
 	cmsg=(struct receiver_msg_st *)malloc(sizeof(struct receiver_msg_st));
 	if(NULL == cmsg){
 		perror("malloc");
-		exit(1);
+		exit(EXIT_FAILURE);
 	}
 	memcpy(cmsg,msg,sizeof(struct receiver_msg_st));
 	return cmsg;
@@ -45,7 +45,8 @@ static void delay_table_delete_obsolete(uint64_t key)
 {
 	linklist *l = get_linklist(table,key);
 	time_t  nowtime = time(0);
-	hash_node *hnode=NULL;
+	hash_node *hnode1=NULL;
+	hash_node *hnode2=NULL;
 	lnodeptr node=NULL;
 
 	while(1){
@@ -53,20 +54,21 @@ static void delay_table_delete_obsolete(uint64_t key)
 		if(! node ){
 			break;
 		}   
-		hnode = (hash_node *)node->data;
-		if(hnode->access_time+table->timeout < nowtime){
+		hnode1 = (hash_node *)node->data;
+		if(hnode1->access_time+table->timeout < nowtime){
 			lnodeptr tail=linklist_pop_tail(l);
-			hash_node *hnode = (hash_node *)tail->data;
-			if(NULL!=hnode)
+			hnode2 = (hash_node *)tail->data;
+			if(NULL!=hnode2)
 			{   
-				if(hnode->data!=NULL)
+				if(hnode2->data!=NULL)
 				{
-					linklist *msg_list=(linklist *)hnode->data;
+					linklist *msg_list=(linklist *)hnode2->data;
 					count+=linklist_destory(msg_list);
+					free(msg_list);  	
+					hnode2->data=NULL;
 					lDestroy++;
 				}
-				hnode->data=NULL;
-				free(hnode);
+				free(hnode2);
 			}   
 			tail->data=NULL;
 			free(tail);
@@ -121,7 +123,7 @@ void delay_table_send(uint64_t key,int fd){
 	while(! linklist_is_empty(msg_list)){
 		first = linklist_pop_first(msg_list);
 		msg = (first->data);
-		msg_receiver_send(fd,msg);
+		(void)msg_receiver_send(fd,msg);
 		if(msg != NULL)
 		{
 			free(msg);
@@ -183,6 +185,7 @@ void delay_table_destroy()
 				{
 					msg_list=(linklist *)hnode->data;
 					count+=linklist_destory(msg_list);
+					free(msg_list);
 					lDestroy++;
 				}	
 				hnode->data=NULL;

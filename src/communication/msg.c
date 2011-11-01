@@ -14,11 +14,13 @@ static int tcp_sock_init(){
 
 static void connect_to_server(int sock,uint32_t ip){
 	struct sockaddr_in remote_addr;                           
+	socklen_t length;
 	memset(&remote_addr,0,sizeof(remote_addr));               
 	remote_addr.sin_family = AF_INET;                         
 	remote_addr.sin_addr.s_addr = ip;                
 	remote_addr.sin_port = htons(SERVER_PORT);                       
-	if(connect(sock,(struct sockaddr *)&remote_addr,sizeof(remote_addr)) == -1){
+	length=(socklen_t)(sizeof(remote_addr));
+	if(connect(sock,(struct sockaddr *)&remote_addr,length) == -1){
 		perror("connect to remote:");                         
 		logInfo(LOG_ERR,"it can not connect to remote server");
 		exit(errno);
@@ -27,7 +29,8 @@ static void connect_to_server(int sock,uint32_t ip){
 
 static void set_sock_no_delay(int sock){                              
 	int flag = 1;
-	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,sizeof(flag)) == -1){                                       
+	socklen_t length = (socklen_t)(sizeof(flag));
+	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,length) == -1){                                       
 		perror("setsockopt:");
 		logInfo(LOG_ERR,"setsocket error when setting TCP_NODELAY");
 		exit(errno);
@@ -43,9 +46,11 @@ int msg_copyer_init(uint32_t receiver_ip){
 
 static void sock_bind(int sock){
 	struct sockaddr_in local_addr;
+	socklen_t length; 
 	memset(&local_addr,0,sizeof(local_addr));
 	local_addr.sin_port = ntohs(SERVER_PORT);
-	if(bind(sock,(struct sockaddr *)&local_addr,sizeof(local_addr))==-1){
+	length = (socklen_t)(sizeof(local_addr));
+	if(bind(sock,(struct sockaddr *)&local_addr,length)==-1){
 		perror("can not bind:");
 		logInfo(LOG_ERR,"it can not bind address");
 		exit(errno);
@@ -61,13 +66,13 @@ static void sock_listen(int sock){
 }
 
 static struct receiver_msg_st r_msg;
-struct receiver_msg_st * msg_copyer_recv(int sock){
+struct receiver_msg_st* msg_copyer_recv(int sock){
 	size_t len =0;
 	while(len != sizeof(struct receiver_msg_st)){
 		ssize_t ret = recv(sock,(char *)&r_msg+len,sizeof(struct receiver_msg_st)-len,0);
 		if(ret == 0){
 			logInfo(LOG_DEBUG,"recv length is zero when in msg_copyer_recv");
-			close(sock);
+			(void)close(sock);
 			return NULL;
 		}else if(ret == -1){
 			continue;
@@ -78,7 +83,7 @@ struct receiver_msg_st * msg_copyer_recv(int sock){
 	return &r_msg;
 }
 
-struct copyer_msg_st c_msg;
+static struct copyer_msg_st c_msg;
 struct copyer_msg_st *msg_receiver_recv(int sock){
 	size_t len = 0;
 	while(len != sizeof(struct copyer_msg_st)){
@@ -117,16 +122,17 @@ int msg_receiver_init(){
 int msg_copyer_send(int sock,uint32_t c_ip,uint16_t c_port,uint16_t type){
 	struct copyer_msg_st buf;
 	ssize_t sendlen;
+	ssize_t bufLen=(ssize_t)(sizeof(buf));
 	buf.client_ip = c_ip;
 	buf.client_port = c_port;
 	buf.type = type;
 	sendlen = send(sock,(const void *)&buf,sizeof(buf),0);
-	if(sendlen != sizeof(buf)){
-		logInfo(LOG_WARN,"send length:%ld,buffer size:%u",
-				sendlen,sizeof(buf));
+	if(sendlen != bufLen){
+		logInfo(LOG_WARN,"send length:%ld,buffer size:%ld",
+				sendlen,bufLen);
 		return -1;
 	}
-	return sendlen;
+	return (int)sendlen;
 }
 
 /* 
@@ -136,17 +142,18 @@ int msg_copyer_send(int sock,uint32_t c_ip,uint16_t c_port,uint16_t type){
  * =====================================================================================
  */
 int msg_receiver_send(int sock,struct receiver_msg_st * msg){
+	ssize_t msgLen=(ssize_t)(sizeof(*msg));
 	ssize_t sendlen = send(sock,(const void *)msg,
 			sizeof(struct receiver_msg_st),0);
 	if(sendlen!=-1)
 	{
-		if(sendlen != sizeof(*msg)){
+		if(sendlen != msgLen){
 			logInfo(LOG_NOTICE,"send length is not equal to msg size:%u",
 					sendlen);	
 			return -1;
 		}
 	}
-	return sendlen;
+	return (int)sendlen;
 }
 
 

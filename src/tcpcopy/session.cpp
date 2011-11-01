@@ -328,7 +328,7 @@ bool session_st::checkSendDeadRequests()
 {
 	time_t now=time(0);
 	int diff=now-lastResponseDispTime;
-	//it will wait for 3 seconds
+	/* it will wait for 3 seconds */
 	if(diff <= 3)
 	{
 		return false;

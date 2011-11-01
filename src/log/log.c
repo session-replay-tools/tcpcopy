@@ -63,7 +63,7 @@ void endLogInfo()
 {
 	if(file)
 	{
-		fclose(file);
+		(void)fclose(file);
 		file=NULL;
 	}
 }

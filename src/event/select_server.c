@@ -1,7 +1,5 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <sys/types.h>
-#include <unistd.h>
 #include <sys/select.h>
 
 #include "select_server.h"
