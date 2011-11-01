@@ -626,7 +626,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t ack=ntohl(tcp_header->ack_seq);
 	if(ack > nextSeq)
 	{
-		logInfo(LOG_WARN,"ack from backend is more than nextSeq");
+		logInfo(LOG_NOTICE,"ack from backend is more than nextSeq");
 		nextSeq=ack;
 	}
 	if( tcp_header->syn)
@@ -1228,7 +1228,7 @@ void process(char *packet)
 						logInfo(LOG_INFO,"dup syn,ses over,time diff:%d",diff);
 					}else
 					{
-						logInfo(LOG_WARN,"duplicate syn,time diff:%d",diff);
+						logInfo(LOG_NOTICE,"duplicate syn,time diff:%d",diff);
 						outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
 								tcp_header);
 						return;
