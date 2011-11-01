@@ -49,7 +49,7 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define UNKNOWN_FLAG 3
 #define SERVER_BACKEND_FLAG 4
 #define SELF_FLAG 5
-#define RESPONSE_MTU 1500
+#define DEFAULT_RESPONSE_MTU 1500
 #define RESERVE_CLIENT_FLAG 6
 
 #define FAKE_SYN_BUF_SIZE 52

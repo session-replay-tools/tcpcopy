@@ -5,7 +5,7 @@ Name:
 
 Description:
     It can help you find bugs in your online project without actually being online. 
-    And it can alo be used to test the stress that a system could endure.
+    And it can also be used to test the stress that a system could endure.
 
     For example, if your system already has "memcached" subsystem and you want to 
     use "membase" to replace it, tcpcopy can assist you to test "membase". While your 

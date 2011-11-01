@@ -685,7 +685,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		sendFakedAckToBackend(ip_header,tcp_header);
 
 		isPartResponse=true;
-		if(tot_len==RESPONSE_MTU)
+		if(tot_len==DEFAULT_RESPONSE_MTU)
 		{
 			return;
 		}else
