@@ -913,7 +913,8 @@ void session_st::process_recv(struct iphdr *ip_header,
 		//then kill self
 		if(diff > 300)
 		{
-			logInfo(LOG_WARN,"no responses from backend");
+			logInfo(LOG_WARN,"no responses from backend,req cont:%u,resp cont:%u",
+					reqContentPackets,respContentPackets);
 			totalNumOfNoRespSession++;
 			over_flag=true;
 			if(totalNumOfNoRespSession>5 && totalNumOfNoRespSession<10)
