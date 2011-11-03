@@ -7,7 +7,7 @@ extern "C"
 #endif
 
 #include "../log/log.h"
-	extern int output_level;
+	extern int global_out_level;
 
 	void interception_init();
 	void interception_run();

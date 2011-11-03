@@ -1,7 +1,6 @@
 #ifndef  _TCP_REDIRECT_SESSION_H_INC
 #define  _TCP_REDIRECT_SESSION_H_INC
 
-
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <sys/time.h>
@@ -20,7 +19,7 @@ extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
 extern uint32_t remote_ip;
 extern uint16_t remote_port;
-extern int output_level;
+extern int global_out_level;
 
 #pragma pack(push,1)
 struct etharp_frame { 
@@ -96,11 +95,14 @@ struct session_st
 	size_t requestProcessed;
 	size_t responseReceived;
 	size_t reqContentPackets;
+	size_t baseReqContentPackets;
 	size_t respContentPackets;
 	time_t lastUpdateTime;
 	time_t lastResponseDispTime;
 	time_t createTime;
 	time_t lastRecvRespContentTime;
+
+	int logLevel;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)                                                                        
 	{
@@ -145,6 +147,7 @@ struct session_st
 
 	void initSessionForKeepalive()
 	{
+		logLevel=global_out_level;
 		fake_ip_addr=0;
 		isFakedSendingFinToBackend=false;
 		isTestConnClosed=false;
@@ -175,6 +178,7 @@ struct session_st
 		requestProcessed=0;
 		responseReceived=0;
 		reqContentPackets=0;
+		baseReqContentPackets=0;
 		respContentPackets=0;
 		lastUpdateTime=time(0);
 		lastResponseDispTime=lastUpdateTime;
@@ -218,6 +222,8 @@ struct session_st
 		}
 		handshakePackets.clear();
 	}
+	void outputPacket(int level,int flag,struct iphdr *ip_header,
+			struct tcphdr *tcp_header);
 	int sendReservedLostPackets();
 	int sendReservedPackets();
 	bool checkPacketLost(struct iphdr *ip_header,

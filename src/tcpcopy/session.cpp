@@ -24,7 +24,6 @@ typedef map<uint64_t,uint32_t>::iterator IPIterator;
 
 static SessContainer sessions;
 static IPContainer trueIPContainer;
-static int default_log_level=output_level;
 static uint64_t activeCount=0;
 static uint64_t enterCount=0;
 static uint64_t leaveCount=0;
@@ -43,7 +42,7 @@ static uint64_t totalNumOfNoRespSession=0;
 void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	if(output_level < level)
+	if(global_out_level < level)
 	{
 		return;
 	}
@@ -477,6 +476,18 @@ void session_st::save_header_info(struct iphdr *ip_header,
 	tcp_header->window=65535;
 }
 
+void session_st::outputPacket(int level,int flag,struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	if(logLevel!=global_out_level)
+	{
+		outputPacketForDebug(LOG_WARN,flag,ip_header,tcp_header);
+	}else
+	{
+		outputPacketForDebug(level,flag,ip_header,tcp_header);
+	}
+}
+
 /**
  * send faked syn packet for backend for intercepting already connected packets
  */
@@ -491,7 +502,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_syn_buf+20);
 
 	logInfo(LOG_NOTICE,"sendFakedSynToBackend");
-	outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,tcp_header);
+	outputPacket(LOG_NOTICE,CLIENT_FLAG,ip_header,tcp_header);
 	ip_header2->version = 4;
 	ip_header2->ihl = 5;
 	ip_header2->tot_len = htons(FAKE_SYN_BUF_SIZE);
@@ -510,7 +521,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	virtual_next_sequence=tcp_header->seq;
 	unsigned char *data=copy_ip_packet(ip_header2);
 	handshakePackets.push_back(data);
-	outputPacketForDebug(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
+	outputPacket(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
 	logInfo(LOG_DEBUG,"send faked syn to backend,client window:%u",
 			tcp_header2->window);
 	send_ip_packet(fake_ip_addr,fake_syn_buf,
@@ -546,8 +557,8 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 	tcp_header2->window= 65535;
 	unsigned char *data=copy_ip_packet(ip_header2);
 	handshakePackets.push_back(data);
-	outputPacketForDebug(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);
-	outputPacketForDebug(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
+	outputPacket(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);
+	outputPacket(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
 	send_ip_packet(fake_ip_addr,fake_ack_buf,
 			virtual_next_sequence,&nextSeq);
 }
@@ -617,7 +628,7 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 void session_st::update_virtual_status(struct iphdr *ip_header,
 		struct tcphdr* tcp_header)
 {
-	outputPacketForDebug(LOG_DEBUG,BACKEND_FLAG,ip_header,tcp_header);
+	outputPacket(LOG_DEBUG,BACKEND_FLAG,ip_header,tcp_header);
 	if( tcp_header->rst)
 	{
 		reset_flag = true;
@@ -741,7 +752,7 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 	if(-1 == sock)
 	{
 		logInfo(LOG_WARN,"sock is invalid in est Conn for NoSynPackets");
-		outputPacketForDebug(LOG_WARN,CLIENT_FLAG,ip_header,tcp_header);
+		outputPacket(LOG_WARN,CLIENT_FLAG,ip_header,tcp_header);
 		return;
 	}
 	int result=msg_copyer_send(sock,ip_header->saddr,
@@ -781,7 +792,7 @@ void session_st::establishConnectionForClosedConn()
 		{
 			free(tmpData);
 			logInfo(LOG_WARN,"sock is invalid in establishConnForClosedConn");
-			outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,tcp_header);
+			outputPacket(LOG_NOTICE,CLIENT_FLAG,ip_header,tcp_header);
 			return;
 		}
 		if(0 == fake_ip_addr)
@@ -825,7 +836,7 @@ void session_st::establishConnectionForClosedConn()
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	outputPacketForDebug(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
+	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 	local_dest_ip_addr=ip_header->daddr;
 	if(0 == fake_ip_addr)
 	{
@@ -916,14 +927,15 @@ void session_st::process_recv(struct iphdr *ip_header,
 			logInfo(LOG_WARN,"no responses from backend,req cont:%u,resp cont:%u",
 					reqContentPackets,respContentPackets);
 			totalNumOfNoRespSession++;
-			over_flag=true;
-			if(totalNumOfNoRespSession>5 && totalNumOfNoRespSession<10)
+			if(0 == baseReqContentPackets)
 			{
-				default_log_level=output_level;
-				output_level=LOG_DEBUG;
-			}else
+				baseReqContentPackets=reqContentPackets;
+			}
+			logLevel=LOG_DEBUG;
+			double diffReqCont=reqContentPackets-baseReqContentPackets;
+			if(diffReqCont>100)
 			{
-				output_level=default_log_level;
+				over_flag=true;
 			}
 			return;
 		}

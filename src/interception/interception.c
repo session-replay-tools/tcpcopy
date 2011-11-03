@@ -31,7 +31,7 @@ static void formatOutput(int level,struct iphdr *ip_header)
 	unsigned int seq;
 	unsigned int ack_seq;
 
-	if(output_level < level)
+	if(global_out_level < level)
 	{
 		return;
 	}

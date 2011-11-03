@@ -1,7 +1,7 @@
 #include "log.h"
 
 static FILE* file=NULL;
-int output_level;
+int global_out_level;
 
 static char* err_levels[] = { 
 	"unknown",
@@ -17,7 +17,7 @@ static char* err_levels[] = {
 
 void initLogInfo()
 {
-	output_level=LOG_NOTICE;
+	global_out_level=LOG_NOTICE;
 	file=fopen("error.log","a+");
 }
 
@@ -33,7 +33,7 @@ void logInfo(int level,const char *fmt, ...)
 	struct tm* pLocalTime=NULL;
 	char* pTimeStr=NULL;
 	size_t len=0;
-	if(output_level >= level)
+	if(global_out_level >= level)
 	{
 		if (file) {
 			t=time(0);
