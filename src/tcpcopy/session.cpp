@@ -921,7 +921,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		time_t current=time(0);
 		double diff=current-lastRecvRespContentTime;
 		//if the sesssion recv no response for more than 5 min
-		//then kill self
+		//then enter the suicide process
 		if(diff > 300)
 		{
 			logLevel=LOG_DEBUG;
@@ -937,8 +937,8 @@ void session_st::process_recv(struct iphdr *ip_header,
 			if(diffReqCont>100)
 			{
 				over_flag=true;
+				return;
 			}
-			return;
 		}
 	}
 	//data packet or the third packet
