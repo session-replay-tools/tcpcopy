@@ -924,14 +924,15 @@ void session_st::process_recv(struct iphdr *ip_header,
 		//then kill self
 		if(diff > 300)
 		{
-			logInfo(LOG_WARN,"no responses from backend,req cont:%u,resp cont:%u",
-					reqContentPackets,respContentPackets);
+			logLevel=LOG_DEBUG;
+			logInfo(LOG_WARN,"no resp from back,req:%u,resp:%u,cont size:%u",
+					reqContentPackets,respContentPackets,contSize);
 			totalNumOfNoRespSession++;
 			if(0 == baseReqContentPackets)
 			{
 				baseReqContentPackets=reqContentPackets;
+				outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 			}
-			logLevel=LOG_DEBUG;
 			double diffReqCont=reqContentPackets-baseReqContentPackets;
 			if(diffReqCont>100)
 			{
