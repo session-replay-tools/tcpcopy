@@ -24,6 +24,7 @@ typedef map<uint64_t,uint32_t>::iterator IPIterator;
 
 static SessContainer sessions;
 static IPContainer trueIPContainer;
+static int default_log_level=output_level;
 static uint64_t activeCount=0;
 static uint64_t enterCount=0;
 static uint64_t leaveCount=0;
@@ -33,6 +34,7 @@ static uint64_t totalReconnectForNoSyn=0;
 static uint64_t timeCount=0;
 static uint64_t totalResponses=0;
 static uint64_t totalRequests=0;
+static uint64_t totalNumOfNoRespSession=0;
 
 
 /**
@@ -676,11 +678,15 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+contSize);
+	time_t current;
 	
 	//it is nontrivial to check if the packet is the last packet of response
 	//the following is not 100 percent right here
 	if(contSize>0)
 	{
+		current=time(0);
+		respContentPackets++;
+		lastRecvRespContentTime=current;
 		virtual_next_sequence =next_seq;
 		sendFakedAckToBackend(ip_header,tcp_header);
 
@@ -701,7 +707,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 				virtual_next_sequence =next_seq;
 				virtual_status = SEND_RESPONSE_CONFIRM;
 				responseReceived++;
-				lastResponseDispTime=time(0);
+				lastResponseDispTime=current;
 				sendReservedPackets();
 				return;
 			}
@@ -897,6 +903,30 @@ void session_st::process_recv(struct iphdr *ip_header,
 
 	uint32_t tmpLastAck=lastAck;
 	bool isNewRequest=false;
+
+	if(contSize>0)
+	{
+		reqContentPackets++;
+		time_t current=time(0);
+		double diff=current-lastRecvRespContentTime;
+		//if the sesssion recv no response for more than 5 min
+		//then kill self
+		if(diff > 300)
+		{
+			logInfo(LOG_WARN,"no responses from backend");
+			totalNumOfNoRespSession++;
+			over_flag=true;
+			if(totalNumOfNoRespSession>5 && totalNumOfNoRespSession<10)
+			{
+				default_log_level=output_level;
+				output_level=LOG_DEBUG;
+			}else
+			{
+				output_level=default_log_level;
+			}
+			return;
+		}
+	}
 	//data packet or the third packet
 	if(virtual_status ==SYN_SEND)
 	{

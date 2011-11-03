@@ -66,6 +66,7 @@ struct session_st
 	uint16_t client_ip_id;
 
 	bool    reset_flag;
+	bool    over_flag;
 	bool 	isWaitBakendClosed;
 	bool 	isClientClosed;
 	bool 	isWaitResponse;
@@ -94,9 +95,12 @@ struct session_st
 	dataContainer handshakePackets;
 	size_t requestProcessed;
 	size_t responseReceived;
+	size_t reqContentPackets;
+	size_t respContentPackets;
 	time_t lastUpdateTime;
 	time_t lastResponseDispTime;
 	time_t createTime;
+	time_t lastRecvRespContentTime;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)                                                                        
 	{
@@ -149,6 +153,7 @@ struct session_st
 		isStatClosed=false;
 		virtual_status = SYN_SEND;
 		reset_flag = false;
+		over_flag = false;
 		isWaitPreviousPacket=false;
 		isWaitBakendClosed=false;
 		isClientClosed=false;
@@ -169,9 +174,12 @@ struct session_st
 		lastSeqFromResponse=0;
 		requestProcessed=0;
 		responseReceived=0;
+		reqContentPackets=0;
+		respContentPackets=0;
 		lastUpdateTime=time(0);
 		lastResponseDispTime=lastUpdateTime;
-		createTime=time(0);
+		createTime=lastUpdateTime;
+		lastRecvRespContentTime=lastUpdateTime;
 
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
 		{
@@ -239,6 +247,10 @@ struct session_st
 			return true;
 		}
 		if(reset_flag)
+		{
+			return true;
+		}
+		if(over_flag)
 		{
 			return true;
 		}
