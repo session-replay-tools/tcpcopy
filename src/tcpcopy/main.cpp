@@ -219,7 +219,7 @@ static int retrieve_raw_sockets(int sock)
 		count++;
 		if(rawPackets%10000==0)
 		{
-			logInfo(LOG_INFO,"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",
+			logInfo(LOG_NOTICE,"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",
 					rawPackets,rawValidPackets,packetsPutNum);
 		}
 	}
