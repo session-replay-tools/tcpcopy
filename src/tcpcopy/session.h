@@ -49,6 +49,7 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define SERVER_BACKEND_FLAG 4
 #define SELF_FLAG 5
 #define DEFAULT_RESPONSE_MTU 1500
+#define MIN_RESPONSE_MTU 576
 #define RESERVE_CLIENT_FLAG 6
 
 #define FAKE_SYN_BUF_SIZE 52
@@ -89,6 +90,7 @@ struct session_st
 	uint32_t lastReqContSeq;
 	uint32_t nextSeq;
 	uint32_t lastAck;
+	uint32_t mtu;
 	dataContainer unsend;
 	dataContainer lostPackets;
 	dataContainer handshakePackets;
@@ -132,6 +134,7 @@ struct session_st
 		lastReqContSeq=0;
 		nextSeq=0;
 		lastAck=0;
+		mtu=MIN_RESPONSE_MTU;
 		lastAckFromResponse=0;
 		lastSeqFromResponse=0;
 		virtual_next_sequence=0;

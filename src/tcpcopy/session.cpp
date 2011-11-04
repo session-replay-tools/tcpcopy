@@ -35,7 +35,6 @@ static uint64_t totalResponses=0;
 static uint64_t totalRequests=0;
 static uint64_t totalNumOfNoRespSession=0;
 
-
 /**
  * output packet info for debug
  */
@@ -115,7 +114,7 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=time(0)-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	const size_t MAXPACKETS=2000;
+	const size_t MAXPACKETS=1000;
 	if(ratio<10)
 	{
 		normalBase=keepaliveBase;
@@ -131,9 +130,9 @@ static int clearTimeoutTcpSessions()
 		{
 			tmpBase=normalBase;
 		}
-		if(p->second.unsend.size()>200)
+		if(p->second.unsend.size()>20)
 		{
-			logInfo(LOG_NOTICE,"internal unsend number:",
+			logInfo(LOG_NOTICE,"internal unsend number:%u",
 					p->second.unsend.size());
 		}
 		if(p->second.unsend.size()>MAXPACKETS)
@@ -334,15 +333,10 @@ bool session_st::checkSendDeadRequests()
 	{
 		return false;
 	}
-	if(responseReceived>requestProcessed)
+	if(isPartResponse)
 	{
-		responseReceived=requestProcessed;
-	}
-	int reqNotProcessed=requestProcessed-responseReceived;
-	if(reqNotProcessed>0 && isPartResponse)
-	{
-		logInfo(LOG_INFO,"send dead requests to backend:%d",reqNotProcessed);
-		isWaitResponse=true;
+		logInfo(LOG_NOTICE,"send dead requests to backend");
+		isWaitResponse=false;
 		isPartResponse=false;
 		isResponseCompletely=false;
 		return true;
@@ -639,9 +633,15 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t ack=ntohl(tcp_header->ack_seq);
 	if(ack > nextSeq)
 	{
-		logInfo(LOG_NOTICE,"ack from backend is more than nextSeq");
+		logInfo(LOG_NOTICE,"ack from back is more than nextSeq");
+		outputPacket(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);
 		nextSeq=ack;
+	}else if(ack <nextSeq)
+	{
+		logInfo(LOG_NOTICE,"ack from back is less than nextSeq");
+		outputPacket(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);
 	}
+
 	if( tcp_header->syn)
 	{
 		virtual_next_sequence = plus_1(tcp_header->seq);
@@ -690,6 +690,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t contSize=tot_len-size_tcp-size_ip;
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+contSize);
 	time_t current;
+	bool isMtuModifed=false;
 	
 	//it is nontrivial to check if the packet is the last packet of response
 	//the following is not 100 percent right here
@@ -702,10 +703,22 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		sendFakedAckToBackend(ip_header,tcp_header);
 
 		isPartResponse=true;
+
+		if(tot_len>mtu)
+		{
+			isMtuModifed=true;
+			mtu=tot_len;
+			logInfo(LOG_NOTICE,"current mtu:%u",mtu);
+			outputPacket(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);	
+		}
 		if(tot_len==DEFAULT_RESPONSE_MTU)
 		{
 			return;
-		}else
+		}
+		if(!isMtuModifed&&tot_len==mtu)
+		{
+			return;
+		}
 		{
 			logInfo(LOG_DEBUG,"receive from backend");
 			if(isWaitResponse)
