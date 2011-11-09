@@ -1237,7 +1237,7 @@ void process(char *packet)
 	{
 		//this is for checking memory leak
 		logInfo(LOG_NOTICE,
-				"activeCount:%llu,total reqs:%llu,rel reqs:%llu,obs del:%llu",
+				"activeCount:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
 				activeCount,enterCount,leaveCount,deleteObsoCount);
 		logInfo(LOG_NOTICE,"total conns:%llu,total reqs:%llu,total resps:%llu",
 				totalConnections,totalRequests,totalResponses);
