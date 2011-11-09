@@ -1233,7 +1233,7 @@ void process(char *packet)
 	bool reusePort=false;
 	timeCount++;
 
-	if(timeCount%1000==0)
+	if(timeCount%100000==0)
 	{
 		//this is for checking memory leak
 		logInfo(LOG_NOTICE,
