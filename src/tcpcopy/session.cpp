@@ -448,10 +448,10 @@ int session_st::sendReservedPackets()
 
 		if(!isOmitTransfer)
 		{
+			count++;
 			send_ip_packet(fake_ip_addr,data,
 					virtual_next_sequence,&nextSeq);
 		}
-		count++;
 		free(data);
 		unsend.pop_front();
 		if(isOmitTransfer)
@@ -905,6 +905,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 	//processing the fin packet
 	if(tcp_header->fin)
 	{
+		logInfo(LOG_DEBUG,"recv fin packet from backend");
 		if(isFakedSendingFinToBackend)
 		{
 			return;
