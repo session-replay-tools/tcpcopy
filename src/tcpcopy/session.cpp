@@ -416,6 +416,11 @@ int session_st::sendReservedPackets()
 			mayPause=true;
 			prevPacket=copy_ip_packet(ip_header);
 			prePackSize=packSize;
+		}else if(tcp_header->rst){
+			reset_flag=true;
+			isOmitTransfer=false;
+			logInfo(LOG_DEBUG,"send reset packet to backend");
+			needPause=true;
 		}else if(tcp_header->fin)
 		{
 			needPause=true;
@@ -661,6 +666,9 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		logInfo(LOG_INFO,"recv fin from backend");
 		isTestConnClosed=true;
 		isWaitBakendClosed=false;
+		isWaitResponse=false;
+		isTrueWaitResponse=false;
+		isResponseCompletely=true;
 		virtual_status  |= SERVER_FIN;
 		virtual_next_sequence = plus_1(tcp_header->seq);
 		int count=sendReservedPackets();
@@ -865,9 +873,18 @@ void session_st::process_recv(struct iphdr *ip_header,
 	//processing the reset packet
 	if(tcp_header->rst)
 	{
-		send_ip_packet(fake_ip_addr,(unsigned char *) ip_header,
-				virtual_next_sequence,&nextSeq);
-		reset_flag = true;
+		isClientReset=true;
+		logInfo(LOG_INFO,"reset from client");
+		if(! unsend.empty())
+		{
+			logInfo(LOG_INFO,"push reset packet from client");
+			unsend.push_back(copy_ip_packet(ip_header));
+		}else
+		{
+			send_ip_packet(fake_ip_addr,(unsigned char *) ip_header,
+					virtual_next_sequence,&nextSeq);
+			reset_flag = true;
+		}
 		return;
 	}
 	//processing the syn packet

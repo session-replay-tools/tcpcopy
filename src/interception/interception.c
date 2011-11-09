@@ -102,13 +102,14 @@ static void interception_process(int fd){
 	}else if(fd == firewall_sock){
 		packet_id=0;
 		ip_header = nl_firewall_recv(firewall_sock,&packet_id);
-		router_update(ip_header);
+		if(ip_header!=NULL)
 		{
+			router_update(ip_header);
 			formatOutput(LOG_DEBUG,ip_header);
+			/* drop the packet */
+			/* if you comment the following,you will boost the tcpcopy server */
+			drop_netlink_packet(packet_id);  	
 		}
-		/* drop the packet */
-		/* if you comment the following,you will boost the tcpcopy server */
-		drop_netlink_packet(packet_id);  	
 	}else{
 		c_msg = msg_receiver_recv(fd);
 		if(c_msg){

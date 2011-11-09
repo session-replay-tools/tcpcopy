@@ -84,6 +84,7 @@ struct session_st
 	bool 	isSynIntercepted;
 	bool 	isHalfWayIntercepted;
 	bool 	isStatClosed;
+	bool 	isClientReset;
 
 	uint32_t lastAckFromResponse;
 	uint32_t lastSeqFromResponse;
@@ -157,6 +158,7 @@ struct session_st
 		isSynIntercepted=false;
 		isHalfWayIntercepted=false;
 		isStatClosed=false;
+		isClientReset=false;
 		virtual_status = SYN_SEND;
 		reset_flag = false;
 		over_flag = false;

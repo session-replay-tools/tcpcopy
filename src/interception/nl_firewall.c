@@ -16,6 +16,11 @@ static char buffer[65536];
 struct iphdr *nl_firewall_recv(int sock,unsigned long *packet_id){
 	ssize_t len = nl_recv(sock,buffer,sizeof(buffer));
 	ssize_t normalLen=sizeof(struct ipq_packet_msg)+NLMSG_LENGTH(0);
+	if(len<0)
+	{
+		logInfo(LOG_WARN,"nl recv length is less than zero:%ld",len);
+		return NULL;
+	}
 	if(len < normalLen)
 	{
 		logInfo(LOG_ERR,"nl recv error:%ld",len);
