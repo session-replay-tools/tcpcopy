@@ -1243,6 +1243,11 @@ void process(char *packet)
 		logInfo(LOG_NOTICE,"total conns:%llu,total reqs:%llu,total resps:%llu",
 				totalConnections,totalRequests,totalResponses);
 		clearTimeoutTcpSessions();
+		double ratio=100.0*totalConnections/(enterCount+1);
+		if(ratio<90)
+		{
+			logInfo(LOG_WARN,"many connections can't be established");
+		}
 	}
 
 	ip_header = (struct iphdr*)packet;
