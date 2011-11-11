@@ -115,7 +115,7 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=time(0)-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	const size_t MAXPACKETS=1000;
+	const size_t MAXPACKETS=2000;
 	if(ratio<10)
 	{
 		normalBase=keepaliveBase;
@@ -133,8 +133,8 @@ static int clearTimeoutTcpSessions()
 		}
 		if(p->second.unsend.size()>20)
 		{
-			logInfo(LOG_NOTICE,"internal unsend number:%u",
-					p->second.unsend.size());
+			logInfo(LOG_NOTICE,"internal unsend number:%u,port=%u",
+					p->second.unsend.size(),p->second.client_port);
 		}
 		if(p->second.unsend.size()>MAXPACKETS)
 		{
@@ -144,7 +144,8 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"session has too many unsend packets");
+			logInfo(LOG_WARN,"session has too many unsend packets:%u,port=%u",
+					p->second.unsend.size(),p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
 			continue;
@@ -879,10 +880,10 @@ void session_st::process_recv(struct iphdr *ip_header,
 	if(tcp_header->rst)
 	{
 		isClientReset=true;
-		logInfo(LOG_INFO,"reset from client");
-		if(! unsend.empty())
+		logInfo(LOG_NOTICE,"reset from client");
+		if(isWaitResponse)
 		{
-			logInfo(LOG_INFO,"push reset packet from client");
+			logInfo(LOG_NOTICE,"push reset packet from client");
 			unsend.push_back(copy_ip_packet(ip_header));
 		}else
 		{
@@ -895,12 +896,17 @@ void session_st::process_recv(struct iphdr *ip_header,
 	//processing the syn packet
 	if(tcp_header->syn)
 	{
+		client_port=ntohs(tcp_header->source);
 		isSynIntercepted=true;
 		unsigned char *data=copy_ip_packet(ip_header);
 		handshakePackets.push_back(data);
 		send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
 				virtual_next_sequence,&nextSeq);
 		return;
+	}
+	if(0 == client_port)
+	{
+		client_port=ntohs(tcp_header->source);
 	}
 	//processing the fin packet
 	if(tcp_header->fin)

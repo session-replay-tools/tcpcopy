@@ -64,6 +64,7 @@ struct session_st
 	uint32_t local_dest_ip_addr;
 	uint16_t virtual_status;
 	uint16_t client_ip_id;
+	uint16_t client_port;
 
 	bool    reset_flag;
 	bool    over_flag;
@@ -140,6 +141,7 @@ struct session_st
 		lastSeqFromResponse=0;
 		virtual_next_sequence=0;
 		client_ip_id=0;
+		client_port=0;
 		initSessionForKeepalive();
 		for(dataIterator iter=handshakePackets.begin();
 				iter!=handshakePackets.end();)
