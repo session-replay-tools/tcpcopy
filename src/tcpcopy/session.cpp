@@ -916,7 +916,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 	//processing the fin packet
 	if(tcp_header->fin)
 	{
-		logInfo(LOG_DEBUG,"recv fin packet from backend");
+		logInfo(LOG_DEBUG,"recv fin packet from client");
 		if(isFakedSendingFinToBackend)
 		{
 			return;
