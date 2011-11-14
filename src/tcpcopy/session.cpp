@@ -184,8 +184,13 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_DEBUG,"session timeout");
+			logInfo(LOG_NOTICE,"session timeout");
 			leaveCount++;
+			if(p->second.unsend.size()>10)
+			{
+				logInfo(LOG_NOTICE,"timeout unsend number:%u,port=%u",
+					p->second.unsend.size(),p->second.client_port);
+			}
 			sessions.erase(p++);
 		}else
 		{
@@ -299,7 +304,7 @@ int session_st::sendReservedLostPackets()
 				}
 				logInfo(LOG_DEBUG,"send reserved packets for lost packet");
 				send_ip_packet(fake_ip_addr,data,virtual_next_sequence,
-						&nextSeq);
+						&nextSeq,&sendConPackets);
 				if(contSize>0)
 				{
 					lastReqContSeq=ntohl(tcp_header->seq);
@@ -451,7 +456,7 @@ int session_st::sendReservedPackets()
 		{
 			count++;
 			send_ip_packet(fake_ip_addr,data,
-					virtual_next_sequence,&nextSeq);
+					virtual_next_sequence,&nextSeq,&sendConPackets);
 		}
 		free(data);
 		unsend.pop_front();
@@ -526,7 +531,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	logInfo(LOG_DEBUG,"send faked syn to backend,client window:%u",
 			tcp_header2->window);
 	send_ip_packet(fake_ip_addr,fake_syn_buf,
-			virtual_next_sequence,&nextSeq);
+			virtual_next_sequence,&nextSeq,&sendConPackets);
 }
 
 /**
@@ -561,7 +566,7 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 	outputPacket(LOG_NOTICE,BACKEND_FLAG,ip_header,tcp_header);
 	outputPacket(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
 	send_ip_packet(fake_ip_addr,fake_ack_buf,
-			virtual_next_sequence,&nextSeq);
+			virtual_next_sequence,&nextSeq,&sendConPackets);
 }
 
 /**
@@ -591,7 +596,7 @@ void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
 	logInfo(LOG_INFO,"send faked ack to backend,client window:%u",
 			tcp_header2->window);
 	send_ip_packet(fake_ip_addr,fake_ack_buf,
-			virtual_next_sequence,&nextSeq);
+			virtual_next_sequence,&nextSeq,&sendConPackets);
 }
 
 /**
@@ -620,7 +625,7 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 	tcp_header2->seq = tcp_header->ack_seq;
 	tcp_header2->window= 65535;
 	send_ip_packet(fake_ip_addr,fake_fin_buf,
-			virtual_next_sequence,&nextSeq);
+			virtual_next_sequence,&nextSeq,&sendConPackets);
 }
 
 /**
@@ -846,7 +851,7 @@ void session_st::establishConnectionForClosedConn()
 			return;
 		}
 		send_ip_packet(fake_ip_addr,data,
-				virtual_next_sequence,&nextSeq);
+				virtual_next_sequence,&nextSeq,&sendConPackets);
 		isSynIntercepted=true;
 		free(tmpData);
 		data=handshakePackets.back();
@@ -888,7 +893,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		}else
 		{
 			send_ip_packet(fake_ip_addr,(unsigned char *) ip_header,
-					virtual_next_sequence,&nextSeq);
+					virtual_next_sequence,&nextSeq,&sendConPackets);
 			reset_flag = true;
 		}
 		return;
@@ -901,7 +906,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		unsigned char *data=copy_ip_packet(ip_header);
 		handshakePackets.push_back(data);
 		send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
-				virtual_next_sequence,&nextSeq);
+				virtual_next_sequence,&nextSeq,&sendConPackets);
 		return;
 	}
 	if(0 == client_port)
@@ -931,7 +936,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					unsend.pop_front();
 				}
 				send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
-						virtual_next_sequence,&nextSeq);
+						virtual_next_sequence,&nextSeq,&sendConPackets);
 				virtual_status |= CLIENT_FIN;
 				confirmed=true;
 			}
@@ -1043,7 +1048,20 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				if(isWaitResponse)
 				{
+					bool savePacket=false;
 					if(isNewRequest&&checkTcpSeg(tcp_header,lastReqContSeq))
+					{
+						savePacket=true;
+					}else
+					{
+						size_t baseConPackets=reqContentPackets-1;
+						if(sendConPackets<baseConPackets)
+						{
+							logInfo(LOG_NOTICE,"it has reserved content packets ");
+							savePacket=true;
+						}
+					}
+					if(savePacket)
 					{
 						logInfo(LOG_DEBUG,"push back the packet");
 						unsend.push_back(copy_ip_packet(ip_header));
@@ -1069,7 +1087,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 						//lost and retransmitted
 						send_ip_packet(fake_ip_addr,
 								(unsigned char *)ip_header,
-								virtual_next_sequence,&nextSeq);
+								virtual_next_sequence,&nextSeq,&sendConPackets);
 						sendReservedLostPackets();
 						isWaitResponse=true;
 						isResponseCompletely=false;
@@ -1084,7 +1102,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					isSegContinue=true;
 					send_ip_packet(fake_ip_addr,
 							(unsigned char *)ip_header,
-							virtual_next_sequence,&nextSeq);
+							virtual_next_sequence,&nextSeq,&sendConPackets);
 					logInfo(LOG_DEBUG,"it is a continuous http request");
 				}
 				lastReqContSeq=ntohl(tcp_header->seq);
@@ -1149,7 +1167,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					{
 						send_ip_packet(fake_ip_addr,
 								(unsigned char *)ip_header,
-								virtual_next_sequence,&nextSeq);
+								virtual_next_sequence,&nextSeq,&sendConPackets);
 					}
 				}
 			}

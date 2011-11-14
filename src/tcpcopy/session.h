@@ -1,6 +1,7 @@
 #ifndef  _TCP_REDIRECT_SESSION_H_INC
 #define  _TCP_REDIRECT_SESSION_H_INC
 
+#include "../log/log.h"
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <sys/time.h>
@@ -99,6 +100,7 @@ struct session_st
 	size_t requestProcessed;
 	size_t responseReceived;
 	size_t reqContentPackets;
+	size_t sendConPackets;
 	size_t baseReqContentPackets;
 	size_t respContentPackets;
 	time_t lastUpdateTime;
@@ -141,7 +143,6 @@ struct session_st
 		lastSeqFromResponse=0;
 		virtual_next_sequence=0;
 		client_ip_id=0;
-		client_port=0;
 		initSessionForKeepalive();
 		for(dataIterator iter=handshakePackets.begin();
 				iter!=handshakePackets.end();)
@@ -185,6 +186,7 @@ struct session_st
 		requestProcessed=0;
 		responseReceived=0;
 		reqContentPackets=0;
+		sendConPackets=0;
 		baseReqContentPackets=0;
 		respContentPackets=0;
 		lastUpdateTime=time(0);
@@ -192,8 +194,16 @@ struct session_st
 		createTime=lastUpdateTime;
 		lastRecvRespContentTime=lastUpdateTime;
 
+		if(unsend.size()>5)
+		{
+			logInfo(LOG_NOTICE,"reinit unsend number:%u,port=%u",
+					unsend.size(),client_port);                                                                 
+		}
+		client_port=0;
+		
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
 		{
+			
 			free(*(iter++));
 		}
 		unsend.clear();
@@ -211,6 +221,12 @@ struct session_st
 
 	~session_st()
 	{
+		if(unsend.size()>5)
+		{
+			logInfo(LOG_NOTICE,"erase unsend number:%u,port=%u",
+					unsend.size(),client_port);                                                                 
+		}
+
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
 		{
 			free(*(iter++));

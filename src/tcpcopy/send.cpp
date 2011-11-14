@@ -75,7 +75,8 @@ static unsigned short tcpcsum(unsigned char *iphdr,unsigned short *packet,
  * sending one ip packet(it will not go through fragmentation))
  */
 uint32_t send_ip_packet(uint64_t fake_ip_addr,
-		unsigned char *data,uint32_t ack_seq,uint32_t* nextSeq)
+		unsigned char *data,uint32_t ack_seq,uint32_t* nextSeq,
+		uint32_t* sendConPackets)
 {
 	if(! data)
 	{
@@ -122,6 +123,7 @@ uint32_t send_ip_packet(uint64_t fake_ip_addr,
 	if(contenLen>0)
 	{
 		*nextSeq=*nextSeq+contenLen;
+		*sendConPackets=*sendConPackets+1;
 	}
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
 			(unsigned short *)tcp_header,tot_len-size_ip);
