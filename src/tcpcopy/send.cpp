@@ -76,7 +76,7 @@ static unsigned short tcpcsum(unsigned char *iphdr,unsigned short *packet,
  */
 uint32_t send_ip_packet(uint64_t fake_ip_addr,
 		unsigned char *data,uint32_t ack_seq,uint32_t* nextSeq,
-		uint32_t* sendConPackets)
+		size_t* sendConPackets)
 {
 	if(! data)
 	{

@@ -115,7 +115,7 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=time(0)-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	const size_t MAXPACKETS=2000;
+	const size_t MAXPACKETS=5000;
 	if(ratio<10)
 	{
 		normalBase=keepaliveBase;
@@ -225,7 +225,6 @@ static inline uint32_t plus_1(uint32_t seq)
 {
 	return htonl(ntohl(seq)+1);
 }
-
 
 static bool checkRetransmission(struct tcphdr *tcp_header,uint32_t oldSeq)
 {
