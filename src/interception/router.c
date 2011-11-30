@@ -63,13 +63,29 @@ void router_update(struct iphdr *ip_header){
 	struct tcphdr *tcp_header=NULL;
 	uint64_t key;
 	void *fd=NULL;
+	uint32_t size_tcp;
 	struct receiver_msg_st msg;
+	uint32_t totalLen;
+	unsigned char* payload=NULL;
+	uint32_t contentLen;
 
 	if(ip_header->protocol != IPPROTO_TCP){
 		return;
 	}
 	size_ip = ip_header->ihl<<2;
+	totalLen = ntohs(ip_header->tot_len);
 	tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+	size_tcp = tcp_header->doff<<2;
+	contentLen=totalLen-size_ip-size_tcp;
+
+	/*if(contentLen>0)
+	{
+		payload=(unsigned char*)((char*)tcp_header+size_tcp);
+		if(totalLen==119)
+		{
+			printf("%s\n",(char*)payload);
+		}
+	}*/
 	key=get_key(ip_header->daddr,tcp_header->dest);
 	route_table_delete_obsolete(key);
 	fd = hash_find(table,key);

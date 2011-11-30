@@ -15,6 +15,7 @@ typedef struct virtual_ip_addr{
 	int num;
 }virtual_ip_addr;
 
+extern bool isMySqlCopy;
 extern uint32_t sample_ip;
 extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
@@ -54,6 +55,9 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define RESERVE_CLIENT_FLAG 6
 
 #define FAKE_SYN_BUF_SIZE 52
+#define COM_STMT_PREPARE 22
+#define COM_QUERY 3
+
 
 
 struct session_st
@@ -63,6 +67,7 @@ struct session_st
 	uint32_t fake_ip_addr;
 	uint32_t client_ip_addr;
 	uint32_t local_dest_ip_addr;
+	uint32_t total_seq_omit;
 	uint16_t virtual_status;
 	uint16_t client_ip_id;
 	uint16_t client_port;
@@ -71,6 +76,7 @@ struct session_st
 	bool    over_flag;
 	bool 	isWaitBakendClosed;
 	bool 	isClientClosed;
+	bool 	isTestConnClosed;
 	bool 	isWaitResponse;
 	bool 	isPartResponse;
 	bool 	isResponseCompletely;
@@ -81,12 +87,20 @@ struct session_st
 	bool    isRequestBegin;
 	bool 	isKeepalive;
 	bool 	confirmed;
-	bool 	isTestConnClosed;
 	bool 	isFakedSendingFinToBackend;
 	bool 	isSynIntercepted;
 	bool 	isHalfWayIntercepted;
 	bool 	isStatClosed;
 	bool 	isClientReset;
+	bool    isPureRequestBegin;
+	bool    isGreeingReceived;
+	bool    isLoginSuccessful;
+	bool    candidateErased;
+	bool    isSeqAckNotConsistent;
+	bool    isLoginCopyed;
+	bool    hasPrepareStat;
+	bool    isExcuteForTheFirstTime;
+	bool    needContinueProcessingForBakAck;
 
 	uint32_t lastAckFromResponse;
 	uint32_t lastSeqFromResponse;
@@ -94,15 +108,18 @@ struct session_st
 	uint32_t nextSeq;
 	uint32_t lastAck;
 	uint32_t mtu;
+	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
 	dataContainer lostPackets;
 	dataContainer handshakePackets;
+	dataContainer mysqlSpecialPackets;
 	size_t requestProcessed;
 	size_t responseReceived;
 	size_t reqContentPackets;
 	size_t sendConPackets;
 	size_t baseReqContentPackets;
 	size_t respContentPackets;
+	size_t numberOfExcutes;
 	time_t lastUpdateTime;
 	time_t lastResponseDispTime;
 	time_t createTime;
@@ -110,7 +127,7 @@ struct session_st
 
 	int logLevel;
 
-	int generateRandomNumber(int min,int max,unsigned int* seed)                                                                        
+	int generateRandomNumber(int min,int max,unsigned int* seed)
 	{
 		int randNum=(int)(max*(rand_r(seed)/(RAND_MAX+1.0)))+min;
 		return randNum;
@@ -135,10 +152,12 @@ struct session_st
 
 	void initSession()
 	{
+		numberOfExcutes=0;
 		lastReqContSeq=0;
 		nextSeq=0;
 		lastAck=0;
 		mtu=MIN_RESPONSE_MTU;
+		handshakeExpectedPackets=2;
 		lastAckFromResponse=0;
 		lastSeqFromResponse=0;
 		virtual_next_sequence=0;
@@ -150,10 +169,18 @@ struct session_st
 			free(*(iter++));
 		}
 		handshakePackets.clear();
+		for(dataIterator iter=mysqlSpecialPackets.begin();
+				iter!=mysqlSpecialPackets.end();)
+		{
+			free(*(iter++));
+		}
+		mysqlSpecialPackets.clear();
+
 	}
 
 	void initSessionForKeepalive()
 	{
+		total_seq_omit=0;
 		logLevel=global_out_level;
 		fake_ip_addr=0;
 		isFakedSendingFinToBackend=false;
@@ -162,6 +189,15 @@ struct session_st
 		isHalfWayIntercepted=false;
 		isStatClosed=false;
 		isClientReset=false;
+		isPureRequestBegin=false;
+		isGreeingReceived=false;
+		isLoginSuccessful=false;
+		candidateErased=false;
+		isSeqAckNotConsistent=false;
+		isLoginCopyed=false;
+		hasPrepareStat=false;
+		isExcuteForTheFirstTime=true;
+		needContinueProcessingForBakAck=false;
 		virtual_status = SYN_SEND;
 		reset_flag = false;
 		over_flag = false;
@@ -244,6 +280,13 @@ struct session_st
 			free(data);
 		}
 		handshakePackets.clear();
+		for(dataIterator iter=mysqlSpecialPackets.begin();
+				iter!=mysqlSpecialPackets.end();)
+		{
+			unsigned char* data=*(iter++);
+			free(data);
+		}
+		mysqlSpecialPackets.clear();
 	}
 	void outputPacket(int level,int flag,struct iphdr *ip_header,
 			struct tcphdr *tcp_header);
@@ -251,7 +294,7 @@ struct session_st
 	int sendReservedPackets();
 	bool checkPacketLost(struct iphdr *ip_header,
 			struct tcphdr *tcp_header,uint32_t oldSeq);
-	bool checkSendDeadRequests();
+	bool checkSendingDeadReqs();
 	void update_virtual_status(struct iphdr *ip_header,
 			struct tcphdr* tcp_header);
 	void establishConnectionForNoSynPackets(struct iphdr *ip_header,
@@ -265,8 +308,11 @@ struct session_st
 			struct tcphdr* tcp_header);
 	void sendFakedFinToBackend(struct iphdr* ip_header,
 			struct tcphdr* tcp_header);
-	unsigned char * copy_ip_packet(struct iphdr *ip_header);
+	void sendFakedFinToBackByCliePack(struct iphdr* ip_header,
+			struct tcphdr* tcp_header);
 	void save_header_info(struct iphdr *ip_header,struct tcphdr *tcp_header);
+	bool checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
+			struct tcphdr *tcp_header);
 	void process_recv(struct iphdr *ip_header,struct tcphdr *tcp_header);
 	bool is_over()
 	{

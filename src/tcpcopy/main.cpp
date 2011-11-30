@@ -47,6 +47,8 @@ static uint64_t writeCounter=0;
 static int raw_sock;
 static uint64_t packetsPutNum=0;
 
+bool isMySqlCopy=false;
+
 /**
  * put one packet to buffered pool
  */
