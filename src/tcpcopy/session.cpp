@@ -884,12 +884,13 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
  */
 void session_st::establishConnectionForClosedConn()
 {
-	logInfo(LOG_INFO,"reestablish connection for keepalive conn:%u",
+	logInfo(LOG_INFO,"reestablish connection for keepalive:%u",
 			client_port);
 
 	if(handshakePackets.size()!=handshakeExpectedPackets)
 	{
-		logInfo(LOG_WARN,"error:handshakePackets size is not expected");
+		logInfo(LOG_WARN,"handshakePackets size is not expected:%u,exp:%u",
+				handshakePackets.size(),handshakeExpectedPackets);
 	}else
 	{
 		unsigned char *data = handshakePackets.front();
@@ -1019,7 +1020,7 @@ bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 }
 
 /**
- * check the packet is the right packet for  starting a new session 
+ * check if the packet is the right packet for  starting a new session 
  * by mysql tcpcopy
  */
 static bool checkPacketPaddingForMysql(struct iphdr *ip_header,
@@ -1055,7 +1056,7 @@ static bool checkPacketPaddingForMysql(struct iphdr *ip_header,
 }
 
 /**
- * check the packet is the right packet for noraml tcpcopy
+ * check if the packet is the right packet for noraml tcpcopy
  */
 static bool checkPacketPadding(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
@@ -1458,7 +1459,6 @@ void session_st::process_recv(struct iphdr *ip_header,
 			if(0 == baseReqContentPackets)
 			{
 				baseReqContentPackets=reqContentPackets;
-				outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 			}
 			double diffReqCont=reqContentPackets-baseReqContentPackets;
 			if(diffReqCont>100)
@@ -1631,7 +1631,6 @@ void session_st::process_recv(struct iphdr *ip_header,
 				{
 					sendReservedPackets();
 				}
-
 			}else
 			{
 				if(isClientClosed)
@@ -1701,10 +1700,7 @@ bool isPacketNeeded(const char *packet)
 		if(checkLocalIPValid(ip_header->daddr) && 
 				(tcp_header->dest==local_port))
 		{
-			//if(ip_header->saddr==sample_ip)
-			{
-				isNeeded=true;
-			}
+			isNeeded=true;
 		}
 		else if(checkLocalIPValid(ip_header->saddr) && 
 				(tcp_header->source==local_port))
@@ -1783,7 +1779,6 @@ void process(char *packet)
 		}else
 		{
 			//it may happen when the last packet comes from backend
-			//logInfo("no session for this packet from test machine");
 		}
 	}
 	else if(checkLocalIPValid(ip_header->daddr) && 
