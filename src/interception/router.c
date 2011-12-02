@@ -66,6 +66,7 @@ void router_update(struct iphdr *ip_header){
 	struct receiver_msg_st msg;
 
 	if(ip_header->protocol != IPPROTO_TCP){
+		logInfo(LOG_INFO,"this is not tcp packet");
 		return;
 	}
 	size_ip = ip_header->ihl<<2;
@@ -76,6 +77,7 @@ void router_update(struct iphdr *ip_header){
 	memcpy((void *) &(msg.ip_header),ip_header,sizeof(struct iphdr));
 	memcpy((void *) &(msg.tcp_header),tcp_header,sizeof(struct tcphdr));
 	if( NULL == fd ){
+		logInfo(LOG_INFO,"fd is null");
 		delay_table_add(key,&msg);
 		return ;
 	}

@@ -1695,8 +1695,6 @@ bool isPacketNeeded(const char *packet)
 	//here we filter the packets we do care about
 	{
 		//because it may use several virtual ip addresses 
-		//if you use ETH_P_ALL,then the following is wrong,
-		//try to check ip and port instead
 		if(checkLocalIPValid(ip_header->daddr) && 
 				(tcp_header->dest==local_port))
 		{
@@ -1705,7 +1703,6 @@ bool isPacketNeeded(const char *packet)
 		else if(checkLocalIPValid(ip_header->saddr) && 
 				(tcp_header->source==local_port))
 		{
-			//this is only valid when using ETH_P_ALL
 			if(tcp_header->fin)
 			{
 				isNeeded=true;
@@ -1882,7 +1879,6 @@ void process(char *packet)
 			(tcp_header->source==local_port))
 	{
 		//when the packet comes from local server 
-		//this is only valid when using ETH_P_ALL
 		if(tcp_header->fin)
 		{
 			logInfo(LOG_DEBUG,"server fin from local ip and local port");
