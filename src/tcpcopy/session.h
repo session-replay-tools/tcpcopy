@@ -108,6 +108,7 @@ struct session_st
 	uint32_t nextSeq;
 	uint32_t lastAck;
 	uint32_t mtu;
+	uint32_t lastRespPacketSize;
 	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
 	dataContainer lostPackets;
@@ -180,6 +181,7 @@ struct session_st
 
 	void initSessionForKeepalive()
 	{
+		lastRespPacketSize=0;
 		total_seq_omit=0;
 		logLevel=global_out_level;
 		fake_ip_addr=0;

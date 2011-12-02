@@ -1110,6 +1110,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			needContinueProcessingForBakAck=true;
 		}
+		lastRespPacketSize=tot_len;
 		return;
 	}
 
@@ -1126,6 +1127,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			sendReservedPackets();
 		}
+		lastRespPacketSize=tot_len;
 		return;
 	}
 	else if(tcp_header->fin)
@@ -1210,11 +1212,16 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			}
 			if(tot_len==DEFAULT_RESPONSE_MTU)
 			{
+				lastRespPacketSize=tot_len;
 				return;
 			}
 			if(!isMtuModifed&&tot_len==mtu)
 			{
-				return;
+				if(lastRespPacketSize==tot_len)
+				{
+					lastRespPacketSize=tot_len;
+					return;
+				}
 			}
 			{
 				logInfo(LOG_DEBUG,"receive from backend");
@@ -1231,6 +1238,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 					lastResponseDispTime=current;
 					sendReservedPackets();
 					needContinueProcessingForBakAck=false;
+					lastRespPacketSize=tot_len;
 					return;
 				}
 			}
@@ -1256,6 +1264,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			logInfo(LOG_NOTICE,"set client closed flag:%u",client_port);
 		}
 	}
+	lastRespPacketSize=tot_len;
 
 }
 
@@ -1574,7 +1583,8 @@ void session_st::process_recv(struct iphdr *ip_header,
 						//lost and retransmitted
 						send_ip_packet(fake_ip_addr,
 								(unsigned char *)ip_header,
-								virtual_next_sequence,&nextSeq,&sendConPackets);
+								virtual_next_sequence,
+								&nextSeq,&sendConPackets);
 						sendReservedLostPackets();
 						isWaitResponse=true;
 						isResponseCompletely=false;
