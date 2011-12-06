@@ -116,14 +116,15 @@ static int clearTimeoutTcpSessions()
 	 * so we adopt a naive method to distinguish between short-lived 
 	 * and long-lived sessions(one connection represents one session)
 	 */
-	time_t normalBase=time(0)-60;
-	time_t keepaliveBase=time(0)-1800;
+	time_t current=time(0);
+	time_t normalBase=current-60;
+	time_t keepaliveBase=current-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
 	size_t MAXPACKETS=5000;
 	if(isMySqlCopy)
 	{
-		MAXPACKETS=1000;
+		MAXPACKETS=10000;
 	}
 	if(ratio<10)
 	{
@@ -133,6 +134,13 @@ static int clearTimeoutTcpSessions()
 	logInfo(LOG_NOTICE,"session number when coming:%u",sessions.size());
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
+		double diff=current-p->second.lastRecvRespContentTime;
+		if(diff<5)
+		{
+			p++;
+			continue;
+		}
+
 		if(p->second.isKeepalive)
 		{
 			tmpBase=keepaliveBase;
@@ -150,7 +158,7 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				p->second.candidateErased=true;
-				logInfo(LOG_NOTICE,"set candidate erased");
+				logInfo(LOG_NOTICE,"unsend:set candidate erased");
 				p++;
 				continue;
 			}
@@ -170,7 +178,7 @@ static int clearTimeoutTcpSessions()
 		{
 			if(!p->second.candidateErased)
 			{
-				logInfo(LOG_NOTICE,"set candidate erased");
+				logInfo(LOG_NOTICE,"lostPackets:set candidate erased");
 				p->second.candidateErased=true;
 				p++;
 				continue;
@@ -191,7 +199,7 @@ static int clearTimeoutTcpSessions()
 		{
 			if(!p->second.candidateErased)
 			{
-				logInfo(LOG_NOTICE,"set candidate erased");
+				logInfo(LOG_NOTICE,"handshake:set candidate erased");
 				p->second.candidateErased=true;
 				p++;
 				continue;
@@ -214,7 +222,7 @@ static int clearTimeoutTcpSessions()
 			{
 				if(!p->second.candidateErased)
 				{
-					logInfo(LOG_NOTICE,"set candidate erased");
+					logInfo(LOG_NOTICE,"mysql:set candidate erased");
 					p->second.candidateErased=true;
 					p++;
 					continue;
@@ -226,7 +234,7 @@ static int clearTimeoutTcpSessions()
 				}
 				activeCount--;
 				logInfo(LOG_WARN,"It has too many mysql packets:%u,port=%u",
-						p->second.handshakePackets.size(),
+						p->second.mysqlSpecialPackets.size(),
 						p->second.client_port);
 				leaveCount++;
 				sessions.erase(p++);
@@ -485,6 +493,7 @@ int session_st::sendReservedPackets()
 					break;
 				}
 			}
+			logInfo(LOG_DEBUG,"set mayPause true");
 			mayPause=true;
 			isWaitResponse=true;
 			isPartResponse=false;
@@ -493,37 +502,6 @@ int session_st::sendReservedPackets()
 			isRequestComletely=false;
 			lastReqContSeq=ntohl(tcp_header->seq);
 			lastAck=ntohl(tcp_header->ack_seq);
-		}else if(isWaitBakendClosed)
-		{
-			//if server closed socket before it is connected with backend
-			//then it should not pause,or it will never send remaining 
-			//packets to backend
-			if(mayPause)
-			{
-				if(prePackSize==packSize)
-				{
-					//check if it is a duplicate short packet
-					if(memcmp(data,prevPacket,packSize)==0)
-					{
-						mayPause=false;
-						free(prevPacket);
-						prevPacket=NULL;
-					}
-				}
-				if(mayPause)
-				{
-					if(NULL!=prevPacket)
-					{
-						free(prevPacket);
-					}
-					//if two consecutive packets has no content,
-					//then it will not send the second packet
-					break;	
-				}
-			}
-			mayPause=true;
-			prevPacket=copy_ip_packet(ip_header);
-			prePackSize=packSize;
 		}else if(tcp_header->rst){
 			reset_flag=true;
 			isOmitTransfer=false;
@@ -638,6 +616,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	handshakePackets.push_back(data);
 	if(isMySqlCopy)
 	{
+		isPureRequestBegin=true;
 		if(fir_auth_user_pack)
 		{
 			isLoginCopyed=true;	
@@ -844,7 +823,13 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 	tcp_header2->ack=1;
 	
 	tcp_header2->ack_seq = virtual_next_sequence;
-	tcp_header2->seq =htonl(nextSeq); 
+	if(isClientClosed)
+	{
+		tcp_header2->seq =htonl(nextSeq-1); 
+	}else
+	{
+		tcp_header2->seq =htonl(nextSeq); 
+	}
 	tcp_header2->window= 65535;
 	send_ip_packet(fake_ip_addr,fake_fin_buf,
 			virtual_next_sequence,&nextSeq,&sendConPackets);
@@ -912,7 +897,7 @@ void session_st::establishConnectionForClosedConn()
 			client_ip_addr=ip_header->saddr;
 		}else
 		{
-			logInfo(LOG_DEBUG,"erase fake_ip_addr\n");
+			logInfo(LOG_DEBUG,"erase fake_ip_addr");
 			trueIPContainer.erase(get_ip_port_value(fake_ip_addr,
 						tcp_header->source));
 		}
@@ -1106,6 +1091,11 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	{
 		logInfo(LOG_NOTICE,"ack from back is less than nextSeq:%u,%u,port=%u",
 				ack,nextSeq,client_port);
+		if(isClientClosed&&!tcp_header->fin)
+		{
+			sendFakedFinToBackend(ip_header,tcp_header);
+			return;
+		}
 		if(tot_len>0)
 		{
 			needContinueProcessingForBakAck=true;
@@ -1134,7 +1124,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	{
 		logInfo(LOG_INFO,"recv fin from backend:%u",client_port);
 		isTestConnClosed=true;
-		isWaitBakendClosed=false;
 		isWaitResponse=false;
 		isTrueWaitResponse=false;
 		isResponseCompletely=true;
@@ -1283,6 +1272,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 			sendFakedFinToBackByCliePack(ip_header,tcp_header);
 			isClientClosed=true;
 			logInfo(LOG_NOTICE,"set client closed flag:%u",client_port);
+		}else
+		{
+			sendFakedFinToBackByCliePack(ip_header,tcp_header);
 		}
 		return;
 	}
@@ -1364,7 +1356,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		//client sends fin ,and the server acks it
 		if(virtual_ack == tcp_header->seq)
 		{
-			if(isWaitResponse||isWaitBakendClosed)
+			if(isWaitResponse)
 			{
 				logInfo(LOG_DEBUG,"push back packet");
 				unsend.push_back(copy_ip_packet(ip_header));
@@ -1404,11 +1396,18 @@ void session_st::process_recv(struct iphdr *ip_header,
 	uint32_t tmpLastAck=lastAck;
 	bool isNewRequest=false;
 	bool isNeedOmit=false;
-
+	if(isMySqlCopy)
+	{
+		if(!isGreeingReceived&&isHalfWayIntercepted)
+		{
+			unsend.push_back(copy_ip_packet(ip_header));
+			return;
+		}
+	}
 	if(contSize>0)
 	{
 		reqContentPackets++;
-		if(isMySqlCopy&&isSynIntercepted)
+		if(isMySqlCopy&&!isHalfWayIntercepted)
 		{
 			if(!isPureRequestBegin)
 			{
@@ -1423,6 +1422,15 @@ void session_st::process_recv(struct iphdr *ip_header,
 				{
 					isNeedOmit=true;
 					isPureRequestBegin=true;
+					logInfo(LOG_INFO,"this is the sec auth packet");
+				}
+				if(0==packetNumber)
+				{
+					if(isLoginSuccessful)
+					{
+						isPureRequestBegin=true;
+						logInfo(LOG_INFO,"it has no sec auth packet");
+					}
 				}
 			}
 			if(isNeedOmit)
@@ -1626,45 +1634,37 @@ void session_st::process_recv(struct iphdr *ip_header,
 				handshakePackets.push_back(data);
 			}
 		}
-		if(isWaitBakendClosed)
+		if(isWaitResponse)
 		{
-			//record the asyn close,then wait for backend server response
 			unsend.push_back(copy_ip_packet(ip_header));
-			logInfo(LOG_DEBUG,"push back fin ack for server active close ");
+			logInfo(LOG_DEBUG,"wait backent server's response");
+			if(checkSendingDeadReqs())
+			{
+				sendReservedPackets();
+			}
 		}else
 		{
-			if(isWaitResponse)
+			if(isClientClosed)
 			{
 				unsend.push_back(copy_ip_packet(ip_header));
-				logInfo(LOG_DEBUG,"wait backent server's response");
+				logInfo(LOG_DEBUG,"save ack for server fin");
 				if(checkSendingDeadReqs())
 				{
 					sendReservedPackets();
 				}
 			}else
 			{
-				if(isClientClosed)
+				if(SEND_REQUEST==virtual_status)
 				{
-					unsend.push_back(copy_ip_packet(ip_header));
-					logInfo(LOG_DEBUG,"save ack for server fin");
-					if(checkSendingDeadReqs())
-					{
-						sendReservedPackets();
-					}
-				}else
+					isWaitResponse=true;
+					isPartResponse=false;
+					isResponseCompletely=false;
+				}
+				if(!isResponseCompletely)
 				{
-					if(SEND_REQUEST==virtual_status)
-					{
-						isWaitResponse=true;
-						isPartResponse=false;
-						isResponseCompletely=false;
-					}
-					if(!isResponseCompletely)
-					{
-						send_ip_packet(fake_ip_addr,
-								(unsigned char *)ip_header,
-								virtual_next_sequence,&nextSeq,&sendConPackets);
-					}
+					send_ip_packet(fake_ip_addr,
+							(unsigned char *)ip_header,
+							virtual_next_sequence,&nextSeq,&sendConPackets);
 				}
 			}
 		}
@@ -1709,14 +1709,6 @@ bool isPacketNeeded(const char *packet)
 				(tcp_header->dest==local_port))
 		{
 			isNeeded=true;
-		}
-		else if(checkLocalIPValid(ip_header->saddr) && 
-				(tcp_header->source==local_port))
-		{
-			if(tcp_header->fin)
-			{
-				isNeeded=true;
-			}
 		}
 	}
 	return isNeeded;
@@ -1881,25 +1873,6 @@ void process(char *packet)
 					{
 						sessions[value].process_recv(ip_header,tcp_header);
 					}
-				}
-			}
-		}
-	}
-	else if(checkLocalIPValid(ip_header->saddr) && 
-			(tcp_header->source==local_port))
-	{
-		//when the packet comes from local server 
-		if(tcp_header->fin)
-		{
-			logInfo(LOG_DEBUG,"server fin from local ip and local port");
-			SessIterator iter = sessions.find(get_ip_port_value(
-						ip_header->daddr,tcp_header->dest));
-			if(iter != sessions.end())
-			{
-				if(!iter->second.isClientClosed)
-				{
-					//server sends fin to the client
-					iter->second.isWaitBakendClosed=true;
 				}
 			}
 		}

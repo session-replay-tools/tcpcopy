@@ -74,7 +74,6 @@ struct session_st
 
 	bool    reset_flag;
 	bool    over_flag;
-	bool 	isWaitBakendClosed;
 	bool 	isClientClosed;
 	bool 	isTestConnClosed;
 	bool 	isWaitResponse;
@@ -204,7 +203,6 @@ struct session_st
 		reset_flag = false;
 		over_flag = false;
 		isWaitPreviousPacket=false;
-		isWaitBakendClosed=false;
 		isClientClosed=false;
 		isKeepalive=false;
 		isWaitResponse=false;
