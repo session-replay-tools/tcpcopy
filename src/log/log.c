@@ -25,6 +25,41 @@ void initLogInfo()
 /**
  * this function is not thread safe
  */
+void logInfoForSel(int level,const char *fmt, va_list args)
+{
+	struct tm localTime;
+	time_t t;
+	char timeStr[32];
+	struct tm* pLocalTime=NULL;
+	char* pTimeStr=NULL;
+	size_t len=0;
+	if(global_out_level >= level)
+	{
+		if (file) {
+			t=time(0);
+			fprintf(file,"[%s] ",err_levels[level]);
+			pLocalTime=localtime_r(&t,&localTime);
+			if(NULL == pLocalTime)
+			{
+				return;
+			}
+			pTimeStr=asctime_r(pLocalTime,timeStr);
+			if(NULL == pTimeStr)
+			{
+				return;
+			}
+			len=strlen(pTimeStr);
+			pTimeStr[len-1]=':';
+			fprintf(file,"%s",pTimeStr);
+			(void)vfprintf(file, fmt, args);
+			fprintf( file, "\n" );
+		}
+	}
+}
+
+/**
+ * this function is not thread safe
+ */
 void logInfo(int level,const char *fmt, ...)
 {
 	va_list args;

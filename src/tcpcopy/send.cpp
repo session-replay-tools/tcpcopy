@@ -44,97 +44,12 @@ int send_close()
 	return 0;
 }
 
-static unsigned short csum (unsigned short *packet, int packlen) 
-{ 
-	register unsigned long sum = 0; 
-	while (packlen > 1) {
-		sum+= *(packet++); 
-		packlen-=2; 
-	} 
-	if (packlen > 0) 
-		sum += *(unsigned char *)packet; 
-	while (sum >> 16) 
-		sum = (sum & 0xffff) + (sum >> 16); 
-	return (unsigned short) ~sum; 
-} 
-
-static unsigned short buf[2048]; 
-static unsigned short tcpcsum(unsigned char *iphdr,unsigned short *packet,
-		int packlen) 
-{ 
-	unsigned short res; 
-	memcpy(buf,iphdr+12,8); 
-	*(buf+4)=htons((unsigned short)(*(iphdr+9))); 
-	*(buf+5)=htons((unsigned short)packlen); 
-	memcpy(buf+6,packet,packlen); 
-	res = csum(buf,packlen+12); 
-	return res; 
-} 
 
 /**
  * sending one ip packet(it will not go through ip fragmentation))
  */
-uint32_t send_ip_packet(uint64_t fake_ip_addr,
-		unsigned char *data,uint32_t ack_seq,uint32_t* nextSeq,
-		size_t* sendConPackets)
+uint32_t send_ip_packet(struct iphdr* ip_header,uint16_t tot_len)
 {
-	if(! data)
-	{
-		logInfo(LOG_ERR,"error ip data is null");
-		return 0;
-	}
-	struct iphdr *ip_header = (struct iphdr *)data;
-	uint16_t size_ip = ip_header->ihl<<2;
-	struct tcphdr *tcp_header = (struct tcphdr *)(data+size_ip);
-	tcp_header->dest = remote_port;
-	ip_header->daddr = remote_ip;
-	if(fake_ip_addr!=0)
-	{
-		tcp_header->seq=htonl(*nextSeq);
-		ip_header->saddr= fake_ip_addr;
-		if(tcp_header->syn)
-		{
-			*nextSeq=*nextSeq+1;
-		}
-		if(tcp_header->fin)
-		{
-			*nextSeq=*nextSeq+1;
-		}
-	}else
-	{
-		*nextSeq=ntohl(tcp_header->seq);
-		if(tcp_header->syn)
-		{
-			*nextSeq=*nextSeq+1;
-		}
-		else if(tcp_header->fin)
-		{
-			*nextSeq=*nextSeq+1;
-		}
-	}
-	if(tcp_header->ack)
-	{
-		tcp_header->ack_seq = ack_seq;
-	}
-	tcp_header->check = 0;
-	uint16_t size_tcp= tcp_header->doff<<2;
-	uint16_t tot_len  = ntohs(ip_header->tot_len);
-	uint16_t contenLen=tot_len-size_ip-size_tcp;
-	if(contenLen>0)
-	{
-		*nextSeq=*nextSeq+contenLen;
-		*sendConPackets=*sendConPackets+1;
-	}
-	
-	tcp_header->check = tcpcsum((unsigned char *)ip_header,
-			(unsigned short *)tcp_header,tot_len-size_ip);
-	ip_header->check = 0;
-	//for linux 
-	//The two fields that are always filled in are: the IP checksum 
-	//(hopefully for us - it saves us the trouble) and the total length, 
-	//iph->tot_len, of the datagram 
-	ip_header->check = csum((unsigned short *)ip_header,size_ip); 
-	outputPacketForDebug(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
 	//the IP layer isn't involved at all. This has one negative effect in result
 	//(although in performance it's better): no IP fragmentation will take place
 	//if needed. This means that a raw packet larger than the MTU of the 
@@ -147,8 +62,6 @@ uint32_t send_ip_packet(uint64_t fake_ip_addr,
 	if(send_len == -1)
 	{
 		perror("send to");
-		logInfo(LOG_ERR,"send to backend error,tot_len is:%d,contentlen:%d",
-				tot_len,contenLen);
 	}
 	return send_len;
 

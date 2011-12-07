@@ -2,6 +2,7 @@
 #define  _TCP_REDIRECT_SESSION_H_INC
 
 #include "../log/log.h"
+#include <stdarg.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <sys/time.h>
@@ -290,6 +291,7 @@ struct session_st
 	}
 	void outputPacket(int level,int flag,struct iphdr *ip_header,
 			struct tcphdr *tcp_header);
+	void selectiveLogInfo(int level,const char *fmt, ...);
 	int sendReservedLostPackets();
 	int sendReservedPackets();
 	bool checkPacketLost(struct iphdr *ip_header,
@@ -311,6 +313,9 @@ struct session_st
 	void sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 			struct tcphdr* tcp_header);
 	void save_header_info(struct iphdr *ip_header,struct tcphdr *tcp_header);
+	uint32_t wrap_send_ip_packet(uint64_t fake_ip_addr,
+		unsigned char *data,uint32_t ack_seq);
+
 	bool checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 			struct tcphdr *tcp_header);
 	void process_recv(struct iphdr *ip_header,struct tcphdr *tcp_header);

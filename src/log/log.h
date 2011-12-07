@@ -22,6 +22,7 @@ extern "C"
 #define LOG_DEBUG             8 
 
 	void initLogInfo();
+	void logInfoForSel(int level,const char *fmt, va_list args);
 	void logInfo(int level,const char *fmt, ...);
 	void endLogInfo();
 
