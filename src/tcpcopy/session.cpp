@@ -136,7 +136,7 @@ static int clearTimeoutTcpSessions()
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastRecvRespContentTime;
-		if(diff<5)
+		if(diff<60)
 		{
 			p++;
 			continue;
@@ -1192,6 +1192,11 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
 	
+	time_t current=time(0);
+	if(contSize>0)
+	{
+		lastRecvRespContentTime=current;
+	}
 	if(ack > nextSeq)
 	{
 		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,port=%u",
@@ -1270,7 +1275,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	}
 
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+contSize);
-	time_t current;
 	bool isMtuModifed=false;
 	bool isGreetReceivedPacket=false; 
 	
@@ -1279,9 +1283,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	//the following is not 100 percent right here
 	if(contSize>0||needContinueProcessingForBakAck)
 	{
-		current=time(0);
 		respContentPackets++;
-		lastRecvRespContentTime=current;
 		virtual_next_sequence =next_seq;
 		if(!isClientClosed)
 		{
