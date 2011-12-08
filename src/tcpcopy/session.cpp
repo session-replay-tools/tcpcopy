@@ -449,7 +449,6 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 	//iph->tot_len, of the datagram 
 	ip_header->check = csum((unsigned short *)ip_header,size_ip); 
 	outputPacket(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
-	send_ip_packet(ip_header,tot_len);
 	uint32_t sendLen=send_ip_packet(ip_header,tot_len);
 	if(-1==sendLen)
 	{
