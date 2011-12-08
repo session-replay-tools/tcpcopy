@@ -362,7 +362,11 @@ void session_st::selectiveLogInfo(int level,const char *fmt, ...)
 	va_start(args, fmt);
 	if(logLevel!=global_out_level)
 	{
-		logInfoForSel(LOG_WARN, fmt, args);
+		logRecordNum++;
+		if(logRecordNum<100000)
+		{
+			logInfoForSel(LOG_WARN, fmt, args);
+		}
 	}else
 	{
 		logInfoForSel(level, fmt, args);
@@ -704,6 +708,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 		struct tcphdr* tcp_header)
 {
 	isHalfWayIntercepted=true;
+	isBackSynReceived=false;
 
 	unsigned char fake_syn_buf[FAKE_SYN_BUF_SIZE];
 	memset(fake_syn_buf,0,FAKE_SYN_BUF_SIZE);
@@ -1225,13 +1230,12 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		if(isBackSynReceived)
 		{
 			selectiveLogInfo(LOG_DEBUG,"recv syn from back again");
-			return;
 		}else
 		{
+			totalConnections++;
 			isBackSynReceived=true;
+			selectiveLogInfo(LOG_DEBUG,"recv syn from back");
 		}
-		selectiveLogInfo(LOG_DEBUG,"recv syn from back");
-		totalConnections++;
 		virtual_next_sequence = plus_1(tcp_header->seq);
 		virtual_status = SYN_CONFIRM;
 		if(isHalfWayIntercepted)
@@ -1669,16 +1673,23 @@ void session_st::process_recv(struct iphdr *ip_header,
 				//if the connection to the backend is closed,then we 
 				//reestablish the connection and 
 				//we reserve all comming packets for later disposure
-				initSessionForKeepalive();
-				establishConnectionForClosedConn();
 				if(isMySqlCopy)
 				{
-					if(fir_auth_user_pack)
+					if(checkPacketPaddingForMysql(ip_header,tcp_header))
 					{
-						unsend.push_back(copy_ip_packet(fir_auth_user_pack));
+						selectiveLogInfo(LOG_NOTICE,"init session");
+						initSessionForKeepalive();
+						establishConnectionForNoSynPackets(ip_header,
+								tcp_header);
+						unsend.push_back(copy_ip_packet(ip_header));
 					}
+				}else
+				{
+					selectiveLogInfo(LOG_NOTICE,"init session");
+					initSessionForKeepalive();
+					establishConnectionForClosedConn();
+					unsend.push_back(copy_ip_packet(ip_header));
 				}
-				unsend.push_back(copy_ip_packet(ip_header));
 				return;
 			}
 			if(!isSynIntercepted)

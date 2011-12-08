@@ -122,6 +122,7 @@ struct session_st
 	size_t baseReqContentPackets;
 	size_t respContentPackets;
 	size_t numberOfExcutes;
+	size_t logRecordNum;
 	time_t lastUpdateTime;
 	time_t lastResponseDispTime;
 	time_t createTime;
@@ -182,6 +183,7 @@ struct session_st
 
 	void initSessionForKeepalive()
 	{
+		logRecordNum=0;
 		lastRespPacketSize=0;
 		total_seq_omit=0;
 		logLevel=global_out_level;
