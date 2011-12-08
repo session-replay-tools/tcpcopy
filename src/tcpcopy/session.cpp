@@ -957,7 +957,10 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	logLevel=LOG_DEBUG;
+	if(isMySqlCopy)
+	{
+		logLevel=LOG_DEBUG;
+	}
 	selectiveLogInfo(LOG_WARN,"establish conn for already connected conn:%u",
 			client_port);
 	int sock=address_find_sock(tcp_header->dest);
