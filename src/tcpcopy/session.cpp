@@ -256,7 +256,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"session timeout");
+			logInfo(LOG_NOTICE,"session timeout");
 			leaveCount++;
 			if(p->second.unsend.size()>10)
 			{
@@ -507,7 +507,7 @@ int session_st::sendReservedLostPackets()
 			{
 				if(contSize==0)
 				{
-					selectiveLogInfo(LOG_WARN,"error info in lostPackets:%u",
+					selectiveLogInfo(LOG_NOTICE,"error info in lostPackets:%u",
 							client_port);
 				}else
 				{
@@ -960,7 +960,7 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 	{
 		logLevel=LOG_DEBUG;
 	}
-	selectiveLogInfo(LOG_WARN,"establish conn for already connected conn:%u",
+	selectiveLogInfo(LOG_NOTICE,"establish conn for already connected conn:%u",
 			client_port);
 	int sock=address_find_sock(tcp_header->dest);
 	if(-1 == sock)
@@ -1432,7 +1432,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 	if(tcp_header->rst)
 	{
 		isClientReset=true;
-		selectiveLogInfo(LOG_WARN,"reset from client");
+		selectiveLogInfo(LOG_NOTICE,"reset from client");
 		if(isWaitResponse)
 		{
 			selectiveLogInfo(LOG_NOTICE,"push reset pack from cli");
