@@ -578,7 +578,8 @@ int session_st::sendReservedPackets()
 	int count=0;
 	bool isOmitTransfer=false;
 	uint32_t curAck=0;
-	selectiveLogInfo(LOG_DEBUG,"send reserved packets:%u",client_port);
+	selectiveLogInfo(LOG_DEBUG,"send reserved packets:%u,port:%u",
+			unsend.size(),client_port);
 	while(! unsend.empty()&&!needPause)
 	{
 		unsigned char *data = unsend.front();
@@ -733,7 +734,6 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 		isPureRequestBegin=true;
 		if(fir_auth_user_pack)
 		{
-			isLoginCopyed=true;	
 			struct iphdr* tmp_ip_header=NULL;
 			struct tcphdr* tmp_tcp_header=NULL;
 			tmp_ip_header=(struct iphdr*)copy_ip_packet(fir_auth_user_pack);
@@ -952,6 +952,7 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
+	logLevel=LOG_DEBUG;
 	selectiveLogInfo(LOG_WARN,"establish conn for already connected conn:%u",
 			client_port);
 	int sock=address_find_sock(tcp_header->dest);
@@ -1221,6 +1222,14 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 
 	if( tcp_header->syn)
 	{
+		if(isBackSynReceived)
+		{
+			selectiveLogInfo(LOG_DEBUG,"recv syn from back again");
+			return;
+		}else
+		{
+			isBackSynReceived=true;
+		}
 		selectiveLogInfo(LOG_DEBUG,"recv syn from back");
 		totalConnections++;
 		virtual_next_sequence = plus_1(tcp_header->seq);
@@ -1380,13 +1389,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	if(isMySqlCopy)
-	{
-		if(client_port%10==3)
-		{
-			logLevel=LOG_DEBUG;	
-		}
-	}
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 	//check if it needs sending fin to backend
 	if(candidateErased)
@@ -1529,6 +1531,11 @@ void session_st::process_recv(struct iphdr *ip_header,
 			unsend.push_back(copy_ip_packet(ip_header));
 			return;
 		}
+		if(0==contSize&&!isGreeingReceived)
+		{
+			unsend.push_back(copy_ip_packet(ip_header));
+			return;
+		}
 	}
 	if(contSize>0)
 	{
@@ -1552,11 +1559,8 @@ void session_st::process_recv(struct iphdr *ip_header,
 				}
 				if(0==packetNumber)
 				{
-					if(isLoginSuccessful)
-					{
-						isPureRequestBegin=true;
-						selectiveLogInfo(LOG_INFO,"it has no sec auth packet");
-					}
+					isPureRequestBegin=true;
+					selectiveLogInfo(LOG_INFO,"it has no sec auth packet");
 				}
 			}
 			if(isNeedOmit)
@@ -1578,15 +1582,26 @@ void session_st::process_recv(struct iphdr *ip_header,
 				}
 				if(isGreeingReceived)
 				{
-					isLoginSuccessful=true;
+					isLoginReceived=true;
+					loginCanSendFlag=true;
 				}else
 				{
-					selectiveLogInfo(LOG_DEBUG,"push back mysql login req");
-					unsend.push_back(copy_ip_packet(ip_header));
-					return;
+					if(!isLoginReceived)
+					{
+						isLoginReceived=true;
+						selectiveLogInfo(LOG_DEBUG,"push back mysql login req");
+						unsend.push_back(copy_ip_packet(ip_header));
+						return;
+					}
 				}
 			}
 			checkMysqlPacketNeededForReconnection(ip_header,tcp_header);
+			if(!isGreeingReceived)
+			{
+				selectiveLogInfo(LOG_DEBUG,"push back client packs for mysql");
+				unsend.push_back(copy_ip_packet(ip_header));
+				return;
+			}
 		}
 
 		time_t current=time(0);
@@ -1623,12 +1638,13 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(!isHalfWayIntercepted&&
 				handshakePackets.size()<handshakeExpectedPackets)
 		{
+			selectiveLogInfo(LOG_DEBUG,"buffer the handshake packet");
 			unsigned char *data=copy_ip_packet(ip_header);
 			handshakePackets.push_back(data);
 		}
 		//when client send multiple packet more quickly than the local network
 		unsend.push_back(copy_ip_packet(ip_header));
-		selectiveLogInfo(LOG_DEBUG,"SYN_SEND push back the packet from client");
+		selectiveLogInfo(LOG_DEBUG,"SYN_SEND push back the packet from cli");
 	}
 	else
 	{
