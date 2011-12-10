@@ -159,7 +159,8 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				p->second.candidateErased=true;
-				logInfo(LOG_WARN,"unsend:set candidate erased");
+				logInfo(LOG_WARN,"unsend:candidate erased:%u,port=%u",
+						p->second.unsend.size(),p->second.client_port);
 				p++;
 				continue;
 			}
@@ -959,9 +960,13 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 	if(isMySqlCopy)
 	{
 		logLevel=LOG_DEBUG;
+		selectiveLogInfo(LOG_WARN,"establish conn for already connected:%u",
+				client_port);
+	}else
+	{
+		selectiveLogInfo(LOG_NOTICE,"establish conn for already connected:%u",
+				client_port);
 	}
-	selectiveLogInfo(LOG_NOTICE,"establish conn for already connected conn:%u",
-			client_port);
 	int sock=address_find_sock(tcp_header->dest);
 	if(-1 == sock)
 	{
@@ -1530,17 +1535,24 @@ void session_st::process_recv(struct iphdr *ip_header,
 	uint32_t tmpLastAck=lastAck;
 	bool isNewRequest=false;
 	bool isNeedOmit=false;
+	if(!isSynIntercepted)
+	{
+		isHalfWayIntercepted=true;
+	}
 	if(isMySqlCopy)
 	{
-		if(!isGreeingReceived&&isHalfWayIntercepted)
+		if(isSynIntercepted)
 		{
-			unsend.push_back(copy_ip_packet(ip_header));
-			return;
-		}
-		if(0==contSize&&!isGreeingReceived)
-		{
-			unsend.push_back(copy_ip_packet(ip_header));
-			return;
+			if(!isGreeingReceived&&isHalfWayIntercepted)
+			{
+				unsend.push_back(copy_ip_packet(ip_header));
+				return;
+			}
+			if(0==contSize&&!isGreeingReceived)
+			{
+				unsend.push_back(copy_ip_packet(ip_header));
+				return;
+			}
 		}
 	}
 	if(contSize>0)
@@ -1964,6 +1976,7 @@ void process(char *packet)
 						logInfo(LOG_INFO,"dup syn,ses over,time diff:%d",diff);
 					}else
 					{
+						enterCount--;
 						logInfo(LOG_NOTICE,"duplicate syn,time diff:%d",diff);
 						outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
 								tcp_header);
