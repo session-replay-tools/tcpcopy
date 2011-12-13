@@ -1348,10 +1348,20 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 				selectiveLogInfo(LOG_NOTICE,"cur mtu:%u,port:%u",
 						mtu,client_port);
 			}
-			if(tot_len==DEFAULT_RESPONSE_MTU)
+			if(isMySqlCopy)
 			{
-				lastRespPacketSize=tot_len;
-				return;
+				if(tot_len>=DEFAULT_RESPONSE_MTU)
+				{
+					lastRespPacketSize=tot_len;
+					return;
+				}
+			}else
+			{	
+				if(tot_len==DEFAULT_RESPONSE_MTU)
+				{
+					lastRespPacketSize=tot_len;
+					return;
+				}
 			}
 			if(!isMtuModifed&&tot_len==mtu)
 			{

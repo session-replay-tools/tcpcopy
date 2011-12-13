@@ -49,7 +49,7 @@ static void formatOutput(int level,struct iphdr *ip_header)
 	seq=ntohl(tcp_header->seq);
 	ack_seq=ntohl(tcp_header->ack_seq);
 	{
-		logInfo(level,"%s:%u-->%s:%u,length %u,seq=%u,ack_seq=%u",sbuf,
+		logInfo(level,"%s:%u-->%s:%u,length %u ,seq=%u,ack_seq=%u",sbuf,
 				ntohs(tcp_header->source),dbuf,ntohs(tcp_header->dest),
 				packSize,seq,ack_seq);
 	}
