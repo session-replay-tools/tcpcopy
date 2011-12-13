@@ -257,7 +257,8 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_NOTICE,"session timeout");
+			logInfo(LOG_NOTICE,"session timeout,port=%u",
+					p->second.client_port);
 			leaveCount++;
 			if(p->second.unsend.size()>10)
 			{
