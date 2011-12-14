@@ -151,7 +151,7 @@ static int clearTimeoutTcpSessions()
 		}
 		if(p->second.unsend.size()>20)
 		{
-			logInfo(LOG_NOTICE,"internal unsend number:%u,port=%u",
+			logInfo(LOG_NOTICE,"internal unsend number:%u,p=%u",
 					p->second.unsend.size(),p->second.client_port);
 		}
 		if(p->second.unsend.size()>MAXPACKETS)
@@ -159,7 +159,7 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				p->second.candidateErased=true;
-				logInfo(LOG_WARN,"unsend:candidate erased:%u,port=%u",
+				logInfo(LOG_WARN,"unsend:candidate erased:%u,p=%u",
 						p->second.unsend.size(),p->second.client_port);
 				p++;
 				continue;
@@ -170,7 +170,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many unsend packets:%u,port=%u",
+			logInfo(LOG_WARN,"It has too many unsend packets:%u,p=%u",
 					p->second.unsend.size(),p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -191,7 +191,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many lost packets:%u,port=%u",
+			logInfo(LOG_WARN,"It has too many lost packets:%u,p=%u",
 					p->second.lostPackets.size(),p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -212,7 +212,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many handshake packets:%u,port=%u",
+			logInfo(LOG_WARN,"It has too many handshake packets:%u,p=%u",
 					p->second.handshakePackets.size(),p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -235,7 +235,7 @@ static int clearTimeoutTcpSessions()
 					p->second.isStatClosed=true;
 				}
 				activeCount--;
-				logInfo(LOG_WARN,"It has too many mysql packets:%u,port=%u",
+				logInfo(LOG_WARN,"It has too many mysql packets:%u,p=%u",
 						p->second.mysqlSpecialPackets.size(),
 						p->second.client_port);
 				leaveCount++;
@@ -257,12 +257,12 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=true;
 			}
 			activeCount--;
-			logInfo(LOG_NOTICE,"session timeout,port=%u",
+			logInfo(LOG_NOTICE,"session timeout,p=%u",
 					p->second.client_port);
 			leaveCount++;
 			if(p->second.unsend.size()>10)
 			{
-				logInfo(LOG_WARN,"timeout unsend number:%u,port=%u",
+				logInfo(LOG_WARN,"timeout unsend number:%u,p=%u",
 					p->second.unsend.size(),p->second.client_port);
 			}
 			sessions.erase(p++);
@@ -570,6 +570,30 @@ bool session_st::checkSendingDeadReqs()
 	}
 	return false;
 }
+
+/**
+ * check if reserved container has content packet unsent
+ */
+bool session_st::checkReservedContainerHasContent()
+{
+	selectiveLogInfo(LOG_NOTICE,"checkReservedContainerHasContent");
+	for(dataIterator iter=unsend.begin();iter!=unsend.end();iter++)
+	{
+		unsigned char *data =*iter;
+		struct iphdr *ip_header=(struct iphdr*)((char*)data);
+		uint32_t size_ip = ip_header->ihl<<2;
+		struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+		uint32_t size_tcp = tcp_header->doff<<2;
+		uint32_t packSize=ntohs(ip_header->tot_len);
+		uint32_t contSize=packSize-size_tcp-size_ip;
+		if(contSize>0)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
 
 /**
  * send reserved packets to backend
@@ -1221,12 +1245,12 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	}
 	if(ack > nextSeq)
 	{
-		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,port=%u",
+		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,p=%u",
 				ack,nextSeq,client_port);
 		nextSeq=ack;
 	}else if(ack <nextSeq)
 	{
-		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u,port=%u",
+		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u, p=%u",
 				ack,nextSeq,client_port);
 		if(isClientClosed&&!tcp_header->fin)
 		{
@@ -1356,6 +1380,11 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 					lastRespPacketSize=tot_len;
 					return;
 				}
+				if(MIN_RESPONSE_MTU==tot_len)
+				{
+					lastRespPacketSize=tot_len;
+					return;
+				}
 			}else
 			{	
 				if(tot_len==DEFAULT_RESPONSE_MTU)
@@ -1424,7 +1453,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
  */
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
-{
+{	
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 	//check if it needs sending fin to backend
 	if(candidateErased)
@@ -1551,12 +1580,11 @@ void session_st::process_recv(struct iphdr *ip_header,
 		}
 		return;
 	}
-	//processing the other type of packet
+
 	uint16_t tot_len = ntohs(ip_header->tot_len);
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
-
 	uint32_t tmpLastAck=lastAck;
 	bool isNewRequest=false;
 	bool isNeedOmit=false;
@@ -1570,6 +1598,10 @@ void session_st::process_recv(struct iphdr *ip_header,
 		{
 			if(!isGreeingReceived&&isHalfWayIntercepted)
 			{
+				if(contSize>0)
+				{
+					reqContentPackets++;
+				}
 				unsend.push_back(copy_ip_packet(ip_header));
 				return;
 			}
@@ -1611,6 +1643,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				selectiveLogInfo(LOG_NOTICE,"omit sec validation for mysql");
 				total_seq_omit=contSize;
 				global_total_seq_omit=total_seq_omit;
+				reqContentPackets--;
 				return;
 			}
 			if(!isPureRequestBegin)
@@ -1774,6 +1807,12 @@ void session_st::process_recv(struct iphdr *ip_header,
 				{
 					if(checkPacketLost(ip_header,tcp_header,nextSeq))
 					{
+						if(checkReservedContainerHasContent())
+						{
+							selectiveLogInfo(LOG_DEBUG,"push back the pack");
+							unsend.push_back(copy_ip_packet(ip_header));
+							return;
+						}
 						lostPackets.push_back(copy_ip_packet(ip_header));
 						selectiveLogInfo(LOG_DEBUG,"lost and need prev pack");
 						isWaitPreviousPacket=true;

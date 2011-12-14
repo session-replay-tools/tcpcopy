@@ -298,6 +298,7 @@ struct session_st
 	void selectiveLogInfo(int level,const char *fmt, ...);
 	int sendReservedLostPackets();
 	int sendReservedPackets();
+	bool checkReservedContainerHasContent();
 	bool checkPacketLost(struct iphdr *ip_header,
 			struct tcphdr *tcp_header,uint32_t oldSeq);
 	bool checkSendingDeadReqs();
