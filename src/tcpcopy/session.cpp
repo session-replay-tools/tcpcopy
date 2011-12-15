@@ -1274,7 +1274,8 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			totalConnections++;
 			isBackSynReceived=true;
-			selectiveLogInfo(LOG_DEBUG,"recv syn from back");
+			selectiveLogInfo(LOG_DEBUG,"recv syn from back:%u",
+					client_port);
 		}
 		virtual_next_sequence = plus_1(tcp_header->seq);
 		virtual_status = SYN_CONFIRM;
@@ -1454,6 +1455,10 @@ void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {	
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
+	uint16_t tot_len = ntohs(ip_header->tot_len);
+	uint32_t size_ip = ip_header->ihl<<2;
+	uint32_t size_tcp = tcp_header->doff<<2;
+	uint32_t contSize=tot_len-size_tcp-size_ip;
 	//check if it needs sending fin to backend
 	if(candidateErased)
 	{
@@ -1540,50 +1545,53 @@ void session_st::process_recv(struct iphdr *ip_header,
 	if(tcp_header->fin)
 	{
 		selectiveLogInfo(LOG_DEBUG,"recv fin packet from cli");
-		if(isFakedSendingFinToBackend)
+		if(contSize>0)
 		{
-			return;
-		}
-		//client sends fin ,and the server acks it
-		if(virtual_ack == tcp_header->seq)
+			selectiveLogInfo(LOG_NOTICE,"fin has content");
+		}else
 		{
-			if(isWaitResponse)
+			if(isFakedSendingFinToBackend)
+			{
+				return;
+			}
+			//client sends fin ,and the server acks it
+			if(virtual_ack == tcp_header->seq)
+			{
+				if(isWaitResponse)
+				{
+					selectiveLogInfo(LOG_DEBUG,"push back packet");
+					unsend.push_back(copy_ip_packet(ip_header));
+				}else
+				{
+					while(! unsend.empty())
+					{
+						unsigned char *data = unsend.front();
+						free(data);
+						unsend.pop_front();
+					}
+					wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
+							virtual_next_sequence);
+					virtual_status |= CLIENT_FIN;
+					confirmed=true;
+					isClientClosed=true;
+					selectiveLogInfo(LOG_NOTICE,"set client closed flag:%u",
+							client_port);
+				}
+			}
+			else
 			{
 				selectiveLogInfo(LOG_DEBUG,"push back packet");
 				unsend.push_back(copy_ip_packet(ip_header));
-			}else
-			{
-				while(! unsend.empty())
+				if(checkSendingDeadReqs())
 				{
-					unsigned char *data = unsend.front();
-					free(data);
-					unsend.pop_front();
+					sendReservedPackets();
 				}
-				wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
-						virtual_next_sequence);
-				virtual_status |= CLIENT_FIN;
-				confirmed=true;
-				isClientClosed=true;
-				selectiveLogInfo(LOG_NOTICE,"set client closed flag:%u",
-						client_port);
 			}
+			return;
 		}
-		else
-		{
-			selectiveLogInfo(LOG_DEBUG,"push back packet");
-			unsend.push_back(copy_ip_packet(ip_header));
-			if(checkSendingDeadReqs())
-			{
-				sendReservedPackets();
-			}
-		}
-		return;
 	}
 
-	uint16_t tot_len = ntohs(ip_header->tot_len);
-	uint32_t size_ip = ip_header->ihl<<2;
-	uint32_t size_tcp = tcp_header->doff<<2;
-	uint32_t contSize=tot_len-size_tcp-size_ip;
+
 	uint32_t tmpLastAck=lastAck;
 	bool isNewRequest=false;
 	bool isNeedOmit=false;
@@ -1601,11 +1609,13 @@ void session_st::process_recv(struct iphdr *ip_header,
 				{
 					reqContentPackets++;
 				}
+				selectiveLogInfo(LOG_DEBUG,"push back pack for half");
 				unsend.push_back(copy_ip_packet(ip_header));
 				return;
 			}
 			if(0==contSize&&!isGreeingReceived)
 			{
+				selectiveLogInfo(LOG_DEBUG,"push back ack for not recv greet");
 				unsend.push_back(copy_ip_packet(ip_header));
 				return;
 			}
