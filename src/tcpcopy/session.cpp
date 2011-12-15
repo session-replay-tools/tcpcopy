@@ -70,17 +70,17 @@ void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
 	uint16_t window=tcp_header->window;
 	if(BACKEND_FLAG==flag)
 	{
-		logInfo(level,"from bak:%s:%u-->%s:%u,len %u,seq=%u,ack_seq=%u,win:%u",
+		logInfo(level,"from bak:%s:%u-->%s:%u,len %u ,seq=%u,ackseq=%u,win:%u",
 				sbuf,ntohs(tcp_header->source),dbuf,
 				ntohs(tcp_header->dest),packSize,seq,ack_seq,window);
 	}else if(CLIENT_FLAG==flag)
 	{
-		logInfo(level,"recv client:%s:%u-->%s:%u,len %u,seq=%u,ack_seq=%u",
+		logInfo(level,"recv client:%s:%u-->%s:%u,len %u ,seq=%u,ack_seq=%u",
 				sbuf,ntohs(tcp_header->source),dbuf,ntohs(tcp_header->dest),
 				packSize,seq,ack_seq);
 	}else if(SERVER_BACKEND_FLAG==flag)
 	{
-		logInfo(level,"to backend: %s:%u-->%s:%u,len %u,seq=%u,ack_seq=%u",
+		logInfo(level,"to backend: %s:%u-->%s:%u,len %u ,seq=%u,ack_seq=%u",
 				sbuf,ntohs(tcp_header->source),dbuf,ntohs(tcp_header->dest),
 				packSize,seq,ack_seq);
 	}else if(RESERVE_CLIENT_FLAG==flag)
@@ -553,7 +553,7 @@ int session_st::sendReservedLostPackets()
 bool session_st::checkSendingDeadReqs()
 {
 	time_t now=time(0);
-	int diff=now-lastResponseDispTime;
+	int diff=now-lastRecvRespContentTime;
 	/* it will wait for 3 seconds */
 	if(diff <= 3)
 	{
@@ -1250,7 +1250,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		nextSeq=ack;
 	}else if(ack <nextSeq)
 	{
-		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u, p=%u",
+		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u, p:%u",
 				ack,nextSeq,client_port);
 		if(isClientClosed&&!tcp_header->fin)
 		{
@@ -1413,7 +1413,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 					virtual_next_sequence =next_seq;
 					virtual_status = SEND_RESPONSE_CONFIRM;
 					responseReceived++;
-					lastResponseDispTime=current;
 					sendReservedPackets();
 					needContinueProcessingForBakAck=false;
 					lastRespPacketSize=tot_len;
@@ -1772,6 +1771,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			}
 			if(checkRetransmission(tcp_header,lastReqContSeq))
 			{
+				reqContentPackets--;
 				selectiveLogInfo(LOG_DEBUG,"it is a retransm from client");
 				return;
 			}else
@@ -1788,8 +1788,13 @@ void session_st::process_recv(struct iphdr *ip_header,
 						if(sendConPackets<baseConPackets)
 						{
 							selectiveLogInfo(LOG_NOTICE,
-									"it has reserved cont packs");
-							savePacket=true;
+									"it has reserved cont packs:%u,%u",
+									sendConPackets,baseConPackets);
+							if(checkReservedContainerHasContent())
+							{
+								selectiveLogInfo(LOG_NOTICE,"save pack");
+								savePacket=true;
+							}
 						}
 					}
 					if(savePacket)

@@ -124,7 +124,6 @@ struct session_st
 	size_t numberOfExcutes;
 	size_t logRecordNum;
 	time_t lastUpdateTime;
-	time_t lastResponseDispTime;
 	time_t createTime;
 	time_t lastRecvRespContentTime;
 
@@ -231,7 +230,6 @@ struct session_st
 		baseReqContentPackets=0;
 		respContentPackets=0;
 		lastUpdateTime=time(0);
-		lastResponseDispTime=lastUpdateTime;
 		createTime=lastUpdateTime;
 		lastRecvRespContentTime=lastUpdateTime;
 
