@@ -40,6 +40,7 @@ int send_close()
 	if(sock>0)
 	{
 		close(sock);
+		sock=-1;
 	}
 	return 0;
 }
@@ -57,11 +58,16 @@ uint32_t send_ip_packet(struct iphdr* ip_header,uint16_t tot_len)
 	//which does general sk_buff cleaning,is called and an error EMSGSIZE 
 	//is returned. On the other hand, normal raw socket frag
 	//if tot_len is more than 1500,it will fail
-	int send_len = sendto(sock,(char *)ip_header,tot_len,0,
-			(struct sockaddr *)&toaddr,sizeof(toaddr));
-	if(send_len == -1)
+	int send_len=0;
+	if(sock > 0)
 	{
-		perror("send to");
+		send_len = sendto(sock,(char *)ip_header,tot_len,0,
+				(struct sockaddr *)&toaddr,sizeof(toaddr));
+		if(-1 == send_len)
+		{
+			logInfo(LOG_ERR,"sock is:%u",sock);
+			perror("send to");
+		}
 	}
 	return send_len;
 

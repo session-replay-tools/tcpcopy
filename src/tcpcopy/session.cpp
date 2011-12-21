@@ -41,6 +41,8 @@ static uint64_t totalConnections=0;
 static uint64_t totalNumOfNoRespSession=0;
 static struct iphdr *fir_auth_user_pack=NULL;
 static uint32_t global_total_seq_omit=0;
+static time_t lastCheckDeadSessionTime=time(0);
+
 
 /**
  * output packet info for debug
@@ -123,6 +125,7 @@ static int clearTimeoutTcpSessions()
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
 	size_t MAXPACKETS=5000;
+	size_t size=0;
 	if(isMySqlCopy)
 	{
 		MAXPACKETS=10000;
@@ -132,7 +135,6 @@ static int clearTimeoutTcpSessions()
 		normalBase=keepaliveBase;
 		logInfo(LOG_NOTICE,"keepalive connection global");
 	}
-	logInfo(LOG_NOTICE,"session number when coming:%u",sessions.size());
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastRecvRespContentTime;
@@ -149,18 +151,14 @@ static int clearTimeoutTcpSessions()
 		{
 			tmpBase=normalBase;
 		}
-		if(p->second.unsend.size()>20)
-		{
-			logInfo(LOG_NOTICE,"internal unsend number:%u,p=%u",
-					p->second.unsend.size(),p->second.client_port);
-		}
-		if(p->second.unsend.size()>MAXPACKETS)
+		size=p->second.unsend.size();
+		if(size>MAXPACKETS)
 		{
 			if(!p->second.candidateErased)
 			{
 				p->second.candidateErased=true;
 				logInfo(LOG_WARN,"unsend:candidate erased:%u,p=%u",
-						p->second.unsend.size(),p->second.client_port);
+						size,p->second.client_port);
 				p++;
 				continue;
 			}
@@ -171,12 +169,13 @@ static int clearTimeoutTcpSessions()
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many unsend packets:%u,p=%u",
-					p->second.unsend.size(),p->second.client_port);
+					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
 			continue;
 		}
-		if(p->second.lostPackets.size()>MAXPACKETS)
+		size=p->second.lostPackets.size();
+		if(size>MAXPACKETS)
 		{
 			if(!p->second.candidateErased)
 			{
@@ -192,12 +191,13 @@ static int clearTimeoutTcpSessions()
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many lost packets:%u,p=%u",
-					p->second.lostPackets.size(),p->second.client_port);
+					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
 			continue;
 		}
-		if(p->second.handshakePackets.size()>MAXPACKETS)
+		size=p->second.handshakePackets.size();
+		if(size>MAXPACKETS)
 		{
 			if(!p->second.candidateErased)
 			{
@@ -213,14 +213,15 @@ static int clearTimeoutTcpSessions()
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many handshake packets:%u,p=%u",
-					p->second.handshakePackets.size(),p->second.client_port);
+					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
 			continue;
 		}
 		if(isMySqlCopy)
 		{
-			if(p->second.mysqlSpecialPackets.size()>MAXPACKETS)
+			size=p->second.mysqlSpecialPackets.size();
+			if(size>MAXPACKETS)
 			{
 				if(!p->second.candidateErased)
 				{
@@ -236,8 +237,7 @@ static int clearTimeoutTcpSessions()
 				}
 				activeCount--;
 				logInfo(LOG_WARN,"It has too many mysql packets:%u,p=%u",
-						p->second.mysqlSpecialPackets.size(),
-						p->second.client_port);
+						size,p->second.client_port);
 				leaveCount++;
 				sessions.erase(p++);
 				continue;
@@ -260,10 +260,11 @@ static int clearTimeoutTcpSessions()
 			logInfo(LOG_NOTICE,"session timeout,p=%u",
 					p->second.client_port);
 			leaveCount++;
-			if(p->second.unsend.size()>10)
+			size=p->second.unsend.size();
+			if(size>10)
 			{
 				logInfo(LOG_WARN,"timeout unsend number:%u,p=%u",
-					p->second.unsend.size(),p->second.client_port);
+						size,p->second.client_port);
 			}
 			sessions.erase(p++);
 		}else
@@ -271,8 +272,20 @@ static int clearTimeoutTcpSessions()
 			p++;
 		}
 	}
-	logInfo(LOG_NOTICE,"session number when leaving:%u",sessions.size());
 	return 0;
+}
+
+static int sendDeadTcpPacketsForSessions()
+{
+	logInfo(LOG_NOTICE,"sendDeadTcpPacketsForSessions");
+	for(SessIterator p=sessions.begin();p!=sessions.end();p++)
+	{
+		if(p->second.checkSendingDeadReqs())
+		{
+			logInfo(LOG_WARN,"send dead reqs from global");
+			p->second.sendReservedPackets();
+		}
+	}
 }
 
 static bool checkLocalIPValid(uint32_t ip)
@@ -487,7 +500,6 @@ bool session_st::checkPacketLost(struct iphdr* ip_header,
  */
 int session_st::sendReservedLostPackets()
 {
-	selectiveLogInfo(LOG_DEBUG,"lost packet size:%d",lostPackets.size());
 	/* TODO sort the lostPackets */
 	/* if not sorted,the following logic will not work for long requests */
 
@@ -554,8 +566,7 @@ bool session_st::checkSendingDeadReqs()
 {
 	time_t now=time(0);
 	int diff=now-lastRecvRespContentTime;
-	/* it will wait for 3 seconds */
-	if(diff <= 3)
+	if(diff < 2)
 	{
 		return false;
 	}
@@ -607,8 +618,7 @@ int session_st::sendReservedPackets()
 	int count=0;
 	bool isOmitTransfer=false;
 	uint32_t curAck=0;
-	selectiveLogInfo(LOG_DEBUG,"send reserved packets:%u,port:%u",
-			unsend.size(),client_port);
+	selectiveLogInfo(LOG_DEBUG,"send reserved packets,port:%u",client_port);
 	while(! unsend.empty()&&!needPause)
 	{
 		unsigned char *data = unsend.front();
@@ -992,7 +1002,6 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 {
 	if(isMySqlCopy)
 	{
-		logLevel=LOG_DEBUG;
 		selectiveLogInfo(LOG_WARN,"establish conn for already connected:%u",
 				client_port);
 	}else
@@ -1029,10 +1038,11 @@ void session_st::establishConnectionForClosedConn()
 	selectiveLogInfo(LOG_INFO,"reestablish connection for keepalive:%u",
 			client_port);
 
-	if(handshakePackets.size()!=handshakeExpectedPackets)
+	size_t size=handshakePackets.size();
+	if(size!=handshakeExpectedPackets)
 	{
 		selectiveLogInfo(LOG_WARN,"hand Packets size not expected:%u,exp:%u",
-				handshakePackets.size(),handshakeExpectedPackets);
+				size,handshakeExpectedPackets);
 	}else
 	{
 		unsigned char *data = handshakePackets.front();
@@ -1237,8 +1247,9 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
-	
 	time_t current=time(0);
+	bool isStopSendReservedPacks=false;
+
 	if(contSize>0)
 	{
 		lastRecvRespContentTime=current;
@@ -1378,31 +1389,32 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			{
 				if(tot_len>=DEFAULT_RESPONSE_MTU)
 				{
-					lastRespPacketSize=tot_len;
-					return;
+					isStopSendReservedPacks=true;
 				}
-				if(MIN_RESPONSE_MTU==tot_len)
+				if(!isStopSendReservedPacks&&MIN_RESPONSE_MTU==tot_len)
 				{
-					lastRespPacketSize=tot_len;
-					return;
+					isStopSendReservedPacks=true;
 				}
 			}else
 			{	
 				if(tot_len==DEFAULT_RESPONSE_MTU)
 				{
-					lastRespPacketSize=tot_len;
-					return;
+					isStopSendReservedPacks=true;
 				}
 			}
-			if(!isMtuModifed&&tot_len==mtu)
+			if(!isStopSendReservedPacks&&!isMtuModifed&&tot_len==mtu)
 			{
 				if(lastRespPacketSize==tot_len)
+				{
+					isStopSendReservedPacks=true;
+				}
+			}
+			{
+				if(isStopSendReservedPacks)
 				{
 					lastRespPacketSize=tot_len;
 					return;
 				}
-			}
-			{
 				selectiveLogInfo(LOG_DEBUG,"receive from backend");
 				if(isWaitResponse||isGreetReceivedPacket)
 				{
@@ -1454,6 +1466,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {	
+	lastRecvClientContentTime=time(0);
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 	uint16_t tot_len = ntohs(ip_header->tot_len);
 	uint32_t size_ip = ip_header->ihl<<2;
@@ -1524,7 +1537,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				for(dataIterator iter2=datas->begin();
 						iter2!=datas->end();)
 				{
-					 free(*(iter2++));
+					free(*(iter2++));
 				}
 				mysqlContainer.erase(iter);
 				delete(datas);
@@ -1689,8 +1702,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			}
 		}
 
-		time_t current=time(0);
-		double diff=current-lastRecvRespContentTime;
+		double diff=lastRecvClientContentTime-lastRecvRespContentTime;
 		//if the sesssion recv no response for more than 5 min
 		//then enter the suicide process
 		if(diff > 300)
@@ -1864,7 +1876,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				}else
 				{
 					requestProcessed++;
-					if(requestProcessed>30)
+				if(requestProcessed>30)
 					{
 						isKeepalive=true;
 					}
@@ -1992,6 +2004,16 @@ void process(char *packet)
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
 	}
+	time_t now=time(0);
+	double diff=now-lastCheckDeadSessionTime;
+	if(diff>3)
+	{
+		if(sessions.size()>0)
+		{
+			sendDeadTcpPacketsForSessions();
+			lastCheckDeadSessionTime=now;
+		}
+	}
 
 	ip_header = (struct iphdr*)packet;
 	size_ip = ip_header->ihl<<2;
@@ -2015,7 +2037,7 @@ void process(char *packet)
 		if(iter != sessions.end())
 		{
 			iter->second.confirmed=false;
-			iter->second.lastUpdateTime=time(0);
+			iter->second.lastUpdateTime=now;
 			iter->second.update_virtual_status(ip_header,tcp_header);
 			if( iter->second.is_over())
 			{
@@ -2045,7 +2067,6 @@ void process(char *packet)
 			if(iter != sessions.end())
 			{
 				//check if it is a duplicate syn
-				time_t now=time(0);
 				int diff=now-iter->second.createTime;
 				//if less than 30 seconds,then we consider it is a dup syn 
 				if(diff < 30)
@@ -2100,7 +2121,7 @@ void process(char *packet)
 			{
 				iter->second.confirmed=false;
 				iter->second.process_recv(ip_header,tcp_header);
-				iter->second.lastUpdateTime=time(0);
+				iter->second.lastUpdateTime=now;
 				if( (iter->second.is_over()))
 				{
 					if(!iter->second.isStatClosed)
