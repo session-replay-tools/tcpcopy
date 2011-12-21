@@ -1876,12 +1876,11 @@ void session_st::process_recv(struct iphdr *ip_header,
 				}else
 				{
 					requestProcessed++;
-				if(requestProcessed>30)
+					if(requestProcessed>30)
 					{
 						isKeepalive=true;
 					}
 					selectiveLogInfo(LOG_DEBUG,"a new request from client");
-					
 				}
 			}
 		}else
