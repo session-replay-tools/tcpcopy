@@ -41,7 +41,7 @@ static uint64_t totalConnections=0;
 static uint64_t totalNumOfNoRespSession=0;
 static struct iphdr *fir_auth_user_pack=NULL;
 static uint32_t global_total_seq_omit=0;
-static time_t lastCheckDeadSessionTime=time(0);
+static time_t lastCheckDeadSessionTime=0;
 
 
 /**
@@ -572,22 +572,31 @@ bool session_st::checkSendingDeadReqs()
 		if(reqContentPackets>sendConPackets)
 		{
 			unsendContPackets=reqContentPackets-sendConPackets;
-			if(unsendContPackets<100)
+			if(unsendContPackets<500)
 			{
 				return false;
 			}
+			if(lastRespPacketSize<DEFAULT_RESPONSE_MTU)
+			{
+				return false;
+			}
+		}else
+		{
+			selectiveLogInfo(LOG_WARN,"port:%u,sent=%u,total cont reqs:%u",
+					client_port,sendConPackets,reqContentPackets);
+			return false;
 		}
 	}
 	if(isPartResponse)
 	{
-		if(unsendContPackets>=100)
+		if(unsendContPackets>0)
 		{
-			selectiveLogInfo(LOG_WARN,"send dead requests to back:%u",
-					client_port);
+			selectiveLogInfo(LOG_WARN,"reqs to back:%u,psize=%u,unsend:%u",
+					client_port,lastRespPacketSize,unsendContPackets);
 		}else
 		{
-			selectiveLogInfo(LOG_NOTICE,"send dead requests to back:%u",
-					client_port);
+			selectiveLogInfo(LOG_NOTICE,"reqs to back:%u,psize=%u",
+					client_port,lastRespPacketSize);
 		}
 		isWaitResponse=false;
 		isPartResponse=false;
@@ -1991,10 +2000,6 @@ void process(char *packet)
 	uint32_t size_ip;
 	bool reusePort=false;
 	time_t now=time(0);
-	if(0 == timeCount)
-	{
-		lastCheckDeadSessionTime=now;
-	}
 	timeCount++;
 
 	if(timeCount%100000==0)
@@ -2019,13 +2024,16 @@ void process(char *packet)
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
 	}
-	double diff=now-lastCheckDeadSessionTime;
-	if(diff>2)
+	if(lastCheckDeadSessionTime>0)
 	{
-		if(sessions.size()>0)
+		double diff=now-lastCheckDeadSessionTime;
+		if(diff>2)
 		{
-			sendDeadTcpPacketsForSessions();
-			lastCheckDeadSessionTime=now;
+			if(sessions.size()>0)
+			{
+				sendDeadTcpPacketsForSessions();
+				lastCheckDeadSessionTime=now;
+			}
 		}
 	}
 
@@ -2071,6 +2079,7 @@ void process(char *packet)
 	else if(checkLocalIPValid(ip_header->daddr) && 
 			(tcp_header->dest==local_port))
 	{
+		lastCheckDeadSessionTime=now;
 		//when the packet comes from client
 		uint64_t value=get_ip_port_value(ip_header->saddr,tcp_header->source);
 		if(tcp_header->syn)
