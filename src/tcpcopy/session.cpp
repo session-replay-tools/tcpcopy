@@ -138,7 +138,7 @@ static int clearTimeoutTcpSessions()
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastRecvRespContentTime;
-		if(diff<30)
+		if(diff < 10)
 		{
 			p++;
 			continue;
@@ -566,11 +566,12 @@ bool session_st::checkSendingDeadReqs()
 {
 	time_t now=time(0);
 	int diff=now-lastRecvRespContentTime;
+	size_t unsendContPackets=0;
 	if(diff < 2)
 	{
 		if(reqContentPackets>sendConPackets)
 		{
-			size_t unsendContPackets=reqContentPackets-sendConPackets;
+			unsendContPackets=reqContentPackets-sendConPackets;
 			if(unsendContPackets<100)
 			{
 				return false;
@@ -579,8 +580,15 @@ bool session_st::checkSendingDeadReqs()
 	}
 	if(isPartResponse)
 	{
-		selectiveLogInfo(LOG_NOTICE,"send dead requests to backend:%u",
-				client_port);
+		if(unsendContPackets>=100)
+		{
+			selectiveLogInfo(LOG_WARN,"send dead requests to back:%u",
+					client_port);
+		}else
+		{
+			selectiveLogInfo(LOG_NOTICE,"send dead requests to back:%u",
+					client_port);
+		}
 		isWaitResponse=false;
 		isPartResponse=false;
 		isResponseCompletely=false;
@@ -1395,10 +1403,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			if(isMySqlCopy)
 			{
 				if(tot_len>=DEFAULT_RESPONSE_MTU)
-				{
-					isStopSendReservedPacks=true;
-				}
-				if(!isStopSendReservedPacks&&MIN_RESPONSE_MTU==tot_len)
 				{
 					isStopSendReservedPacks=true;
 				}
