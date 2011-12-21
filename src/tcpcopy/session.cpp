@@ -138,7 +138,7 @@ static int clearTimeoutTcpSessions()
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastRecvRespContentTime;
-		if(diff<60)
+		if(diff<30)
 		{
 			p++;
 			continue;
@@ -568,7 +568,14 @@ bool session_st::checkSendingDeadReqs()
 	int diff=now-lastRecvRespContentTime;
 	if(diff < 2)
 	{
-		return false;
+		if(reqContentPackets>sendConPackets)
+		{
+			size_t unsendContPackets=reqContentPackets-sendConPackets;
+			if(unsendContPackets<100)
+			{
+				return false;
+			}
+		}
 	}
 	if(isPartResponse)
 	{
@@ -2005,7 +2012,7 @@ void process(char *packet)
 	}
 	time_t now=time(0);
 	double diff=now-lastCheckDeadSessionTime;
-	if(diff>3)
+	if(diff>2)
 	{
 		if(sessions.size()>0)
 		{
