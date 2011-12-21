@@ -1986,6 +1986,11 @@ void process(char *packet)
 	struct iphdr *ip_header;
 	uint32_t size_ip;
 	bool reusePort=false;
+	time_t now=time(0);
+	if(0 == timeCount)
+	{
+		lastCheckDeadSessionTime=now;
+	}
 	timeCount++;
 
 	if(timeCount%100000==0)
@@ -2010,7 +2015,6 @@ void process(char *packet)
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
 	}
-	time_t now=time(0);
 	double diff=now-lastCheckDeadSessionTime;
 	if(diff>2)
 	{
