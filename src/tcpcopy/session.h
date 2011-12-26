@@ -16,7 +16,6 @@ typedef struct virtual_ip_addr{
 	int num;
 }virtual_ip_addr;
 
-extern bool isMySqlCopy;
 extern uint32_t sample_ip;
 extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
@@ -69,39 +68,6 @@ struct session_st
 	uint32_t client_ip_addr;
 	uint32_t local_dest_ip_addr;
 	uint32_t total_seq_omit;
-	uint16_t virtual_status;
-	uint16_t client_ip_id;
-	uint16_t client_port;
-
-	bool    reset_flag;
-	bool    over_flag;
-	bool 	isClientClosed;
-	bool 	isTestConnClosed;
-	bool 	isWaitResponse;
-	bool 	isPartResponse;
-	bool 	isResponseCompletely;
-	bool 	isTrueWaitResponse;
-	bool 	isWaitPreviousPacket;
-	bool 	isSegContinue;
-	bool 	isRequestComletely;
-	bool    isRequestBegin;
-	bool 	isKeepalive;
-	bool 	confirmed;
-	bool 	isFakedSendingFinToBackend;
-	bool 	isSynIntercepted;
-	bool 	isBackSynReceived;
-	bool 	isHalfWayIntercepted;
-	bool 	isStatClosed;
-	bool 	isClientReset;
-	bool    isPureRequestBegin;
-	bool    isGreeingReceived;
-	bool    loginCanSendFlag;
-	bool    candidateErased;
-	bool    isSeqAckNotConsistent;
-	bool    isLoginReceived;
-	bool    hasPrepareStat;
-	bool    isExcuteForTheFirstTime;
-	bool    needContinueProcessingForBakAck;
 
 	uint32_t lastAckFromResponse;
 	uint32_t lastSeqFromResponse;
@@ -127,8 +93,41 @@ struct session_st
 	time_t createTime;
 	time_t lastRecvRespContentTime;
 	time_t lastRecvClientContentTime;
+	uint16_t virtual_status;
+	uint16_t client_ip_id;
+	uint16_t client_port;
 
-	int logLevel;
+	unsigned logLevel:4;
+	unsigned reset_flag:1;
+	unsigned over_flag:1;
+	unsigned isClientClosed:1;
+	unsigned isTestConnClosed:1;
+	unsigned isWaitResponse:1;
+	unsigned isPartResponse:1;
+	unsigned isResponseCompletely:1;
+	unsigned isTrueWaitResponse:1;
+	unsigned isWaitPreviousPacket:1;
+	unsigned isSegContinue:1;
+	unsigned isRequestComletely:1;
+	unsigned isRequestBegin:1;
+	unsigned isKeepalive:1;
+	unsigned confirmed:1;
+	unsigned isFakedSendingFinToBackend:1;
+	unsigned isSynIntercepted:1;
+	unsigned isBackSynReceived:1;
+	unsigned isHalfWayIntercepted:1;
+	unsigned isStatClosed:1;
+	unsigned isClientReset:1;
+	unsigned isPureRequestBegin:1;
+	unsigned isGreeingReceived:1;
+	unsigned loginCanSendFlag:1;
+	unsigned candidateErased:1;
+	unsigned isSeqAckNotConsistent:1;
+	unsigned isLoginReceived:1;
+	unsigned hasPrepareStat:1;
+	unsigned isExcuteForTheFirstTime:1;
+	unsigned needContinueProcessingForBakAck:1;
+	unsigned isHighPressure:1;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)
 	{
@@ -188,35 +187,36 @@ struct session_st
 		total_seq_omit=0;
 		logLevel=global_out_level;
 		fake_ip_addr=0;
-		isFakedSendingFinToBackend=false;
-		isTestConnClosed=false;
-		isSynIntercepted=false;
-		isBackSynReceived=false;
-		isHalfWayIntercepted=false;
-		isStatClosed=false;
-		isClientReset=false;
-		isPureRequestBegin=false;
-		isGreeingReceived=false;
-		loginCanSendFlag=false;
-		candidateErased=false;
-		isSeqAckNotConsistent=false;
-		isLoginReceived=false;
-		hasPrepareStat=false;
+		isFakedSendingFinToBackend=0;
+		isTestConnClosed=0;
+		isSynIntercepted=0;
+		isBackSynReceived=0;
+		isHalfWayIntercepted=0;
+		isStatClosed=0;
+		isClientReset=0;
+		isPureRequestBegin=0;
+		isGreeingReceived=0;
+		loginCanSendFlag=0;
+		candidateErased=0;
+		isSeqAckNotConsistent=0;
+		isLoginReceived=0;
+		hasPrepareStat=0;
 		isExcuteForTheFirstTime=true;
-		needContinueProcessingForBakAck=false;
+		needContinueProcessingForBakAck=0;
+		isHighPressure=0;
 		virtual_status = SYN_SEND;
-		reset_flag = false;
-		over_flag = false;
-		isWaitPreviousPacket=false;
-		isClientClosed=false;
-		isKeepalive=false;
-		isWaitResponse=false;
-		isPartResponse=false;
-		isResponseCompletely=false;
+		reset_flag = 0;
+		over_flag = 0;
+		isWaitPreviousPacket=0;
+		isClientClosed=0;
+		isKeepalive=0;
+		isWaitResponse=0;
+		isPartResponse=0;
+		isResponseCompletely=0;
 		isRequestComletely=true;
-		isRequestBegin=false;
-		isTrueWaitResponse=false;
-		isSegContinue=false;
+		isRequestBegin=0;
+		isTrueWaitResponse=0;
+		isSegContinue=0;
 		confirmed=true;
 
 		lastReqContSeq=0;
@@ -301,7 +301,7 @@ struct session_st
 	void sendFakedSynAckToBackend(struct iphdr* ip_header,
 			struct tcphdr* tcp_header);
 	void sendFakedAckToBackend(struct iphdr* ip_header,
-			struct tcphdr* tcp_header);
+			struct tcphdr* tcp_header,bool changeSeq);
 	void sendFakedFinToBackend(struct iphdr* ip_header,
 			struct tcphdr* tcp_header);
 	void sendFakedFinToBackByCliePack(struct iphdr* ip_header,

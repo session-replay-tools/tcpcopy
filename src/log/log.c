@@ -22,6 +22,13 @@ void initLogInfo()
 	file=fopen("error.log","a+");
 }
 
+static struct timeval getTime()
+{
+	struct timeval tp;
+	gettimeofday(&tp,NULL);
+	return tp;
+}
+
 /**
  * this function is not thread safe
  */
@@ -33,6 +40,7 @@ void logInfoForSel(int level,const char *fmt, va_list args)
 	struct tm* pLocalTime=NULL;
 	char* pTimeStr=NULL;
 	size_t len=0;
+	struct timeval usec=getTime();
 	if(global_out_level >= level)
 	{
 		if (file) {
@@ -49,8 +57,8 @@ void logInfoForSel(int level,const char *fmt, va_list args)
 				return;
 			}
 			len=strlen(pTimeStr);
-			pTimeStr[len-1]=':';
-			fprintf(file,"%s",pTimeStr);
+			pTimeStr[len-1]='\0';
+			fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
 			(void)vfprintf(file, fmt, args);
 			fprintf( file, "\n" );
 		}
@@ -69,6 +77,7 @@ void logInfo(int level,const char *fmt, ...)
 	struct tm* pLocalTime=NULL;
 	char* pTimeStr=NULL;
 	size_t len=0;
+	struct timeval usec=getTime();
 	if(global_out_level >= level)
 	{
 		if (file) {
@@ -85,8 +94,8 @@ void logInfo(int level,const char *fmt, ...)
 				return;
 			}
 			len=strlen(pTimeStr);
-			pTimeStr[len-1]=':';
-			fprintf(file,"%s",pTimeStr);
+			pTimeStr[len-1]='\0';
+			fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
 			va_start(args, fmt);
 			(void)vfprintf(file, fmt, args);
 			fprintf( file, "\n" );

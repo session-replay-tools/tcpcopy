@@ -33,6 +33,8 @@
 #define MAX_ADDR 67106816
 #define SUCCESS 0
 #define FAILURE -1
+#define MULTI_THREADS 1
+#define MEMORY_USAGE "VmRSS:"
 
 static pthread_mutex_t mutex;
 static pthread_cond_t empty;
@@ -43,11 +45,10 @@ static uint64_t readCounter=0;
 static uint64_t writeCounter=0;
 
 static int raw_sock;
+static uint64_t eventTotal=0;
 static uint64_t packetsPutNum=0;
 static bool isReadCompletely=true;
 
-/*if true,then tcpcopy mysql request replication*/
-bool isMySqlCopy=false;
 
 /**
  * put one packet to buffered pool
@@ -235,7 +236,54 @@ static int retrieve_raw_sockets(int sock)
 	return 0;
 }
 
+static void checkMemoryUsage(const char* path)
+{
+	FILE* fp=fopen(path,"r");
+	if(!fp)
+	{
+		logInfo(LOG_ERR,"%s can't be opened",path);
+		exit(1);
+	}
+	const int BUF_SIZE=2048;
+	char buf[BUF_SIZE];
+	char *p=NULL;
+	int index=0;
+	int memory=0;
+	while(fgets(buf,BUF_SIZE,fp)!=NULL)
+	{
+		if(strlen(buf)>0&&strstr(buf,MEMORY_USAGE)!=NULL)
+		{
+			logInfo(LOG_WARN,"memory usage:%s",buf);
+			index=strlen(MEMORY_USAGE);
+			p=buf+index;
+
+			while(index<2048&&!isdigit(p[0]))
+			{
+				index++;
+				p++;
+			}
+			if(index<2048)
+			{
+				memory=atoi(p);
+				if(memory>1048576)
+				{
+					logInfo(LOG_ERR,"too much memory:%d KB",memory);
+					perror("tcpcopy occupies too much memory");
+					exit(1);
+				}
+			}else
+			{
+				perror("tcpcopy can't get memory info");
+				logInfo(LOG_ERR,"no memroy info");
+				exit(1);
+			}
+		}
+	}
+}
+
+
 static void dispose_event(int fd){
+	eventTotal++;
 	if(fd == raw_sock){
 		retrieve_raw_sockets(fd);
 	}else{
@@ -254,6 +302,15 @@ static void dispose_event(int fd){
 		process((char*)msg);
 #endif
 	}   
+	if((eventTotal%1000000)==0)
+	{
+		//retrieve memory usage by this process
+		//if more than 1G,then suicide
+		int pid=getpid();
+		char path[512];
+		sprintf(path,"/proc/%d/status",pid);
+		checkMemoryUsage(path);
+	}
 }
 
 static void exit_tcp_copy(){

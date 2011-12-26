@@ -10,6 +10,9 @@
 
 using std::map;
 
+//#define DEBUG_TCPCOPY 1
+#define TCPCOPY_MYSQL 1
+
 uint32_t localhost_ip;
 uint32_t sample_ip;
 uint32_t client_ip;
@@ -42,7 +45,11 @@ static uint64_t totalNumOfNoRespSession=0;
 static struct iphdr *fir_auth_user_pack=NULL;
 static uint32_t global_total_seq_omit=0;
 static time_t lastCheckDeadSessionTime=0;
-
+static uint64_t bakTotal=0;
+static double bakTotalTimes=0;
+static uint64_t clientTotal=0;
+static double clientTotalTimes=0;
+static uint64_t sendPackets=0;
 
 /**
  * output packet info for debug
@@ -126,10 +133,9 @@ static int clearTimeoutTcpSessions()
 	double ratio=100.0*enterCount/(totalRequests+1);
 	size_t MAXPACKETS=5000;
 	size_t size=0;
-	if(isMySqlCopy)
-	{
-		MAXPACKETS=10000;
-	}
+#if (TCPCOPY_MYSQL)
+	MAXPACKETS=10000;
+#endif
 	if(ratio<10)
 	{
 		normalBase=keepaliveBase;
@@ -156,7 +162,7 @@ static int clearTimeoutTcpSessions()
 		{
 			if(!p->second.candidateErased)
 			{
-				p->second.candidateErased=true;
+				p->second.candidateErased=1;
 				logInfo(LOG_WARN,"unsend:candidate erased:%u,p=%u",
 						size,p->second.client_port);
 				p++;
@@ -165,7 +171,7 @@ static int clearTimeoutTcpSessions()
 			deleteObsoCount++;
 			if(!p->second.isStatClosed)
 			{
-				p->second.isStatClosed=true;
+				p->second.isStatClosed=1;
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many unsend packets:%u,p=%u",
@@ -180,14 +186,14 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				logInfo(LOG_WARN,"lostPackets:set candidate erased");
-				p->second.candidateErased=true;
+				p->second.candidateErased=1;
 				p++;
 				continue;
 			}
 			deleteObsoCount++;
 			if(!p->second.isStatClosed)
 			{
-				p->second.isStatClosed=true;
+				p->second.isStatClosed=1;
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many lost packets:%u,p=%u",
@@ -202,14 +208,14 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				logInfo(LOG_WARN,"handshake:set candidate erased");
-				p->second.candidateErased=true;
+				p->second.candidateErased=1;
 				p++;
 				continue;
 			}
 			deleteObsoCount++;
 			if(!p->second.isStatClosed)
 			{
-				p->second.isStatClosed=true;
+				p->second.isStatClosed=1;
 			}
 			activeCount--;
 			logInfo(LOG_WARN,"It has too many handshake packets:%u,p=%u",
@@ -218,43 +224,42 @@ static int clearTimeoutTcpSessions()
 			sessions.erase(p++);
 			continue;
 		}
-		if(isMySqlCopy)
-		{
-			size=p->second.mysqlSpecialPackets.size();
-			if(size>MAXPACKETS)
-			{
-				if(!p->second.candidateErased)
-				{
-					logInfo(LOG_WARN,"mysql:set candidate erased");
-					p->second.candidateErased=true;
-					p++;
-					continue;
-				}
-				deleteObsoCount++;
-				if(!p->second.isStatClosed)
-				{
-					p->second.isStatClosed=true;
-				}
-				activeCount--;
-				logInfo(LOG_WARN,"It has too many mysql packets:%u,p=%u",
-						size,p->second.client_port);
-				leaveCount++;
-				sessions.erase(p++);
-				continue;
-			}
-		}
-		if(p->second.lastUpdateTime<tmpBase)
+#if (TCPCOPY_MYSQL)
+		size=p->second.mysqlSpecialPackets.size();
+		if(size>MAXPACKETS)
 		{
 			if(!p->second.candidateErased)
 			{
-				p->second.candidateErased=true;
+				logInfo(LOG_WARN,"mysql:set candidate erased");
+				p->second.candidateErased=1;
 				p++;
 				continue;
 			}
 			deleteObsoCount++;
 			if(!p->second.isStatClosed)
 			{
-				p->second.isStatClosed=true;
+				p->second.isStatClosed=1;
+			}
+			activeCount--;
+			logInfo(LOG_WARN,"It has too many mysql packets:%u,p=%u",
+					size,p->second.client_port);
+			leaveCount++;
+			sessions.erase(p++);
+			continue;
+		}
+#endif
+		if(p->second.lastUpdateTime<tmpBase)
+		{
+			if(!p->second.candidateErased)
+			{
+				p->second.candidateErased=1;
+				p++;
+				continue;
+			}
+			deleteObsoCount++;
+			if(!p->second.isStatClosed)
+			{
+				p->second.isStatClosed=1;
 			}
 			activeCount--;
 			logInfo(LOG_NOTICE,"session timeout,p=%u",
@@ -301,6 +306,13 @@ static bool checkLocalIPValid(uint32_t ip)
 		}
 	}
 	return result;
+}
+
+static struct timeval getTime()
+{
+	struct timeval tp; 
+	gettimeofday(&tp,NULL);
+	return tp; 
 }
 
 static inline uint32_t minus_1(uint32_t seq)
@@ -397,8 +409,10 @@ static bool checkTcpSeg(struct tcphdr *tcp_header,uint32_t oldSeq)
 	uint32_t curSeq=ntohl(tcp_header->seq);
 	if(curSeq<=oldSeq)
 	{
+#if (DEBUG_TCPCOPY)
 		logInfo(LOG_INFO,"current seq %u ,last seq:%u from client",
 				curSeq,oldSeq);
+#endif
 		return false;
 	}
 	return true;
@@ -463,7 +477,10 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 	//(hopefully for us - it saves us the trouble) and the total length, 
 	//iph->tot_len, of the datagram 
 	ip_header->check = csum((unsigned short *)ip_header,size_ip); 
+#if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
+#endif
+	sendPackets++;
 	uint32_t sendLen=send_ip_packet(ip_header,tot_len);
 	if(-1==sendLen)
 	{
@@ -487,8 +504,10 @@ bool session_st::checkPacketLost(struct iphdr* ip_header,
 			unsend.push_back(copy_ip_packet(ip_header));
 		}else
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_INFO,"seq in the packet:%u,expected seq:%u",
 					curSeq,oldSeq);
+#endif
 			return true;
 		}
 	}
@@ -521,16 +540,20 @@ int session_st::sendReservedLostPackets()
 			{
 				if(contSize==0)
 				{
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_NOTICE,"error info in lostPackets:%u",
 							client_port);
+#endif
 				}else
 				{
-					isWaitResponse=true;
-					isPartResponse=false;
-					isResponseCompletely=false;
+					isWaitResponse=1;
+					isPartResponse=0;
+					isResponseCompletely=0;
 				}
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"send reserved packets for lost:%u",
 						client_port);
+#endif
 				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence);
 				if(contSize>0)
 				{
@@ -541,8 +564,10 @@ int session_st::sendReservedLostPackets()
 				lostPackets.erase(iter++);
 			}else
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"cant send packets for lost:%u",
 						client_port);
+#endif
 				iter++;
 			}
 		}
@@ -553,7 +578,7 @@ int session_st::sendReservedLostPackets()
 	}
 	if(lostPackets.empty())
 	{
-		isWaitPreviousPacket=false;
+		isWaitPreviousPacket=0;
 	}
 
 	return 0;
@@ -569,12 +594,20 @@ bool session_st::checkSendingDeadReqs()
 	size_t unsendContPackets=0;
 	if(diff < 2)
 	{
-		if(reqContentPackets>sendConPackets)
+		if(reqContentPackets>=sendConPackets)
 		{
 			unsendContPackets=reqContentPackets-sendConPackets;
-			if(unsendContPackets<500)
+			if(unsendContPackets<5)
 			{
+#if (DEBUG_TCPCOPY) 
+				selectiveLogInfo(LOG_DEBUG,"f port:%u,sent=%u,tot co reqs:%u",
+					client_port,sendConPackets,reqContentPackets);
+#endif
+				isHighPressure=0;
 				return false;
+			}else 
+			{
+				isHighPressure=1;
 			}
 			if(lastRespPacketSize<DEFAULT_RESPONSE_MTU)
 			{
@@ -582,8 +615,6 @@ bool session_st::checkSendingDeadReqs()
 			}
 		}else
 		{
-			selectiveLogInfo(LOG_WARN,"port:%u,sent=%u,total cont reqs:%u",
-					client_port,sendConPackets,reqContentPackets);
 			return false;
 		}
 	}
@@ -591,16 +622,19 @@ bool session_st::checkSendingDeadReqs()
 	{
 		if(unsendContPackets>0)
 		{
-			selectiveLogInfo(LOG_WARN,"reqs to back:%u,psize=%u,unsend:%u",
-					client_port,lastRespPacketSize,unsendContPackets);
+			selectiveLogInfo(LOG_WARN,"to back:%u,size=%u,send:%u,totCRq=%u",
+					client_port,lastRespPacketSize,sendConPackets,
+					reqContentPackets);
 		}else
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"reqs to back:%u,psize=%u",
 					client_port,lastRespPacketSize);
+#endif
 		}
-		isWaitResponse=false;
-		isPartResponse=false;
-		isResponseCompletely=false;
+		isWaitResponse=0;
+		isPartResponse=0;
+		isResponseCompletely=0;
 		return true;
 	}
 	return false;
@@ -611,7 +645,9 @@ bool session_st::checkSendingDeadReqs()
  */
 bool session_st::checkReservedContainerHasContent()
 {
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"checkReservedContainerHasContent");
+#endif
 	for(dataIterator iter=unsend.begin();iter!=unsend.end();iter++)
 	{
 		unsigned char *data =*iter;
@@ -635,14 +671,18 @@ bool session_st::checkReservedContainerHasContent()
  */
 int session_st::sendReservedPackets()
 {
-	bool needPause=false;
-	bool mayPause=false;
+	bool needPause=0;
+	bool mayPause=0;
 	unsigned char* prevPacket=NULL;
 	uint32_t prePackSize=0;
 	int count=0;
-	bool isOmitTransfer=false;
+	bool isOmitTransfer=0;
 	uint32_t curAck=0;
+#if (DEBUG_TCPCOPY)
+	selectiveLogInfo(LOG_DEBUG,"sendResPas port:%u,sent=%u,tot co reqs:%u",
+	client_port,sendConPackets,reqContentPackets);
 	selectiveLogInfo(LOG_DEBUG,"send reserved packets,port:%u",client_port);
+#endif
 	while(! unsend.empty()&&!needPause)
 	{
 		unsigned char *data = unsend.front();
@@ -654,30 +694,33 @@ int session_st::sendReservedPackets()
 		uint32_t contSize=packSize-size_tcp-size_ip;
 		if(contSize>0)
 		{
-			if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+			if(!isGreeingReceived)
 			{
-				if(!isGreeingReceived)
-				{
-					break;
-				}
+				break;
 			}
+#endif
 			curAck=ntohl(tcp_header->ack_seq);
 			if(mayPause)
 			{
 				if(curAck!=lastAck)
 				{
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"cease to send:%u",
 							client_port);
+#endif
 					break;
 				}
 			}
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"set mayPause true");
-			mayPause=true;
-			isWaitResponse=true;
-			isPartResponse=false;
-			isResponseCompletely=false;
-			isRequestBegin=true;
-			isRequestComletely=false;
+#endif
+			mayPause=1;
+			isWaitResponse=1;
+			isPartResponse=0;
+			isResponseCompletely=0;
+			isRequestBegin=1;
+			isRequestComletely=0;
 			lastReqContSeq=ntohl(tcp_header->seq);
 			lastAck=ntohl(tcp_header->ack_seq);
 		}else if(tcp_header->rst){
@@ -685,40 +728,48 @@ int session_st::sendReservedPackets()
 			{
 				break;
 			}
-			reset_flag=true;
-			isOmitTransfer=false;
+			reset_flag=1;
+			isOmitTransfer=0;
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"send reset packet to backend:%u",
 					client_port);
-			needPause=true;
+#endif
+			needPause=1;
 		}else if(tcp_header->fin)
 		{
 			if(isWaitResponse)
 			{
 				break;
 			}
-			isClientClosed=true;
+			isClientClosed=1;
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"set cli closed flag:%u",client_port);
-			needPause=true;
+#endif
+			needPause=1;
 			virtual_status |= CLIENT_FIN;
-			confirmed=true;
+			confirmed=1;
 		}else if(0==contSize&&isWaitResponse)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"omit tranfer:size 0 and wait resp:%u",
 					client_port);
-			isOmitTransfer=true;
+#endif
+			isOmitTransfer=1;
 		}else if (0 == contSize)
 		{
 			if(SYN_CONFIRM != virtual_status)
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"omit tranfer:notsynack,%u",
 						client_port);
-				isOmitTransfer=true;
+#endif
+				isOmitTransfer=1;
 			}
 			if(isRequestBegin)
 			{
-				isOmitTransfer=true;
-				isRequestBegin=false;
-				isRequestComletely=true;
+				isOmitTransfer=1;
+				isRequestBegin=0;
+				isRequestComletely=1;
 			}
 		}
 
@@ -733,12 +784,14 @@ int session_st::sendReservedPackets()
 		{
 			if(isWaitResponse)
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"cease to send reserved packs:%u",
 						client_port);
+#endif
 				break;
 			}
 		}
-		isOmitTransfer=false;
+		isOmitTransfer=0;
 	}
 	return count;
 }
@@ -774,15 +827,17 @@ void session_st::outputPacket(int level,int flag,struct iphdr *ip_header,
 void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 		struct tcphdr* tcp_header)
 {
-	isHalfWayIntercepted=true;
-	isBackSynReceived=false;
+	isHalfWayIntercepted=1;
+	isBackSynReceived=0;
 
 	unsigned char fake_syn_buf[FAKE_SYN_BUF_SIZE];
 	memset(fake_syn_buf,0,FAKE_SYN_BUF_SIZE);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_syn_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_syn_buf+20);
 
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"sendFakedSynToBackend:%u",client_port);
+#endif
 	ip_header2->version = 4;
 	ip_header2->ihl = 5;
 	ip_header2->tot_len = htons(FAKE_SYN_BUF_SIZE);
@@ -801,81 +856,84 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	virtual_next_sequence=tcp_header->seq;
 	unsigned char *data=copy_ip_packet(ip_header2);
 	handshakePackets.push_back(data);
-	if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+	isPureRequestBegin=1;
+	if(fir_auth_user_pack)
 	{
-		isPureRequestBegin=true;
-		if(fir_auth_user_pack)
+		struct iphdr* tmp_ip_header=NULL;
+		struct tcphdr* tmp_tcp_header=NULL;
+		tmp_ip_header=(struct iphdr*)copy_ip_packet(fir_auth_user_pack);
+		tmp_ip_header->saddr=ip_header2->saddr;
+		size_t size_ip= tmp_ip_header->ihl<<2;
+		size_t total_len= ntohs(tmp_ip_header->tot_len);
+		tmp_tcp_header=(struct tcphdr*)((char *)tmp_ip_header+size_ip);
+		size_t size_tcp= tmp_tcp_header->doff<<2;
+		size_t contentLen=total_len-size_ip-size_tcp;
+		tmp_tcp_header->source=tcp_header2->source;
+		unsend.push_back((unsigned char*)tmp_ip_header);
+		total_seq_omit=global_total_seq_omit;
+		uint32_t total_cont_len=contentLen;	
+		MysqlIterator mysqlIter=mysqlContainer.find(client_port);
+		dataContainer* datas=NULL;
+		struct iphdr* tmp_ip_header2=NULL;
+		struct tcphdr* tmp_tcp_header2=NULL;
+		//TODO to be removed later
+		if(mysqlIter!= mysqlContainer.end())
 		{
-			struct iphdr* tmp_ip_header=NULL;
-			struct tcphdr* tmp_tcp_header=NULL;
-			tmp_ip_header=(struct iphdr*)copy_ip_packet(fir_auth_user_pack);
-			tmp_ip_header->saddr=ip_header2->saddr;
-			size_t size_ip= tmp_ip_header->ihl<<2;
-			size_t total_len= ntohs(tmp_ip_header->tot_len);
-			tmp_tcp_header=(struct tcphdr*)((char *)tmp_ip_header+size_ip);
-			size_t size_tcp= tmp_tcp_header->doff<<2;
-			size_t contentLen=total_len-size_ip-size_tcp;
-			tmp_tcp_header->source=tcp_header2->source;
-			unsend.push_back((unsigned char*)tmp_ip_header);
-			total_seq_omit=global_total_seq_omit;
-			uint32_t total_cont_len=contentLen;	
-			MysqlIterator mysqlIter=mysqlContainer.find(client_port);
-			dataContainer* datas=NULL;
-			struct iphdr* tmp_ip_header2=NULL;
-			struct tcphdr* tmp_tcp_header2=NULL;
-			//TODO to be removed later
-			if(mysqlIter!= mysqlContainer.end())
+			datas=mysqlIter->second;
+			//check if we insert COM_STMT_PREPARE statements 
+			for(dataIterator iter=datas->begin();
+					iter!=datas->end();iter++)
 			{
-				datas=mysqlIter->second;
-				//check if we insert COM_STMT_PREPARE statements 
-				for(dataIterator iter=datas->begin();
-						iter!=datas->end();iter++)
-				{
-					unsigned char *data =*iter;
-					tmp_ip_header2=(struct iphdr *)data;
-					size_ip= tmp_ip_header2->ihl<<2;
-					total_len= ntohs(tmp_ip_header2->tot_len);
-					tmp_tcp_header2=(struct tcphdr*)((char *)tmp_ip_header2
-							+size_ip); 
-					size_tcp= tmp_tcp_header2->doff<<2;
-					size_t tmpContentLen=total_len-size_ip-size_tcp;
-					total_cont_len+=tmpContentLen;
-				}
+				unsigned char *data =*iter;
+				tmp_ip_header2=(struct iphdr *)data;
+				size_ip= tmp_ip_header2->ihl<<2;
+				total_len= ntohs(tmp_ip_header2->tot_len);
+				tmp_tcp_header2=(struct tcphdr*)((char *)tmp_ip_header2
+						+size_ip); 
+				size_tcp= tmp_tcp_header2->doff<<2;
+				size_t tmpContentLen=total_len-size_ip-size_tcp;
+				total_cont_len+=tmpContentLen;
 			}
+		}
 
-			selectiveLogInfo(LOG_NOTICE,"total len needs to be subtracted:%u",
-					total_cont_len);
-			tcp_header2->seq=htonl(ntohl(tcp_header2->seq)-total_cont_len);
-			tmp_tcp_header->seq=plus_1(tcp_header2->seq);
-			uint32_t baseSeq=ntohl(tmp_tcp_header->seq)+contentLen;
-			if(mysqlIter!= mysqlContainer.end())
+#if (DEBUG_TCPCOPY)
+		selectiveLogInfo(LOG_NOTICE,"total len needs to be subtracted:%u",
+				total_cont_len);
+#endif
+		tcp_header2->seq=htonl(ntohl(tcp_header2->seq)-total_cont_len);
+		tmp_tcp_header->seq=plus_1(tcp_header2->seq);
+		uint32_t baseSeq=ntohl(tmp_tcp_header->seq)+contentLen;
+		if(mysqlIter!= mysqlContainer.end())
+		{
+			datas=mysqlIter->second;
+			//check if we insert COM_STMT_PREPARE statements 
+			for(dataIterator iter=datas->begin();
+					iter!=datas->end();iter++)
 			{
-				datas=mysqlIter->second;
-				//check if we insert COM_STMT_PREPARE statements 
-				for(dataIterator iter=datas->begin();
-						iter!=datas->end();iter++)
-				{
-					unsigned char *data =*iter;
-					tmp_ip_header2=(struct iphdr *)data;
-					tmp_ip_header2=(struct iphdr*)copy_ip_packet(tmp_ip_header2);
-					size_ip= tmp_ip_header2->ihl<<2;
-					total_len= ntohs(tmp_ip_header2->tot_len);
-					tmp_tcp_header2=(struct tcphdr*)((char *)tmp_ip_header2
-							+size_ip); 
-					size_tcp= tmp_tcp_header2->doff<<2;
-					size_t tmpContentLen=total_len-size_ip-size_tcp;
-					tmp_tcp_header2->seq=htonl(baseSeq);
-					unsend.push_back((unsigned char*)tmp_ip_header2);
-					total_cont_len+=tmpContentLen;
-					baseSeq+=tmpContentLen;
-				}
+				unsigned char *data =*iter;
+				tmp_ip_header2=(struct iphdr *)data;
+				tmp_ip_header2=(struct iphdr*)copy_ip_packet(tmp_ip_header2);
+				size_ip= tmp_ip_header2->ihl<<2;
+				total_len= ntohs(tmp_ip_header2->tot_len);
+				tmp_tcp_header2=(struct tcphdr*)((char *)tmp_ip_header2
+						+size_ip); 
+				size_tcp= tmp_tcp_header2->doff<<2;
+				size_t tmpContentLen=total_len-size_ip-size_tcp;
+				tmp_tcp_header2->seq=htonl(baseSeq);
+				unsend.push_back((unsigned char*)tmp_ip_header2);
+				total_cont_len+=tmpContentLen;
+				baseSeq+=tmpContentLen;
 			}
 		}
 	}
+#endif
 
+#if (DEBUG_TCPCOPY)
 	outputPacket(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
 	selectiveLogInfo(LOG_DEBUG,"send faked syn to back,client win:%u",
 			tcp_header2->window);
+#endif
 	wrap_send_ip_packet(fake_ip_addr,fake_syn_buf,virtual_next_sequence);
 }
 
@@ -889,7 +947,9 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 	memset(fake_ack_buf,40,0);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_ack_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_ack_buf+20);
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"sendFakedSynAckToBackend:%u",client_port);
+#endif
 	ip_header2->version = 4;
 	ip_header2->ihl = 5;
 	ip_header2->tot_len = htons(40);
@@ -908,7 +968,9 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 	tcp_header2->window= 65535;
 	unsigned char *data=copy_ip_packet(ip_header2);
 	handshakePackets.push_back(data);
+#if (DEBUG_TCPCOPY)
 	outputPacket(LOG_NOTICE,FAKE_CLIENT_FLAG,ip_header2,tcp_header2);
+#endif
 	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence);
 }
 
@@ -916,7 +978,7 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
  * send faked ack packet to backend 
  */
 void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
-		struct tcphdr* tcp_header)
+		struct tcphdr* tcp_header,bool changeSeq)
 {
 	static unsigned char fake_ack_buf[40];
 	memset(fake_ack_buf,40,0);
@@ -934,10 +996,18 @@ void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
 	tcp_header2->source = tcp_header->dest;
 	tcp_header2->ack=1;
 	tcp_header2->ack_seq = virtual_next_sequence;
-	tcp_header2->seq = tcp_header->ack_seq;
+	if(changeSeq)
+	{
+		tcp_header2->seq = htonl(nextSeq);
+	}else
+	{
+		tcp_header2->seq = tcp_header->ack_seq;
+	}
 	tcp_header2->window= 65535;
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_INFO,"send faked ack to backend,client win:%u",
 			tcp_header2->window);
+#endif
 	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence);
 }
 
@@ -947,7 +1017,9 @@ void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
 void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 		struct tcphdr* tcp_header)
 {
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"send faked fin To Back:%u",client_port);
+#endif
 	static unsigned char fake_fin_buf[40];
 	memset(fake_fin_buf,40,0);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_fin_buf;
@@ -986,8 +1058,10 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 		struct tcphdr* tcp_header)
 {
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"send faked fin To Back from cli pack:%u",
 			client_port);
+#endif
 	static unsigned char fake_fin_buf[40];
 	memset(fake_fin_buf,40,0);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_fin_buf;
@@ -1024,15 +1098,13 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	if(isMySqlCopy)
-	{
-		selectiveLogInfo(LOG_WARN,"establish conn for already connected:%u",
-				client_port);
-	}else
-	{
-		selectiveLogInfo(LOG_NOTICE,"establish conn for already connected:%u",
-				client_port);
-	}
+#if (TCPCOPY_MYSQL)
+	selectiveLogInfo(LOG_WARN,"establish conn for already connected:%u",
+			client_port);
+#else
+	selectiveLogInfo(LOG_NOTICE,"establish conn for already connected:%u",
+			client_port);
+#endif
 	int sock=address_find_sock(tcp_header->dest);
 	if(-1 == sock)
 	{
@@ -1048,7 +1120,7 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 		return;
 	}
 	sendFakedSynToBackend(ip_header,tcp_header);
-	isSynIntercepted=true;
+	isSynIntercepted=1;
 	activeCount++;
 	totalReconnectForNoSyn++;
 
@@ -1059,9 +1131,10 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
  */
 void session_st::establishConnectionForClosedConn()
 {
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_INFO,"reestablish connection for keepalive:%u",
 			client_port);
-
+#endif
 	size_t size=handshakePackets.size();
 	if(size!=handshakeExpectedPackets)
 	{
@@ -1080,7 +1153,9 @@ void session_st::establishConnectionForClosedConn()
 		{
 			free(tmpData);
 			selectiveLogInfo(LOG_WARN,"sock invalid estConnForClosedConn");
+#if (DEBUG_TCPCOPY)
 			outputPacket(LOG_NOTICE,CLIENT_FLAG,ip_header,tcp_header);
+#endif
 			return;
 		}
 		if(0 == fake_ip_addr)
@@ -1088,12 +1163,16 @@ void session_st::establishConnectionForClosedConn()
 			client_ip_addr=ip_header->saddr;
 		}else
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"erase fake_ip_addr");
+#endif
 			trueIPContainer.erase(get_ip_port_value(fake_ip_addr,
 						tcp_header->source));
 		}
 		fake_ip_addr=getRandomIP();
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_NOTICE,"change ip address");
+#endif
 		uint64_t key=get_ip_port_value(fake_ip_addr,tcp_header->source);
 		trueIPContainer[key]=client_ip_addr;
 
@@ -1107,7 +1186,7 @@ void session_st::establishConnectionForClosedConn()
 			return;
 		}
 		wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence);
-		isSynIntercepted=true;
+		isSynIntercepted=1;
 		free(tmpData);
 		//push remaining packets in handshakePackets to unsend
 
@@ -1154,14 +1233,14 @@ bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 		{
 			if(COM_STMT_PREPARE == command)
 			{
-				hasPrepareStat=true;
+				hasPrepareStat=1;
 			}else
 			{
 				if(COM_QUERY == command&&hasPrepareStat)
 				{
 					if(numberOfExcutes>0)
 					{
-						isExcuteForTheFirstTime=false;
+						isExcuteForTheFirstTime=0;
 					}
 					numberOfExcutes++;
 				}
@@ -1172,9 +1251,10 @@ bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 			}
 			unsigned char *data=copy_ip_packet(ip_header);
 			mysqlSpecialPackets.push_back(data);
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"push back necc statement:%u",
 					client_port);
-
+#endif
 			MysqlIterator iter=mysqlContainer.find(client_port);
 			dataContainer* datas=NULL;
 			if(iter!= mysqlContainer.end())
@@ -1223,7 +1303,9 @@ static bool checkPacketPaddingForMysql(struct iphdr *ip_header,
 		unsigned char command=payload[0];
 		if(COM_QUERY == command)
 		{
+#if (DEBUG_TCPCOPY)
 			logInfo(LOG_DEBUG,"this is query command");
+#endif
 			return true;
 		}
 	}
@@ -1257,12 +1339,15 @@ static bool checkPacketPadding(struct iphdr *ip_header,
 void session_st::update_virtual_status(struct iphdr *ip_header,
 		struct tcphdr* tcp_header)
 {
-	
+#if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,BACKEND_FLAG,ip_header,tcp_header);
+#endif
 	if( tcp_header->rst)
 	{
 		reset_flag = true;
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_INFO,"reset from backend:%u",client_port);
+#endif
 		return;
 	}
 	virtual_ack = tcp_header->ack_seq;
@@ -1272,7 +1357,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
 	time_t current=time(0);
-	bool isStopSendReservedPacks=false;
+	bool isStopSendReservedPacks=0;
 
 	if(contSize>0)
 	{
@@ -1280,37 +1365,46 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	}
 	if(ack > nextSeq)
 	{
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,p=%u",
 				ack,nextSeq,client_port);
+#endif
 		nextSeq=ack;
 	}else if(ack <nextSeq)
 	{
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u, p:%u",
 				ack,nextSeq,client_port);
+#endif
 		if(isClientClosed&&!tcp_header->fin)
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
 			return;
 		}
-		if(contSize>0)
+		/*if(contSize>0)
 		{
-			needContinueProcessingForBakAck=true;
+			needContinueProcessingForBakAck=1;
 		}
 		lastRespPacketSize=tot_len;
-		return;
+		
+		return;*/
 	}
 
 	if( tcp_header->syn)
 	{
 		if(isBackSynReceived)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"recv syn from back again");
+#endif
 		}else
 		{
 			totalConnections++;
-			isBackSynReceived=true;
+			isBackSynReceived=1;
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"recv syn from back:%u",
 					client_port);
+#endif
 		}
 		virtual_next_sequence = plus_1(tcp_header->seq);
 		virtual_status = SYN_CONFIRM;
@@ -1327,11 +1421,13 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	}
 	else if(tcp_header->fin)
 	{
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_INFO,"recv fin from back:%u",client_port);
-		isTestConnClosed=true;
-		isWaitResponse=false;
-		isTrueWaitResponse=false;
-		isResponseCompletely=true;
+#endif
+		isTestConnClosed=1;
+		isWaitResponse=0;
+		isTrueWaitResponse=0;
+		isResponseCompletely=1;
 		virtual_status  |= SERVER_FIN;
 		if(contSize>0)
 		{
@@ -1340,22 +1436,22 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			virtual_next_sequence = plus_1(tcp_header->seq);
 		}
-		sendFakedAckToBackend(ip_header,tcp_header);
+		sendFakedAckToBackend(ip_header,tcp_header,false);
 		if(!isClientClosed)
 		{
 			//send constructed server fin to the backend
 			sendFakedFinToBackend(ip_header,tcp_header);
-			isFakedSendingFinToBackend=true;
+			isFakedSendingFinToBackend=1;
 		}else
 		{
-			over_flag=true;
+			over_flag=1;
 		}
 		return;
 	}else if(tcp_header->ack)
 	{
 		if(isClientClosed&&isTestConnClosed)
 		{
-			over_flag=true;
+			over_flag=1;
 			return;
 		}
 		if(isWaitResponse)
@@ -1364,26 +1460,25 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			{
 				totalRequests++;
 			}
-			isTrueWaitResponse=true;
+			isTrueWaitResponse=1;
 		}
 		
 	}
 
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+contSize);
-	bool isMtuModifed=false;
-	bool isGreetReceivedPacket=false; 
+	bool isMtuModifed=0;
+	bool isGreetReceivedPacket=0; 
 	
+#if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_DEBUG,"cont size:%d",contSize);
+#endif
 	//it is nontrivial to check if the packet is the last packet of response
 	//the following is not 100 percent right here
 	if(contSize>0||needContinueProcessingForBakAck)
 	{
 		respContentPackets++;
 		virtual_next_sequence =next_seq;
-		if(!isClientClosed)
-		{
-			sendFakedAckToBackend(ip_header,tcp_header);
-		}else
+		if(isClientClosed)
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
 			return;
@@ -1391,63 +1486,75 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 
 		if(!candidateErased)
 		{
-			if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+			if(!isGreeingReceived)
 			{
-				if(!isGreeingReceived)
-				{
-					selectiveLogInfo(LOG_INFO,"recv greeting from back");
-					isGreeingReceived=true;
-					isGreetReceivedPacket=true;
-				}
+#if (DEBUG_TCPCOPY)
+				selectiveLogInfo(LOG_INFO,"recv greeting from back");
+#endif
+				isGreeingReceived=1;
+				isGreetReceivedPacket=1;
 			}
-			isPartResponse=true;
+#endif
+			isPartResponse=1;
 
 			if(tot_len>mtu)
 			{
-				isMtuModifed=true;
+				isMtuModifed=1;
 				mtu=tot_len;
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_NOTICE,"cur mtu:%u,port:%u",
 						mtu,client_port);
+#endif
 			}
-			if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+			if(tot_len>=DEFAULT_RESPONSE_MTU)
 			{
-				if(tot_len>=DEFAULT_RESPONSE_MTU)
-				{
-					isStopSendReservedPacks=true;
-				}
-			}else
-			{	
-				if(tot_len==DEFAULT_RESPONSE_MTU)
-				{
-					isStopSendReservedPacks=true;
-				}
+				isStopSendReservedPacks=1;
 			}
+#else
+			if(tot_len==DEFAULT_RESPONSE_MTU)
+			{
+				isStopSendReservedPacks=1;
+			}
+#endif
 			if(!isStopSendReservedPacks&&!isMtuModifed&&tot_len==mtu)
 			{
 				if(lastRespPacketSize==tot_len)
 				{
-					isStopSendReservedPacks=true;
+					isStopSendReservedPacks=1;
 				}
 			}
 			{
-				if(isStopSendReservedPacks)
+				/*if(isStopSendReservedPacks)
 				{
-					lastRespPacketSize=tot_len;
-					return;
-				}
+					if(!isHighPressure)
+					{
+						lastRespPacketSize=tot_len;
+						return;
+					}
+				}*/
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"receive from backend");
+#endif
 				if(isWaitResponse||isGreetReceivedPacket)
 				{
+					if(contSize>0)
+					{
+						sendFakedAckToBackend(ip_header,tcp_header,true);
+					}
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"receive back server's resp");
+#endif
 					totalResponses++;
-					isResponseCompletely=true;
-					isWaitResponse=false;
-					isTrueWaitResponse=false;
+					isResponseCompletely=1;
+					isWaitResponse=0;
+					isTrueWaitResponse=0;
 					virtual_next_sequence =next_seq;
 					virtual_status = SEND_RESPONSE_CONFIRM;
 					responseReceived++;
 					sendReservedPackets();
-					needContinueProcessingForBakAck=false;
+					needContinueProcessingForBakAck=0;
 					lastRespPacketSize=tot_len;
 					return;
 				}
@@ -1458,7 +1565,9 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		if(isClientClosed&&!isTestConnClosed)
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"send fin to back again");
+#endif
 		}
 	}
 	virtual_next_sequence= next_seq;
@@ -1466,14 +1575,18 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	{
 		if(!isClientClosed)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"candidate erased true:%u",
 					client_port);
+#endif
 			//send constructed server fin to the backend
 			sendFakedFinToBackend(ip_header,tcp_header);
-			isFakedSendingFinToBackend=true;
-			isClientClosed=true;
+			isFakedSendingFinToBackend=1;
+			isClientClosed=1;
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"set client closed flag:%u",
 					client_port);
+#endif
 		}
 	}
 	lastRespPacketSize=tot_len;
@@ -1487,7 +1600,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {	
 	lastRecvClientContentTime=time(0);
+#if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
+#endif
 	uint16_t tot_len = ntohs(ip_header->tot_len);
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
@@ -1498,9 +1613,11 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(!isClientClosed)
 		{
 			sendFakedFinToBackByCliePack(ip_header,tcp_header);
-			isClientClosed=true;
+			isClientClosed=1;
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"set client closed flag:%u",
 					client_port);
+#endif
 		}else
 		{
 			sendFakedFinToBackByCliePack(ip_header,tcp_header);
@@ -1520,50 +1637,57 @@ void session_st::process_recv(struct iphdr *ip_header,
 	save_header_info(ip_header,tcp_header);
 	if(fake_ip_addr!=0)
 	{
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_INFO,"set fake ip addr for client");
+#endif
 		ip_header->saddr=fake_ip_addr;
 		tcp_header->seq=htonl(nextSeq);
 	}
 	//processing the reset packet
 	if(tcp_header->rst)
 	{
-		isClientReset=true;
+		isClientReset=1;
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_NOTICE,"reset from client");
+#endif
 		if(isWaitResponse)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"push reset pack from cli");
+#endif
 			unsend.push_back(copy_ip_packet(ip_header));
 		}else
 		{
 			wrap_send_ip_packet(fake_ip_addr,(unsigned char *) ip_header,
 					virtual_next_sequence);
-			reset_flag = true;
+			reset_flag = 1;
 		}
 		return;
 	}
 	/* processing the syn packet */
 	if(tcp_header->syn)
 	{
-		isSynIntercepted=true;
+		isSynIntercepted=1;
 		client_port=ntohs(tcp_header->source);
-		if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+		/* remove old mysql info*/
+		MysqlIterator iter=mysqlContainer.find(client_port);
+		dataContainer* datas=NULL;
+		if(iter!= mysqlContainer.end())
 		{
-			/* remove old mysql info*/
-			MysqlIterator iter=mysqlContainer.find(client_port);
-			dataContainer* datas=NULL;
-			if(iter!= mysqlContainer.end())
+			datas=iter->second;
+			for(dataIterator iter2=datas->begin();
+					iter2!=datas->end();)
 			{
-				datas=iter->second;
-				for(dataIterator iter2=datas->begin();
-						iter2!=datas->end();)
-				{
-					free(*(iter2++));
-				}
-				mysqlContainer.erase(iter);
-				delete(datas);
-				selectiveLogInfo(LOG_NOTICE,"remove old mysql info");
+				free(*(iter2++));
 			}
+			mysqlContainer.erase(iter);
+			delete(datas);
+#if (DEBUG_TCPCOPY)
+			selectiveLogInfo(LOG_NOTICE,"remove old mysql info");
+#endif
 		}
+#endif
 		unsigned char *data=copy_ip_packet(ip_header);
 		handshakePackets.push_back(data);
 		wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
@@ -1577,10 +1701,14 @@ void session_st::process_recv(struct iphdr *ip_header,
 	/* processing the fin packet */
 	if(tcp_header->fin)
 	{
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_DEBUG,"recv fin packet from cli");
+#endif
 		if(contSize>0)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_NOTICE,"fin has content");
+#endif
 		}else
 		{
 			if(isFakedSendingFinToBackend)
@@ -1592,7 +1720,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				if(isWaitResponse)
 				{
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"push back packet");
+#endif
 					unsend.push_back(copy_ip_packet(ip_header));
 				}else
 				{
@@ -1605,15 +1735,19 @@ void session_st::process_recv(struct iphdr *ip_header,
 					wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
 							virtual_next_sequence);
 					virtual_status |= CLIENT_FIN;
-					confirmed=true;
-					isClientClosed=true;
+					confirmed=1;
+					isClientClosed=1;
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_NOTICE,"set client closed flag:%u",
 							client_port);
+#endif
 				}
 			}
 			else
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"push back packet");
+#endif
 				unsend.push_back(copy_ip_packet(ip_header));
 				if(checkSendingDeadReqs())
 				{
@@ -1626,38 +1760,42 @@ void session_st::process_recv(struct iphdr *ip_header,
 
 
 	uint32_t tmpLastAck=lastAck;
-	bool isNewRequest=false;
-	bool isNeedOmit=false;
+	bool isNewRequest=0;
+	bool isNeedOmit=0;
 	if(!isSynIntercepted)
 	{
-		isHalfWayIntercepted=true;
+		isHalfWayIntercepted=1;
 	}
-	if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+	if(isSynIntercepted)
 	{
-		if(isSynIntercepted)
+		if(!isGreeingReceived&&isHalfWayIntercepted)
 		{
-			if(!isGreeingReceived&&isHalfWayIntercepted)
+			if(contSize>0)
 			{
-				if(contSize>0)
-				{
-					reqContentPackets++;
-				}
-				selectiveLogInfo(LOG_DEBUG,"push back pack for half");
-				unsend.push_back(copy_ip_packet(ip_header));
-				return;
+				reqContentPackets++;
 			}
-			if(0==contSize&&!isGreeingReceived)
-			{
-				selectiveLogInfo(LOG_DEBUG,"push back ack for not recv greet");
-				unsend.push_back(copy_ip_packet(ip_header));
-				return;
-			}
+#if (DEBUG_TCPCOPY)
+			selectiveLogInfo(LOG_DEBUG,"push back pack for half");
+#endif
+			unsend.push_back(copy_ip_packet(ip_header));
+			return;
+		}
+		if(0==contSize&&!isGreeingReceived)
+		{
+#if (DEBUG_TCPCOPY)
+			selectiveLogInfo(LOG_DEBUG,"push back ack for not recv greet");
+#endif
+			unsend.push_back(copy_ip_packet(ip_header));
+			return;
 		}
 	}
+#endif
 	if(contSize>0)
 	{
 		reqContentPackets++;
-		if(isMySqlCopy&&!isHalfWayIntercepted)
+#if (TCPCOPY_MYSQL)
+		if(!isHalfWayIntercepted)
 		{
 			if(!isPureRequestBegin)
 			{
@@ -1670,19 +1808,25 @@ void session_st::process_recv(struct iphdr *ip_header,
 				//if it is the second authenticate_user,then skip it
 				if(3==packetNumber)
 				{
-					isNeedOmit=true;
-					isPureRequestBegin=true;
+					isNeedOmit=1;
+					isPureRequestBegin=1;
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_INFO,"this is the sec auth packet");
+#endif
 				}
 				if(0==packetNumber)
 				{
-					isPureRequestBegin=true;
+					isPureRequestBegin=1;
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_INFO,"it has no sec auth packet");
+#endif
 				}
 			}
 			if(isNeedOmit)
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_NOTICE,"omit sec validation for mysql");
+#endif
 				total_seq_omit=contSize;
 				global_total_seq_omit=total_seq_omit;
 				reqContentPackets--;
@@ -1696,18 +1840,22 @@ void session_st::process_recv(struct iphdr *ip_header,
 				if(!fir_auth_user_pack)
 				{
 					fir_auth_user_pack=(struct iphdr*)copy_ip_packet(ip_header);
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_NOTICE,"set global fir auth packet");
+#endif
 				}
 				if(isGreeingReceived)
 				{
-					isLoginReceived=true;
-					loginCanSendFlag=true;
+					isLoginReceived=1;
+					loginCanSendFlag=1;
 				}else
 				{
 					if(!isLoginReceived)
 					{
-						isLoginReceived=true;
+						isLoginReceived=1;
+#if (DEBUG_TCPCOPY)
 						selectiveLogInfo(LOG_DEBUG,"push back mysql login req");
+#endif
 						unsend.push_back(copy_ip_packet(ip_header));
 						return;
 					}
@@ -1716,11 +1864,14 @@ void session_st::process_recv(struct iphdr *ip_header,
 			checkMysqlPacketNeededForReconnection(ip_header,tcp_header);
 			if(!isGreeingReceived)
 			{
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"push back client packs for mysql");
+#endif
 				unsend.push_back(copy_ip_packet(ip_header));
 				return;
 			}
 		}
+#endif
 
 		double diff=lastRecvClientContentTime-lastRecvRespContentTime;
 		//if the sesssion recv no response for more than 5 min
@@ -1738,7 +1889,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			double diffReqCont=reqContentPackets-baseReqContentPackets;
 			if(diffReqCont>100)
 			{
-				over_flag=true;
+				over_flag=1;
 				return;
 			}
 		}
@@ -1755,20 +1906,24 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(!isHalfWayIntercepted&&
 				handshakePackets.size()<handshakeExpectedPackets)
 		{
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"buffer the handshake packet");
+#endif
 			unsigned char *data=copy_ip_packet(ip_header);
 			handshakePackets.push_back(data);
 		}
 		//when client send multiple packet more quickly than the local network
 		unsend.push_back(copy_ip_packet(ip_header));
+#if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_DEBUG,"SYN_SEND push back the packet from cli");
+#endif
 	}
 	else
 	{
 		if(tcp_header->ack)
 		{
-			isRequestComletely=true;
-			isRequestBegin=false;
+			isRequestComletely=1;
+			isRequestBegin=0;
 		}
 
 		if(contSize>0)
@@ -1776,33 +1931,37 @@ void session_st::process_recv(struct iphdr *ip_header,
 			lastAck=ntohl(tcp_header->ack_seq);
 			if(lastAck!=tmpLastAck)
 			{
-				isNewRequest=true;
-				isRequestComletely=false;
-				isRequestBegin=true;
+				isNewRequest=1;
+				isRequestComletely=0;
+				isRequestBegin=1;
 			}
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"check it is a http request");
+#endif
 			if(isTestConnClosed)
 			{
 				//if the connection to the backend is closed,then we 
 				//reestablish the connection and 
 				//we reserve all comming packets for later disposure
-				if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+				if(checkPacketPaddingForMysql(ip_header,tcp_header))
 				{
-					if(checkPacketPaddingForMysql(ip_header,tcp_header))
-					{
-						selectiveLogInfo(LOG_NOTICE,"init session");
-						initSessionForKeepalive();
-						establishConnectionForNoSynPackets(ip_header,
-								tcp_header);
-						unsend.push_back(copy_ip_packet(ip_header));
-					}
-				}else
-				{
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_NOTICE,"init session");
+#endif
 					initSessionForKeepalive();
-					establishConnectionForClosedConn();
+					establishConnectionForNoSynPackets(ip_header,
+							tcp_header);
 					unsend.push_back(copy_ip_packet(ip_header));
 				}
+#else
+#if (DEBUG_TCPCOPY)
+				selectiveLogInfo(LOG_NOTICE,"init session");
+#endif
+				initSessionForKeepalive();
+				establishConnectionForClosedConn();
+				unsend.push_back(copy_ip_packet(ip_header));
+#endif
 				return;
 			}
 			if(!isSynIntercepted)
@@ -1814,34 +1973,42 @@ void session_st::process_recv(struct iphdr *ip_header,
 			if(checkRetransmission(tcp_header,lastReqContSeq))
 			{
 				reqContentPackets--;
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"it is a retransm from client");
+#endif
 				return;
 			}else
 			{
 				if(isWaitResponse)
 				{
-					bool savePacket=false;
+					bool savePacket=0;
 					if(isNewRequest&&checkTcpSeg(tcp_header,lastReqContSeq))
 					{
-						savePacket=true;
+						savePacket=1;
 					}else
 					{
 						size_t baseConPackets=reqContentPackets-1;
 						if(sendConPackets<baseConPackets)
 						{
+#if (DEBUG_TCPCOPY)
 							selectiveLogInfo(LOG_NOTICE,
 									"it has reserved cont packs:%u,%u",
 									sendConPackets,baseConPackets);
+#endif
 							if(checkReservedContainerHasContent())
 							{
+#if (DEBUG_TCPCOPY)
 								selectiveLogInfo(LOG_NOTICE,"save pack");
-								savePacket=true;
+#endif
+								savePacket=1;
 							}
 						}
 					}
 					if(savePacket)
 					{
+#if (DEBUG_TCPCOPY)
 						selectiveLogInfo(LOG_DEBUG,"push back the packet");
+#endif
 						unsend.push_back(copy_ip_packet(ip_header));
 						if(checkSendingDeadReqs())
 						{
@@ -1856,13 +2023,17 @@ void session_st::process_recv(struct iphdr *ip_header,
 					{
 						if(checkReservedContainerHasContent())
 						{
+#if (DEBUG_TCPCOPY)
 							selectiveLogInfo(LOG_DEBUG,"push back the pack");
+#endif
 							unsend.push_back(copy_ip_packet(ip_header));
 							return;
 						}
 						lostPackets.push_back(copy_ip_packet(ip_header));
+#if (DEBUG_TCPCOPY)
 						selectiveLogInfo(LOG_DEBUG,"lost and need prev pack");
-						isWaitPreviousPacket=true;
+#endif
+						isWaitPreviousPacket=1;
 						return;
 					}
 					if(isWaitPreviousPacket)
@@ -1873,9 +2044,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 								(unsigned char *)ip_header,
 								virtual_next_sequence);
 						sendReservedLostPackets();
-						isWaitResponse=true;
-						isResponseCompletely=false;
-						isPartResponse=false;
+						isWaitResponse=1;
+						isResponseCompletely=0;
+						isPartResponse=0;
 						return;
 					}
 				}
@@ -1883,24 +2054,28 @@ void session_st::process_recv(struct iphdr *ip_header,
 				if(isWaitResponse&&checkTcpSeg(tcp_header,lastReqContSeq)&&
 						!isNewRequest)
 				{
-					isSegContinue=true;
+					isSegContinue=1;
 					wrap_send_ip_packet(fake_ip_addr,
 							(unsigned char *)ip_header,virtual_next_sequence);
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"it is a continuous http req");
+#endif
 				}
 				lastReqContSeq=ntohl(tcp_header->seq);
 				if(isSegContinue)
 				{
-					isSegContinue=false;
+					isSegContinue=0;
 					return;
 				}else
 				{
 					requestProcessed++;
 					if(requestProcessed>30)
 					{
-						isKeepalive=true;
+						isKeepalive=1;
 					}
+#if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"a new request from client");
+#endif
 				}
 			}
 		}else
@@ -1914,7 +2089,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(isWaitResponse)
 		{
 			unsend.push_back(copy_ip_packet(ip_header));
+#if (DEBUG_TCPCOPY)
 			selectiveLogInfo(LOG_DEBUG,"wait backent server's response");
+#endif
 			if(checkSendingDeadReqs())
 			{
 				sendReservedPackets();
@@ -1924,7 +2101,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 			if(isClientClosed)
 			{
 				unsend.push_back(copy_ip_packet(ip_header));
+#if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"save ack for server fin");
+#endif
 				if(checkSendingDeadReqs())
 				{
 					sendReservedPackets();
@@ -1933,9 +2112,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				if(SEND_REQUEST==virtual_status)
 				{
-					isWaitResponse=true;
-					isPartResponse=false;
-					isResponseCompletely=false;
+					isWaitResponse=1;
+					isPartResponse=0;
+					isResponseCompletely=0;
 				}
 				if(!isResponseCompletely)
 				{
@@ -1952,7 +2131,7 @@ void session_st::process_recv(struct iphdr *ip_header,
  */
 bool isPacketNeeded(const char *packet)
 {
-	bool isNeeded=false;
+	bool isNeeded=0;
 	struct tcphdr *tcp_header;
 	struct iphdr *ip_header;
 	uint32_t size_ip;
@@ -1984,7 +2163,7 @@ bool isPacketNeeded(const char *packet)
 		if(checkLocalIPValid(ip_header->daddr) && 
 				(tcp_header->dest==local_port))
 		{
-			isNeeded=true;
+			isNeeded=1;
 		}
 	}
 	return isNeeded;
@@ -1998,7 +2177,7 @@ void process(char *packet)
 	struct tcphdr *tcp_header;
 	struct iphdr *ip_header;
 	uint32_t size_ip;
-	bool reusePort=false;
+	bool reusePort=0;
 	time_t now=time(0);
 	timeCount++;
 
@@ -2010,6 +2189,14 @@ void process(char *packet)
 				activeCount,enterCount,leaveCount,deleteObsoCount);
 		logInfo(LOG_WARN,"total conns:%llu,total reqs:%llu,total resps:%llu",
 				totalConnections,totalRequests,totalResponses);
+		if(bakTotal>0)
+		{
+			logInfo(LOG_WARN,"bakTotal:%llu,bakTotalTimes:%f,avg=%f",
+					bakTotal,bakTotalTimes,bakTotalTimes/bakTotal);
+		}
+		logInfo(LOG_WARN,"clientTotal:%llu,clientTotalTimes:%f,avg=%f",
+				clientTotal,clientTotalTimes,clientTotalTimes/clientTotal);
+		logInfo(LOG_WARN,"send Packets:%llu",sendPackets);
 		clearTimeoutTcpSessions();
 		double ratio=0;
 		if(enterCount>0)
@@ -2058,14 +2245,19 @@ void process(char *packet)
 					tcp_header->dest));
 		if(iter != sessions.end())
 		{
-			iter->second.confirmed=false;
+			iter->second.confirmed=0;
 			iter->second.lastUpdateTime=now;
+			struct timeval start=getTime();
+			bakTotal++;
 			iter->second.update_virtual_status(ip_header,tcp_header);
+			struct timeval end=getTime();
+			bakTotalTimes+=end.tv_sec-start.tv_sec;
+			bakTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 			if( iter->second.is_over())
 			{
 				if(!iter->second.isStatClosed)
 				{
-					iter->second.isStatClosed=true;
+					iter->second.isStatClosed=1;
 				}
 				activeCount--;
 				leaveCount++;
@@ -2096,11 +2288,15 @@ void process(char *packet)
 				{
 					if(iter->second.is_over())
 					{
+#if (DEBUG_TCPCOPY)
 						logInfo(LOG_INFO,"dup syn,ses over,time diff:%d",diff);
+#endif
 					}else
 					{
 						enterCount--;
+#if (DEBUG_TCPCOPY)
 						logInfo(LOG_NOTICE,"duplicate syn,time diff:%d",diff);
+#endif
 						outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
 								tcp_header);
 						return;
@@ -2110,7 +2306,7 @@ void process(char *packet)
 				activeCount--;
 				//reuse port number
 				iter->second.initSession();
-				reusePort=true;
+				reusePort=1;
 				logInfo(LOG_WARN,"reuse port number,key :%llu",value);
 			}
 			int sock=address_find_sock(tcp_header->dest);
@@ -2130,10 +2326,20 @@ void process(char *packet)
 			{
 				if(reusePort)
 				{
+					struct timeval start=getTime();
+					clientTotal++;
 					iter->second.process_recv(ip_header,tcp_header);
+					struct timeval end=getTime();
+					clientTotalTimes+=end.tv_sec-start.tv_sec;
+					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 				}else
 				{
+					struct timeval start=getTime();
+					clientTotal++;
 					sessions[value].process_recv(ip_header,tcp_header);
+					struct timeval end=getTime();
+					clientTotalTimes+=end.tv_sec-start.tv_sec;
+					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 				}
 			}
 		}
@@ -2142,14 +2348,19 @@ void process(char *packet)
 			SessIterator iter = sessions.find(value);
 			if(iter != sessions.end())
 			{
-				iter->second.confirmed=false;
+				iter->second.confirmed=0;
+				struct timeval start=getTime();
+				clientTotal++;
 				iter->second.process_recv(ip_header,tcp_header);
+				struct timeval end=getTime();
+				clientTotalTimes+=end.tv_sec-start.tv_sec;
+				clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 				iter->second.lastUpdateTime=now;
 				if( (iter->second.is_over()))
 				{
 					if(!iter->second.isStatClosed)
 					{
-						iter->second.isStatClosed=true;
+						iter->second.isStatClosed=1;
 					}
 					activeCount--;
 					leaveCount++;
@@ -2160,16 +2371,25 @@ void process(char *packet)
 				//we check if we can pad tcp handshake for this request
 				if(checkPacketPadding(ip_header,tcp_header))
 				{
-					if(isMySqlCopy)
+#if (TCPCOPY_MYSQL)
+					if(checkPacketPaddingForMysql(ip_header,tcp_header))
 					{
-						if(checkPacketPaddingForMysql(ip_header,tcp_header))
-						{
-							sessions[value].process_recv(ip_header,tcp_header);
-						}
-					}else
-					{
+						struct timeval start=getTime();
+						clientTotal++;
 						sessions[value].process_recv(ip_header,tcp_header);
+						struct timeval end=getTime();
+						clientTotalTimes+=end.tv_sec-start.tv_sec;
+						clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 					}
+#else
+					struct timeval start=getTime();
+					clientTotal++;
+					sessions[value].process_recv(ip_header,tcp_header);
+					struct timeval end=getTime();
+					clientTotalTimes+=end.tv_sec-start.tv_sec;
+					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
+
+#endif
 				}
 			}
 		}
