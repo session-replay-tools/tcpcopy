@@ -592,28 +592,25 @@ bool session_st::checkSendingDeadReqs()
 	time_t now=time(0);
 	int diff=now-lastRecvRespContentTime;
 	size_t unsendContPackets=0;
+	if(reqContentPackets>=sendConPackets)
+	{
+		unsendContPackets=reqContentPackets-sendConPackets;
+	}
 	if(diff < 2)
 	{
-		if(reqContentPackets>=sendConPackets)
+		if(unsendContPackets<5)
 		{
-			unsendContPackets=reqContentPackets-sendConPackets;
-			if(unsendContPackets<5)
-			{
 #if (DEBUG_TCPCOPY) 
-				selectiveLogInfo(LOG_DEBUG,"f port:%u,sent=%u,tot co reqs:%u",
+			selectiveLogInfo(LOG_DEBUG,"f port:%u,sent=%u,tot co reqs:%u",
 					client_port,sendConPackets,reqContentPackets);
 #endif
-				isHighPressure=0;
-				return false;
-			}else 
-			{
-				isHighPressure=1;
-			}
-			if(lastRespPacketSize<DEFAULT_RESPONSE_MTU)
-			{
-				return false;
-			}
-		}else
+			isHighPressure=0;
+			return false;
+		}else 
+		{
+			isHighPressure=1;
+		}
+		if(lastRespPacketSize<DEFAULT_RESPONSE_MTU)
 		{
 			return false;
 		}
@@ -1381,14 +1378,29 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			sendFakedFinToBackend(ip_header,tcp_header);
 			return;
 		}
-		/*if(contSize>0)
+		if(0 == contSize)
 		{
-			needContinueProcessingForBakAck=1;
+			if(lastAckFromResponse!=0)
+			{
+				if(ack==lastAckFromResponse)
+				{
+					lastSameAckTotal++;
+					if(lastSameAckTotal>64)
+					{
+						selectiveLogInfo(LOG_WARN,"backend lost packets");
+						sendFakedFinToBackend(ip_header,tcp_header);
+						isFakedSendingFinToBackend=1;
+						isClientClosed=1;
+						return;
+					}
+				}else
+				{
+					lastSameAckTotal=0;
+				}
+			}
 		}
-		lastRespPacketSize=tot_len;
-		
-		return;*/
 	}
+	lastAckFromResponse=ack;
 
 	if( tcp_header->syn)
 	{
@@ -1474,7 +1486,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 #endif
 	//it is nontrivial to check if the packet is the last packet of response
 	//the following is not 100 percent right here
-	if(contSize>0||needContinueProcessingForBakAck)
+	if(contSize>0)
 	{
 		respContentPackets++;
 		virtual_next_sequence =next_seq;
@@ -1526,23 +1538,14 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 				}
 			}
 			{
-				/*if(isStopSendReservedPacks)
-				{
-					if(!isHighPressure)
-					{
-						lastRespPacketSize=tot_len;
-						return;
-					}
-				}*/
 #if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"receive from backend");
 #endif
 				if(isWaitResponse||isGreetReceivedPacket)
 				{
-					if(contSize>0)
-					{
-						sendFakedAckToBackend(ip_header,tcp_header,true);
-					}
+#if (!TCPCOPY_MYSQL)
+					sendFakedAckToBackend(ip_header,tcp_header,true);
+#endif
 #if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"receive back server's resp");
 #endif
@@ -1554,7 +1557,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 					virtual_status = SEND_RESPONSE_CONFIRM;
 					responseReceived++;
 					sendReservedPackets();
-					needContinueProcessingForBakAck=0;
 					lastRespPacketSize=tot_len;
 					return;
 				}

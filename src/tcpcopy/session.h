@@ -89,6 +89,7 @@ struct session_st
 	size_t respContentPackets;
 	size_t numberOfExcutes;
 	size_t logRecordNum;
+	size_t lastSameAckTotal;
 	time_t lastUpdateTime;
 	time_t createTime;
 	time_t lastRecvRespContentTime;
@@ -126,7 +127,6 @@ struct session_st
 	unsigned isLoginReceived:1;
 	unsigned hasPrepareStat:1;
 	unsigned isExcuteForTheFirstTime:1;
-	unsigned needContinueProcessingForBakAck:1;
 	unsigned isHighPressure:1;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)
@@ -160,8 +160,6 @@ struct session_st
 		lastAck=0;
 		mtu=MIN_RESPONSE_MTU;
 		handshakeExpectedPackets=2;
-		lastAckFromResponse=0;
-		lastSeqFromResponse=0;
 		virtual_next_sequence=0;
 		client_ip_id=0;
 		initSessionForKeepalive();
@@ -182,6 +180,7 @@ struct session_st
 
 	void initSessionForKeepalive()
 	{
+		lastSameAckTotal=0;
 		logRecordNum=0;
 		lastRespPacketSize=0;
 		total_seq_omit=0;
@@ -202,7 +201,6 @@ struct session_st
 		isLoginReceived=0;
 		hasPrepareStat=0;
 		isExcuteForTheFirstTime=true;
-		needContinueProcessingForBakAck=0;
 		isHighPressure=0;
 		virtual_status = SYN_SEND;
 		reset_flag = 0;
