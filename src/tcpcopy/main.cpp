@@ -31,6 +31,7 @@
 #define RECV_POOL_SIZE 67108864
 #define RECV_POOL_SIZE_SHIFT 26
 #define MAX_ADDR 67106816
+#define MAX_MEMORY_SIZE 524288
 #define SUCCESS 0
 #define FAILURE -1
 #define MULTI_THREADS 1
@@ -265,7 +266,8 @@ static void checkMemoryUsage(const char* path)
 			if(index<2048)
 			{
 				memory=atoi(p);
-				if(memory>1048576)
+				//if more than 0.5G,suicide
+				if(memory>MAX_MEMORY_SIZE)
 				{
 					logInfo(LOG_ERR,"tcpcopy occupies too much memory:%d KB",
 							memory);
@@ -304,7 +306,7 @@ static void dispose_event(int fd){
 	if((eventTotal%1000000)==0)
 	{
 		//retrieve memory usage by this process
-		//if more than 1G,then suicide
+		//if more than 0.5G,then suicide
 		int pid=getpid();
 		char path[512];
 		sprintf(path,"/proc/%d/status",pid);
