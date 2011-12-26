@@ -271,15 +271,18 @@ static void checkMemoryUsage(const char* path)
 				{
 					logInfo(LOG_ERR,"tcpcopy occupies too much memory:%d KB",
 							memory);
+					fclose(fp);
 					exit(1);
 				}
 			}else
 			{
 				logInfo(LOG_ERR,"no memroy info");
+				fclose(fp);
 				exit(1);
 			}
 		}
 	}
+	fclose(fp);
 }
 
 
