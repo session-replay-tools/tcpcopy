@@ -267,13 +267,12 @@ static void checkMemoryUsage(const char* path)
 				memory=atoi(p);
 				if(memory>1048576)
 				{
-					logInfo(LOG_ERR,"too much memory:%d KB",memory);
-					perror("tcpcopy occupies too much memory");
+					logInfo(LOG_ERR,"tcpcopy occupies too much memory:%d KB",
+							memory);
 					exit(1);
 				}
 			}else
 			{
-				perror("tcpcopy can't get memory info");
 				logInfo(LOG_ERR,"no memroy info");
 				exit(1);
 			}
