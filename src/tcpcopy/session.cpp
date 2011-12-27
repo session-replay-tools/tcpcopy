@@ -10,9 +10,6 @@
 
 using std::map;
 
-//#define DEBUG_TCPCOPY 1
-#define TCPCOPY_MYSQL 1
-
 uint32_t localhost_ip;
 uint32_t sample_ip;
 uint32_t client_ip;
