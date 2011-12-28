@@ -1538,11 +1538,11 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 #if (DEBUG_TCPCOPY)
 				selectiveLogInfo(LOG_DEBUG,"receive from backend");
 #endif
+#if (!TCPCOPY_MYSQL)
+				sendFakedAckToBackend(ip_header,tcp_header,true);
+#endif
 				if(isWaitResponse||isGreetReceivedPacket)
 				{
-#if (!TCPCOPY_MYSQL)
-					sendFakedAckToBackend(ip_header,tcp_header,true);
-#endif
 #if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"receive back server's resp");
 #endif
