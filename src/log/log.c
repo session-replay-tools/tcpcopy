@@ -17,8 +17,11 @@ static char* err_levels[] = {
 
 void initLogInfo()
 {
+#if (DEBUG_TCPCOPY)
+	global_out_level=LOG_DEBUG;
+#else 
 	global_out_level=LOG_WARN;
-	//global_out_level=LOG_DEBUG;
+#endif
 	file=fopen("error.log","a+");
 }
 

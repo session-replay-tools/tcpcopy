@@ -105,7 +105,9 @@ static void interception_process(int fd){
 		if(ip_header!=NULL)
 		{
 			router_update(ip_header);
+#if (DEBUG_TCPCOPY)
 			formatOutput(LOG_DEBUG,ip_header);
+#endif
 			/* drop the packet */
 			/* if you comment the following,you will boost the tcpcopy server */
 			drop_netlink_packet(packet_id);  	

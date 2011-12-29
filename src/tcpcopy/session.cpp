@@ -13,10 +13,10 @@ using std::map;
 uint32_t localhost_ip;
 uint32_t sample_ip;
 uint32_t client_ip;
-virtual_ip_addr local_ips;
 uint32_t remote_ip;
 uint16_t local_port;
 uint16_t remote_port;
+virtual_ip_addr local_ips;
 
 typedef map<uint64_t,session_st> SessContainer;
 typedef map<uint64_t,uint32_t> IPContainer;
@@ -39,14 +39,14 @@ static uint64_t totalResponses=0;
 static uint64_t totalRequests=0;
 static uint64_t totalConnections=0;
 static uint64_t totalNumOfNoRespSession=0;
-static struct iphdr *fir_auth_user_pack=NULL;
-static uint32_t global_total_seq_omit=0;
-static time_t lastCheckDeadSessionTime=0;
 static uint64_t bakTotal=0;
-static double bakTotalTimes=0;
 static uint64_t clientTotal=0;
-static double clientTotalTimes=0;
 static uint64_t sendPackets=0;
+static uint32_t global_total_seq_omit=0;
+static double bakTotalTimes=0;
+static double clientTotalTimes=0;
+static struct iphdr *fir_auth_user_pack=NULL;
+static time_t lastCheckDeadSessionTime=0;
 
 /**
  * output packet info for debug
@@ -399,7 +399,7 @@ void session_st::selectiveLogInfo(int level,const char *fmt, ...)
 }
 
 /**
- * check tcp seq is valid 
+ * check if tcp seq is valid 
  */
 static bool checkTcpSeg(struct tcphdr *tcp_header,uint32_t oldSeq)
 {
@@ -484,7 +484,6 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 		logInfo(LOG_ERR,"send to backend error,tot_len is:%d,contentlen:%d",
 				tot_len,contenLen);
 	}
-
 }
 
 /**
@@ -1183,7 +1182,6 @@ void session_st::establishConnectionForClosedConn()
 		isSynIntercepted=1;
 		free(tmpData);
 		//push remaining packets in handshakePackets to unsend
-
 		int i=0;
 		for(dataIterator iter=handshakePackets.begin();
 				iter!=handshakePackets.end();iter++)
@@ -1321,11 +1319,9 @@ static bool checkPacketPadding(struct iphdr *ip_header,
 	{
 		return true;
 	}
-
 	return false;
 
 }
-
 
 /**
  * processing backend packets
