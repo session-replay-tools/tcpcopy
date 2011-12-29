@@ -128,10 +128,10 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=current-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	size_t MAXPACKETS=5000;
+	size_t MAXPACKETS=100;
 	size_t size=0;
 #if (TCPCOPY_MYSQL)
-	MAXPACKETS=10000;
+	MAXPACKETS=2000;
 #endif
 	if(ratio<10)
 	{
@@ -1370,6 +1370,13 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		selectiveLogInfo(LOG_NOTICE,"ack back less than nextSeq:%u,%u, p:%u",
 				ack,nextSeq,client_port);
 #endif
+		if(!isBackSynReceived)
+		{
+			sendFakedFinToBackend(ip_header,tcp_header);
+			isFakedSendingFinToBackend=1;
+			isClientClosed=1;
+			return;
+		}
 		if(isClientClosed&&!tcp_header->fin)
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
@@ -1473,7 +1480,13 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		}
 		
 	}
-
+	if(!isBackSynReceived)
+	{
+		sendFakedFinToBackend(ip_header,tcp_header);
+		isFakedSendingFinToBackend=1;
+		isClientClosed=1;
+		return;
+	}
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+contSize);
 	bool isMtuModifed=0;
 	bool isGreetReceivedPacket=0; 
@@ -2180,7 +2193,7 @@ void process(char *packet)
 	time_t now=time(0);
 	timeCount++;
 
-	if(timeCount%100000==0)
+	if(timeCount%10000==0)
 	{
 		//this is for checking memory leak
 		logInfo(LOG_WARN,
