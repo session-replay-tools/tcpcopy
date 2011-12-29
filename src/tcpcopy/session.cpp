@@ -1894,9 +1894,10 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				baseReqContentPackets=reqContentPackets;
 			}
-			double diffReqCont=reqContentPackets-baseReqContentPackets;
+			size_t diffReqCont=reqContentPackets-baseReqContentPackets;
 			if(diffReqCont>100)
 			{
+				selectiveLogInfo(LOG_WARN,"lost packets:%u",diffReqCont);
 				over_flag=1;
 				return;
 			}
