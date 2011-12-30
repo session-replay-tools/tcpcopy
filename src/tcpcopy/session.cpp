@@ -1359,6 +1359,14 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,p=%u",
 				ack,nextSeq,client_port);
 #endif
+		if(!isBackSynReceived)
+		{
+#if (DEBUG_TCPCOPY)
+			selectiveLogInfo(LOG_NOTICE,"not recv back syn,p=%u",client_port);
+#endif
+			reset_flag = true;
+			return;
+		}
 		nextSeq=ack;
 	}else if(ack <nextSeq)
 	{
@@ -1368,6 +1376,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 #endif
 		if(!isBackSynReceived)
 		{
+			virtual_next_sequence =tcp_header->seq;;
 			sendFakedFinToBackend(ip_header,tcp_header);
 			isFakedSendingFinToBackend=1;
 			isClientClosed=1;
@@ -1478,6 +1487,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	}
 	if(!isBackSynReceived)
 	{
+		virtual_next_sequence =tcp_header->seq;;
 		sendFakedFinToBackend(ip_header,tcp_header);
 		isFakedSendingFinToBackend=1;
 		isClientClosed=1;
