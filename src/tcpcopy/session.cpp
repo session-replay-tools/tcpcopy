@@ -461,6 +461,7 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 	uint16_t contenLen=tot_len-size_ip-size_tcp;
 	if(contenLen>0)
 	{
+		lastSendClientContentTime=time(0);
 		nextSeq=nextSeq+contenLen;
 		sendConPackets=sendConPackets+1;
 	}
@@ -1616,7 +1617,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {	
-	lastRecvClientContentTime=time(0);
 #if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
 #endif
@@ -1889,22 +1889,24 @@ void session_st::process_recv(struct iphdr *ip_header,
 			}
 		}
 #endif
-
-		double diff=lastRecvClientContentTime-lastRecvRespContentTime;
-		//if the sesssion recv no response for more than 5 min
-		//then enter the suicide process
-		if(diff > 300)
+		if(isWaitResponse)
 		{
-			logLevel=LOG_DEBUG;
-			selectiveLogInfo(LOG_WARN,"no res back,req:%u,res:%u,p:%u",
-					reqContentPackets,respContentPackets,client_port);
-			size_t diffReqCont=reqContentPackets-sendConPackets;
-			if(diffReqCont>100)
-			{
-				selectiveLogInfo(LOG_WARN,"lost packets:%u,p:%u",
-						diffReqCont,client_port);
-				over_flag=1;
-				return;
+			double diff=time(0)-lastSendClientContentTime;
+			if(diff<300)
+			{	
+				//if the sesssion recv no response for more than 5 min
+				//then enter the suicide process
+				logLevel=LOG_DEBUG;
+				selectiveLogInfo(LOG_WARN,"no res back,req:%u,res:%u,p:%u",
+						reqContentPackets,respContentPackets,client_port);
+				size_t diffReqCont=reqContentPackets-sendConPackets;
+				if(diffReqCont>200)
+				{
+					selectiveLogInfo(LOG_WARN,"lost packets:%u,p:%u",
+							diffReqCont,client_port);
+					over_flag=1;
+					return;
+				}
 			}
 		}
 	}
@@ -2195,7 +2197,7 @@ void process(char *packet)
 	time_t now=time(0);
 	timeCount++;
 
-	if(timeCount%10000==0)
+	if(timeCount%20000==0)
 	{
 		//this is for checking memory leak
 		logInfo(LOG_WARN,

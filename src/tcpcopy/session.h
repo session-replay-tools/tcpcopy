@@ -92,7 +92,7 @@ struct session_st
 	time_t lastUpdateTime;
 	time_t createTime;
 	time_t lastRecvRespContentTime;
-	time_t lastRecvClientContentTime;
+	time_t lastSendClientContentTime;
 	uint16_t virtual_status;
 	uint16_t client_ip_id;
 	uint16_t client_port;
@@ -229,7 +229,7 @@ struct session_st
 		lastUpdateTime=time(0);
 		createTime=lastUpdateTime;
 		lastRecvRespContentTime=lastUpdateTime;
-		lastRecvClientContentTime=lastUpdateTime;
+		lastSendClientContentTime=lastUpdateTime;
 
 		client_port=0;
 		
