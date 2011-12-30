@@ -85,7 +85,6 @@ struct session_st
 	size_t responseReceived;
 	size_t reqContentPackets;
 	size_t sendConPackets;
-	size_t baseReqContentPackets;
 	size_t respContentPackets;
 	size_t numberOfExcutes;
 	size_t logRecordNum;
@@ -226,7 +225,6 @@ struct session_st
 		responseReceived=0;
 		reqContentPackets=0;
 		sendConPackets=0;
-		baseReqContentPackets=0;
 		respContentPackets=0;
 		lastUpdateTime=time(0);
 		createTime=lastUpdateTime;

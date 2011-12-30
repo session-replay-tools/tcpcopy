@@ -38,7 +38,6 @@ static uint64_t timeCount=0;
 static uint64_t totalResponses=0;
 static uint64_t totalRequests=0;
 static uint64_t totalConnections=0;
-static uint64_t totalNumOfNoRespSession=0;
 static uint64_t bakTotal=0;
 static uint64_t clientTotal=0;
 static uint64_t sendPackets=0;
@@ -160,7 +159,7 @@ static int clearTimeoutTcpSessions()
 			if(!p->second.candidateErased)
 			{
 				p->second.candidateErased=1;
-				logInfo(LOG_WARN,"unsend:candidate erased:%u,p=%u",
+				logInfo(LOG_WARN,"unsend:candidate erased:%u,p:%u",
 						size,p->second.client_port);
 				p++;
 				continue;
@@ -171,7 +170,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many unsend packets:%u,p=%u",
+			logInfo(LOG_WARN,"It has too many unsend packets:%u,p:%u",
 					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -193,7 +192,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many lost packets:%u,p=%u",
+			logInfo(LOG_WARN,"It has too many lost packets:%u,p:%u",
 					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -215,7 +214,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many handshake packets:%u,p=%u",
+			logInfo(LOG_WARN,"It has too many handshake packets:%u,p:%u",
 					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -238,7 +237,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_WARN,"It has too many mysql packets:%u,p=%u",
+			logInfo(LOG_WARN,"It has too many mysql packets:%u,p:%u",
 					size,p->second.client_port);
 			leaveCount++;
 			sessions.erase(p++);
@@ -259,13 +258,13 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_NOTICE,"session timeout,p=%u",
+			logInfo(LOG_NOTICE,"session timeout,p:%u",
 					p->second.client_port);
 			leaveCount++;
 			size=p->second.unsend.size();
 			if(size>10)
 			{
-				logInfo(LOG_WARN,"timeout unsend number:%u,p=%u",
+				logInfo(LOG_WARN,"timeout unsend number:%u,p:%u",
 						size,p->second.client_port);
 			}
 			sessions.erase(p++);
@@ -1351,18 +1350,19 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 
 	if(contSize>0)
 	{
+		respContentPackets++;
 		lastRecvRespContentTime=current;
 	}
 	if(ack > nextSeq)
 	{
 #if (DEBUG_TCPCOPY)
-		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,p=%u",
+		selectiveLogInfo(LOG_NOTICE,"ack back more than nextSeq:%u,%u,p:%u",
 				ack,nextSeq,client_port);
 #endif
 		if(!isBackSynReceived)
 		{
 #if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_NOTICE,"not recv back syn,p=%u",client_port);
+			selectiveLogInfo(LOG_NOTICE,"not recv back syn,p:%u",client_port);
 #endif
 			reset_flag = true;
 			return;
@@ -1504,7 +1504,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	//the following is not 100 percent right here
 	if(contSize>0)
 	{
-		respContentPackets++;
 		virtual_next_sequence =next_seq;
 		if(isClientClosed)
 		{
@@ -1897,17 +1896,13 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(diff > 300)
 		{
 			logLevel=LOG_DEBUG;
-			selectiveLogInfo(LOG_WARN,"no res back,req:%u,res:%u,contsize:%u",
-					reqContentPackets,respContentPackets,contSize);
-			totalNumOfNoRespSession++;
-			if(0 == baseReqContentPackets)
-			{
-				baseReqContentPackets=reqContentPackets;
-			}
-			size_t diffReqCont=reqContentPackets-baseReqContentPackets;
+			selectiveLogInfo(LOG_WARN,"no res back,req:%u,res:%u,p:%u",
+					reqContentPackets,respContentPackets,client_port);
+			size_t diffReqCont=reqContentPackets-sendConPackets;
 			if(diffReqCont>100)
 			{
-				selectiveLogInfo(LOG_WARN,"lost packets:%u",diffReqCont);
+				selectiveLogInfo(LOG_WARN,"lost packets:%u,p:%u",
+						diffReqCont,client_port);
 				over_flag=1;
 				return;
 			}
