@@ -1892,20 +1892,23 @@ void session_st::process_recv(struct iphdr *ip_header,
 		if(isWaitResponse)
 		{
 			double diff=time(0)-lastSendClientContentTime;
-			if(diff<300)
+			if(diff>300)
 			{	
 				//if the sesssion recv no response for more than 5 min
 				//then enter the suicide process
 				logLevel=LOG_DEBUG;
 				selectiveLogInfo(LOG_WARN,"no res back,req:%u,res:%u,p:%u",
 						reqContentPackets,respContentPackets,client_port);
-				size_t diffReqCont=reqContentPackets-sendConPackets;
-				if(diffReqCont>200)
+				if(reqContentPackets>sendConPackets)
 				{
-					selectiveLogInfo(LOG_WARN,"lost packets:%u,p:%u",
-							diffReqCont,client_port);
-					over_flag=1;
-					return;
+					size_t diffReqCont=reqContentPackets-sendConPackets;
+					if(diffReqCont>200)
+					{
+						selectiveLogInfo(LOG_WARN,"lost packets:%u,p:%u",
+								diffReqCont,client_port);
+						over_flag=1;
+						return;
+					}
 				}
 			}
 		}
