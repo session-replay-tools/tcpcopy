@@ -140,7 +140,7 @@ static int clearTimeoutTcpSessions()
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastSendClientContentTime;
-		if(diff < 10)
+		if(diff < 30)
 		{
 			p++;
 			continue;
