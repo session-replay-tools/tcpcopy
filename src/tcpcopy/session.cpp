@@ -127,7 +127,7 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=current-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	size_t MAXPACKETS=500;
+	size_t MAXPACKETS=200;
 	size_t size=0;
 #if (TCPCOPY_MYSQL)
 	MAXPACKETS=2000;
