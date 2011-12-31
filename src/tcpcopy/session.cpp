@@ -127,7 +127,7 @@ static int clearTimeoutTcpSessions()
 	time_t keepaliveBase=current-1800;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
-	size_t MAXPACKETS=100;
+	size_t MAXPACKETS=500;
 	size_t size=0;
 #if (TCPCOPY_MYSQL)
 	MAXPACKETS=2000;
@@ -139,7 +139,7 @@ static int clearTimeoutTcpSessions()
 	}
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
-		double diff=current-p->second.lastRecvRespContentTime;
+		double diff=current-p->second.lastSendClientContentTime;
 		if(diff < 10)
 		{
 			p++;
@@ -586,7 +586,7 @@ int session_st::sendReservedLostPackets()
 bool session_st::checkSendingDeadReqs()
 {
 	time_t now=time(0);
-	int diff=now-lastRecvRespContentTime;
+	int diff=now-lastSendClientContentTime;
 	size_t unsendContPackets=0;
 	if(reqContentPackets>=sendConPackets)
 	{
