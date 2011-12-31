@@ -117,14 +117,15 @@ void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
 static int clearTimeoutTcpSessions()
 {
 	/*
-	 * we clear old sessions that is never visited for more than one minute
-	 * this may be a problem for keepalive connections
+	 * we clear old sessions that recv no content response for 
+	 * more than one minute. this may be a problem 
+	 * for keepalive connections.
 	 * so we adopt a naive method to distinguish between short-lived 
 	 * and long-lived sessions(one connection represents one session)
 	 */
 	time_t current=time(0);
 	time_t normalBase=current-60;
-	time_t keepaliveBase=current-1800;
+	time_t keepaliveBase=current-120;
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
 	size_t MAXPACKETS=200;
@@ -244,7 +245,7 @@ static int clearTimeoutTcpSessions()
 			continue;
 		}
 #endif
-		if(p->second.lastUpdateTime<tmpBase)
+		if(p->second.lastRecvRespContentTime<tmpBase)
 		{
 			if(!p->second.candidateErased)
 			{
