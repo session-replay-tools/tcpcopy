@@ -18,6 +18,7 @@
 #include <netinet/if_ether.h> 
 #include <pthread.h>
 #include <unistd.h>
+#include <ctype.h>
 
 #include "session.h"
 #include "send.h"
@@ -210,6 +211,12 @@ static int retrieve_raw_sockets(int sock)
 			printf("recv_len:%d ,it is too long for recvbuf\n",recv_len);
 			logInfo(LOG_ERR,"recv_len:%d ,it is too long for recvbuf",recv_len);
 		}
+		//In the TCP/IP world, the encapsulation of IP datagrams is defined 
+		//in RFC 894 for Ethernets and in RFC 1042 for IEEE 802 networks. 
+		//Fortunately none of the valid 802 length values is the same as the Ethernet type values, 
+		//making the two frame formats distinguishable.
+		//TODO It will support 802 networks later
+		//the following works for Ethernet
 		struct etharp_frame *ether = (struct etharp_frame *)recvbuf; 
 		if(ntohs(ether->type) != 0x800){
 			return 0;

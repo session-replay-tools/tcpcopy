@@ -937,8 +937,8 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 		struct tcphdr* tcp_header)
 {
-	static unsigned char fake_ack_buf[40];
-	memset(fake_ack_buf,40,0);
+	unsigned char fake_ack_buf[40];
+	memset(fake_ack_buf,0,40);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_ack_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_ack_buf+20);
 #if (DEBUG_TCPCOPY)
@@ -974,8 +974,8 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
 		struct tcphdr* tcp_header,bool changeSeq)
 {
-	static unsigned char fake_ack_buf[40];
-	memset(fake_ack_buf,40,0);
+	unsigned char fake_ack_buf[40];
+	memset(fake_ack_buf,0,40);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_ack_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_ack_buf+20);
 	ip_header2->version = 4;
@@ -1014,8 +1014,8 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 #if (DEBUG_TCPCOPY)
 	selectiveLogInfo(LOG_NOTICE,"send faked fin To Back:%u",client_port);
 #endif
-	static unsigned char fake_fin_buf[40];
-	memset(fake_fin_buf,40,0);
+	unsigned char fake_fin_buf[40];
+	memset(fake_fin_buf,0,40);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_fin_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_fin_buf+20);
 	ip_header2->version = 4;
@@ -1056,8 +1056,8 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 	selectiveLogInfo(LOG_NOTICE,"send faked fin To Back from cli pack:%u",
 			client_port);
 #endif
-	static unsigned char fake_fin_buf[40];
-	memset(fake_fin_buf,40,0);
+	unsigned char fake_fin_buf[40];
+	memset(fake_fin_buf,0,40);
 	struct iphdr *ip_header2 = (struct iphdr *)fake_fin_buf;
 	struct tcphdr *tcp_header2 = (struct tcphdr *)(fake_fin_buf+20);
 	ip_header2->version = 4;
