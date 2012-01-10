@@ -41,6 +41,7 @@ static uint64_t totalConnections=0;
 static uint64_t bakTotal=0;
 static uint64_t clientTotal=0;
 static uint64_t sendPackets=0;
+static uint64_t globalSendConPackets=0;
 static uint32_t global_total_seq_omit=0;
 static double bakTotalTimes=0;
 static double clientTotalTimes=0;
@@ -138,11 +139,13 @@ static int clearTimeoutTcpSessions()
 		normalBase=keepaliveBase;
 		logInfo(LOG_NOTICE,"keepalive connection global");
 	}
+	logInfo(LOG_WARN,"session size:%u",sessions.size());
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
 		double diff=current-p->second.lastSendClientContentTime;
 		if(diff < 30)
 		{
+			logInfo(LOG_WARN,"diff < 30:%u",p->second.client_port);
 			p++;
 			continue;
 		}
@@ -465,6 +468,7 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 		lastSendClientContentTime=time(0);
 		nextSeq=nextSeq+contenLen;
 		sendConPackets=sendConPackets+1;
+		globalSendConPackets=globalSendConPackets+1;
 	}
 
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
@@ -1122,6 +1126,10 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 
 /**
  * establish a connection for already closed connection
+ * Attension:
+ *   if the server does the active close,it lets a client and server 
+ *   continually reuse the same port number at each end for successive 
+ *   incarnations of the same connection
  */
 void session_st::establishConnectionForClosedConn()
 {
@@ -1245,7 +1253,7 @@ bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 			unsigned char *data=copy_ip_packet(ip_header);
 			mysqlSpecialPackets.push_back(data);
 #if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_NOTICE,"push back necc statement:%u",
+			selectiveLogInfo(LOG_WARN,"push back necc statement:%u",
 					client_port);
 #endif
 			MysqlIterator iter=mysqlContainer.find(client_port);
@@ -1398,7 +1406,8 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 					lastSameAckTotal++;
 					if(lastSameAckTotal>64)
 					{
-						selectiveLogInfo(LOG_WARN,"backend lost packets");
+						selectiveLogInfo(LOG_WARN,"backend lost packets:%u",
+								client_port);
 						sendFakedFinToBackend(ip_header,tcp_header);
 						isFakedSendingFinToBackend=1;
 						isClientClosed=1;
@@ -1465,6 +1474,8 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			//send constructed server fin to the backend
 			sendFakedFinToBackend(ip_header,tcp_header);
 			isFakedSendingFinToBackend=1;
+			virtual_status |= CLIENT_FIN;
+			confirmed=1;
 		}else
 		{
 			over_flag=1;
@@ -1967,7 +1978,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				if(checkPacketPaddingForMysql(ip_header,tcp_header))
 				{
 #if (DEBUG_TCPCOPY)
-					selectiveLogInfo(LOG_NOTICE,"init session");
+					selectiveLogInfo(LOG_WARN,"init session");
 #endif
 					initSessionForKeepalive();
 					establishConnectionForNoSynPackets(ip_header,
@@ -2216,7 +2227,8 @@ void process(char *packet)
 		}
 		logInfo(LOG_WARN,"clientTotal:%llu,clientTotalTimes:%f,avg=%f",
 				clientTotal,clientTotalTimes,clientTotalTimes/clientTotal);
-		logInfo(LOG_WARN,"send Packets:%llu",sendPackets);
+		logInfo(LOG_WARN,"send Packets:%llu,send content packets:%llu",
+				sendPackets,globalSendConPackets);
 		clearTimeoutTcpSessions();
 		double ratio=0;
 		if(enterCount>0)

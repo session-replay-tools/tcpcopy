@@ -50,7 +50,15 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define UNKNOWN_FLAG 3
 #define SERVER_BACKEND_FLAG 4
 #define SELF_FLAG 5
+/* 
+ * For an Ethernet this implies an MSS of up to 1460 bytes. 
+ * Using IEEE 802.3 encapsulation, the MSS could go up to 1452 bytes.
+ */
 #define DEFAULT_RESPONSE_MTU 1500
+/*
+ * If one end does not receive an MSS option from the other end, 
+ * a default of 536 bytes is assumed. 
+ */
 #define MIN_RESPONSE_MTU 576
 #define RESERVE_CLIENT_FLAG 6
 
@@ -160,6 +168,7 @@ struct session_st
 		mtu=MIN_RESPONSE_MTU;
 		handshakeExpectedPackets=2;
 		virtual_next_sequence=0;
+		virtual_ack=0;
 		client_ip_id=0;
 		initSessionForKeepalive();
 		for(dataIterator iter=handshakePackets.begin();
