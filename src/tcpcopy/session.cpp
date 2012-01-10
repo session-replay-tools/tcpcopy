@@ -145,7 +145,9 @@ static int clearTimeoutTcpSessions()
 		double diff=current-p->second.lastSendClientContentTime;
 		if(diff < 30)
 		{
+#if (TCPCOPY_MYSQL)
 			logInfo(LOG_WARN,"diff < 30:%u",p->second.client_port);
+#endif
 			p++;
 			continue;
 		}
@@ -1625,6 +1627,11 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 
 /**
  * processing client packets
+ * TODO
+ * TCP is always allowed to send 1 byte of data 
+ * beyond the end of a closed window which confuses tcpcopy
+ * It will be resolved later
+ * 
  */
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
