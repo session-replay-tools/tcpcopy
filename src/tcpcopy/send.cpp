@@ -28,7 +28,7 @@ int send_init()
 	if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {  
 		perror("IP_HDRINCL");  
 		exit(1);  
-	} 
+	}
 	toaddr.sin_family = AF_INET;
 	toaddr.sin_addr.s_addr = remote_ip;
 

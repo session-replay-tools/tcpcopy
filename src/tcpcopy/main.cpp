@@ -158,7 +158,21 @@ static void set_nonblock(int socket)
 
 static int init_raw_socket()
 {
-	int sock = socket(AF_PACKET,SOCK_RAW,htons(ETH_P_IP));
+#if (COPY_LINK_PACKETS)
+	/* 
+	 * AF_PACKET
+	 * Packet sockets are used to receive or send raw packets 
+	 * at the device driver level.They allow the user to 
+	 * implement protocol modules in user space on top of 
+	 * the physical layer. 
+	 * ETH_P_IP
+	 * Internet Protocol packet that is related to the Ethernet 
+	 */
+	int sock = socket(AF_PACKET,SOCK_DGRAM,htons(ETH_P_IP));
+#else 
+	/* copy ip datagram from IP layer*/
+	int sock = socket(AF_INET,SOCK_RAW,IPPROTO_TCP);
+#endif
 	if(-1 == sock)
 	{
 		perror("socket");
@@ -211,24 +225,12 @@ static int retrieve_raw_sockets(int sock)
 			printf("recv_len:%d ,it is too long for recvbuf\n",recv_len);
 			logInfo(LOG_ERR,"recv_len:%d ,it is too long for recvbuf",recv_len);
 		}
-		//In the TCP/IP world, the encapsulation of IP datagrams is defined 
-		//in RFC 894 for Ethernets and in RFC 1042 for IEEE 802 networks. 
-		//Fortunately none of the valid 802 length values is the same as the Ethernet type values, 
-		//making the two frame formats distinguishable.
-		//TODO It will support 802 networks later
-		//the following works for Ethernet
-		struct etharp_frame *ether = (struct etharp_frame *)recvbuf; 
-		if(ntohs(ether->type) != 0x800){
-			return 0;
-		}
-		size_t len=sizeof(struct etharp_frame);
-		char* packet=recvbuf+len;
-		size_t length=recv_len-len;
+		char* packet=recvbuf;
 		if(isPacketNeeded((const char* )packet))
 		{
 			rawValidPackets++;
 #if (MULTI_THREADS)  
-			putPacketToPool((const char*)packet,length);
+			putPacketToPool((const char*)packet,recv_len);
 #else
 			process(packet);
 #endif
@@ -357,7 +359,7 @@ static int init_tcp_copy()
 	if(raw_sock!=-1)
 	{
 		select_sever_add(raw_sock);
-		//init sending info
+		/*init sending info*/
 		send_init();
 #if (MULTI_THREADS)  
 		pthread_t thread;

@@ -23,13 +23,6 @@ extern uint32_t remote_ip;
 extern uint16_t remote_port;
 extern int global_out_level;
 
-#pragma pack(push,1)
-struct etharp_frame { 
-	unsigned char dst[6]; 
-	unsigned char src[6];
-	unsigned short type; 
-};
-#pragma pack(pop)
 void process(char *);
 bool isPacketNeeded(const char *packet);
 void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
