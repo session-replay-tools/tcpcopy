@@ -65,6 +65,10 @@ static int drop_netlink_packet(unsigned long packet_id)
 	struct ipq_verdict_msg *ver_data = NULL;
 	struct sockaddr_nl addr;
 
+	/*
+	 * The IPQM_VERDICT message is used to release packets 
+	 * from the kernel ip queue module.
+	 */
 	nl_header->nlmsg_type=IPQM_VERDICT;
 	nl_header->nlmsg_len=NLMSG_LENGTH(sizeof(struct ipq_verdict_msg));
 	nl_header->nlmsg_flags=(NLM_F_REQUEST);
@@ -77,6 +81,13 @@ static int drop_netlink_packet(unsigned long packet_id)
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid = 0;
 	addr.nl_groups = 0;
+	/*
+	 * In an effort to keep packets properly ordered,
+	 * the impelmentation of the protocol requires that
+	 * the user space application send an IPQM_VERDICT message
+	 * after every IPQM PACKET message is received.
+	 *
+	 */
 	if(sendto(firewall_sock,(void *)nl_header,nl_header->nlmsg_len,0,
 				(struct sockaddr *)&addr,sizeof(struct sockaddr_nl))<0)
 	{
@@ -108,8 +119,11 @@ static void interception_process(int fd){
 #if (DEBUG_TCPCOPY)
 			formatOutput(LOG_DEBUG,ip_header);
 #endif
-			/* drop the packet */
-			/* if you comment the following,you will boost the tcpcopy server */
+			/* 
+			 * drop the packet 
+			 * if you comment the following,you will boost the tcpcopy server
+			 * buf you may encounter some problems
+			 */
 			drop_netlink_packet(packet_id);  	
 		}
 	}else{
