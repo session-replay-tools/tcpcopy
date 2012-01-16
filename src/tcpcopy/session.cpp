@@ -42,6 +42,7 @@ static uint64_t bakTotal=0;
 static uint64_t clientTotal=0;
 static uint64_t sendPackets=0;
 static uint64_t globalSendConPackets=0;
+static uint64_t globalConPackets=0;
 static uint32_t global_total_seq_omit=0;
 static double bakTotalTimes=0;
 static double clientTotalTimes=0;
@@ -1643,6 +1644,10 @@ void session_st::process_recv(struct iphdr *ip_header,
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
+	if(contSize>0)
+	{
+		globalConPackets++;
+	}
 	//check if it needs sending fin to backend
 	if(candidateErased)
 	{
@@ -2236,6 +2241,7 @@ void process(char *packet)
 				clientTotal,clientTotalTimes,clientTotalTimes/clientTotal);
 		logInfo(LOG_WARN,"send Packets:%llu,send content packets:%llu",
 				sendPackets,globalSendConPackets);
+		logInfo(LOG_WARN,"total cont Packs from cli:%llu",globalConPackets);
 		clearTimeoutTcpSessions();
 		double ratio=0;
 		if(enterCount>0)
