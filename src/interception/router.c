@@ -64,6 +64,12 @@ void router_update(struct iphdr *ip_header){
 	uint64_t key;
 	void *fd=NULL;
 	struct receiver_msg_st msg;
+#if (TCPCOPY_MYSQL_ADVANCED) 
+	unsigned char* payload=NULL;
+	uint32_t size_tcp;
+	uint32_t contentLen;
+	uint32_t totalLen;
+#endif
 
 	if(ip_header->protocol != IPPROTO_TCP){
 		logInfo(LOG_INFO,"this is not tcp packet");
@@ -71,11 +77,31 @@ void router_update(struct iphdr *ip_header){
 	}
 	size_ip = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+
+	memset(&msg,0,sizeof(struct receiver_msg_st));
+	memcpy((void *) &(msg.ip_header),ip_header,sizeof(struct iphdr));
+	memcpy((void *) &(msg.tcp_header),tcp_header,sizeof(struct tcphdr));
+
+#if (TCPCOPY_MYSQL_ADVANCED) 
+	totalLen = ntohs(ip_header->tot_len);
+	size_tcp = tcp_header->doff<<2;
+	contentLen=totalLen-size_ip-size_tcp;
+	if(contentLen>0)
+	{
+		payload=(unsigned char*)((char*)tcp_header+size_tcp);
+		if(contentLen<=MAX_PAYLOAD_LEN)
+		{
+			/*
+			 * only transfer payload if content length is less
+			 * than MAX_PAYLOAD_LEN
+			 */
+			memcpy((void *) &(msg.payload),payload,contentLen);
+		}
+	}
+#endif
 	key=get_key(ip_header->daddr,tcp_header->dest);
 	route_table_delete_obsolete(key);
 	fd = hash_find(table,key);
-	memcpy((void *) &(msg.ip_header),ip_header,sizeof(struct iphdr));
-	memcpy((void *) &(msg.tcp_header),tcp_header,sizeof(struct tcphdr));
 	if( NULL == fd ){
 		logInfo(LOG_INFO,"fd is null");
 		delay_table_add(key,&msg);

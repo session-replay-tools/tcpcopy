@@ -1,6 +1,5 @@
 #include <unistd.h>
 #include "msg.h"
-#include "../log/log.h"
 
 static int tcp_sock_init(){
 	int sock;

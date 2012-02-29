@@ -19,12 +19,16 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <ctype.h>
+#include <getopt.h>
 
 #include "session.h"
 #include "send.h"
 #include "address.h"
 #include "../event/select_server.h"
 #include "../log/log.h"
+#if (TCPCOPY_MYSQL_NO_SKIP)
+#include "../mysql/pairs.h"
+#endif
 #include "../communication/msg.h"
 
 #define RECV_BUF_SIZE 2048
@@ -37,6 +41,7 @@
 #define FAILURE -1
 #define MULTI_THREADS 1
 #define MEMORY_USAGE "VmRSS:"
+#define VERSION "0.3.4"
 
 static pthread_mutex_t mutex;
 static pthread_cond_t empty;
@@ -426,20 +431,88 @@ static int retrieveVirtualIPAddress(const char* ips)
 	return true;
 }
 
+typedef struct _tcpcopy_options TcpcopyOptions;                                                                                
+struct _tcpcopy_options
+{
+	char *conf_file;
+};
+
+TcpcopyOptions options = {
+	"tcpcopy.conf"
+};
+
+#if (TCPCOPY_MYSQL_ADVANCED)  
+int readArgs (int argc,
+		char **argv,
+		TcpcopyOptions *options)
+{
+	int c;
+	char pairs[512];
+	int result=0;
+	while (1) {
+		int option_index = 0;
+		static struct option long_options[] = {
+			{"pairs",  1, 0, 'p'},
+			{"help",       0, 0, 'h'},
+			{"version",    0, 0, 'v'},
+			{0, 0, 0, 0}
+		};
+		c = getopt_long (argc, argv, "p:hv",
+				long_options, &option_index);
+		if (c == -1) {
+			break;
+		}
+		switch (c) {			
+			case 'p':
+				strcpy(pairs,optarg);
+				retrieveMysqlUserPwdInfo(pairs);
+				result=1;
+				break;
+			case 'c':
+				options->conf_file = (char*)malloc(strlen(optarg) + 1);
+				if (!options->conf_file) {
+					fprintf(stderr, "Not enough memory to "
+							"launch rinetd.\n");
+					exit(1);
+				}
+				strcpy(options->conf_file, optarg);
+				break;
+			case 'h':
+				printf("Usage: tcpcopy [OPTION]\n"
+						"  -c, --conf-file FILE   read configuration "
+						"from FILE\n"
+						"  -h, --help             display this help\n"
+						"  -v, --version          display version "
+						"number\n\n");
+				printf("Most options are controlled through the\n"
+						"configuration file. See the tcpcopy\n"
+						"manpage for more information.\n");
+				exit (0);
+			case 'v':
+				printf ("rinetd %s\n", VERSION);
+				exit (0);
+			case '?':
+			default:
+				exit (1);
+		}
+	}
+	return result;
+}
+#endif
+
 /**
  * main entry point
  */
 int main(int argc ,char **argv)
 {
 	bool result=true;
-	if(argc != 5)
+	if(argc < 5)
 	{
 		printf("Usage: %s 61.135.250.1 80 61.135.250.2 80\n",
 				argv[0]);
 		exit(1);
 	}
 	initLogInfo();
-	sample_ip=inet_addr("61.135.250.217");
 	result=retrieveVirtualIPAddress(argv[1]);
 	if(!result)
 	{
@@ -449,6 +522,22 @@ int main(int argc ,char **argv)
 	local_port = htons(atoi(argv[2]));
 	remote_ip = inet_addr(argv[3]);
 	remote_port = htons(atoi(argv[4]));
+
+#if (TCPCOPY_MYSQL_ADVANCED)  
+	if(argc>5)
+	{
+		if(!readArgs(argc,argv,&options))
+		{
+			logInfo(LOG_ERR,"user password pair is missing:%d",argc);
+		}
+	}else
+	{
+		logInfo(LOG_ERR,"user password pair is missing");
+		printf("Usage: %s 1.1.1.1 80 1.1.1.2 80 -p user1@psw1:user2@psw2:...\n",
+				argv[0]);
+		exit(1);
+	}
+#endif
 
 	set_signal_handler();
 	if(SUCCESS==init_tcp_copy())

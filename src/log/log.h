@@ -22,7 +22,24 @@ extern "C"
 #define LOG_INFO              7
 #define LOG_DEBUG             8 
 
+//#define TCPCOPY_MYSQL_SKIP        1
+//#define TCPCOPY_MYSQL_NO_SKIP     1
 #define DEBUG_TCPCOPY 		  0
+
+#if(TCPCOPY_MYSQL_SKIP)
+#define TCPCOPY_MYSQL_BASIC 1
+#endif
+
+#if(TCPCOPY_MYSQL_NO_SKIP)
+
+#ifndef TCPCOPY_MYSQL_BASIC
+#define TCPCOPY_MYSQL_BASIC 1
+#endif
+
+#define TCPCOPY_MYSQL_ADVANCED 1
+
+#endif
+
 
 	void initLogInfo();
 	void logInfoForSel(int level,const char *fmt, va_list args);

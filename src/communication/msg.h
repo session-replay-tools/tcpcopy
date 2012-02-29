@@ -13,7 +13,13 @@ extern "C"
 #include <arpa/inet.h>
 #include <string.h>
 #include <netinet/ip.h>
+#include "../log/log.h"
+
 #define  SERVER_PORT  36524
+
+#if (TCPCOPY_MYSQL_ADVANCED)
+#define  MAX_PAYLOAD_LEN 128
+#endif
 
 #define  CLIENT_ADD   1
 #define  CLIENT_DEL   2
@@ -29,6 +35,9 @@ extern "C"
 	struct receiver_msg_st{
 		struct iphdr ip_header;
 		struct tcphdr tcp_header;
+#if (TCPCOPY_MYSQL_ADVANCED)	
+		unsigned char payload[MAX_PAYLOAD_LEN];
+#endif
 	};
 #pragma pack(pop)
 

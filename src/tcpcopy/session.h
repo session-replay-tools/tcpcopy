@@ -2,6 +2,7 @@
 #define  _TCP_REDIRECT_SESSION_H_INC
 
 #include "../log/log.h"
+#include "../communication/msg.h"
 #include <stdarg.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
@@ -16,7 +17,6 @@ typedef struct virtual_ip_addr{
 	int num;
 }virtual_ip_addr;
 
-extern uint32_t sample_ip;
 extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
 extern uint32_t remote_ip;
@@ -36,6 +36,7 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define SEND_RESPONSE_CONFIRM 8
 #define SERVER_FIN  16
 #define	CLIENT_FIN  32
+
 #define BACKEND_FLAG 0
 #define CLIENT_FLAG 1
 #define FAKE_CLIENT_FLAG 10
@@ -43,22 +44,17 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define UNKNOWN_FLAG 3
 #define SERVER_BACKEND_FLAG 4
 #define SELF_FLAG 5
-/* 
- * For an Ethernet this implies an MSS of up to 1460 bytes. 
- * Using IEEE 802.3 encapsulation, the MSS could go up to 1452 bytes.
- */
-#define DEFAULT_RESPONSE_MTU 1500
-/*
- * If one end does not receive an MSS option from the other end, 
- * a default of 536 bytes is assumed. 
- */
-#define MIN_RESPONSE_MTU 576
 #define RESERVE_CLIENT_FLAG 6
 
 #define FAKE_SYN_BUF_SIZE 52
 #define COM_STMT_PREPARE 22
 #define COM_QUERY 3
 
+#if (TCPCOPY_MYSQL_ADVANCED) 
+#define SCRAMBLE_LENGTH 20
+#define SEED_323_LENGTH 8
+#define MAX_PASSWORD_LEN 256
+#endif
 
 
 struct session_st
@@ -75,7 +71,6 @@ struct session_st
 	uint32_t lastReqContSeq;
 	uint32_t nextSeq;
 	uint32_t lastAck;
-	uint32_t mtu;
 	uint32_t lastRespPacketSize;
 	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
@@ -90,6 +85,7 @@ struct session_st
 	size_t numberOfExcutes;
 	size_t logRecordNum;
 	size_t lastSameAckTotal;
+	size_t contPacketsFromGreet;
 	time_t lastUpdateTime;
 	time_t createTime;
 	time_t lastRecvRespContentTime;
@@ -97,7 +93,11 @@ struct session_st
 	uint16_t virtual_status;
 	uint16_t client_ip_id;
 	uint16_t client_port;
-
+#if (TCPCOPY_MYSQL_ADVANCED)
+	char scrambleBuf[SCRAMBLE_LENGTH+1];
+	char seed323[SEED_323_LENGTH+1];
+	char password[MAX_PASSWORD_LEN];
+#endif
 	unsigned logLevel:4;
 	unsigned reset_flag:1;
 	unsigned over_flag:1;
@@ -121,7 +121,9 @@ struct session_st
 	unsigned isClientReset:1;
 	unsigned isPureRequestBegin:1;
 	unsigned isGreeingReceived:1;
+	unsigned isNeedSecondAuth:1;
 	unsigned loginCanSendFlag:1;
+	unsigned isFirstAuthSent:1;
 	unsigned candidateErased:1;
 	unsigned isSeqAckNotConsistent:1;
 	unsigned isLoginReceived:1;
@@ -158,7 +160,6 @@ struct session_st
 		lastReqContSeq=0;
 		nextSeq=0;
 		lastAck=0;
-		mtu=MIN_RESPONSE_MTU;
 		handshakeExpectedPackets=2;
 		virtual_next_sequence=0;
 		virtual_ack=0;
@@ -182,6 +183,7 @@ struct session_st
 	void initSessionForKeepalive()
 	{
 		lastSameAckTotal=0;
+		contPacketsFromGreet=0;
 		logRecordNum=0;
 		lastRespPacketSize=0;
 		total_seq_omit=0;
@@ -196,7 +198,9 @@ struct session_st
 		isClientReset=0;
 		isPureRequestBegin=0;
 		isGreeingReceived=0;
+		isNeedSecondAuth=0;
 		loginCanSendFlag=0;
+		isFirstAuthSent=0;
 		candidateErased=0;
 		isSeqAckNotConsistent=0;
 		isLoginReceived=0;
