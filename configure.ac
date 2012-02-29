@@ -51,6 +51,7 @@ AC_OUTPUT([
 Makefile
 src/Makefile
 src/log/Makefile
+src/mysql/Makefile
 src/interception/Makefile
 src/communication/Makefile
 src/tcpcopy/Makefile
