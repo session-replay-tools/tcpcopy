@@ -22,6 +22,7 @@ static void connect_to_server(int sock,uint32_t ip){
 	if(connect(sock,(struct sockaddr *)&remote_addr,length) == -1){
 		perror("connect to remote:");                         
 		logInfo(LOG_ERR,"it can not connect to remote server");
+		logInfo(LOG_ERR,"hint:server ip valid or server 36524 port forbidden?");
 		exit(errno);
 	}   
 }
