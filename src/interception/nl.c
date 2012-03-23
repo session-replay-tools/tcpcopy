@@ -54,7 +54,8 @@ void nl_set_mode(int sock,uint8_t mode,size_t range){
 	if(sendto(sock, &req, req.head.nlmsg_len,0,
 				(struct sockaddr *)&addr,sizeof(addr)) < 0){
 		perror("cannot set mode:");
-		logInfo(LOG_ERR,"it can not set mode for netlink");
+		logInfo(LOG_ERR,
+				"it can not set mode for netlink,check if ip queue is up");
 		exit(errno);
 	}
 }

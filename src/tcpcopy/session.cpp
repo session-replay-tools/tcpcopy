@@ -2196,7 +2196,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			unsigned char *data=copy_ip_packet(ip_header);
 			handshakePackets.push_back(data);
 		}
-		//when client send multiple packets more quickly than the local network
+		//when client sends multi-packets more quickly than the local network
 		unsend.push_back(copy_ip_packet(ip_header));
 #if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_DEBUG,"SYN_SEND push back the packet from cli");
