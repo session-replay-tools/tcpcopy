@@ -23,10 +23,10 @@ struct iphdr *nl_firewall_recv(int sock,unsigned long *packet_id){
 	}
 	if(len < normalLen)
 	{
-		logInfo(LOG_ERR,"nl recv error:%ld",len);
-		logInfo(LOG_ERR,"privilage problems(use root) or other error");
-		fprintf(stderr,"privilage problems(use root) or other error\n");
-		exit(-1);
+		logInfo(LOG_WARN,"nl recv error:%ld",len);
+		logInfo(LOG_WARN,"privilage problems or not the object of tcpcopy");
+		fprintf(stderr,"privilage problems or not the object of tcpcopy\n");
+		return NULL;
 	}else
 	{
 		struct ipq_packet_msg *msg = nl_payload(buffer);

@@ -11,10 +11,14 @@ static  int msg_listen_sock;
 
 static void set_sock_no_delay(int sock){
 	int flag = 1;
-	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,sizeof(flag)) == -1){
+	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,
+				sizeof(flag)) == -1){
 		perror("setsockopt:");
 		logInfo(LOG_ERR,"setsockopt error");
 		exit(errno);
+	}else
+	{
+		logInfo(LOG_NOTICE,"setsockopt ok");
 	}
 }
 
@@ -142,27 +146,29 @@ static void interception_process(int fd){
 }
 
 /* 
- * ===  FUNCTION  ======================================================================
+ * ===  FUNCTION  ==============================================
  *         Name:  interception_init
  *  Description:  init for interception
- * =====================================================================================
+ * =============================================================
  */
 void interception_init(){
 	delay_table_init();
 	router_init();
 	select_sever_set_callback(interception_process);
 	msg_listen_sock = msg_receiver_init();
+	logInfo(LOG_NOTICE,"msg listen socket:%d",msg_listen_sock);
 	select_sever_add(msg_listen_sock);
 	firewall_sock = nl_firewall_init();
+	logInfo(LOG_NOTICE,"firewall socket:%d",firewall_sock);
 	select_sever_add(firewall_sock);
 }
 
 
 /* 
- * ===  FUNCTION  ======================================================================
+ * ===  FUNCTION  ==============================================
  *         Name:  interception_run
  *  Description:  main procedure for running interception
- * =====================================================================================
+ * =============================================================
  */
 void interception_run(){
 	select_server_run();
@@ -170,18 +176,22 @@ void interception_run(){
 
 
 /* 
- * ===  FUNCTION  ======================================================================
+ * ===  FUNCTION  ==============================================
  *         Name:  interception_over
  *  Description:  interception over
- * =====================================================================================
+ * =============================================================
  */
 void interception_over(){
 	if(firewall_sock!=-1){
 		close(firewall_sock);
+		firewall_sock=-1;
+		logInfo(LOG_NOTICE,"firewall sock is closed");
 	}
 
 	if(msg_listen_sock!=-1){
 		close(msg_listen_sock);
+		msg_listen_sock=-1;
+		logInfo(LOG_NOTICE,"msg listen sock is closed");
 	}
 	router_destroy();
 	delay_table_destroy();

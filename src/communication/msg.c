@@ -7,6 +7,9 @@ static int tcp_sock_init(){
 		perror("socket:");                                        
 		logInfo(LOG_ERR,"socket create error");
 		exit(errno);
+	}else
+	{
+		logInfo(LOG_NOTICE,"socket created successfully ");
 	}
 	return sock;
 }
@@ -54,6 +57,9 @@ static void sock_bind(int sock){
 		perror("can not bind:");
 		logInfo(LOG_ERR,"it can not bind address");
 		exit(errno);
+	}else
+	{
+		logInfo(LOG_NOTICE,"it binds address successfully");
 	}
 }
 
@@ -62,6 +68,9 @@ static void sock_listen(int sock){
 		perror("sock listen:");
 		logInfo(LOG_ERR,"it can not listen");
 		exit(errno);
+	}else
+	{
+		logInfo(LOG_NOTICE,"it listens successfully");
 	}
 }
 

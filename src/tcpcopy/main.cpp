@@ -513,6 +513,8 @@ int main(int argc ,char **argv)
 		exit(1);
 	}
 	initLogInfo();
+	logInfo(LOG_NOTICE,"%s %s %s %s %s",argv[0],argv[1],
+			argv[2],argv[3],argv[4]);
 	result=retrieveVirtualIPAddress(argv[1]);
 	if(!result)
 	{

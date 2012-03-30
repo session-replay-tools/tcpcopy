@@ -57,6 +57,9 @@ void nl_set_mode(int sock,uint8_t mode,size_t range){
 		logInfo(LOG_ERR,
 				"it can not set mode for netlink,check if ip queue is up");
 		exit(errno);
+	}else
+	{
+		logInfo(LOG_NOTICE,"sendto for ip queue is ok");
 	}
 }
 

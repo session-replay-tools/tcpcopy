@@ -21,15 +21,18 @@
 
 static void releaseResources()
 {
+	logInfo(LOG_NOTICE,"releaseResources begin");
 	interception_over();
+	logInfo(LOG_NOTICE,"releaseResources end except log file");
 	endLogInfo();
 }
 
 static void signal_handler(int sig)
 {
-	printf("set signal handler:%d\n",sig);
+	logInfo(LOG_ERR,"set signal handler:%d",sig);
 	if(SIGSEGV==sig)
 	{    
+		logInfo(LOG_ERR,"SIGSEGV error");
 		signal(SIGSEGV, SIG_DFL);
 		kill(getpid(), sig);
 	}else
@@ -39,11 +42,12 @@ static void signal_handler(int sig)
 }
 
 static void set_signal_handler(){
+	int i=1;
 	atexit(releaseResources);
-	signal(SIGINT,signal_handler);
-	signal(SIGPIPE,signal_handler);
-	signal(SIGHUP,signal_handler);
-	signal(SIGTERM,signal_handler);
+	for(;i<SIGRTMIN;i++)	
+	{
+		signal(i,signal_handler);
+	}
 }
 
 int main(){
