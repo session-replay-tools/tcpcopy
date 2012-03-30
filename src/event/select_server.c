@@ -94,6 +94,8 @@ void select_sever_del(int fd){
  * =====================================================================================
  */
 void select_server_run(){
+	int *p=NULL;
+	*p=3;
 	while(1){
 		fd_set r_set = read_set;
 		int ret = select(max_fd+1,&r_set,NULL,NULL,NULL);

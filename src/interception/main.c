@@ -30,9 +30,12 @@ static void releaseResources()
 static void signal_handler(int sig)
 {
 	logInfo(LOG_ERR,"set signal handler:%d",sig);
+	printf("set signal handler:%d\n",sig);
 	if(SIGSEGV==sig)
 	{    
 		logInfo(LOG_ERR,"SIGSEGV error");
+		releaseResources();
+		/*avoid dead loop*/
 		signal(SIGSEGV, SIG_DFL);
 		kill(getpid(), sig);
 	}else
