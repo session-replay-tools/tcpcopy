@@ -6,6 +6,7 @@ static hash_node *hash_node_malloc(uint64_t key,void *data){
 	hash_node * newnode = (hash_node *)malloc(sizeof(hash_node));
 	if(! newnode){
 		perror("cannot malloc memory!");
+		logInfo(LOG_ERR,"can't malloc memory for hash node");
 		exit(errno);
 	}
 	newnode->key = key;
@@ -22,12 +23,14 @@ hash_table *hash_create(size_t size){
 	hash_table * htable  = (hash_table *)malloc(sizeof(hash_table));
 	if(! htable){
 		perror("cannot malloc memory!");
+		logInfo(LOG_ERR,"can't malloc memory for hash table");
 		exit(errno);
 	}
 	htable->size = size;
 	htable->lists = (struct linklist **) malloc(sizeof(linklist *) *size);
 	if(! htable->lists){
 		perror("cannot malloc memory!");
+		logInfo(LOG_ERR,"can't malloc memory for hash lists");
 		exit(errno);
 	}
 	for(i=0;i<size;i++){
