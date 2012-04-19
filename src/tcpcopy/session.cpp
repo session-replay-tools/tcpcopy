@@ -21,6 +21,7 @@ uint32_t client_ip;
 uint32_t remote_ip;
 uint16_t local_port;
 uint16_t remote_port;
+uint16_t shift_port;
 virtual_ip_addr local_ips;
 
 typedef map<uint64_t,session_st> SessContainer;
@@ -2555,8 +2556,23 @@ void process(char *packet)
 	else if(checkLocalIPValid(ip_header->daddr) && 
 			(tcp_header->dest==local_port))
 	{
-		lastCheckDeadSessionTime=now;
 		//when the packet comes from client
+		lastCheckDeadSessionTime=now;
+		uint16_t tmp_shift_port=shift_port<<8;
+		if(shift_port)
+		{
+			uint16_t transfered_port=ntohs(tcp_header->source);
+			logInfo(LOG_DEBUG,"src port:%u",transfered_port);
+			if(transfered_port<=(65535-tmp_shift_port))
+			{
+				transfered_port=transfered_port+tmp_shift_port;
+			}else
+			{
+				transfered_port=1024+tmp_shift_port;
+			}
+			tcp_header->source=htons(transfered_port);
+			logInfo(LOG_DEBUG,"dst port:%u",transfered_port);
+		}
 		uint64_t value=get_ip_port_value(ip_header->saddr,tcp_header->source);
 		if(tcp_header->syn)
 		{

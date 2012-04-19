@@ -8,6 +8,7 @@
 
 static  int firewall_sock;
 static  int msg_listen_sock;
+passed_ip_addr passed_ips;
 
 static void set_sock_no_delay(int sock){
 	int flag = 1;
@@ -102,8 +103,51 @@ static int drop_netlink_packet(unsigned long packet_id)
 	return 1;
 }
 
+static unsigned char pass_buffer[128];
+static int pass_netlink_packet(unsigned long packet_id)
+{
+	struct nlmsghdr* nl_header=(struct nlmsghdr*)pass_buffer;
+	struct ipq_verdict_msg *ver_data = NULL;
+	struct sockaddr_nl addr;
+
+	/*
+	 * The IPQM_VERDICT message is used to release packets 
+	 * from the kernel ip queue module.
+	 */
+	nl_header->nlmsg_type=IPQM_VERDICT;
+	nl_header->nlmsg_len=NLMSG_LENGTH(sizeof(struct ipq_verdict_msg));
+	nl_header->nlmsg_flags=(NLM_F_REQUEST);
+	nl_header->nlmsg_pid=getpid();
+	nl_header->nlmsg_seq=seq++;
+	ver_data=(struct ipq_verdict_msg *)NLMSG_DATA(nl_header);
+	ver_data->value=NF_ACCEPT;
+	ver_data->id=packet_id;
+	memset(&addr,0,sizeof(addr));
+	addr.nl_family = AF_NETLINK;
+	addr.nl_pid = 0;
+	addr.nl_groups = 0;
+	/*
+	 * In an effort to keep packets properly ordered,
+	 * the impelmentation of the protocol requires that
+	 * the user space application send an IPQM_VERDICT message
+	 * after every IPQM PACKET message is received.
+	 *
+	 */
+	if(sendto(firewall_sock,(void *)nl_header,nl_header->nlmsg_len,0,
+				(struct sockaddr *)&addr,sizeof(struct sockaddr_nl))<0)
+	{
+		perror("unable to send mode message");
+		logInfo(LOG_ERR,"unable to send mode message");
+		exit(0);
+	}
+	return 1;
+}
+
+
 static void interception_process(int fd){
 	int newfd;
+	int i=0;
+	int pass_through_flag=0;
 	unsigned long packet_id;
 	struct iphdr *ip_header=NULL;
 	struct copyer_msg_st *c_msg=NULL;
@@ -119,16 +163,30 @@ static void interception_process(int fd){
 		ip_header = nl_firewall_recv(firewall_sock,&packet_id);
 		if(ip_header!=NULL)
 		{
-			router_update(ip_header);
+			/*check if it is the valid user to pass through firewall*/
+			for(i=0;i<passed_ips.num;i++)
+			{
+				if(passed_ips.ips[i]==ip_header->daddr)
+				{
+					pass_through_flag=1;
+				}
+			}
+			if(pass_through_flag)
+			{
+				pass_netlink_packet(packet_id);  	
+			}else
+			{
+				router_update(ip_header);
 #if (DEBUG_TCPCOPY)
-			formatOutput(LOG_DEBUG,ip_header);
+				formatOutput(LOG_DEBUG,ip_header);
 #endif
-			/* 
-			 * drop the packet 
-			 * if you comment the following,you will boost the tcpcopy server
-			 * buf you may encounter some problems
-			 */
-			drop_netlink_packet(packet_id);  	
+				/* 
+				 * drop the packet 
+				 * if you comment the following,you will boost the tcpcopy server
+				 * buf you may encounter some problems
+				 */
+				drop_netlink_packet(packet_id);  	
+			}
 		}
 	}else{
 		c_msg = msg_receiver_recv(fd);

@@ -41,7 +41,7 @@
 #define FAILURE -1
 #define MULTI_THREADS 1
 #define MEMORY_USAGE "VmRSS:"
-#define VERSION "0.3.4"
+#define VERSION "0.3.5"
 
 static pthread_mutex_t mutex;
 static pthread_cond_t empty;
@@ -310,7 +310,6 @@ static void dispose_event(int fd){
 			fprintf(stderr,"socket error:\n");
 			exit(1);
 		}   
-		//printf("recv from backend\n");
 		//it changes source port for this packet
 		(msg->tcp_header).source=remote_port;
 		//it is tricked as if from tested machine
@@ -338,9 +337,10 @@ static void exit_tcp_copy(){
 }
 
 static void tcp_copy_over(const int sig){
-	printf("sig %d received\n",sig);
+	logInfo(LOG_WARN,"sig %d received",sig);
 	while(!isReadCompletely)
 	{
+		logInfo(LOG_WARN,"sleep one second");
 		sleep(1);
 	}
 	close(raw_sock);
@@ -441,7 +441,6 @@ TcpcopyOptions options = {
 	"tcpcopy.conf"
 };
 
-#if (TCPCOPY_MYSQL_ADVANCED)  
 int readArgs (int argc,
 		char **argv,
 		TcpcopyOptions *options)
@@ -453,20 +452,29 @@ int readArgs (int argc,
 		int option_index = 0;
 		static struct option long_options[] = {
 			{"pairs",  1, 0, 'p'},
+			{"num",  1, 0, 'n'},
 			{"help",       0, 0, 'h'},
 			{"version",    0, 0, 'v'},
 			{0, 0, 0, 0}
 		};
-		c = getopt_long (argc, argv, "p:hv",
+		c = getopt_long (argc, argv, "n:p:hv",
 				long_options, &option_index);
 		if (c == -1) {
 			break;
 		}
 		switch (c) {			
 			case 'p':
+#if (TCPCOPY_MYSQL_ADVANCED)  
 				strcpy(pairs,optarg);
 				retrieveMysqlUserPwdInfo(pairs);
 				result=1;
+#endif
+				break;
+			case 'n':
+				shift_port=atoi(optarg);
+#if (!TCPCOPY_MYSQL_ADVANCED)  
+				result=1;
+#endif
 				break;
 			case 'c':
 				options->conf_file = (char*)malloc(strlen(optarg) + 1);
@@ -479,14 +487,11 @@ int readArgs (int argc,
 				break;
 			case 'h':
 				printf("Usage: tcpcopy [OPTION]\n"
-						"  -c, --conf-file FILE   read configuration "
-						"from FILE\n"
+						"  -p, --pair             user password pair of mysqlcopy \n"
+						"  -n, --num             the seq of tcpcopy instancesth\n"
 						"  -h, --help             display this help\n"
 						"  -v, --version          display version "
 						"number\n\n");
-				printf("Most options are controlled through the\n"
-						"configuration file. See the tcpcopy\n"
-						"manpage for more information.\n");
 				exit (0);
 			case 'v':
 				printf ("rinetd %s\n", VERSION);
@@ -498,7 +503,6 @@ int readArgs (int argc,
 	}
 	return result;
 }
-#endif
 
 /**
  * main entry point
@@ -525,21 +529,23 @@ int main(int argc ,char **argv)
 	remote_ip = inet_addr(argv[3]);
 	remote_port = htons(atoi(argv[4]));
 
-#if (TCPCOPY_MYSQL_ADVANCED)  
 	if(argc>5)
 	{
 		if(!readArgs(argc,argv,&options))
 		{
+#if (TCPCOPY_MYSQL_ADVANCED)  
 			logInfo(LOG_ERR,"user password pair is missing:%d",argc);
+#endif
 		}
 	}else
 	{
+#if (TCPCOPY_MYSQL_ADVANCED)  
 		logInfo(LOG_ERR,"user password pair is missing");
 		printf("Usage: %s 1.1.1.1 80 1.1.1.2 80 -p user1@psw1:user2@psw2:...\n",
 				argv[0]);
 		exit(1);
-	}
 #endif
+	}
 
 	set_signal_handler();
 	if(SUCCESS==init_tcp_copy())

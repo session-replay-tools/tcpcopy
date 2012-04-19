@@ -1,4 +1,4 @@
-/*                                                                                                                               *  tcpcopy - an online replication replication tool
+/*                                                                                           *  tcpcopy - an online replication replication tool
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.  See
@@ -53,7 +53,48 @@ static void set_signal_handler(){
 	}
 }
 
-int main(){
+static int retrieveIPAddresses(const char* ips)
+{
+	size_t len;
+	int count=0;
+	const char* split;
+	const char* p=ips;
+	char tmp[32];
+	memset(tmp,0,32);
+	uint32_t inetAddr=0;
+	while(1)
+	{
+		split=strchr(p,':');
+		if(split!=NULL)
+		{   
+			len=(size_t)(split-p);
+		}else
+		{   
+			len=strlen(p);
+		}   
+		strncpy(tmp,p,len);
+		inetAddr=inet_addr(tmp);    
+		passed_ips.ips[count++]=inetAddr;
+		if(NULL==split)
+		{
+			break;
+		}else
+		{
+			p=split+1;
+		}
+		memset(tmp,0,32);
+
+	}
+	passed_ips.num=count;
+	return 1;
+}
+
+
+int main(int argc ,char **argv){
+	if(argc>1)
+	{
+		retrieveIPAddresses(argv[1]);
+	}
 	initLogInfo();
 	set_signal_handler();
 	interception_init();

@@ -21,6 +21,7 @@ extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
 extern uint32_t remote_ip;
 extern uint16_t remote_port;
+extern uint16_t shift_port;
 extern int global_out_level;
 
 void process(char *);
