@@ -47,7 +47,7 @@ static void signal_handler(int sig)
 static void set_signal_handler(){
 	int i=1;
 	atexit(releaseResources);
-	for(;i<SIGRTMIN;i++)	
+	for(;i<SIGTTOU;i++)	
 	{
 		signal(i,signal_handler);
 	}

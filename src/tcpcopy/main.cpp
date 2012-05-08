@@ -41,7 +41,7 @@
 #define FAILURE -1
 #define MULTI_THREADS 1
 #define MEMORY_USAGE "VmRSS:"
-#define VERSION "0.3.5"
+#define VERSION "0.4.0"
 
 static pthread_mutex_t mutex;
 static pthread_cond_t empty;
@@ -56,6 +56,7 @@ static uint64_t eventTotal=0;
 static uint64_t packetsPutNum=0;
 static bool isReadCompletely=true;
 
+static int replica_num=1;
 
 /**
  * put one packet to buffered pool
@@ -96,6 +97,7 @@ static void putPacketToPool(const char *packet,int len)
 	pthread_cond_signal(&full);
 	pthread_mutex_unlock (&mutex);
 }
+
 static uint64_t recvFromPoolPackets=0;
 
 /**
@@ -236,6 +238,36 @@ static int retrieve_raw_sockets(int sock)
 			rawValidPackets++;
 #if (MULTI_THREADS)  
 			putPacketToPool((const char*)packet,recv_len);
+			/*multi-copy is only supported in multithreading mode*/
+			if(replica_num>1)
+			{
+				int i=1;
+				struct tcphdr *tcp_header=NULL;
+				struct iphdr *ip_header=NULL;
+				uint32_t size_ip;
+				int randNum=0;
+				for(;i<replica_num;i++)
+				{
+					ip_header = (struct iphdr*)packet;
+					size_ip = ip_header->ihl<<2;
+					tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+					uint16_t tmp_port_addition=(1024<<((i<<1)-1))
+						+rand_shift_port;
+					uint16_t transfered_port=ntohs(tcp_header->source);
+					if(transfered_port<=(65535-tmp_port_addition))
+					{    
+						transfered_port=transfered_port+tmp_port_addition;
+					}else
+					{    
+						transfered_port=1024+tmp_port_addition;
+					}    
+#if (DEBUG_TCPCOPY)
+					logInfo(LOG_DEBUG,"shift port:%u",tmp_port_addition);
+#endif
+					tcp_header->source=htons(transfered_port);
+					putPacketToPool((const char*)packet,recv_len);
+				}
+			}
 #else
 			process(packet);
 #endif
@@ -243,7 +275,8 @@ static int retrieve_raw_sockets(int sock)
 		count++;
 		if(rawPackets%10000==0)
 		{
-			logInfo(LOG_NOTICE,"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",
+			logInfo(LOG_NOTICE,
+					"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",
 					rawPackets,rawValidPackets,packetsPutNum);
 		}
 	}
@@ -338,10 +371,16 @@ static void exit_tcp_copy(){
 
 static void tcp_copy_over(const int sig){
 	logInfo(LOG_WARN,"sig %d received",sig);
+	int total=0;
 	while(!isReadCompletely)
 	{
 		logInfo(LOG_WARN,"sleep one second");
 		sleep(1);
+		total++;
+		if(total>30)
+		{
+			break;
+		}
 	}
 	close(raw_sock);
 	send_close();
@@ -453,6 +492,7 @@ int readArgs (int argc,
 		static struct option long_options[] = {
 			{"pairs",  1, 0, 'p'},
 			{"num",  1, 0, 'n'},
+			{"port_shift_factor",  1, 0, 'f'},
 			{"help",       0, 0, 'h'},
 			{"version",    0, 0, 'v'},
 			{0, 0, 0, 0}
@@ -471,7 +511,18 @@ int readArgs (int argc,
 #endif
 				break;
 			case 'n':
-				shift_port=atoi(optarg);
+				replica_num=atoi(optarg);
+				if(replica_num<1)
+				{
+					replica_num=1;
+				}
+#if (!TCPCOPY_MYSQL_ADVANCED)  
+				result=1;
+#endif
+				break;
+
+			case 'f':
+				port_shift_factor=atoi(optarg);
 #if (!TCPCOPY_MYSQL_ADVANCED)  
 				result=1;
 #endif
@@ -487,11 +538,12 @@ int readArgs (int argc,
 				break;
 			case 'h':
 				printf("Usage: tcpcopy [OPTION]\n"
-						"  -p, --pair             user password pair of mysqlcopy \n"
-						"  -n, --num             the seq of tcpcopy instancesth\n"
-						"  -h, --help             display this help\n"
-						"  -v, --version          display version "
-						"number\n\n");
+						"  -p, --pair    user password pair for mysqlcopy \n"
+						"  -n, --num     multicopy number of tcpcopy\n"
+						"  -f, --port_shift_factor  client port shift factor\n"
+						"  -h, --help    display this help\n"
+						"  -v, --version display version number\n"
+						"\n");
 				exit (0);
 			case 'v':
 				printf ("rinetd %s\n", VERSION);
@@ -519,6 +571,14 @@ int main(int argc ,char **argv)
 	initLogInfo();
 	logInfo(LOG_NOTICE,"%s %s %s %s %s",argv[0],argv[1],
 			argv[2],argv[3],argv[4]);
+	logInfo(LOG_NOTICE,"tcpcopy version:%s",VERSION);
+#if (TCPCOPY_MYSQL_SKIP)
+	logInfo(LOG_NOTICE,"TCPCOPY_MYSQL_SKIP mode");
+#endif
+#if (TCPCOPY_MYSQL_NO_SKIP)
+	logInfo(LOG_NOTICE,"TCPCOPY_MYSQL_NO_SKIP mode");
+#endif
+	
 	result=retrieveVirtualIPAddress(argv[1]);
 	if(!result)
 	{
@@ -545,6 +605,23 @@ int main(int argc ,char **argv)
 				argv[0]);
 		exit(1);
 #endif
+	}
+
+	if(port_shift_factor||replica_num>1)
+	{
+		struct timeval tp;
+		gettimeofday(&tp,NULL);
+		unsigned int seed=tp.tv_usec;
+		rand_shift_port=(int)((rand_r(&seed)/(RAND_MAX+1.0))*512);
+
+		if(port_shift_factor)
+		{
+			logInfo(LOG_NOTICE,"port shift factor:%u",port_shift_factor);
+		}else
+		{
+			logInfo(LOG_NOTICE,"replica num:%d",replica_num);
+		}
+		logInfo(LOG_NOTICE,"random shift port:%u",rand_shift_port);
 	}
 
 	set_signal_handler();

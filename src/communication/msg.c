@@ -52,6 +52,7 @@ static void sock_bind(int sock){
 	socklen_t length; 
 	memset(&local_addr,0,sizeof(local_addr));
 	local_addr.sin_port = ntohs(SERVER_PORT);
+	local_addr.sin_family= AF_INET;
 	length = (socklen_t)(sizeof(local_addr));
 	if(bind(sock,(struct sockaddr *)&local_addr,length)==-1){
 		perror("can not bind:");

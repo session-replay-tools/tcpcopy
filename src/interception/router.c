@@ -103,7 +103,7 @@ void router_update(struct iphdr *ip_header){
 	route_table_delete_obsolete(key);
 	fd = hash_find(table,key);
 	if( NULL == fd ){
-		logInfo(LOG_NOTICE,"fd is null");
+		logInfo(LOG_INFO,"fd is null");
 		delay_table_add(key,&msg);
 		return ;
 	}

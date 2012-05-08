@@ -21,7 +21,8 @@ extern virtual_ip_addr local_ips;
 extern uint16_t local_port;
 extern uint32_t remote_ip;
 extern uint16_t remote_port;
-extern uint16_t shift_port;
+extern uint16_t port_shift_factor;
+extern uint16_t rand_shift_port;
 extern int global_out_level;
 
 void process(char *);
@@ -71,10 +72,12 @@ struct session_st
 	uint32_t lastSeqFromResponse;
 	uint32_t lastReqContSeq;
 	uint32_t nextSeq;
+	uint32_t synSeq;
 	uint32_t lastAck;
 	uint32_t lastRespPacketSize;
 	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
+	dataContainer unAckPackets;
 	dataContainer lostPackets;
 	dataContainer handshakePackets;
 	dataContainer mysqlSpecialPackets;
@@ -94,12 +97,15 @@ struct session_st
 	uint16_t virtual_status;
 	uint16_t client_ip_id;
 	uint16_t client_port;
+	uint16_t fake_client_port;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	char scrambleBuf[SCRAMBLE_LENGTH+1];
 	char seed323[SEED_323_LENGTH+1];
 	char password[MAX_PASSWORD_LEN];
 #endif
 	unsigned logLevel:4;
+	unsigned isSessionAlreadyExist:1;
+	unsigned alreadyRetransmit:1;
 	unsigned reset_flag:1;
 	unsigned over_flag:1;
 	unsigned isClientClosed:1;
@@ -160,6 +166,7 @@ struct session_st
 		numberOfExcutes=0;
 		lastReqContSeq=0;
 		nextSeq=0;
+		synSeq=0;
 		lastAck=0;
 		handshakeExpectedPackets=2;
 		virtual_next_sequence=0;
@@ -210,6 +217,8 @@ struct session_st
 		isHighPressure=0;
 		virtual_status = SYN_SEND;
 		reset_flag = 0;
+		isSessionAlreadyExist=0;
+		alreadyRetransmit=0;
 		over_flag = 0;
 		isWaitPreviousPacket=0;
 		isClientClosed=0;
@@ -225,6 +234,7 @@ struct session_st
 
 		lastReqContSeq=0;
 		nextSeq=0;
+		synSeq=0;
 		lastAck=0;
 		lastAckFromResponse=0;
 		lastSeqFromResponse=0;
@@ -239,6 +249,7 @@ struct session_st
 		lastSendClientContentTime=lastUpdateTime;
 
 		client_port=0;
+		fake_client_port=0;
 		
 		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
 		{
@@ -251,6 +262,12 @@ struct session_st
 			free(*(iter++));
 		}
 		lostPackets.clear();
+		for(dataIterator iter=unAckPackets.begin();iter!=unAckPackets.end();)
+		{
+			free(*(iter++));
+		}
+		unAckPackets.clear();
+
 	}
 
 	session_st()
@@ -270,6 +287,12 @@ struct session_st
 			free(*(iter++));
 		}
 		lostPackets.clear();
+		for(dataIterator iter=unAckPackets.begin();iter!=unAckPackets.end();)
+		{
+			free(*(iter++));
+		}
+		unAckPackets.clear();
+
 		for(dataIterator iter=handshakePackets.begin();
 				iter!=handshakePackets.end();)
 		{
@@ -290,6 +313,8 @@ struct session_st
 	void selectiveLogInfo(int level,const char *fmt, ...);
 	int sendReservedLostPackets();
 	int sendReservedPackets();
+	int retransmitPacket();
+	int updateRetransmissionPackets();
 	bool checkReservedContainerHasContent();
 	bool checkPacketLost(struct iphdr *ip_header,
 			struct tcphdr *tcp_header,uint32_t oldSeq);
@@ -311,7 +336,7 @@ struct session_st
 			struct tcphdr* tcp_header);
 	void save_header_info(struct iphdr *ip_header,struct tcphdr *tcp_header);
 	uint32_t wrap_send_ip_packet(uint64_t fake_ip_addr,
-		unsigned char *data,uint32_t ack_seq);
+		unsigned char *data,uint32_t ack_seq,int isSave);
 
 	bool checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 			struct tcphdr *tcp_header);

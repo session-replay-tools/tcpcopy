@@ -21,8 +21,10 @@ uint32_t client_ip;
 uint32_t remote_ip;
 uint16_t local_port;
 uint16_t remote_port;
-uint16_t shift_port;
+uint16_t port_shift_factor;
+uint16_t rand_shift_port;
 virtual_ip_addr local_ips;
+
 
 typedef map<uint64_t,session_st> SessContainer;
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -45,6 +47,8 @@ static MysqlContainer mysqlContainer;
 static AuthPackContainer firAuthPackContainer;
 static AuthPackContainer secAuthPackContainer;
 #endif
+static uint64_t synTotal=0;
+static uint64_t totalClientPackets=0;
 static uint64_t activeCount=0;
 static uint64_t enterCount=0;
 static uint64_t leaveCount=0;
@@ -65,6 +69,7 @@ static double bakTotalTimes=0;
 static double clientTotalTimes=0;
 static struct iphdr *fir_auth_user_pack=NULL;
 static time_t lastCheckDeadSessionTime=0;
+
 
 /**
  * output packet info for debug
@@ -327,6 +332,20 @@ static int sendDeadTcpPacketsForSessions()
 	}
 }
 
+static unsigned int seed=0;
+static uint16_t getPortRandomAddition()
+{
+	if(0==seed)
+	{
+		struct timeval tp;
+		gettimeofday(&tp,NULL);
+		seed=tp.tv_usec;
+	}
+	uint16_t tmp_port_addition=(uint16_t)(4096*(rand_r(&seed)/(RAND_MAX+1.0)));
+	tmp_port_addition=tmp_port_addition+1024;
+	return tmp_port_addition;
+}
+
 static bool checkLocalIPValid(uint32_t ip)
 {
 	bool result=false;
@@ -407,6 +426,11 @@ static unsigned short tcpcsum(unsigned char *iphdr,unsigned short *packet,
 		int packlen) 
 { 
 	unsigned short res; 
+	if(packlen>4084)
+	{
+		logInfo(LOG_ERR,"packet is too long:%d",packlen);
+		return 0;
+	}
 	memcpy(buf,iphdr+12,8); 
 	*(buf+4)=htons((unsigned short)(*(iphdr+9))); 
 	*(buf+5)=htons((unsigned short)packlen); 
@@ -454,7 +478,7 @@ static bool checkTcpSeg(struct tcphdr *tcp_header,uint32_t oldSeq)
 }
 
 uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
-		unsigned char *data,uint32_t ack_seq)
+		unsigned char *data,uint32_t ack_seq,int isSave)
 {
 	if(!data)
 	{
@@ -464,11 +488,17 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 	struct iphdr *ip_header = (struct iphdr *)data;
 	uint16_t size_ip = ip_header->ihl<<2;
 	struct tcphdr *tcp_header = (struct tcphdr *)(data+size_ip);
+
+	if(isSave)
+	{
+		unAckPackets.push_back(copy_ip_packet(ip_header));
+	}
 	tcp_header->dest = remote_port;
 	ip_header->daddr = remote_ip;
 	if(fake_ip_addr!=0)
 	{
 		tcp_header->seq=htonl(nextSeq);
+		tcp_header->source=fake_client_port;
 		ip_header->saddr= fake_ip_addr;
 		if(tcp_header->syn)
 		{
@@ -503,7 +533,10 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 		lastSendClientContentTime=time(0);
 		nextSeq=nextSeq+contenLen;
 		sendConPackets=sendConPackets+1;
-		globalSendConPackets=globalSendConPackets+1;
+		if(isSave)
+		{
+			globalSendConPackets=globalSendConPackets+1;
+		}
 	}
 
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
@@ -590,7 +623,7 @@ int session_st::sendReservedLostPackets()
 				selectiveLogInfo(LOG_DEBUG,"send reserved packets for lost:%u",
 						client_port);
 #endif
-				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence);
+				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,1);
 				if(contSize>0)
 				{
 					lastReqContSeq=ntohl(tcp_header->seq);
@@ -619,6 +652,96 @@ int session_st::sendReservedLostPackets()
 
 	return 0;
 }
+
+/**
+ * retransmit the packets to backend
+ * here we only retransmit only one packet for one time
+ */
+int session_st::retransmitPacket()
+{
+	int needPause=0;
+	int isSuccessful=0;
+	uint32_t destSeq=nextSeq;
+	dataContainer buffered;
+
+	while(! unAckPackets.empty()&&!needPause)
+	{
+		unsigned char *data = unAckPackets.front();
+		struct iphdr *ip_header=(struct iphdr*)((char*)data);
+		uint32_t size_ip = ip_header->ihl<<2;
+		struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+		uint32_t size_tcp = tcp_header->doff<<2;
+		uint32_t packSize=ntohs(ip_header->tot_len);
+		uint32_t contSize=packSize-size_tcp-size_ip;
+		uint32_t curSeq=ntohl(tcp_header->seq);  
+		if(!isSuccessful)
+		{
+			if(curSeq==lastAckFromResponse)
+			{
+				isSuccessful=true;
+			}else if(curSeq<lastAckFromResponse)
+			{
+				free(data);
+				unAckPackets.pop_front();
+			}else
+			{
+				logInfo(LOG_WARN,"no retransmission packets:%u",client_port);
+				needPause=1;
+			}
+		}
+		if(isSuccessful)
+		{
+			if(curSeq<destSeq)
+			{
+				logInfo(LOG_NOTICE,"retransmit the packet successful,p:%u",
+						client_port);
+				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,0);
+				buffered.push_back(data);
+				unAckPackets.pop_front();
+			}else
+			{
+				needPause=1;	
+			}
+		}
+	}
+	
+	if(!buffered.empty())
+	{
+		dataIterator unAckIter=unAckPackets.begin();
+		for(dataIterator iter=buffered.begin();iter!=buffered.end();iter++) 
+		{
+			unAckPackets.insert(unAckIter,*iter);
+		}
+	}
+
+	return isSuccessful;
+
+}
+
+/**
+ * update retransmission packets
+ */
+int session_st::updateRetransmissionPackets()
+{
+	while(! unAckPackets.empty())
+	{
+		unsigned char *data = unAckPackets.front();
+		struct iphdr *ip_header=(struct iphdr*)((char*)data);
+		uint32_t size_ip = ip_header->ihl<<2;
+		struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+		uint32_t curSeq=ntohl(tcp_header->seq);  
+		if(curSeq<lastAckFromResponse)
+		{
+			free(data);
+			unAckPackets.pop_front();
+		}else
+		{
+			break;
+		}
+	}
+	return 1;
+}
+
 
 /**
  * check if it needs sending dead requests
@@ -874,7 +997,7 @@ int session_st::sendReservedPackets()
 		if(!isOmitTransfer)
 		{
 			count++;
-			wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence);
+			wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,1);
 		}
 		free(data);
 		unsend.pop_front();
@@ -1087,7 +1210,7 @@ void session_st::sendFakedSynToBackend(struct iphdr* ip_header,
 	selectiveLogInfo(LOG_DEBUG,"send faked syn to back,client win:%u",
 			f_tcp_header->window);
 #endif
-	wrap_send_ip_packet(fake_ip_addr,fake_syn_buf,virtual_next_sequence);
+	wrap_send_ip_packet(fake_ip_addr,fake_syn_buf,virtual_next_sequence,1);
 }
 
 /**
@@ -1124,7 +1247,7 @@ void session_st::sendFakedSynAckToBackend(struct iphdr* ip_header,
 #if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,FAKE_CLIENT_FLAG,f_ip_header,f_tcp_header);
 #endif
-	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence);
+	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence,1);
 }
 
 /**
@@ -1161,7 +1284,7 @@ void session_st::sendFakedAckToBackend(struct iphdr* ip_header,
 	selectiveLogInfo(LOG_INFO,"send faked ack to backend,client win:%u",
 			f_tcp_header->window);
 #endif
-	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence);
+	wrap_send_ip_packet(fake_ip_addr,fake_ack_buf,virtual_next_sequence,1);
 }
 
 /**
@@ -1193,16 +1316,28 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 	uint16_t size_tcp= tcp_header->doff<<2;
 	uint16_t tot_len  = ntohs(ip_header->tot_len);
 	uint16_t contenLen=tot_len-size_ip-size_tcp;
+	uint32_t seq=ntohl(tcp_header->seq);
+	uint32_t expectedSeq=ntohl(virtual_next_sequence);
 	if(contenLen>0){   
-		uint32_t next_ack= htonl(ntohl(tcp_header->seq)+contenLen); 
+		uint32_t next_ack= htonl(seq+contenLen); 
 		f_tcp_header->ack_seq = next_ack;
 	}else
 	{
+		if(isClientClosed&&!isTestConnClosed)
+		{
+			if(seq>expectedSeq)
+			{
+				logInfo(LOG_NOTICE,"set virtual_next_sequence larger");
+				virtual_next_sequence=tcp_header->seq;
+				isTestConnClosed=true;
+			}
+			f_tcp_header->fin =0;
+		}
 		f_tcp_header->ack_seq = virtual_next_sequence;
 	}
 	f_tcp_header->seq = tcp_header->ack_seq;
 	f_tcp_header->window= 65535;
-	wrap_send_ip_packet(fake_ip_addr,fake_fin_buf,virtual_next_sequence);
+	wrap_send_ip_packet(fake_ip_addr,fake_fin_buf,virtual_next_sequence,1);
 }
 
 /**
@@ -1242,7 +1377,7 @@ void session_st::sendFakedFinToBackByCliePack(struct iphdr* ip_header,
 		f_tcp_header->seq =htonl(nextSeq); 
 	}
 	f_tcp_header->window= 65535;
-	wrap_send_ip_packet(fake_ip_addr,fake_fin_buf,virtual_next_sequence);
+	wrap_send_ip_packet(fake_ip_addr,fake_fin_buf,virtual_next_sequence,1);
 }
 
 /**
@@ -1326,12 +1461,24 @@ void session_st::establishConnectionForClosedConn()
 			trueIPContainer.erase(get_ip_port_value(fake_ip_addr,
 						tcp_header->source));
 		}
-		fake_ip_addr=getRandomIP();
+		fake_ip_addr=ip_header->saddr;
+		uint16_t tmp_port_addition=getPortRandomAddition();
+		uint16_t transfered_port=ntohs(tcp_header->source);
+		if(transfered_port<=(65535-tmp_port_addition))
+		{
+			transfered_port=transfered_port+tmp_port_addition;
+		}else
+		{
+			transfered_port=32768+tmp_port_addition;
+		}
+		tcp_header->source=htons(transfered_port);
+		fake_client_port=htons(transfered_port);
+		//fake_ip_addr=getRandomIP();
 #if (TCPCOPY_MYSQL_ADVANCED)
-		selectiveLogInfo(LOG_WARN,"change ip address");
+		selectiveLogInfo(LOG_WARN,"change port");
 #endif
 #if (DEBUG_TCPCOPY)
-		selectiveLogInfo(LOG_INFO,"change ip address");
+		selectiveLogInfo(LOG_INFO,"change port,add port:%u",tmp_port_addition);
 #endif
 		uint64_t key=get_ip_port_value(fake_ip_addr,tcp_header->source);
 		trueIPContainer[key]=client_ip_addr;
@@ -1345,7 +1492,7 @@ void session_st::establishConnectionForClosedConn()
 			selectiveLogInfo(LOG_ERR,"msg copyer send error");
 			return;
 		}
-		wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence);
+		wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,1);
 		isSynIntercepted=1;
 		free(tmpData);
 		//push remaining packets in handshakePackets to unsend
@@ -1358,6 +1505,9 @@ void session_st::establishConnectionForClosedConn()
 				unsigned char *data =*iter;
 				ip_header=(struct iphdr *)data;
 				ip_header->saddr=fake_ip_addr;
+				size_ip = ip_header->ihl<<2;
+				tcp_header=(struct tcphdr*)((char *)ip_header+size_ip);
+				tcp_header->source=fake_client_port;
 				unsend.push_back(copy_ip_packet(ip_header));
 			}
 			i++;
@@ -1512,6 +1662,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
+	bool simulClosing=false;
 	time_t current=time(0);
 #if (TCPCOPY_MYSQL_ADVANCED)
 	unsigned char* payload=NULL;
@@ -1544,7 +1695,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 #endif
 		if(!isBackSynReceived)
 		{
-			virtual_next_sequence =tcp_header->seq;;
+			virtual_next_sequence =tcp_header->seq;
 			sendFakedFinToBackend(ip_header,tcp_header);
 			isFakedSendingFinToBackend=1;
 			isClientClosed=1;
@@ -1554,31 +1705,60 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
 			return;
+		}else
+		{
+			/* simulaneous close*/
+			if(isClientClosed&&tcp_header->fin)
+			{
+				simulClosing=true;
+			}
 		}
-		if(0 == contSize)
+		if(0 == contSize&&!tcp_header->fin)
 		{
 			if(lastAckFromResponse!=0)
 			{
 				if(ack==lastAckFromResponse)
 				{
 					lastSameAckTotal++;
-					if(lastSameAckTotal>64)
+					if(lastSameAckTotal>1)
 					{
+						/* it needs retransmission*/
 						selectiveLogInfo(LOG_WARN,"backend lost packets:%u",
 								client_port);
-						sendFakedFinToBackend(ip_header,tcp_header);
-						isFakedSendingFinToBackend=1;
-						isClientClosed=1;
+						if(!alreadyRetransmit)
+						{
+							if(!retransmitPacket())
+							{
+								sendFakedFinToBackend(ip_header,tcp_header);
+								isFakedSendingFinToBackend=1;
+								isClientClosed=1;
+							}
+							alreadyRetransmit=1;
+						}else
+						{
+							selectiveLogInfo(LOG_WARN,"omit retransmit:%u",
+								client_port);
+						}
 						return;
 					}
 				}else
 				{
 					lastSameAckTotal=0;
+					alreadyRetransmit=0;
+#if (DEBUG_TCPCOPY)
+					selectiveLogInfo(LOG_DEBUG,"ack is not equal to last ack");
+#endif
 				}
+			}else
+			{
+#if (DEBUG_TCPCOPY)
+				selectiveLogInfo(LOG_DEBUG,"lastSameAckTotal is zero");
+#endif
 			}
 		}
 	}
 	lastAckFromResponse=ack;
+	updateRetransmissionPackets();
 
 	if( tcp_header->syn)
 	{
@@ -1626,7 +1806,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			virtual_next_sequence = plus_1(tcp_header->seq);
 		}
-		sendFakedAckToBackend(ip_header,tcp_header,false);
+		sendFakedAckToBackend(ip_header,tcp_header,simulClosing);
 		if(!isClientClosed)
 		{
 			/* send constructed server fin to the backend */
@@ -1768,7 +1948,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
 #if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_INFO,"send fin to back again");
+			selectiveLogInfo(LOG_INFO,"send fin to back again:%u",client_port);
 #endif
 		}
 	}
@@ -1848,13 +2028,14 @@ void session_st::process_recv(struct iphdr *ip_header,
 		tcp_header->seq=htonl(seq);
 	}
 	save_header_info(ip_header,tcp_header);
-	if(fake_ip_addr!=0)
+	if(fake_ip_addr!=0||fake_client_port!=0)
 	{
 #if (DEBUG_TCPCOPY)
 		selectiveLogInfo(LOG_INFO,"set fake ip addr for client");
 #endif
 		ip_header->saddr=fake_ip_addr;
 		tcp_header->seq=htonl(nextSeq);
+		tcp_header->source=fake_client_port;
 	}
 	//processing the reset packet
 	if(tcp_header->rst)
@@ -1872,7 +2053,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		}else
 		{
 			wrap_send_ip_packet(fake_ip_addr,(unsigned char *) ip_header,
-					virtual_next_sequence);
+					virtual_next_sequence,1);
 			reset_flag = 1;
 		}
 		return;
@@ -1904,7 +2085,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 		unsigned char *data=copy_ip_packet(ip_header);
 		handshakePackets.push_back(data);
 		wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
-				virtual_next_sequence);
+				virtual_next_sequence,1);
 		return;
 	}
 	if(0 == client_port)
@@ -1946,7 +2127,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 						unsend.pop_front();
 					}
 					wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
-							virtual_next_sequence);
+							virtual_next_sequence,1);
 					virtual_status |= CLIENT_FIN;
 					confirmed=1;
 					isClientClosed=1;
@@ -2257,7 +2438,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				reqContentPackets--;
 #if (DEBUG_TCPCOPY)
-				selectiveLogInfo(LOG_DEBUG,"it is a retransm from client");
+				selectiveLogInfo(LOG_DEBUG,"it is a retransmit from client");
 #endif
 				return;
 			}else
@@ -2325,7 +2506,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 						//lost and retransmitted
 						wrap_send_ip_packet(fake_ip_addr,
 								(unsigned char *)ip_header,
-								virtual_next_sequence);
+								virtual_next_sequence,1);
 						sendReservedLostPackets();
 						isWaitResponse=1;
 						isResponseCompletely=0;
@@ -2339,7 +2520,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				{
 					isSegContinue=1;
 					wrap_send_ip_packet(fake_ip_addr,
-							(unsigned char *)ip_header,virtual_next_sequence);
+							(unsigned char *)ip_header,virtual_next_sequence,1);
 #if (DEBUG_TCPCOPY)
 					selectiveLogInfo(LOG_DEBUG,"it is a continuous http req");
 #endif
@@ -2402,7 +2583,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				if(!isResponseCompletely)
 				{
 					wrap_send_ip_packet(fake_ip_addr,
-							(unsigned char *)ip_header,virtual_next_sequence);
+							(unsigned char *)ip_header,virtual_next_sequence,1);
 				}
 			}
 		}
@@ -2447,6 +2628,11 @@ bool isPacketNeeded(const char *packet)
 				(tcp_header->dest==local_port))
 		{
 			isNeeded=1;
+			if(tcp_header->syn)
+			{
+				synTotal++;
+			}
+			totalClientPackets++;
 		}
 	}
 	return isNeeded;
@@ -2495,6 +2681,8 @@ void process(char *packet)
 		{
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
+		logInfo(LOG_NOTICE,"syn total:%llu,all client packets:%llu",
+				synTotal,totalClientPackets);
 	}
 	if(lastCheckDeadSessionTime>0)
 	{
@@ -2558,20 +2746,18 @@ void process(char *packet)
 	{
 		//when the packet comes from client
 		lastCheckDeadSessionTime=now;
-		uint16_t tmp_shift_port=shift_port<<8;
-		if(shift_port)
+		if(port_shift_factor)
 		{
+			uint16_t tmp_port_addition=(2048<<port_shift_factor)+rand_shift_port;
 			uint16_t transfered_port=ntohs(tcp_header->source);
-			logInfo(LOG_DEBUG,"src port:%u",transfered_port);
-			if(transfered_port<=(65535-tmp_shift_port))
+			if(transfered_port<=(65535-tmp_port_addition))
 			{
-				transfered_port=transfered_port+tmp_shift_port;
+				transfered_port=transfered_port+tmp_port_addition;
 			}else
 			{
-				transfered_port=1024+tmp_shift_port;
+				transfered_port=1024+tmp_port_addition;
 			}
 			tcp_header->source=htons(transfered_port);
-			logInfo(LOG_DEBUG,"dst port:%u",transfered_port);
 		}
 		uint64_t value=get_ip_port_value(ip_header->saddr,tcp_header->source);
 		if(tcp_header->syn)
@@ -2583,31 +2769,37 @@ void process(char *packet)
 			{
 				//check if it is a duplicate syn
 				int diff=now-iter->second.createTime;
-				//if less than 30 seconds,then we consider it is a dup syn 
-				if(diff < 30)
+				if(tcp_header->seq==iter->second.synSeq)
 				{
 					if(iter->second.is_over())
 					{
 #if (DEBUG_TCPCOPY)
 						logInfo(LOG_INFO,"dup syn,ses over,time diff:%d",diff);
 #endif
+						deleteObsoCount++;	
+						activeCount--;
+						//reuse port number
+						iter->second.initSession();
+						reusePort=1;
+						logInfo(LOG_WARN,"reuse port number,key :%llu",value);
+
 					}else
 					{
 						enterCount--;
 #if (DEBUG_TCPCOPY)
 						logInfo(LOG_INFO,"duplicate syn,time diff:%d",diff);
-#endif
-						outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
+						outputPacketForDebug(LOG_INFO,CLIENT_FLAG,ip_header,
 								tcp_header);
+#endif
 						return;
 					}
+				}else
+				{
+					iter->second.isSessionAlreadyExist=1;
+					return;
+					/*TODO buffer the syn packet*/
 				}
-				deleteObsoCount++;	
-				activeCount--;
-				//reuse port number
-				iter->second.initSession();
-				reusePort=1;
-				logInfo(LOG_WARN,"reuse port number,key :%llu",value);
+
 			}
 			int sock=address_find_sock(tcp_header->dest);
 			if(-1 == sock)
@@ -2640,7 +2832,9 @@ void process(char *packet)
 					struct timeval end=getTime();
 					clientTotalTimes+=end.tv_sec-start.tv_sec;
 					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
+					iter = sessions.find(value);
 				}
+				iter->second.synSeq=tcp_header->seq;
 			}
 		}
 		else
@@ -2648,6 +2842,12 @@ void process(char *packet)
 			SessIterator iter = sessions.find(value);
 			if(iter != sessions.end())
 			{
+				if(iter->second.isSessionAlreadyExist)
+				{
+					/* if there are serveral sessions for four pair,
+					 * then we only dispose the first one*/
+					return;
+				}
 				iter->second.confirmed=0;
 				struct timeval start=getTime();
 				clientTotal++;
