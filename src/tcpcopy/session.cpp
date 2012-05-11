@@ -2856,7 +2856,6 @@ void process(char *packet)
 		uint64_t value=get_ip_port_value(ip_header->saddr,tcp_header->source);
 		if(tcp_header->syn)
 		{
-			activeCount++;
 			enterCount++;
 			SessIterator iter = sessions.find(value);
 			if(iter != sessions.end())
@@ -2886,6 +2885,9 @@ void process(char *packet)
 					return;
 				}
 
+			}else
+			{
+				activeCount++;
 			}
 			int sock=address_find_sock(tcp_header->dest);
 			if(-1 == sock)
@@ -2966,6 +2968,7 @@ void process(char *packet)
 				//we check if we can pad tcp handshake for this request
 				if(checkPacketPadding(ip_header,tcp_header))
 				{
+					activeCount++;
 #if (TCPCOPY_MYSQL_BASIC)
 					if(checkPacketPaddingForMysql(ip_header,tcp_header))
 					{
