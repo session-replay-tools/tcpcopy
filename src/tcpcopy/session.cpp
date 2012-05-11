@@ -57,6 +57,7 @@ static uint64_t totalReconnectForClosed=0;
 static uint64_t totalReconnectForNoSyn=0;
 static uint64_t timeCount=0;
 static uint64_t totalResponses=0;
+static uint64_t totalRetransmitSuccess=0;
 static uint64_t totalRequests=0;
 static uint64_t totalConnections=0;
 static uint64_t bakTotal=0;
@@ -263,6 +264,50 @@ static int clearTimeoutTcpSessions()
 			sessions.erase(p++);
 			continue;
 		}
+		size=p->second.unAckPackets.size();
+		if(size>MAXPACKETS)
+		{
+			if(!p->second.candidateErased)
+			{
+				logInfo(LOG_WARN,"handshake:set candidate erased");
+				p->second.candidateErased=1;
+				p++;
+				continue;
+			}
+			deleteObsoCount++;
+			if(!p->second.isStatClosed)
+			{
+				p->second.isStatClosed=1;
+			}
+			activeCount--;
+			logInfo(LOG_WARN,"It has too many unAckPackets packets:%u,p:%u",
+					size,p->second.client_port);
+			leaveCount++;
+			sessions.erase(p++);
+			continue;
+		}
+		size=p->second.nextSessionBuffer.size();
+		if(size>MAXPACKETS)
+		{
+			if(!p->second.candidateErased)
+			{
+				logInfo(LOG_WARN,"handshake:set candidate erased");
+				p->second.candidateErased=1;
+				p++;
+				continue;
+			}
+			deleteObsoCount++;
+			if(!p->second.isStatClosed)
+			{
+				p->second.isStatClosed=1;
+			}
+			activeCount--;
+			logInfo(LOG_WARN,"It has too many future packets:%u,p:%u",
+					size,p->second.client_port);
+			leaveCount++;
+			sessions.erase(p++);
+			continue;
+		}
 #if (TCPCOPY_MYSQL_BASIC)
 		size=p->second.mysqlSpecialPackets.size();
 		if(size>MAXPACKETS)
@@ -328,6 +373,12 @@ static int sendDeadTcpPacketsForSessions()
 		{
 			logInfo(LOG_WARN,"send dead reqs from global");
 			p->second.sendReservedPackets();
+		}else
+		{
+			if(p->second.retransmitSynTimes<=3)
+			{
+				p->second.retransmitPacket();
+			}
 		}
 	}
 }
@@ -536,6 +587,9 @@ uint32_t session_st::wrap_send_ip_packet(uint64_t fake_ip_addr,
 		if(isSave)
 		{
 			globalSendConPackets=globalSendConPackets+1;
+		}else
+		{
+			isNewRetransmit=1;
 		}
 	}
 
@@ -670,6 +724,13 @@ int session_st::retransmitPacket()
 		struct iphdr *ip_header=(struct iphdr*)((char*)data);
 		uint32_t size_ip = ip_header->ihl<<2;
 		struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+		if(SYN_SEND==virtual_status)
+		{
+			wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
+				virtual_next_sequence,0);
+			retransmitSynTimes++;
+			break;
+		}
 		uint32_t size_tcp = tcp_header->doff<<2;
 		uint32_t packSize=ntohs(ip_header->tot_len);
 		uint32_t contSize=packSize-size_tcp-size_ip;
@@ -685,7 +746,7 @@ int session_st::retransmitPacket()
 				unAckPackets.pop_front();
 			}else
 			{
-				logInfo(LOG_WARN,"no retransmission packets:%u",client_port);
+				logInfo(LOG_NOTICE,"no retransmission packets:%u",client_port);
 				needPause=1;
 			}
 		}
@@ -693,8 +754,6 @@ int session_st::retransmitPacket()
 		{
 			if(curSeq<destSeq)
 			{
-				logInfo(LOG_NOTICE,"retransmit the packet successful,p:%u",
-						client_port);
 				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,0);
 				buffered.push_back(data);
 				unAckPackets.pop_front();
@@ -763,11 +822,7 @@ bool session_st::checkSendingDeadReqs()
 			selectiveLogInfo(LOG_DEBUG,"f port:%u,sent=%u,tot co reqs:%u",
 					client_port,sendConPackets,reqContentPackets);
 #endif
-			isHighPressure=0;
 			return false;
-		}else 
-		{
-			isHighPressure=1;
 		}
 	}
 	if(isPartResponse)
@@ -962,13 +1017,8 @@ int session_st::sendReservedPackets()
 			{
 				break;
 			}
-			isClientClosed=1;
-#if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_DEBUG,"set cli closed flag:%u",client_port);
-#endif
 			needPause=1;
-			virtual_status |= CLIENT_FIN;
-			confirmed=1;
+			isOmitTransfer=1;
 		}else if(0==contSize&&isWaitResponse)
 		{
 #if (DEBUG_TCPCOPY)
@@ -1310,8 +1360,9 @@ void session_st::sendFakedFinToBackend(struct iphdr* ip_header,
 	f_ip_header->saddr = ip_header->daddr;
 	f_tcp_header->doff= 5;
 	f_tcp_header->source = tcp_header->dest;
-	f_tcp_header->fin =1;
+	f_tcp_header->rst=1;
 	f_tcp_header->ack=1;
+	reset_flag=1;
 	uint16_t size_ip = ip_header->ihl<<2; 
 	uint16_t size_tcp= tcp_header->doff<<2;
 	uint16_t tot_len  = ntohs(ip_header->tot_len);
@@ -1473,7 +1524,6 @@ void session_st::establishConnectionForClosedConn()
 		}
 		tcp_header->source=htons(transfered_port);
 		fake_client_port=htons(transfered_port);
-		//fake_ip_addr=getRandomIP();
 #if (TCPCOPY_MYSQL_ADVANCED)
 		selectiveLogInfo(LOG_WARN,"change port");
 #endif
@@ -1662,13 +1712,17 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
 	uint32_t contSize=tot_len-size_tcp-size_ip;
-	bool simulClosing=false;
 	time_t current=time(0);
 #if (TCPCOPY_MYSQL_ADVANCED)
 	unsigned char* payload=NULL;
 #endif
 	if(contSize>0)
 	{
+		if(isNewRetransmit)
+		{
+			totalRetransmitSuccess++;
+			isNewRetransmit=0;
+		}
 		respContentPackets++;
 		lastRecvRespContentTime=current;
 	}
@@ -1710,7 +1764,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 			/* simulaneous close*/
 			if(isClientClosed&&tcp_header->fin)
 			{
-				simulClosing=true;
+				simulClosing=1;
 			}
 		}
 		if(0 == contSize&&!tcp_header->fin)
@@ -1947,9 +2001,6 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		if(isClientClosed&&!isTestConnClosed)
 		{
 			sendFakedFinToBackend(ip_header,tcp_header);
-#if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_INFO,"send fin to back again:%u",client_port);
-#endif
 		}
 	}
 	virtual_next_sequence= next_seq;
@@ -1985,10 +2036,31 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
  */
 void session_st::process_recv(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
-{	
+{
 #if (DEBUG_TCPCOPY)
 	outputPacket(LOG_DEBUG,CLIENT_FLAG,ip_header,tcp_header);
+#endif	
+	if(SYN_SEND==virtual_status)
+	{
+		time_t now=time(0);
+		int diff=now-createTime;
+		if(diff>3)
+		{
+			//retransmit the first syn packet 
+			retransmitPacket();
+			createTime=now;
+		}
+	}
+	if(hasMoreNewSession)
+	{
+		nextSessionBuffer.push_back(copy_ip_packet(ip_header));
+
+#if (DEBUG_TCPCOPY)
+		logInfo(LOG_INFO,"buffer the packet for next session:%u",client_port);
 #endif
+		return;
+	}
+
 	uint16_t tot_len = ntohs(ip_header->tot_len);
 	uint32_t size_ip = ip_header->ihl<<2;
 	uint32_t size_tcp = tcp_header->doff<<2;
@@ -2030,9 +2102,6 @@ void session_st::process_recv(struct iphdr *ip_header,
 	save_header_info(ip_header,tcp_header);
 	if(fake_ip_addr!=0||fake_client_port!=0)
 	{
-#if (DEBUG_TCPCOPY)
-		selectiveLogInfo(LOG_INFO,"set fake ip addr for client");
-#endif
 		ip_header->saddr=fake_ip_addr;
 		tcp_header->seq=htonl(nextSeq);
 		tcp_header->source=fake_client_port;
@@ -2063,6 +2132,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 	{
 		isSynIntercepted=1;
 		client_port=ntohs(tcp_header->source);
+#if (DEBUG_TCPCOPY)
+		logInfo(LOG_INFO,"syn port:%u",client_port);
+#endif
 #if (TCPCOPY_MYSQL_BASIC)
 		/* remove old mysql info*/
 		MysqlIterator iter=mysqlContainer.find(client_port);
@@ -2590,6 +2662,17 @@ void session_st::process_recv(struct iphdr *ip_header,
 	}
 }
 
+void session_st::restoreBufferedSession()
+{
+	unsigned char *data = unsend.front();
+	unsend.pop_front();
+	struct iphdr *ip_header=(struct iphdr*)((char*)data);
+	uint32_t size_ip = ip_header->ihl<<2;
+	struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+	process_recv(ip_header,tcp_header);
+	free(data);
+}
+
 /**
  * filter packets 
  */
@@ -2681,6 +2764,8 @@ void process(char *packet)
 		{
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
+		logInfo(LOG_NOTICE,"total successful retransmit:%llu",
+				totalRetransmitSuccess);
 		logInfo(LOG_NOTICE,"syn total:%llu,all client packets:%llu",
 				synTotal,totalClientPackets);
 	}
@@ -2728,13 +2813,22 @@ void process(char *packet)
 			bakTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
 			if( iter->second.is_over())
 			{
-				if(!iter->second.isStatClosed)
+				if(iter->second.hasMoreNewSession)
 				{
-					iter->second.isStatClosed=1;
+					iter->second.initForNextSession();
+					logInfo(LOG_NOTICE,"init for next session from backend");
+					iter->second.restoreBufferedSession();
+					return;
+				}else
+				{
+					if(!iter->second.isStatClosed)
+					{
+						iter->second.isStatClosed=1;
+					}
+					activeCount--;
+					leaveCount++;
+					sessions.erase(iter);
 				}
-				activeCount--;
-				leaveCount++;
-				sessions.erase(iter);
 			}
 		}else
 		{
@@ -2771,33 +2865,25 @@ void process(char *packet)
 				int diff=now-iter->second.createTime;
 				if(tcp_header->seq==iter->second.synSeq)
 				{
-					if(iter->second.is_over())
-					{
+					enterCount--;
 #if (DEBUG_TCPCOPY)
-						logInfo(LOG_INFO,"dup syn,ses over,time diff:%d",diff);
+					logInfo(LOG_INFO,"duplicate syn,time diff:%d",diff);
+					outputPacketForDebug(LOG_INFO,CLIENT_FLAG,ip_header,
+							tcp_header);
 #endif
-						deleteObsoCount++;	
-						activeCount--;
-						//reuse port number
-						iter->second.initSession();
-						reusePort=1;
-						logInfo(LOG_WARN,"reuse port number,key :%llu",value);
-
-					}else
-					{
-						enterCount--;
-#if (DEBUG_TCPCOPY)
-						logInfo(LOG_INFO,"duplicate syn,time diff:%d",diff);
-						outputPacketForDebug(LOG_INFO,CLIENT_FLAG,ip_header,
-								tcp_header);
-#endif
-						return;
-					}
+					return;
 				}else
 				{
-					iter->second.isSessionAlreadyExist=1;
+					//buffer the next session to current session
+					iter->second.hasMoreNewSession=1;
+					iter->second.nextSessionBuffer.push_back
+						(copy_ip_packet(ip_header));
+#if (DEBUG_TCPCOPY)
+					logInfo(LOG_INFO,"buffer the new session");
+					outputPacketForDebug(LOG_INFO,CLIENT_FLAG,ip_header,
+							tcp_header);
+#endif
 					return;
-					/*TODO buffer the syn packet*/
 				}
 
 			}
@@ -2858,13 +2944,22 @@ void process(char *packet)
 				iter->second.lastUpdateTime=now;
 				if( (iter->second.is_over()))
 				{
-					if(!iter->second.isStatClosed)
+					if(iter->second.hasMoreNewSession)
 					{
-						iter->second.isStatClosed=1;
+						iter->second.initForNextSession();
+						logInfo(LOG_NOTICE,"init for next session from client");
+						iter->second.restoreBufferedSession();
+						return;
+					}else
+					{
+						if(!iter->second.isStatClosed)
+						{
+							iter->second.isStatClosed=1;
+						}
+						activeCount--;
+						leaveCount++;
+						sessions.erase(iter);
 					}
-					activeCount--;
-					leaveCount++;
-					sessions.erase(iter);
 				}
 			}else
 			{

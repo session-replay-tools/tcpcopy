@@ -25,7 +25,6 @@ struct iphdr *nl_firewall_recv(int sock,unsigned long *packet_id){
 	{
 		logInfo(LOG_WARN,"nl recv error:%ld",len);
 		logInfo(LOG_WARN,"privilage problems or not the object of tcpcopy");
-		fprintf(stderr,"privilage problems or not the object of tcpcopy\n");
 		return NULL;
 	}else
 	{

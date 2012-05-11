@@ -77,6 +77,7 @@ struct session_st
 	uint32_t lastRespPacketSize;
 	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
+	dataContainer nextSessionBuffer;
 	dataContainer unAckPackets;
 	dataContainer lostPackets;
 	dataContainer handshakePackets;
@@ -106,6 +107,8 @@ struct session_st
 	unsigned logLevel:4;
 	unsigned isSessionAlreadyExist:1;
 	unsigned alreadyRetransmit:1;
+	unsigned isNewRetransmit:1;
+	unsigned simulClosing:1;
 	unsigned reset_flag:1;
 	unsigned over_flag:1;
 	unsigned isClientClosed:1;
@@ -136,7 +139,8 @@ struct session_st
 	unsigned isLoginReceived:1;
 	unsigned hasPrepareStat:1;
 	unsigned isExcuteForTheFirstTime:1;
-	unsigned isHighPressure:1;
+	unsigned hasMoreNewSession:1;
+	unsigned retransmitSynTimes:4;
 
 	int generateRandomNumber(int min,int max,unsigned int* seed)
 	{
@@ -213,12 +217,15 @@ struct session_st
 		isSeqAckNotConsistent=0;
 		isLoginReceived=0;
 		hasPrepareStat=0;
-		isExcuteForTheFirstTime=true;
-		isHighPressure=0;
+		isExcuteForTheFirstTime=1;
+		hasMoreNewSession=0;
+		retransmitSynTimes=0;
 		virtual_status = SYN_SEND;
 		reset_flag = 0;
 		isSessionAlreadyExist=0;
 		alreadyRetransmit=0;
+		isNewRetransmit=0;
+		simulClosing=0;
 		over_flag = 0;
 		isWaitPreviousPacket=0;
 		isClientClosed=0;
@@ -226,11 +233,11 @@ struct session_st
 		isWaitResponse=0;
 		isPartResponse=0;
 		isResponseCompletely=0;
-		isRequestComletely=true;
+		isRequestComletely=1;
 		isRequestBegin=0;
 		isTrueWaitResponse=0;
 		isSegContinue=0;
-		confirmed=true;
+		confirmed=1;
 
 		lastReqContSeq=0;
 		nextSeq=0;
@@ -270,6 +277,18 @@ struct session_st
 
 	}
 
+	void initForNextSession()
+	{
+		initSession();
+		for(dataIterator iter=nextSessionBuffer.begin();
+				iter!=nextSessionBuffer.end();)
+		{
+			unsend.push_back(*iter);	
+			iter++;
+		}
+		nextSessionBuffer.clear();
+	}
+
 	session_st()
 	{
 		initSession();	
@@ -282,6 +301,12 @@ struct session_st
 			free(*(iter++));
 		}
 		unsend.clear();
+		for(dataIterator iter=nextSessionBuffer.begin();
+				iter!=nextSessionBuffer.end();)
+		{
+			free(*(iter++));
+		}
+		nextSessionBuffer.clear();
 		for(dataIterator iter=lostPackets.begin();iter!=lostPackets.end();)
 		{
 			free(*(iter++));
@@ -341,6 +366,7 @@ struct session_st
 	bool checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 			struct tcphdr *tcp_header);
 	void process_recv(struct iphdr *ip_header,struct tcphdr *tcp_header);
+	void restoreBufferedSession();
 	bool is_over()
 	{
 		if(confirmed&& (virtual_status&CLIENT_FIN) && 
