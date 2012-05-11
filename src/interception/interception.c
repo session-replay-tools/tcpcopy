@@ -182,8 +182,6 @@ static void interception_process(int fd){
 #endif
 				/* 
 				 * drop the packet 
-				 * if you comment the following,you will boost the tcpcopy server
-				 * buf you may encounter some problems
 				 */
 				drop_netlink_packet(packet_id);  	
 			}
