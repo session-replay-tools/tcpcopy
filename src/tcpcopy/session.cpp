@@ -1460,7 +1460,6 @@ void session_st::establishConnectionForNoSynPackets(struct iphdr *ip_header,
 	}
 	sendFakedSynToBackend(ip_header,tcp_header);
 	isSynIntercepted=1;
-	activeCount++;
 	totalReconnectForNoSyn++;
 
 }
@@ -2704,6 +2703,12 @@ bool isPacketNeeded(const char *packet)
 				size_tcp,packSize);
 		return isNeeded;
 	}
+	uint32_t tot_len=ntohs(ip_header->tot_len);
+	if(tot_len>RECV_BUF_SIZE)
+	{
+		logInfo(LOG_WARN,"tot_len is wrong:%u",tot_len);
+		return isNeeded;
+	}
 	//here we filter the packets we do care about
 	{
 		//because it may use several virtual ip addresses 
@@ -2729,7 +2734,6 @@ void process(char *packet)
 	struct tcphdr *tcp_header=NULL;
 	struct iphdr *ip_header=NULL;
 	uint32_t size_ip;
-	bool reusePort=0;
 	time_t now=time(0);
 	timeCount++;
 
@@ -2884,7 +2888,6 @@ void process(char *packet)
 #endif
 					return;
 				}
-
 			}else
 			{
 				activeCount++;
@@ -2904,24 +2907,13 @@ void process(char *packet)
 				return;
 			}else
 			{
-				if(reusePort)
-				{
-					struct timeval start=getTime();
-					clientTotal++;
-					iter->second.process_recv(ip_header,tcp_header);
-					struct timeval end=getTime();
-					clientTotalTimes+=end.tv_sec-start.tv_sec;
-					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
-				}else
-				{
-					struct timeval start=getTime();
-					clientTotal++;
-					sessions[value].process_recv(ip_header,tcp_header);
-					struct timeval end=getTime();
-					clientTotalTimes+=end.tv_sec-start.tv_sec;
-					clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
-					iter = sessions.find(value);
-				}
+				struct timeval start=getTime();
+				clientTotal++;
+				sessions[value].process_recv(ip_header,tcp_header);
+				struct timeval end=getTime();
+				clientTotalTimes+=end.tv_sec-start.tv_sec;
+				clientTotalTimes+=(end.tv_usec-start.tv_usec)/1000000.0;
+				iter = sessions.find(value);
 				iter->second.synSeq=tcp_header->seq;
 			}
 		}
@@ -2930,12 +2922,6 @@ void process(char *packet)
 			SessIterator iter = sessions.find(value);
 			if(iter != sessions.end())
 			{
-				if(iter->second.isSessionAlreadyExist)
-				{
-					/* if there are serveral sessions for four pair,
-					 * then we only dispose the first one*/
-					return;
-				}
 				iter->second.confirmed=0;
 				struct timeval start=getTime();
 				clientTotal++;

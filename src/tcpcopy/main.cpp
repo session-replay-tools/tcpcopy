@@ -31,7 +31,6 @@
 #endif
 #include "../communication/msg.h"
 
-#define RECV_BUF_SIZE 2048
 #define MAX_IP_LEN 4096
 #define RECV_POOL_SIZE 67108864
 #define RECV_POOL_SIZE_SHIFT 26

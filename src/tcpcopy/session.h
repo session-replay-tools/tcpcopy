@@ -52,6 +52,8 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define COM_STMT_PREPARE 22
 #define COM_QUERY 3
 
+#define RECV_BUF_SIZE 2048
+
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define SCRAMBLE_LENGTH 20
 #define SEED_323_LENGTH 8
@@ -105,7 +107,6 @@ struct session_st
 	char password[MAX_PASSWORD_LEN];
 #endif
 	unsigned logLevel:4;
-	unsigned isSessionAlreadyExist:1;
 	unsigned alreadyRetransmit:1;
 	unsigned isNewRetransmit:1;
 	unsigned simulClosing:1;
@@ -141,29 +142,6 @@ struct session_st
 	unsigned isExcuteForTheFirstTime:1;
 	unsigned hasMoreNewSession:1;
 	unsigned retransmitSynTimes:4;
-
-	int generateRandomNumber(int min,int max,unsigned int* seed)
-	{
-		int randNum=(int)(max*(rand_r(seed)/(RAND_MAX+1.0)))+min;
-		return randNum;
-	}
-
-	uint32_t getRandomIP()
-	{
-		int ip0,ip1,ip2,ip3;
-		unsigned int seed=0;
-		struct timeval tp;
-		gettimeofday(&tp,NULL);
-		seed=tp.tv_usec;
-		char buf[64];
-
-		ip0=generateRandomNumber(1,254,&seed);
-		ip1=generateRandomNumber(1,254,&seed);
-		ip2=generateRandomNumber(1,254,&seed);
-		ip3=generateRandomNumber(1,254,&seed);
-		sprintf(buf,"%d.%d.%d.%d",ip0,ip1,ip2,ip3);
-		return inet_addr(buf);
-	}
 
 	void initSession()
 	{
@@ -222,7 +200,6 @@ struct session_st
 		retransmitSynTimes=0;
 		virtual_status = SYN_SEND;
 		reset_flag = 0;
-		isSessionAlreadyExist=0;
 		alreadyRetransmit=0;
 		isNewRetransmit=0;
 		simulClosing=0;
