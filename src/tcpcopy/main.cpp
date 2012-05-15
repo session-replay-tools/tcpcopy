@@ -32,9 +32,11 @@
 #include "../communication/msg.h"
 
 #define MAX_IP_LEN 4096
+/*pool size is 2^26,64M size*/
 #define RECV_POOL_SIZE 67108864
 #define RECV_POOL_SIZE_SHIFT 26
-#define MAX_ADDR 67106816
+
+#define MAX_ADDR (RECV_POOL_SIZE-RECV_BUF_SIZE)
 #define MAX_MEMORY_SIZE 524288
 #define SUCCESS 0
 #define FAILURE -1
