@@ -272,7 +272,7 @@ static int retrieve_raw_sockets(int sock)
 #endif
 		}
 		count++;
-		if(rawPackets%10000==0)
+		if(rawPackets%100000==0)
 		{
 			logInfo(LOG_NOTICE,
 					"recv raw packets:%llu,valid :%llu,total in pool:%llu\n",

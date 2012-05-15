@@ -90,7 +90,6 @@ struct session_st
 	size_t sendConPackets;
 	size_t respContentPackets;
 	size_t numberOfExcutes;
-	size_t logRecordNum;
 	size_t lastSameAckTotal;
 	size_t contPacketsFromGreet;
 	time_t lastUpdateTime;
@@ -174,7 +173,6 @@ struct session_st
 	{
 		lastSameAckTotal=0;
 		contPacketsFromGreet=0;
-		logRecordNum=0;
 		lastRespPacketSize=0;
 		total_seq_omit=0;
 		logLevel=global_out_level;

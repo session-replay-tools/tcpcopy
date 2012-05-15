@@ -55,7 +55,6 @@ static uint64_t leaveCount=0;
 static uint64_t deleteObsoCount=0;
 static uint64_t totalReconnectForClosed=0;
 static uint64_t totalReconnectForNoSyn=0;
-static uint64_t timeCount=0;
 static uint64_t totalResponses=0;
 static uint64_t totalRetransmitSuccess=0;
 static uint64_t totalRequests=0;
@@ -68,8 +67,11 @@ static uint64_t globalConPackets=0;
 static uint32_t global_total_seq_omit=0;
 static double bakTotalTimes=0;
 static double clientTotalTimes=0;
-static struct iphdr *fir_auth_user_pack=NULL;
 static time_t lastCheckDeadSessionTime=0;
+static time_t lastStatTime=0;
+#if (TCPCOPY_MYSQL_BASIC)
+static struct iphdr *fir_auth_user_pack=NULL;
+#endif
 
 
 /**
@@ -346,7 +348,7 @@ static int clearTimeoutTcpSessions()
 				p->second.isStatClosed=1;
 			}
 			activeCount--;
-			logInfo(LOG_NOTICE,"session timeout,p:%u",
+			logInfo(LOG_INFO,"session timeout,p:%u",
 					p->second.client_port);
 			leaveCount++;
 			size=p->second.unsend.size();
@@ -497,17 +499,7 @@ void session_st::selectiveLogInfo(int level,const char *fmt, ...)
 {
 	va_list args;
 	va_start(args, fmt);
-	if(logLevel!=global_out_level)
-	{
-		logRecordNum++;
-		if(logRecordNum<100000)
-		{
-			logInfoForSel(LOG_WARN, fmt, args);
-		}
-	}else
-	{
-		logInfoForSel(level, fmt, args);
-	}
+	logInfoForSel(level, fmt, args);
 	va_end(args);
 }
 
@@ -2735,10 +2727,10 @@ void process(char *packet)
 	struct iphdr *ip_header=NULL;
 	uint32_t size_ip;
 	time_t now=time(0);
-	timeCount++;
-
-	if(timeCount%20000==0)
+	double diff=now-lastStatTime;
+	if(diff > 10)
 	{
+		lastStatTime=now;
 		//this is for checking memory leak
 		logInfo(LOG_WARN,
 				"activeCount:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
@@ -2764,14 +2756,17 @@ void process(char *packet)
 		{
 			ratio=100.0*totalConnections/(enterCount+1);
 		}
-		if(ratio<80)
-		{
-			logInfo(LOG_WARN,"many connections can't be established");
-		}
+
+		logInfo(LOG_NOTICE,"total reconnect for closed :%llu,for no syn:%llu",
+				totalReconnectForClosed,totalReconnectForNoSyn);
 		logInfo(LOG_NOTICE,"total successful retransmit:%llu",
 				totalRetransmitSuccess);
 		logInfo(LOG_NOTICE,"syn total:%llu,all client packets:%llu",
 				synTotal,totalClientPackets);
+		if(ratio<80)
+		{
+			logInfo(LOG_WARN,"many connections can't be established");
+		}
 	}
 	if(lastCheckDeadSessionTime>0)
 	{
