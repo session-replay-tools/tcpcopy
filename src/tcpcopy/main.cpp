@@ -31,7 +31,7 @@
 #endif
 #include "../communication/msg.h"
 
-#define MAX_IP_LEN 4096
+#define MAX_IP_DATAGRAM_LEN 4096
 /*pool size is 2^26,64M size*/
 #define RECV_POOL_SIZE 67108864
 #define RECV_POOL_SIZE_SHIFT 26
@@ -48,7 +48,7 @@ static pthread_mutex_t mutex;
 static pthread_cond_t empty;
 static pthread_cond_t full;
 static char recvpool[RECV_POOL_SIZE];
-static char recvitem[MAX_IP_LEN];
+static char recvitem[MAX_IP_DATAGRAM_LEN];
 static uint64_t readCounter=0;
 static uint64_t writeCounter=0;
 
@@ -366,6 +366,7 @@ static void dispose_event(int fd){
 
 static void exit_tcp_copy(){
 	close(raw_sock);
+	raw_sock=-1;
 	send_close();
 	exit(0);
 }
@@ -383,7 +384,10 @@ static void tcp_copy_over(const int sig){
 			break;
 		}
 	}
-	close(raw_sock);
+	if(-1!=raw_sock)
+	{
+		close(raw_sock);
+	}
 	send_close();
 	endLogInfo();
 	exit(0);

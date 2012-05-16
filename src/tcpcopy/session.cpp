@@ -669,6 +669,7 @@ int session_st::sendReservedLostPackets()
 				selectiveLogInfo(LOG_DEBUG,"send reserved packets for lost:%u",
 						client_port);
 #endif
+				lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,1);
 				if(contSize>0)
 				{
@@ -718,6 +719,7 @@ int session_st::retransmitPacket()
 		struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
 		if(SYN_SEND==virtual_status)
 		{
+			lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 			wrap_send_ip_packet(fake_ip_addr,(unsigned char *)ip_header,
 				virtual_next_sequence,0);
 			retransmitSynTimes++;
@@ -746,6 +748,7 @@ int session_st::retransmitPacket()
 		{
 			if(curSeq<destSeq)
 			{
+				lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 				wrap_send_ip_packet(fake_ip_addr,data,virtual_next_sequence,0);
 				buffered.push_back(data);
 				unAckPackets.pop_front();
@@ -1010,7 +1013,20 @@ int session_st::sendReservedPackets()
 				break;
 			}
 			needPause=1;
-			isOmitTransfer=1;
+			uint32_t ackFromClient=ntohl(tcp_header->ack_seq);
+			if(lastSentAckFromClient==ackFromClient)
+			{
+				/*active close from client*/
+				isClientClosed=1;
+#if (DEBUG_TCPCOPY)
+				selectiveLogInfo(LOG_NOTICE,"set cli closed flag:%u",client_port);
+#endif
+				virtual_status |= CLIENT_FIN;
+				confirmed=1;
+			}else
+			{
+				isOmitTransfer=1;
+			}
 		}else if(0==contSize&&isWaitResponse)
 		{
 #if (DEBUG_TCPCOPY)
@@ -1036,6 +1052,7 @@ int session_st::sendReservedPackets()
 			}
 		}
 
+		lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 		if(!isOmitTransfer)
 		{
 			count++;
@@ -2567,6 +2584,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					{
 						//we do not support session when  two packets are 
 						//lost and retransmitted
+						lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 						wrap_send_ip_packet(fake_ip_addr,
 								(unsigned char *)ip_header,
 								virtual_next_sequence,1);
@@ -2582,6 +2600,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 						!isNewRequest)
 				{
 					isSegContinue=1;
+					lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 					wrap_send_ip_packet(fake_ip_addr,
 							(unsigned char *)ip_header,virtual_next_sequence,1);
 #if (DEBUG_TCPCOPY)
@@ -2645,6 +2664,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				}
 				if(!isResponseCompletely)
 				{
+					lastSentAckFromClient=ntohl(tcp_header->ack_seq);
 					wrap_send_ip_packet(fake_ip_addr,
 							(unsigned char *)ip_header,virtual_next_sequence,1);
 				}

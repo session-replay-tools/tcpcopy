@@ -85,7 +85,10 @@ void logInfo(int level,const char *fmt, ...)
 	{
 		if (file) {
 			t=time(0);
-			fprintf(file,"[%s] ",err_levels[level]);
+			if(file)
+			{
+				fprintf(file,"[%s] ",err_levels[level]);
+			}
 			pLocalTime=localtime_r(&t,&localTime);
 			if(NULL == pLocalTime)
 			{
@@ -98,10 +101,19 @@ void logInfo(int level,const char *fmt, ...)
 			}
 			len=strlen(pTimeStr);
 			pTimeStr[len-1]='\0';
-			fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
+			if(file)
+			{
+				fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
+			}
 			va_start(args, fmt);
-			(void)vfprintf(file, fmt, args);
-			fprintf( file, "\n" );
+			if(file)
+			{
+				(void)vfprintf(file, fmt, args);
+			}
+			if(file)
+			{
+				fprintf( file, "\n" );
+			}
 			va_end(args);
 		}
 	}

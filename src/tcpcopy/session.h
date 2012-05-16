@@ -76,6 +76,7 @@ struct session_st
 	uint32_t nextSeq;
 	uint32_t synSeq;
 	uint32_t lastAck;
+	uint32_t lastSentAckFromClient;
 	uint32_t lastRespPacketSize;
 	uint32_t handshakeExpectedPackets;
 	dataContainer unsend;
@@ -149,6 +150,7 @@ struct session_st
 		nextSeq=0;
 		synSeq=0;
 		lastAck=0;
+		lastSentAckFromClient=0;
 		handshakeExpectedPackets=2;
 		virtual_next_sequence=0;
 		virtual_ack=0;
@@ -218,6 +220,7 @@ struct session_st
 		nextSeq=0;
 		synSeq=0;
 		lastAck=0;
+		lastSentAckFromClient=0;
 		lastAckFromResponse=0;
 		lastSeqFromResponse=0;
 		requestProcessed=0;
