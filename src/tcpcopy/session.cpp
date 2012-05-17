@@ -156,6 +156,7 @@ static int clearTimeoutTcpSessions()
 	time_t tmpBase=0;
 	double ratio=100.0*enterCount/(totalRequests+1);
 	size_t MAXPACKETS=200;
+	size_t threshold=0;
 	size_t size=0;
 #if (TCPCOPY_MYSQL_BASIC)
 	MAXPACKETS=2000;
@@ -168,6 +169,7 @@ static int clearTimeoutTcpSessions()
 	logInfo(LOG_WARN,"session size:%u",sessions.size());
 	for(SessIterator p=sessions.begin();p!=sessions.end();)
 	{
+		threshold=MAXPACKETS;	
 		double diff=current-p->second.lastSendClientContentTime;
 		if(diff < 30)
 		{
@@ -187,8 +189,13 @@ static int clearTimeoutTcpSessions()
 				continue;
 			}else
 			{
-				logInfo(LOG_WARN,"still live,but too many unsend packets:%u",
-						p->second.client_port);
+				threshold=MAXPACKETS<<3;
+				if(diff<3)
+				{
+					threshold=threshold<<1;
+				}
+				logInfo(LOG_WARN,"still live,but too many:%u,threshold:%u",
+						p->second.client_port,threshold);
 			}
 		}
 
@@ -200,7 +207,7 @@ static int clearTimeoutTcpSessions()
 			tmpBase=normalBase;
 		}
 		size=p->second.unsend.size();
-		if(size>MAXPACKETS)
+		if(size>threshold)
 		{
 			if(!p->second.candidateErased)
 			{
@@ -267,7 +274,7 @@ static int clearTimeoutTcpSessions()
 			continue;
 		}
 		size=p->second.unAckPackets.size();
-		if(size>MAXPACKETS)
+		if(size>threshold)
 		{
 			if(!p->second.candidateErased)
 			{
@@ -1775,6 +1782,13 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 				simulClosing=1;
 			}
 		}
+		uint16_t window=tcp_header->window;
+		if(0==window)
+		{
+			/*slide window is full*/
+			return;
+		}
+
 		if(0 == contSize&&!tcp_header->fin)
 		{
 			if(lastAckFromResponse!=0)
@@ -2718,6 +2732,8 @@ bool isPacketNeeded(const char *packet)
 	uint32_t tot_len=ntohs(ip_header->tot_len);
 	if(tot_len>RECV_BUF_SIZE)
 	{
+		outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
+							tcp_header);
 		logInfo(LOG_WARN,"tot_len is wrong:%u",tot_len);
 		return isNeeded;
 	}
