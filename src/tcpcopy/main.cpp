@@ -31,7 +31,6 @@
 #endif
 #include "../communication/msg.h"
 
-#define MAX_IP_DATAGRAM_LEN 4096
 /*pool size is 2^26,64M size*/
 #define RECV_POOL_SIZE 67108864
 #define RECV_POOL_SIZE_SHIFT 26
@@ -48,7 +47,7 @@ static pthread_mutex_t mutex;
 static pthread_cond_t empty;
 static pthread_cond_t full;
 static char recvpool[RECV_POOL_SIZE];
-static char recvitem[MAX_IP_DATAGRAM_LEN];
+static char recvitem[RECV_BUF_SIZE+RECV_BUF_SIZE];
 static uint64_t readCounter=0;
 static uint64_t writeCounter=0;
 

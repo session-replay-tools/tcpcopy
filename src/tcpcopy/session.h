@@ -52,7 +52,7 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define COM_STMT_PREPARE 22
 #define COM_QUERY 3
 
-#define RECV_BUF_SIZE 2048
+#define RECV_BUF_SIZE 8192
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define SCRAMBLE_LENGTH 20
