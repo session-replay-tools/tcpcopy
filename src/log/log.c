@@ -1,7 +1,9 @@
 #include "log.h"
+#include <pthread.h>
 
-static FILE* file=NULL;
 int global_out_level;
+static FILE* file=NULL;
+static pthread_mutex_t mutex;
 
 static char* err_levels[] = { 
 	"unknown",
@@ -22,7 +24,9 @@ void initLogInfo()
 #else 
 	global_out_level=LOG_NOTICE;
 #endif
+	pthread_mutex_lock (&mutex);
 	file=fopen("error.log","a+");
+	pthread_mutex_unlock (&mutex);
 }
 
 static struct timeval getTime()
@@ -32,9 +36,6 @@ static struct timeval getTime()
 	return tp;
 }
 
-/**
- * this function is not thread safe
- */
 void logInfoForSel(int level,const char *fmt, va_list args)
 {
 	struct tm localTime;
@@ -46,6 +47,7 @@ void logInfoForSel(int level,const char *fmt, va_list args)
 	struct timeval usec=getTime();
 	if(global_out_level >= level)
 	{
+		pthread_mutex_lock (&mutex);
 		if (file) {
 			t=time(0);
 			fprintf(file,"[%s] ",err_levels[level]);
@@ -65,12 +67,10 @@ void logInfoForSel(int level,const char *fmt, va_list args)
 			(void)vfprintf(file, fmt, args);
 			fprintf( file, "\n" );
 		}
+		pthread_mutex_unlock (&mutex);
 	}
 }
 
-/**
- * this function is not thread safe
- */
 void logInfo(int level,const char *fmt, ...)
 {
 	va_list args;
@@ -83,12 +83,10 @@ void logInfo(int level,const char *fmt, ...)
 	struct timeval usec=getTime();
 	if(global_out_level >= level)
 	{
+		pthread_mutex_lock (&mutex);
 		if (file) {
 			t=time(0);
-			if(file)
-			{
-				fprintf(file,"[%s] ",err_levels[level]);
-			}
+			fprintf(file,"[%s] ",err_levels[level]);
 			pLocalTime=localtime_r(&t,&localTime);
 			if(NULL == pLocalTime)
 			{
@@ -101,30 +99,24 @@ void logInfo(int level,const char *fmt, ...)
 			}
 			len=strlen(pTimeStr);
 			pTimeStr[len-1]='\0';
-			if(file)
-			{
-				fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
-			}
+			fprintf(file,"%s usec=%ld ",pTimeStr,usec.tv_usec);
 			va_start(args, fmt);
-			if(file)
-			{
-				(void)vfprintf(file, fmt, args);
-			}
-			if(file)
-			{
-				fprintf( file, "\n" );
-			}
+			(void)vfprintf(file, fmt, args);
+			fprintf( file, "\n" );
 			va_end(args);
 		}
+		pthread_mutex_unlock (&mutex);
 	}
 }
 
 void endLogInfo()
 {
+	pthread_mutex_lock (&mutex);
 	if(file)
 	{
 		(void)fclose(file);
 		file=NULL;
-	}
+	}	
+	pthread_mutex_unlock (&mutex);
 }
 
