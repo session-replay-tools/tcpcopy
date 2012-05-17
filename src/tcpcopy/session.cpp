@@ -1785,6 +1785,8 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		uint16_t window=tcp_header->window;
 		if(0==window)
 		{
+			lastAckFromResponse=ack;
+			updateRetransmissionPackets();
 			/*slide window is full*/
 			return;
 		}
