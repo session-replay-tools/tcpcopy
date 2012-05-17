@@ -176,6 +176,11 @@ static int clearTimeoutTcpSessions()
 #if (TCPCOPY_MYSQL_BASIC)
 			logInfo(LOG_WARN,"diff < 30:%u",p->second.client_port);
 #endif
+			threshold=MAXPACKETS<<3;
+			if(diff < 3)
+			{
+				threshold=threshold<<1;
+			}
 			size_t unsendContPackets=0;
 			size_t reqContentPackets=p->second.reqContentPackets;
 			size_t sendConPackets=p->second.sendConPackets;
@@ -183,17 +188,12 @@ static int clearTimeoutTcpSessions()
 			{
 				unsendContPackets=reqContentPackets-sendConPackets;
 			}
-			if(unsendContPackets<MAXPACKETS)
+			if(unsendContPackets<threshold)
 			{
 				p++;
 				continue;
 			}else
 			{
-				threshold=MAXPACKETS<<3;
-				if(diff<3)
-				{
-					threshold=threshold<<1;
-				}
 				logInfo(LOG_WARN,"still live,but too many:%u,threshold:%u",
 						p->second.client_port,threshold);
 			}
