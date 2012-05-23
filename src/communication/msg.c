@@ -1,11 +1,11 @@
-#include <unistd.h>
 #include "msg.h"
 
 static int tcp_sock_init(){
 	int sock;
 	if((sock = socket(AF_INET,SOCK_STREAM,0))<0){          
 		perror("socket:");                                        
-		logInfo(LOG_ERR,"socket create error");
+		logInfo(LOG_ERR,"socket create error:%s",strerror(errno));
+		sync();
 		exit(errno);
 	}else
 	{
@@ -24,8 +24,10 @@ static void connect_to_server(int sock,uint32_t ip){
 	length=(socklen_t)(sizeof(remote_addr));
 	if(connect(sock,(struct sockaddr *)&remote_addr,length) == -1){
 		perror("connect to remote:");                         
-		logInfo(LOG_ERR,"it can not connect to remote server");
+		logInfo(LOG_ERR,"it can not connect to remote server:%s",
+				strerror(errno));
 		logInfo(LOG_ERR,"hint:server ip valid or server 36524 port forbidden?");
+		sync(); 
 		exit(errno);
 	}   
 }
@@ -35,7 +37,9 @@ static void set_sock_no_delay(int sock){
 	socklen_t length = (socklen_t)(sizeof(flag));
 	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,length) == -1){                                       
 		perror("setsockopt:");
-		logInfo(LOG_ERR,"setsocket error when setting TCP_NODELAY");
+		logInfo(LOG_ERR,"setsocket error when setting TCP_NODELAY:%s",
+				strerror(errno));
+		sync(); 
 		exit(errno);
 	} 
 }
@@ -56,7 +60,8 @@ static void sock_bind(int sock){
 	length = (socklen_t)(sizeof(local_addr));
 	if(bind(sock,(struct sockaddr *)&local_addr,length)==-1){
 		perror("can not bind:");
-		logInfo(LOG_ERR,"it can not bind address");
+		logInfo(LOG_ERR,"it can not bind address:%s",strerror(errno));
+		sync(); 
 		exit(errno);
 	}else
 	{
@@ -67,7 +72,8 @@ static void sock_bind(int sock){
 static void sock_listen(int sock){
 	if(listen(sock,5)==-1){
 		perror("sock listen:");
-		logInfo(LOG_ERR,"it can not listen");
+		logInfo(LOG_ERR,"it can not listen:%s",strerror(errno));
+		sync(); 
 		exit(errno);
 	}else
 	{

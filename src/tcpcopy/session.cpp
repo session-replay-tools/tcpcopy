@@ -1785,6 +1785,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		uint16_t window=tcp_header->window;
 		if(0==window)
 		{
+			logInfo(LOG_NOTICE,"slide window is zero now");
 			lastAckFromResponse=ack;
 			updateRetransmissionPackets();
 			/*slide window is full*/
@@ -2496,7 +2497,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 				isRequestBegin=1;
 			}
 #if (DEBUG_TCPCOPY)
-			selectiveLogInfo(LOG_DEBUG,"check it is a http request");
+			selectiveLogInfo(LOG_DEBUG,"it is a request from client");
 #endif
 			if(isTestConnClosed)
 			{
@@ -2620,7 +2621,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					wrap_send_ip_packet(fake_ip_addr,
 							(unsigned char *)ip_header,virtual_next_sequence,1);
 #if (DEBUG_TCPCOPY)
-					selectiveLogInfo(LOG_DEBUG,"it is a continuous http req");
+					selectiveLogInfo(LOG_DEBUG,"it is a continuous req");
 #endif
 				}
 				lastReqContSeq=ntohl(tcp_header->seq);

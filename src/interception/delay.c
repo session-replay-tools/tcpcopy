@@ -15,7 +15,8 @@ static struct receiver_msg_st * copy_message(struct receiver_msg_st *msg){
 	cmsg=(struct receiver_msg_st *)malloc(sizeof(struct receiver_msg_st));
 	if(NULL == cmsg){
 		perror("malloc");
-		logInfo(LOG_ERR,"malloc error");
+		logInfo(LOG_ERR,"malloc error:%s",strerror(errno));
+		sync(); 
 		exit(EXIT_FAILURE);
 	}
 	memcpy(cmsg,msg,sizeof(struct receiver_msg_st));

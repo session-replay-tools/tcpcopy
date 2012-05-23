@@ -15,7 +15,8 @@ static void set_sock_no_delay(int sock){
 	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,
 				sizeof(flag)) == -1){
 		perror("setsockopt:");
-		logInfo(LOG_ERR,"setsockopt error");
+		logInfo(LOG_ERR,"setsockopt error:%s",strerror(errno));
+		sync(); 
 		exit(errno);
 	}else
 	{
@@ -97,7 +98,9 @@ static int drop_netlink_packet(unsigned long packet_id)
 				(struct sockaddr *)&addr,sizeof(struct sockaddr_nl))<0)
 	{
 		perror("unable to send mode message");
-		logInfo(LOG_ERR,"unable to send mode message");
+		logInfo(LOG_ERR,"unable to send mode message:%s",
+				strerror(errno));
+		sync(); 
 		exit(0);
 	}
 	return 1;
@@ -137,7 +140,9 @@ static int pass_netlink_packet(unsigned long packet_id)
 				(struct sockaddr *)&addr,sizeof(struct sockaddr_nl))<0)
 	{
 		perror("unable to send mode message");
-		logInfo(LOG_ERR,"unable to send mode message");
+		logInfo(LOG_ERR,"unable to send mode message:%s",
+				strerror(errno));
+		sync(); 
 		exit(0);
 	}
 	return 1;
@@ -169,6 +174,7 @@ static void interception_process(int fd){
 				if(passed_ips.ips[i]==ip_header->daddr)
 				{
 					pass_through_flag=1;
+					break;
 				}
 			}
 			if(pass_through_flag)

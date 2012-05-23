@@ -7,7 +7,9 @@ static int sock_init(int protocol){
 	int sock = socket(AF_NETLINK,SOCK_RAW,protocol);
 	if(sock == -1){
 		perror("socket:");
-		logInfo(LOG_ERR,"create netlink socket error");
+		logInfo(LOG_ERR,"create netlink socket error:%s",
+				strerror(errno));
+		sync(); 
 		exit(errno);
 	}
 	return sock;
@@ -55,7 +57,9 @@ void nl_set_mode(int sock,uint8_t mode,size_t range){
 				(struct sockaddr *)&addr,sizeof(addr)) < 0){
 		perror("cannot set mode:");
 		logInfo(LOG_ERR,
-				"it can not set mode for netlink,check if ip queue is up");
+				"can not set mode for netlink,check if ip queue is up:%s",
+				strerror(errno));
+		sync(); 
 		exit(errno);
 	}else
 	{

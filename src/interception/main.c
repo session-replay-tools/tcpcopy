@@ -13,7 +13,6 @@
 #  include <config.h>
 #endif
 
-#include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
 
