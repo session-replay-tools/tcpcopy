@@ -6,28 +6,21 @@ Name:
 Description:
     It can help you find bugs without deploying your server software on your production servers. 
     It can also be used to do smoke testing against your products.
-
-    For example, when you want to migrate your web server from Apache to Nginx, tcpcopy can help you test
-    it. Apache is running online, while tcpcopy can copy the TCP flows from Apache to Nginx. To Nginx, the
-    TCP flows are just forwarding to it. This will not affect Apache at all except cost a little network 
-    bandwidth and CPU load.
+	For example, when you want to migrate your web server from Apache to Nginx, tcpcopy can help you test it. Apache is running online, while tcpcopy can copy the TCP flows from Apache to Nginx. To Nginx, the TCP flows are just forwarding to it. This will not affect Apache at all except cost a little network bandwidth and CPU load.
 
 
 Scenarios:
     1) Distributed stress testing
-       Use tcpcopy to copy real-world data to stress test your server software. Bugs that only can be
-       produced in high-stress situations can be found.
+       Use tcpcopy to copy real-world data to stress test your server software. Bugs that only can be produced in high-stress situations can be found.
 
     2) Hot backup
-       It is very suitable for backup tasks if connections are short-lived. The request loss ratio is
-       quite low (e.g. 0.000001).
+       It is very suitable for backup tasks if connections are short-lived. The request loss ratio is quite low (e.g. 0.00001).
 
     3) Online testing
        Prove the new system is stable and find bugs that only occur in the real world.
 
     4) Benchmark
-       Do performance benchmark. For instance, you can use tcpcopy to compare the performance of Apache 
-       and Nginx.
+       Do performance benchmark. For instance, you can use tcpcopy to compare the performance of Apache and Nginx.
 
 
 Usage:
@@ -48,10 +41,8 @@ Usage:
           ./interception 
 
 Example:
-    Suppose there are two online hosts, 1.2.3.13 and 1.2.3.14. And 1.2.3.148 is the target host (similar to 
-    the online hosts). Port 12321 is used both as local port and remote port. We use tcpcopy to test if
-    1.2.3.148 can process 2X requests than a host can serve.
-    
+    Suppose there are two online hosts, 1.2.3.13 and 1.2.3.14. And 1.2.3.148 is the target host (similar to the online hosts). Port 12321 is used both as local port and remote port. We use tcpcopy to test if 1.2.3.148 can process 2X requests than a host can serve.
+
     Here we use tcpcopy to perform the above test task.
     
     1) on the target host (1.2.3.148)
@@ -91,9 +82,7 @@ Example:
 
     Clearly, the target host can process 2X of requests a source host can serve.
 
-    How is the CPU load? Well, tcpcopy on online host 1.2.3.13 used 12.3%, host 1.2.3.14 
-    used 14%, while interception on the target host consumed about 17%. We can see that
-    the CPU load is low here, and so is the memory usage.
+    How is the CPU load? Well, tcpcopy on online host 1.2.3.13 used 12.3%, host 1.2.3.14 used 14%, while interception on the target host consumed about 17%. We can see that the CPU load is low here, and so is the memory usage.
 
 
 Note:
@@ -102,8 +91,7 @@ Note:
     3) If you use tcpcopy to duplicate local requests, please keep lo MTU not more than 1500.
     4) Interception (tcpcopy server) is single-threaded now.
     5) Root privilege is required.
-    6) Long-lived requests (such as uploading a large file) does not work well (no retransmission
-       when sending packets to the target test server)
+    6) Long-lived requests (such as uploading a large file) does not work well until now
     7) Check error.log if you encounter some problem and feel free to report it to us
-       (163.beijing@gmail.com or wangbin579@gmail.com).
+       (wangbin579@gmail.com).
 
