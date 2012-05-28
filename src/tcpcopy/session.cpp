@@ -12,7 +12,6 @@
 #include "../mysql/protocol.h"
 #endif
 
-
 using std::map;
 
 uint32_t localhost_ip;
