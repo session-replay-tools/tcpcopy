@@ -25,7 +25,7 @@ Scenarios:
 Usage:
     1) Install
        a) download the source code from github:
-          git clone https://github.com/wangbin579/tcpcopy
+          git clone http://github.com/wangbin579/tcpcopy
        b) ./configure
        c) make
        d) make install
