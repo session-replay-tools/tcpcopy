@@ -90,6 +90,6 @@ Note:
     4) Interception (tcpcopy server) is single-threaded now.
     5) Root privilege is required.
     6) Long-lived requests (such as uploading a large file) does not work well until now
-    7) Check error.log if you encounter some problems：： and feel free to report it to us
+    7) Check error.log if you encounter some problems and feel free to report it to us
        (wangbin579@gmail.com).
 
