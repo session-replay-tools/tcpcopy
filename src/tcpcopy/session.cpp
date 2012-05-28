@@ -2801,7 +2801,7 @@ void process(char *packet)
 				totalRetransmitSuccess);
 		logInfo(LOG_NOTICE,"syn total:%llu,all client packets:%llu",
 				synTotal,totalClientPackets);
-		if(ratio<80)
+		if(enterCount>100&&ratio<80)
 		{
 			logInfo(LOG_WARN,"many connections can't be established");
 		}
