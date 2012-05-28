@@ -80,7 +80,6 @@ Example:
            (89316 + 89309 - 178175) / (89316 + 89309) = 0.25%
 
     Clearly, the target host can process 2X of requests a source host can serve.
-
     How is the CPU load? Well, tcpcopy on online host 1.2.3.13 used 12.3%, host 1.2.3.14 used 14%, while interception on the target host consumed about 17%. We can see that the CPU load is low here, and so is the memory usage.
 
 
