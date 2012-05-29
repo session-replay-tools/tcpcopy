@@ -172,9 +172,6 @@ static int clearTimeoutTcpSessions()
 		double diff=current-p->second.lastSendClientContentTime;
 		if(diff < 30)
 		{
-#if (TCPCOPY_MYSQL_BASIC)
-			logInfo(LOG_WARN,"diff < 30:%u",p->second.client_port);
-#endif
 			threshold=MAXPACKETS<<3;
 			if(diff < 3)
 			{
