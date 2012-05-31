@@ -923,7 +923,9 @@ int session_st::sendReservedPackets()
 					{
 						isOmitTransfer=1;
 						over_flag=1;
-						logInfo(LOG_WARN,"it is strange here");
+						logInfo(LOG_WARN,"it is strange here,possibility");
+						logInfo(LOG_WARN,"1)user password pair not equal");
+						logInfo(LOG_WARN,"2)half-intercepted");
 						needPause=1;
 						break;
 					}
@@ -2299,6 +2301,9 @@ void session_st::process_recv(struct iphdr *ip_header,
 					if(!result)
 					{
 						logInfo(LOG_WARN,"it should never reach here");
+						logInfo(LOG_WARN,"it is strange here,possibility");
+						logInfo(LOG_WARN,"1)user password pair not equal");
+						logInfo(LOG_WARN,"2)half-intercepted");
 						over_flag=1;
 						return;
 					}
