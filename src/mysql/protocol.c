@@ -234,7 +234,14 @@ int change_client_auth_content(unsigned char *payload,
 	memset(user,0,256);
 	strcpy(user,str);
 	char* pwd=retrieveUserPwd(user);
-	logInfo(LOG_WARN,"user:%s,pwd:%s",user,pwd);
+	if(pwd != NULL)
+	{
+		logInfo(LOG_WARN,"user:%s,pwd:%s",user,pwd);
+	}else
+	{
+		logInfo(LOG_WARN,"user:%s,pwd is null",user);
+		return 0;
+	}
 	/*skip user*/
 	p=p+strlen(str)+1;
 	/*skip scramble_buff length*/
