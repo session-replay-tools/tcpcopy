@@ -2733,12 +2733,11 @@ bool isPacketNeeded(const char *packet)
 				size_tcp,packSize);
 		return isNeeded;
 	}
-	uint32_t tot_len=ntohs(ip_header->tot_len);
-	if(tot_len>RECV_BUF_SIZE)
+	if(packSize>RECV_BUF_SIZE)
 	{
 		outputPacketForDebug(LOG_NOTICE,CLIENT_FLAG,ip_header,
 							tcp_header);
-		logInfo(LOG_WARN,"tot_len is wrong:%u",tot_len);
+		logInfo(LOG_WARN,"packet sizeis wrong:%u",packSize);
 		return isNeeded;
 	}
 	//here we filter the packets we do care about

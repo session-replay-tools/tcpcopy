@@ -23,7 +23,6 @@ extern "C"
 #define LOG_INFO              7
 #define LOG_DEBUG             8 
 
-#define TCPCOPY_MYSQL_NO_SKIP     1
 #define DEBUG_TCPCOPY 		  0
 
 #if(TCPCOPY_MYSQL_SKIP)

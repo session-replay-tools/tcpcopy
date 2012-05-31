@@ -198,6 +198,37 @@ static int init_raw_socket()
 static uint64_t rawPackets=0;
 static uint64_t rawValidPackets=0;
 
+static int replicatePackets(const char* packet,int length)
+{			
+	int i=1;
+	struct tcphdr *tcp_header=NULL;
+	struct iphdr *ip_header=NULL;
+	uint32_t size_ip;
+	int randNum=0;
+	for(;i<replica_num;i++)
+	{
+		ip_header = (struct iphdr*)packet;
+		size_ip = ip_header->ihl<<2;
+		tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+		uint16_t tmp_port_addition=(1024<<((i<<1)-1))
+			+rand_shift_port;
+		uint16_t transfered_port=ntohs(tcp_header->source);
+		if(transfered_port<=(65535-tmp_port_addition))
+		{    
+			transfered_port=transfered_port+tmp_port_addition;
+		}else
+		{    
+			transfered_port=1024+tmp_port_addition;
+		}    
+#if (DEBUG_TCPCOPY)
+		logInfo(LOG_DEBUG,"shift port:%u",tmp_port_addition);
+#endif
+		tcp_header->source=htons(transfered_port);
+		putPacketToPool((const char*)packet,length);
+	}
+	return 0;
+}
+
 /**
  * retrieve raw packets here
  */
@@ -237,35 +268,54 @@ static int retrieve_raw_sockets(int sock)
 		{
 			rawValidPackets++;
 #if (MULTI_THREADS)  
-			putPacketToPool((const char*)packet,recv_len);
-			/*multi-copy is only supported in multithreading mode*/
-			if(replica_num>1)
+			int packet_num=1;
+			/*if packet length larger than 1500,we split it */
+			if(recv_len>1500)
 			{
-				int i=1;
-				struct tcphdr *tcp_header=NULL;
-				struct iphdr *ip_header=NULL;
+				/*calculate packet number*/
+
+				struct tcphdr *tcp_header;
+				struct iphdr *ip_header;
 				uint32_t size_ip;
-				int randNum=0;
-				for(;i<replica_num;i++)
+				uint32_t size_tcp;
+				ip_header = (struct iphdr*)packet;
+				size_ip = ip_header->ihl<<2;
+				uint32_t packSize=ntohs(ip_header->tot_len);
+				tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+				size_tcp = tcp_header->doff<<2;
+				uint32_t contSize=packSize-size_tcp-size_ip;
+				int maxConInOnePacket=1500-size_tcp-size_ip;
+				packet_num=(contSize+maxConInOnePacket-1)/maxConInOnePacket;
+				int i=0;
+				uint32_t syn=ntohl(tcp_header->seq);
+				char tmpPacket[1500];
+				memset(recvbuf,0,1500);
+				for(;i<packet_num;i++)
 				{
-					ip_header = (struct iphdr*)packet;
-					size_ip = ip_header->ihl<<2;
-					tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
-					uint16_t tmp_port_addition=(1024<<((i<<1)-1))
-						+rand_shift_port;
-					uint16_t transfered_port=ntohs(tcp_header->source);
-					if(transfered_port<=(65535-tmp_port_addition))
-					{    
-						transfered_port=transfered_port+tmp_port_addition;
+					tcp_header->seq=htonl(syn+i*maxConInOnePacket);
+					if(i!=(packet_num-1))
+					{
+						ip_header->tot_len=1500;
 					}else
-					{    
-						transfered_port=1024+tmp_port_addition;
-					}    
-#if (DEBUG_TCPCOPY)
-					logInfo(LOG_DEBUG,"shift port:%u",tmp_port_addition);
-#endif
-					tcp_header->source=htons(transfered_port);
-					putPacketToPool((const char*)packet,recv_len);
+					{
+						ip_header->tot_len=size_tcp+size_ip+
+							(contSize-i*maxConInOnePacket);
+					}
+					putPacketToPool((const char*)packet,ip_header->tot_len);
+					if(replica_num>1)
+					{
+						memset(tmpPacket,0,1500);
+						memcpy(tmpPacket,packet,ip_header->tot_len);
+						replicatePackets(tmpPacket,ip_header->tot_len);
+					}
+				}
+			}else
+			{
+				putPacketToPool((const char*)packet,recv_len);
+				/*multi-copy is only supported in multithreading mode*/
+				if(replica_num>1)
+				{
+					replicatePackets(packet,recv_len);
 				}
 			}
 #else
