@@ -4,7 +4,7 @@ tcpcopy_SOURCES=\
 				send.cpp send.h\
 				session.cpp session.h\
 				getopt.c getopt.h\
-				main.cpp
+				main.c
 tcpcopy_LDADD=\
 				   ../log/liblog.a\
 				   ../mysql/libmysql.a\
