@@ -1,58 +1,56 @@
-#ifndef  _TCP_REDIRECT_SESSION_H_INC
-#define  _TCP_REDIRECT_SESSION_H_INC
+#ifndef  _TCP_SESSION_H_INC
+#define  _TCP_SESSION_H_INC
 
-#include "../log/log.h"
-#include "../communication/msg.h"
-#include <stdarg.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <sys/time.h>
-#include <list>
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
+typedef struct ip_port_pair_mapping_s
+{
+	uint32_t src_ip;
+	uint32_t dst_ip;
+	uint16_t src_port;
+	uint16_t dst_port;
+}ip_port_pair_mapping_t;
 
-typedef struct virtual_ip_addr{
-	uint32_t ips[16];
+typedef struct ip_port_pair_mappings_s
+{
+	ip_port_pair_mapping_t *mappings;
 	int num;
-}virtual_ip_addr;
+}ip_port_pair_mappings_t;
 
-extern virtual_ip_addr local_ips;
-extern uint16_t local_port;
-extern uint32_t remote_ip;
-extern uint16_t remote_port;
-extern uint16_t port_shift_factor;
-extern uint16_t rand_shift_port;
-extern int global_out_level;
+/* global variables*/
+extern ip_port_pair_mappings_t g_transfer_target;
 
-void process(char *);
-bool isPacketNeeded(const char *packet);
-void outputPacketForDebug(int level,int flag,struct iphdr *ip_header,
+/* the following two are for avoiding port collisions 
+ * in multiple tcpcopy occations
+ */ 
+extern uint16_t g_port_shift_factor;
+extern uint16_t g_rand_port_shift;
+
+/*global functions*/
+void process(char *packet);
+bool is_packet_needed(const char *packet);
+void strace_packet_info(int level,int flag,struct iphdr *ip_header,
 		struct tcphdr *tcp_header);
-typedef std::list<unsigned char *> dataContainer;
-typedef std::list<unsigned char *>::iterator dataIterator;
 
-#define SYN_SEND     1
-#define SYN_CONFIRM  2
-#define SEND_REQUEST 4
-#define SEND_RESPONSE_CONFIRM 8
-#define SERVER_FIN  16
-#define	CLIENT_FIN  32
+enum session_status{
+	SYN_SEND,
+	SYN_CONFIRM,
+	SEND_REQUEST,
+	RECV_RESP,
+	SERVER_FIN,
+	CLIENT_FIN
+};
 
-#define BACKEND_FLAG 0
-#define CLIENT_FLAG 1
-#define FAKE_CLIENT_FLAG 10
-#define SERVER_FLAG 2
-#define UNKNOWN_FLAG 3
-#define SERVER_BACKEND_FLAG 4
-#define SELF_FLAG 5
-#define RESERVE_CLIENT_FLAG 6
+enum packet_classification{
+	CLIENT_FLAG,
+	BACKEND_FLAG,
+	FAKED_CLIENT_FLAG,
+	TO_BAKEND_FLAG,
+	UNKNOWN_FLAG
+};
 
-#define FAKE_SYN_BUF_SIZE 52
+#if (TCPCOPY_MYSQL_BASICS)
 #define COM_STMT_PREPARE 22
 #define COM_QUERY 3
-
-#define RECV_BUF_SIZE 8192
+#endif
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define SCRAMBLE_LENGTH 20
@@ -60,318 +58,210 @@ typedef std::list<unsigned char *>::iterator dataIterator;
 #define MAX_PASSWORD_LEN 256
 #endif
 
+#define FAKED_SYN_BUF_SIZE 52
+#define RECV_BUF_SIZE 8192
 
-struct session_st
+
+typedef struct session_s
 {
-	uint32_t virtual_next_sequence;
-	uint32_t virtual_ack;
-	uint32_t fake_ip_addr;
-	uint32_t client_ip_addr;
-	uint32_t local_dest_ip_addr;
-	uint32_t total_seq_omit;
+	/*src or client ip address*/
+	uint32_t src_addr;
+	/*dst or backend ip address*/
+	uint32_t dst_addr;
+	/*online ip address*/
+	uint32_t online_addr;
+	/*src or client port*/
+	uint16_t src_port;
+	/*dst or backend port*/
+	uint16_t dst_port;
+	/*online port*/
+	uint16_t online_port;
+	/*faked src or client  port*/
+	uint16_t faked_src_port;
 
-	uint32_t lastAckFromResponse;
-	uint32_t lastSeqFromResponse;
-	uint32_t lastReqContSeq;
-	uint32_t nextSeq;
-	uint32_t synSeq;
-	uint32_t lastAck;
-	uint32_t lastSentAckFromClient;
-	uint32_t lastRespPacketSize;
-	uint32_t handshakeExpectedPackets;
-	dataContainer unsend;
-	dataContainer nextSessionBuffer;
-	dataContainer unAckPackets;
-	dataContainer lostPackets;
-	dataContainer handshakePackets;
-	dataContainer mysqlSpecialPackets;
-	size_t requestProcessed;
-	size_t responseReceived;
-	size_t reqContentPackets;
-	size_t sendConPackets;
-	size_t respContentPackets;
-	size_t numberOfExcutes;
-	size_t lastSameAckTotal;
-	size_t contPacketsFromGreet;
-	time_t lastUpdateTime;
-	time_t createTime;
-	time_t lastRecvRespContentTime;
-	time_t lastSendClientContentTime;
-	uint16_t virtual_status;
-	uint16_t client_ip_id;
-	uint16_t client_port;
-	uint16_t fake_client_port;
-#if (TCPCOPY_MYSQL_ADVANCED)
-	char scrambleBuf[SCRAMBLE_LENGTH+1];
-	char seed323[SEED_323_LENGTH+1];
-	char password[MAX_PASSWORD_LEN];
+	/*src variables are also captured variables*/
+	/*src or client sequence*/
+	uint32_t src_seq;
+	/*src or client acknowledgement sequence*/
+	uint32_t src_ack_seq;
+
+	/*virtual variables*/
+	/*virtual sequence that sends to backend*/
+	uint32_t vir_seq;
+	/*virtual acknowledgement sequence that sends to backend*/
+	uint32_t vir_ack_seq;
+	/*virtual next expected sequence*/
+	uint32_t vir_next_seq;
+
+#if (TCPCOPY_MYSQL_BASIC)
+	/*the seq diff between virtual sequence and client sequence*/
+	uint32_t mysql_vir_req_seq_diff;
 #endif
-	unsigned logLevel:4;
-	unsigned alreadyRetransmit:1;
-	unsigned isNewRetransmit:1;
-	unsigned simulClosing:1;
-	unsigned reset_flag:1;
-	unsigned over_flag:1;
-	unsigned isClientClosed:1;
-	unsigned isTestConnClosed:1;
-	unsigned isWaitResponse:1;
-	unsigned isPartResponse:1;
-	unsigned isResponseCompletely:1;
-	unsigned isTrueWaitResponse:1;
-	unsigned isWaitPreviousPacket:1;
-	unsigned isSegContinue:1;
-	unsigned isRequestComletely:1;
-	unsigned isRequestBegin:1;
-	unsigned isKeepalive:1;
-	unsigned confirmed:1;
-	unsigned isFakedSendingFinToBackend:1;
-	unsigned isSynIntercepted:1;
-	unsigned isBackSynReceived:1;
-	unsigned isHalfWayIntercepted:1;
-	unsigned isStatClosed:1;
-	unsigned isClientReset:1;
-	unsigned isPureRequestBegin:1;
-	unsigned isGreeingReceived:1;
-	unsigned isNeedSecondAuth:1;
-	unsigned loginCanSendFlag:1;
-	unsigned isFirstAuthSent:1;
-	unsigned candidateErased:1;
-	unsigned isSeqAckNotConsistent:1;
-	unsigned isLoginReceived:1;
-	unsigned hasPrepareStat:1;
-	unsigned isExcuteForTheFirstTime:1;
-	unsigned hasMoreNewSession:1;
-	unsigned retransmitSynTimes:4;
 
-	void initSession()
-	{
-		numberOfExcutes=0;
-		lastReqContSeq=0;
-		nextSeq=0;
-		synSeq=0;
-		lastAck=0;
-		lastSentAckFromClient=0;
-		handshakeExpectedPackets=2;
-		virtual_next_sequence=0;
-		virtual_ack=0;
-		client_ip_id=0;
-		initSessionForKeepalive();
-		for(dataIterator iter=handshakePackets.begin();
-				iter!=handshakePackets.end();)
-		{
-			free(*(iter++));
-		}
-		handshakePackets.clear();
-		for(dataIterator iter=mysqlSpecialPackets.begin();
-				iter!=mysqlSpecialPackets.end();)
-		{
-			free(*(iter++));
-		}
-		mysqlSpecialPackets.clear();
+	/*response variables*/
+	/*acknowledgement sequence from backend response*/
+	uint32_t resp_ack_seq;
+	/*last sequence from backend response*/
+	uint32_t resp_last_seq;
+	/*last acknowledgement sequence from backend response*/
+	uint32_t resp_last_ack_seq;
+	/*last packet size from backend response*/
+	uint32_t resp_last_pack_size;
 
-	}
+	/*captured variables*/
+	/*last sequence of client content packet*/
+	uint32_t req_last_cont_seq;
+	/*last syn sequence of client packet*/
+	uint32_t req_last_syn_seq;
+	/*last ack sequence of client packet*/
+	uint32_t req_last_ack_seq;
 
-	void initSessionForKeepalive()
-	{
-		lastSameAckTotal=0;
-		contPacketsFromGreet=0;
-		lastRespPacketSize=0;
-		total_seq_omit=0;
-		logLevel=global_out_level;
-		fake_ip_addr=0;
-		isFakedSendingFinToBackend=0;
-		isTestConnClosed=0;
-		isSynIntercepted=0;
-		isBackSynReceived=0;
-		isHalfWayIntercepted=0;
-		isStatClosed=0;
-		isClientReset=0;
-		isPureRequestBegin=0;
-		isGreeingReceived=0;
-		isNeedSecondAuth=0;
-		loginCanSendFlag=0;
-		isFirstAuthSent=0;
-		candidateErased=0;
-		isSeqAckNotConsistent=0;
-		isLoginReceived=0;
-		hasPrepareStat=0;
-		isExcuteForTheFirstTime=1;
-		hasMoreNewSession=0;
-		retransmitSynTimes=0;
-		virtual_status = SYN_SEND;
-		reset_flag = 0;
-		alreadyRetransmit=0;
-		isNewRetransmit=0;
-		simulClosing=0;
-		over_flag = 0;
-		isWaitPreviousPacket=0;
-		isClientClosed=0;
-		isKeepalive=0;
-		isWaitResponse=0;
-		isPartResponse=0;
-		isResponseCompletely=0;
-		isRequestComletely=1;
-		isRequestBegin=0;
-		isTrueWaitResponse=0;
-		isSegContinue=0;
-		confirmed=1;
+	/*the number of client content packets*/
+	uint64_t req_cont_pack_num;
+	/*the number of content packets sent to backend*/
+	uint64_t vir_send_cont_pack_num;
+	/*the number of content packets from backend response*/
+	uint64_t resp_cont_pack_num;
 
-		lastReqContSeq=0;
-		nextSeq=0;
-		synSeq=0;
-		lastAck=0;
-		lastSentAckFromClient=0;
-		lastAckFromResponse=0;
-		lastSeqFromResponse=0;
-		requestProcessed=0;
-		responseReceived=0;
-		reqContentPackets=0;
-		sendConPackets=0;
-		respContentPackets=0;
-		lastUpdateTime=time(0);
-		createTime=lastUpdateTime;
-		lastRecvRespContentTime=lastUpdateTime;
-		lastSendClientContentTime=lastUpdateTime;
+	/*the hash key for this session*/
+	uint32_t hash_key;
 
-		client_port=0;
-		fake_client_port=0;
-		
-		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
-		{
-			
-			free(*(iter++));
-		}
-		unsend.clear();
-		for(dataIterator iter=lostPackets.begin();iter!=lostPackets.end();)
-		{
-			free(*(iter++));
-		}
-		lostPackets.clear();
-		for(dataIterator iter=unAckPackets.begin();iter!=unAckPackets.end();)
-		{
-			free(*(iter++));
-		}
-		unAckPackets.clear();
+	/*record time*/
+	/*last update time*/
+	time_t   last_update_time;
+	/*session create time*/
+	time_t   create_time;
+	/*the time of last receiving backend content*/
+	time_t   resp_last_recv_cont_time;
+	/*the time of sending the last content packet*/
+	time_t   req_last_send_cont_time;
 
-	}
+	/*shared variables*/
+	/*use this varible to check if the session is keepalived.
+	 *it will be added until reaching the threshold */
+	uint32_t req_proccessed_num:6;
+	/*the size of ip header*/
+	uint32_t ip_header_size:6;
+	/*the size of tcp header*/
+	uint32_t tcp_header_size:6;
+	/*the size of packet which is equal to tot_len*/
+	uint32_t packet_size:16;
+	/*the payload of the tcp packet*/
+	uint32_t tcp_payload_size:16;
+	/*the session status*/
+	uint32_t status:4;
+	/*the number of expected handshake packets*/
+	uint32_t expected_handshake_pack_num:8;
+	/*
+	 * the number of the response packets last received 
+	 * which have the same acknowledgement sequence.
+	 * this is for checking retransmission required from backend
+	 */
+	uint32_t resp_last_same_ack_num:8;
+	/*the id from client ip header*/
+	uint32_t req_ip_id:16;
+	/*the flag indicates if the session has retransmitted or not*/
+	uint32_t vir_already_retransmit:1;
+	/*this is for successful retransmission statistics*/
+	uint32_t vir_new_retransmit:1;
+	/*this is the simultaneous closing flag*/
+	uint32_t simul_closing:1;
+	/*reset flag either from client or from backend*/
+	uint32_t reset:1;
+	/*session over flag*/
+	uint32_t sess_over:1;
+	/*src or client closed flag*/
+	uint32_t src_closed:1;
+	/*dst or backend closed flag*/
+	uint32_t dst_closed:1;
+	/*candidate response waiting flag*/
+	uint32_t candidate_response_waiting:1;
+	/*response waiting flag*/
+	uint32_t response_waiting:1;
+	/*this indicates if the session needs to wait previous packets or not*/
+	uint32_t previous_packet_waiting:1;
+	/*connection keepalive flag*/
+	uint32_t conn_keepalive:1;
+	/*this indicates if faked fin sent to backend*/
+	uint32_t faked_fin_sent:1;
+	/*this indicates if the session intercepted the syn packets from client
+	 * or it has faked the syn packets*/
+	uint32_t req_syn_intercepted:1;
+	/*this indicates if we intercepted the packets halfway*/
+	uint32_t req_halfway_intercepted:1;
+	/*this indicates if the syn packets from backend is received*/
+	uint32_t resp_syn_received:1;
+	/*session candidate erased flag*/
+	uint32_t sess_candidate_erased:1;
+	/*session reused flag*/
+	uint32_t sess_more:1;
+	/*the times of syn retransmission to backend*/
+	uint32_t vir_syn_retrans_times:4;
+#if (TCPCOPY_MYSQL_BASIC)
+	/*mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation)*/
+	uint32_t mysql_excute_times:8;
+	/*the number of greet content packets receiving from backend*/
+	uint32_t mysql_cont_pack_num_after_recv_greet:4;
+	/*request begin flag for mysql*/
+	uint32_t mysql_req_begin:1;
+	/*this indicates if greeting from bakend is received*/
+	uint32_t mysql_resp_greet_received:1;
+	/*this indicates if it needs second auth*/
+	uint32_t mysql_sec_auth:1;
+	/*this indicates if it can send login packet*/
+	uint32_t mysql_can_login_send:1;
+	/*this indicates if it has sent the first auth*/
+	uint32_t mysql_first_auth_sent:1;
+	/*this indicates if the session has received login packet from client*/
+	uint32_t mysql_req_login_received:1;
+	/*this indicates if the session has prepare statment*/
+	uint32_t mysql_prepare_stat:1;
+	/*this indicates if the first excution is met*/
+	uint32_t mysql_first_excution:1;
+	/*mysql special packets for reconnection*/
+	linklist *mysql_special_packets;
+#endif
 
-	void initForNextSession()
-	{
-		initSession();
-		for(dataIterator iter=nextSessionBuffer.begin();
-				iter!=nextSessionBuffer.end();)
-		{
-			unsend.push_back(*iter);	
-			iter++;
-		}
-		nextSessionBuffer.clear();
-	}
+	linklist *unsend_packets;
+	linklist *next_session_packets;
+	linklist *unack_packets;
+	linklist *lost_packets;
+	linklist *handshake_packets;
+#if (TCPCOPY_MYSQL_ADVANCED)
+	char mysql_scramble[SCRAMBLE_LENGTH+1];
+	char mysql_seed323[SEED_323_LENGTH+1];
+	char mysql_password[MAX_PASSWORD_LEN];
+#endif
 
-	session_st()
-	{
-		initSession();	
-	}
+}session_t;
 
-	~session_st()
-	{
-		for(dataIterator iter=unsend.begin();iter!=unsend.end();)
-		{
-			free(*(iter++));
-		}
-		unsend.clear();
-		for(dataIterator iter=nextSessionBuffer.begin();
-				iter!=nextSessionBuffer.end();)
-		{
-			free(*(iter++));
-		}
-		nextSessionBuffer.clear();
-		for(dataIterator iter=lostPackets.begin();iter!=lostPackets.end();)
-		{
-			free(*(iter++));
-		}
-		lostPackets.clear();
-		for(dataIterator iter=unAckPackets.begin();iter!=unAckPackets.end();)
-		{
-			free(*(iter++));
-		}
-		unAckPackets.clear();
+/*session functions*/
+void process_recv(session_t *s);
+void update_virtual_status(session_t *s);
 
-		for(dataIterator iter=handshakePackets.begin();
-				iter!=handshakePackets.end();)
-		{
-			unsigned char* data=*(iter++);
-			free(data);
-		}
-		handshakePackets.clear();
-		for(dataIterator iter=mysqlSpecialPackets.begin();
-				iter!=mysqlSpecialPackets.end();)
-		{
-			unsigned char* data=*(iter++);
-			free(data);
-		}
-		mysqlSpecialPackets.clear();
-	}
-	void outputPacket(int level,int flag,struct iphdr *ip_header,
-			struct tcphdr *tcp_header);
-	void selectiveLogInfo(int level,const char *fmt, ...);
-	int sendReservedLostPackets();
-	int sendReservedPackets();
-	int retransmitPacket();
-	int updateRetransmissionPackets();
-	bool checkReservedContainerHasContent();
-	bool checkPacketLost(struct iphdr *ip_header,
-			struct tcphdr *tcp_header,uint32_t oldSeq);
-	bool checkSendingDeadReqs();
-	void update_virtual_status(struct iphdr *ip_header,
-			struct tcphdr* tcp_header);
-	void establishConnectionForNoSynPackets(struct iphdr *ip_header,
-			struct tcphdr *tcp_header);
-	void establishConnectionForClosedConn();
-	void sendFakedSynToBackend(struct iphdr* ip_header,
-			struct tcphdr* tcp_header);
-	void sendFakedSynAckToBackend(struct iphdr* ip_header,
-			struct tcphdr* tcp_header);
-	void sendFakedAckToBackend(struct iphdr* ip_header,
-			struct tcphdr* tcp_header,bool changeSeq);
-	void sendFakedFinToBackend(struct iphdr* ip_header,
-			struct tcphdr* tcp_header);
-	void sendFakedFinToBackByCliePack(struct iphdr* ip_header,
-			struct tcphdr* tcp_header);
-	void save_header_info(struct iphdr *ip_header,struct tcphdr *tcp_header);
-	uint32_t wrap_send_ip_packet(uint64_t fake_ip_addr,
-		unsigned char *data,uint32_t ack_seq,int isSave);
+void init_session(session_t *s);
+void init_keepalive_session(session_t *s);
+void init_next_session(session_t *s);
+void delete_session(session_t *s);
+int send_reserved_lost_packets(session_t *s);
+int send_reserved_packets(session_t *s);
+int retransmit_packets(session_t *s);
+int update_retransmission_packets(session_t *s);
+int check_reserved_content_left(session_t *s);
+int check_packet_lost(session_t *s);
+int check_dead_reqs(session_t *s);
+void est_conn_with_no_syn_packets(session_t *s);
+void est_conn_for_closed_conn(session_t *s);
+void send_faked_syn(session_t *s);
+void send_faked_third_handshake(session_t *s);
+void send_faked_ack(session_t *s);
+void send_faked_fin(session_t *s);
+void send_faked_fin_by_client(session_t *s);
+void save_header_info(session_t *s);
+uint32_t wrap_send_ip_packet(session_t *s,unsigned char *data,uint32_t ack);
+int mysql_check_reconnection(struct iphdr *ip_header);
+void restore_buffered_next_session(session_t *s);
+int check_session_over(session_t *s);
 
-	bool checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
-			struct tcphdr *tcp_header);
-	void process_recv(struct iphdr *ip_header,struct tcphdr *tcp_header);
-	void restoreBufferedSession();
-	bool is_over()
-	{
-		if(confirmed&& (virtual_status&CLIENT_FIN) && 
-				(virtual_status&SERVER_FIN))
-		{
-			return true;
-		}
-		if(reset_flag)
-		{
-			return true;
-		}
-		if(over_flag)
-		{
-			return true;
-		}
-		return false;
-	}
-};
-
-
-inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port)
-{
-	uint64_t value=(uint64_t(s_ip))<<16;
-	value+=s_port;
-	return value;
-}
-
-
-#endif   /* ----- #ifndef _TCP_REDIRECT_SESSION_H_INC  ----- */
+#endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
 
