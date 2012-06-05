@@ -1,9 +1,7 @@
-#ifndef  PASSWORD_INC
-#define  PASSWORD_INC
-
-#define SCRAMBLE_LENGTH 20
+#ifndef  _PASSWORD_INC
+#define  _PASSWORD_INC
 
 void
 scramble(char *to, const char *message, const char *password);
 
-#endif   /* ----- #ifndef PASSWORD_INC  ----- */
+#endif   /* ----- #ifndef _PASSWORD_INC  ----- */

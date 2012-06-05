@@ -62,6 +62,10 @@ enum packet_classification{
 #define RECV_BUF_SIZE 8192
 
 
+#ifdef TCPCOPY_MYSQL_ADVANCED
+#include "../mysql/protocol.h"
+#endif
+
 typedef struct session_s
 {
 	/*src or client ip address*/

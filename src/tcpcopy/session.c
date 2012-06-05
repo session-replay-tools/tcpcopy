@@ -1,29 +1,4 @@
-#include <map>
-#include <arpa/inet.h>
-#include <stdio.h>
-#include <stdarg.h>
 #include "session.h"
-#include "send.h"
-#include "../communication/msg.h"
-#include "../log/log.h"
-#include "address.h"
-
-#ifdef TCPCOPY_MYSQL_ADVANCED 
-#include "../mysql/protocol.h"
-#endif
-
-using std::map;
-
-uint32_t localhost_ip;
-uint32_t sample_ip;
-uint32_t client_ip;
-uint32_t remote_ip;
-uint16_t local_port;
-uint16_t remote_port;
-uint16_t port_shift_factor;
-uint16_t rand_shift_port;
-virtual_ip_addr local_ips;
-
 
 typedef map<uint64_t,session_st> SessContainer;
 #if (TCPCOPY_MYSQL_ADVANCED)

@@ -1,78 +1,58 @@
-#include "hash.h"
-#include "delay.h"
-#include "../log/log.h"
+#include <xcopy.h>
+
+static uint64_t msg_item_cnt;
+static uint64_t msg_item_free_cnt;
+static uint64_t msg_item_destr_cnt;
+static uint64_t msg_ll_cnt;
+static uint64_t msg_ll_free_cnt;
+static uint64_t msg_list_destr_cnt;
 
 static hash_table  *table;
-static int mCount;
-static int lCount;
-static int fCount;
-static int delayDel;
-static int lDestroy;
-static int count;
 
-static struct receiver_msg_st * copy_message(struct receiver_msg_st *msg){
-	struct receiver_msg_st *cmsg = NULL;
-	cmsg=(struct receiver_msg_st *)malloc(sizeof(struct receiver_msg_st));
+static struct msg_server_s *copy_message(struct msg_server_s *msg){
+	struct msg_server_s *cmsg = NULL;
+	cmsg=(struct msg_server_s *)malloc(sizeof(struct msg_server_s));
 	if(NULL == cmsg){
 		perror("malloc");
-		logInfo(LOG_ERR,"malloc error:%s",strerror(errno));
+		log_info(LOG_ERR, "malloc error:%s", strerror(errno));
 		sync(); 
 		exit(EXIT_FAILURE);
 	}
-	memcpy(cmsg,msg,sizeof(struct receiver_msg_st));
+	memcpy(cmsg, msg, sizeof(struct msg_server_s));
 	return cmsg;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  delay_table_init
- *  Description:  init delay table
- * =====================================================================================
- */
-void delay_table_init(){
-	/* we support 64k slots here */
-	table = hash_create(1024*64);
-	hash_set_timeout(table,30);
-	strcpy(table->name,"delay-table");
-	logInfo(LOG_NOTICE,"create table %s,size:%u",table->name,table->size);
-	mCount=0;
-	fCount=0;
-	lCount=0;
-	delayDel=0;
-	lDestroy=0;
-	count=0;
 }
 
 static void delay_table_delete_obsolete(uint64_t key)
 {
-	linklist *l = get_linklist(table,key);
-	time_t  nowtime = time(0);
-	hash_node *hnode1=NULL;
-	hash_node *hnode2=NULL;
-	lnodeptr node=NULL;
+	hash_node *hn1 = NULL;
+	hash_node *hn2 = NULL;
+	p_link_node ln = NULL;
+	link_list *msg_list = NULL;
+	time_t  nowtime     = time(0);
+	link_list *l   = get_link_list(table,key);
 
 	while(1){
-		node = linklist_tail(l);
-		if(! node ){
+		ln = link_list_tail(l);
+		if(NULL == ln){
 			break;
 		}   
-		hnode1 = (hash_node *)node->data;
-		if(hnode1->access_time+table->timeout < nowtime){
-			lnodeptr tail=linklist_pop_tail(l);
-			hnode2 = (hash_node *)tail->data;
-			if(NULL!=hnode2)
+		hn1 = (hash_node *)ln->data;
+		if(hn1->access_time+table->timeout < nowtime){
+			p_link_node tail = link_list_pop_tail(l);
+			hn2 = (hash_node *)tail->data;
+			if(NULL != hn2)
 			{   
-				if(hnode2->data!=NULL)
+				if(hn2->data!=NULL)
 				{
-					linklist *msg_list=(linklist *)hnode2->data;
-					count+=linklist_destory(msg_list);
+					msg_list = (link_list *)hn2->data;
+					msg_item_destr_cnt += link_list_destory(msg_list);
 					free(msg_list);  	
-					hnode2->data=NULL;
-					lDestroy++;
+					hn2->data = NULL;
+					msg_list_destr_cnt++;
 				}
-				free(hnode2);
+				free(hn2);
 			}   
-			tail->data=NULL;
+			tail->data = NULL;
 			free(tail);
 		}else{
 			break;
@@ -80,128 +60,129 @@ static void delay_table_delete_obsolete(uint64_t key)
 	} 
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  delay_table_add
- *  Description:  add msg to delay table
- * =====================================================================================
- */
-void delay_table_add(uint64_t key,struct receiver_msg_st *msg){
-	linklist *msg_list=NULL;
-	struct receiver_msg_st *cmsg = NULL;
-	lnodeptr pnode=NULL;
+
+/* init delay table */
+void delay_table_init(){
+	/* we support 64k slots here */
+	table = hash_create(65536);
+	hash_set_timeout(table, 30);
+	strcpy(table->name,"delay-table");
+	log_info(LOG_NOTICE,"create table %s,size:%u",
+			table->name, table->size);
+	msg_item_cnt       =0;
+	msg_item_free_cnt  =0;
+	msg_item_destr_cnt =0;
+	msg_ll_cnt         =0;
+	msg_list_destr_cnt =0;
+}
+
+/* add message to delay table*/
+void delay_table_add(uint64_t key,struct msg_server_s *msg){
+	link_list *msg_list       = NULL;
+	struct msg_server_s *cmsg = NULL;
+	p_link_node           ln  = NULL;
 
 	delay_table_delete_obsolete(key);	
-	msg_list =(linklist *)hash_find(table,key);
+	msg_list =(link_list *)hash_find(table, key);
 	cmsg = copy_message(msg);
-	pnode = lnode_malloc((void *)cmsg);
+	ln = link_node_malloc((void *)cmsg);
 	if(NULL == msg_list){
-		lCount++;
-		msg_list = linklist_create();
-		hash_add(table,key,msg_list);
+		msg_ll_cnt++;
+		msg_list = link_list_create();
+		hash_add(table, key, msg_list);
 	}
-	mCount++;
-	linklist_append(msg_list,pnode);
+	msg_item_cnt++;
+	link_list_append(msg_list, ln);
 	return;
 }
 
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  delay_table_send
- *  Description:  send delayed message according key
- * =====================================================================================
- */
+/* send delayed message according to the key*/
 void delay_table_send(uint64_t key,int fd){
-	linklist *msg_list=NULL;
-	struct receiver_msg_st *msg=NULL;
-	lnodeptr first=NULL;
+	link_list *msg_list      = NULL;
+	p_link_node first        = NULL;
+	struct msg_server_s *msg = NULL;
 
 	delay_table_delete_obsolete(key);	
-	msg_list =(linklist *)hash_find(table,key);
+	msg_list =(link_list *)hash_find(table, key);
 	if(NULL == msg_list){
 		return;	
 	}
-	while(! linklist_is_empty(msg_list)){
-		first = linklist_pop_first(msg_list);
+	while(! link_list_is_empty(msg_list)){
+		first = link_list_pop_first(msg_list);
 		msg = (first->data);
-		(void)msg_receiver_send(fd,msg);
+		(void)msg_receiver_send(fd, msg);
 		if(msg != NULL)
 		{
 			free(msg);
 		}
-		fCount++;
-		lnode_free(first);
+		msg_item_free_cnt++;
+		link_node_free(first);
 	}
 }
 
+/* delete delay table item according to the key */
 void delay_table_del(uint64_t key){
-	linklist *msg_list=NULL;
-	struct receiver_msg_st *msg=NULL;
-	lnodeptr first=NULL;
+	link_list      *msg_list = NULL;
+	struct msg_server_s *msg = NULL;
+	p_link_node      first   = NULL;
 
 	delay_table_delete_obsolete(key);	
-	msg_list =(linklist *)hash_find(table,key);
+	msg_list =(link_list *)hash_find(table, key);
 	if(NULL == msg_list){
 		return;	
 	}
-	while(! linklist_is_empty(msg_list)){
-		first = linklist_pop_first(msg_list);
+	while(! link_list_is_empty(msg_list)){
+		first = link_list_pop_first(msg_list);
 		msg = (first->data);
-		if(msg!=NULL)
+		if(msg != NULL)
 		{
 			free(msg);
 		}
-		delayDel++;
-		fCount++;
-		lnode_free(first);
+		msg_item_free_cnt++;
+		link_node_free(first);
 	}
-	hash_del(table,key);
+	hash_del(table, key);
 	free(msg_list);
+	msg_ll_free_cnt++;
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  delay_table_destroy
- *  Description:  destroy delay table
- * =====================================================================================
- */
+/* destroy delay table */
 void delay_table_destroy()
 {
-	uint32_t i=0;
-	linklist* list=NULL;
-	linklist *msg_list=NULL;
-	lnodeptr node=NULL;
-	hash_node *hnode=NULL;
+	uint32_t    i  = 0;
+	link_list  *ll = NULL,*msg_list = NULL;
+	p_link_node ln = NULL;
+	hash_node  *hn = NULL;
 
-	if(table!=NULL)
+	if(table != NULL)
 	{
-		logInfo(LOG_NOTICE,"destroy delayed table");
-		for(;i<table->size;i++)
+		log_info(LOG_NOTICE,"destroy delayed table");
+		for(; i < table->size; i++)
 		{
-			list=table->lists[i];
-			node = linklist_first(list);
-			while(node){
-				hnode = (hash_node *)node->data;
-				if(hnode->data!=NULL)
+			list = table->lists[i];
+			ln   = link_list_first(list);
+			while(ln){
+				hn = (hash_node *)ln->data;
+				if(hn->data != NULL)
 				{
-					msg_list=(linklist *)hnode->data;
-					count+=linklist_destory(msg_list);
+					msg_list=(link_list *)hn->data;
+					msg_item_destr_cnt+=link_list_destory(msg_list);
 					free(msg_list);
-					lDestroy++;
+					msg_list_destr_cnt++;
 				}	
-				hnode->data=NULL;
-				node = linklist_get_next(list,node);
+				hn->data = NULL;
+				ln = link_list_get_next(list, ln);
 			}
 		}
 
-		logInfo(LOG_NOTICE,"destroy msg list items:%d,free:%d,total:%d",
-				count,fCount,mCount);
-		logInfo(LOG_NOTICE,"create msg list:%d,delayDel:%d,destroyList:%d",
-				lCount,delayDel,lDestroy);
+		log_info(LOG_NOTICE,"destroy msg list items:%llu,free:%llu,total:%llu",
+				msg_item_destr_cnt, msg_item_free_cnt, msg_item_cnt);
+		log_info(LOG_NOTICE,"create msg list:%llu,free:%llu,destroyList:%llu",
+				msg_ll_cnt, msg_ll_free_cnt, msg_list_destr_cnt);
 		hash_destory(table);
 		free(table);
-		table=NULL;
+		table = NULL;
 	}
 }
 

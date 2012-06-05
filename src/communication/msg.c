@@ -1,16 +1,17 @@
-#include "msg.h"
+#include <xcopy.h>
 
 static int tcp_sock_init(){
-	int sock;
-	if((sock = socket(AF_INET,SOCK_STREAM,0))<0){          
+	int sock =socket(AF_INET,SOCK_STREAM,0);
+	if( sock < 0){          
 		perror("socket:");                                        
-		logInfo(LOG_ERR,"socket create error:%s",strerror(errno));
+		log_info(LOG_ERR,"socket create error:%s",strerror(errno));
 		sync();
 		exit(errno);
 	}else
 	{
-		logInfo(LOG_NOTICE,"socket created successfully ");
+		log_info(LOG_NOTICE,"socket created successfully ");
 	}
+
 	return sock;
 }
 
@@ -24,9 +25,9 @@ static void connect_to_server(int sock,uint32_t ip){
 	length=(socklen_t)(sizeof(remote_addr));
 	if(connect(sock,(struct sockaddr *)&remote_addr,length) == -1){
 		perror("connect to remote:");                         
-		logInfo(LOG_ERR,"it can not connect to remote server:%s",
+		log_info(LOG_ERR,"it can not connect to remote server:%s",
 				strerror(errno));
-		logInfo(LOG_ERR,"hint:server ip valid or server 36524 port forbidden?");
+		log_info(LOG_ERR,"server ip valid or server port 36524 forbidden?");
 		sync(); 
 		exit(errno);
 	}   
@@ -35,18 +36,18 @@ static void connect_to_server(int sock,uint32_t ip){
 static void set_sock_no_delay(int sock){                              
 	int flag = 1;
 	socklen_t length = (socklen_t)(sizeof(flag));
-	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,length) == -1){                                       
+	if(setsockopt(sock,IPPROTO_TCP,TCP_NODELAY,(char *)&flag,length) == -1){
 		perror("setsockopt:");
-		logInfo(LOG_ERR,"setsocket error when setting TCP_NODELAY:%s",
+		log_info(LOG_ERR,"setsocket error when setting TCP_NODELAY:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
 	} 
 }
 
-int msg_copyer_init(uint32_t receiver_ip){
+int msg_client_init(uint32_t server_ip){
 	int sock  = tcp_sock_init();
-	connect_to_server(sock,receiver_ip);
+	connect_to_server(sock,server_ip);
 	set_sock_no_delay(sock);
 	return sock;
 }
@@ -55,39 +56,51 @@ static void sock_bind(int sock){
 	struct sockaddr_in local_addr;
 	socklen_t length; 
 	memset(&local_addr,0,sizeof(local_addr));
-	local_addr.sin_port = ntohs(SERVER_PORT);
-	local_addr.sin_family= AF_INET;
+	local_addr.sin_port   = ntohs(SERVER_PORT);
+	local_addr.sin_family = AF_INET;
 	length = (socklen_t)(sizeof(local_addr));
-	if(bind(sock,(struct sockaddr *)&local_addr,length)==-1){
+	if(bind(sock,(struct sockaddr *)&local_addr,length) == -1){
 		perror("can not bind:");
-		logInfo(LOG_ERR,"it can not bind address:%s",strerror(errno));
+		log_info(LOG_ERR,"it can not bind address:%s",strerror(errno));
 		sync(); 
 		exit(errno);
 	}else
 	{
-		logInfo(LOG_NOTICE,"it binds address successfully");
+		log_info(LOG_NOTICE,"it binds address successfully");
 	}
 }
 
 static void sock_listen(int sock){
 	if(listen(sock,5)==-1){
 		perror("sock listen:");
-		logInfo(LOG_ERR,"it can not listen:%s",strerror(errno));
+		log_info(LOG_ERR,"it can not listen:%s",strerror(errno));
 		sync(); 
 		exit(errno);
 	}else
 	{
-		logInfo(LOG_NOTICE,"it listens successfully");
+		log_info(LOG_NOTICE,"it listens successfully");
 	}
 }
 
-static struct receiver_msg_st r_msg;
-struct receiver_msg_st* msg_copyer_recv(int sock){
+/* init msg server */
+int msg_server_init(){
+	int sock = tcp_sock_init();
+	sock_bind(sock);
+	sock_listen(sock);
+	return sock;
+}
+
+
+static struct msg_server_s s_msg;
+
+/* receiving server message */
+struct msg_server_s* msg_client_recv(int sock){
 	size_t len =0;
-	while(len != sizeof(struct receiver_msg_st)){
-		ssize_t ret = recv(sock,(char *)&r_msg+len,sizeof(struct receiver_msg_st)-len,0);
+	while(len != sizeof(struct msg_server_s)){
+		ssize_t ret = recv(sock,(char *)&s_msg+len,
+				sizeof(struct msg_server_s)-len,0);
 		if(ret == 0){
-			logInfo(LOG_DEBUG,"recv length is zero when in msg_copyer_recv");
+			log_info(LOG_DEBUG,"recv length is zero in msg_client_recv");
 			(void)close(sock);
 			return NULL;
 		}else if(ret == -1){
@@ -96,16 +109,19 @@ struct receiver_msg_st* msg_copyer_recv(int sock){
 			len += ret;
 		}
 	}
-	return &r_msg;
+	return &s_msg;
 }
 
-static struct copyer_msg_st c_msg;
-struct copyer_msg_st *msg_receiver_recv(int sock){
+static struct msg_client_s c_msg;
+
+/* receiving server message */
+struct msg_client_s *msg_server_recv(int sock){
 	size_t len = 0;
-	while(len != sizeof(struct copyer_msg_st)){
-		ssize_t ret = recv(sock,(char *)&c_msg+len,sizeof(struct copyer_msg_st)-len,0);
+	while(len != sizeof(struct msg_client_s)){
+		ssize_t ret = recv(sock,(char *)&c_msg+len,
+				sizeof(struct msg_client_s)-len,0);
 		if(ret == 0){
-			logInfo(LOG_DEBUG,"recv length is zero when in msg_receiver_recv");
+			log_info(LOG_DEBUG,"recv length is zero in msg_server_recv");
 			return NULL;
 		}else if(ret == -1){
 			continue;
@@ -116,60 +132,36 @@ struct copyer_msg_st *msg_receiver_recv(int sock){
 	return &c_msg;
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  msg_receiver_init
- *  Description:  init msg receiver 
- * =====================================================================================
- */
-int msg_receiver_init(){
-	int sock = tcp_sock_init();
-	sock_bind(sock);
-	sock_listen(sock);
-	return sock;
-}
-
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  msg_copyer_send
- *  Description:  send msg for backend
- * =====================================================================================
- */
-int msg_copyer_send(int sock,uint32_t c_ip,uint16_t c_port,uint16_t type){
-	struct copyer_msg_st buf;
-	ssize_t sendlen;
-	ssize_t bufLen=(ssize_t)(sizeof(buf));
-	buf.client_ip = c_ip;
+/* send msg to backend */
+int msg_client_send(int sock,uint32_t c_ip,uint16_t c_port,uint16_t type){
+	struct msg_client_s buf;
+	ssize_t send_len;
+	ssize_t buf_len  =(ssize_t)(sizeof(buf));
+	buf.client_ip   = c_ip;
 	buf.client_port = c_port;
 	buf.type = type;
-	sendlen = send(sock,(const void *)&buf,sizeof(buf),0);
-	if(sendlen != bufLen){
-		logInfo(LOG_WARN,"send length:%ld,buffer size:%ld",
-				sendlen,bufLen);
+	send_len  = send(sock,(const void *)&buf,sizeof(buf),0);
+	if(send_len != buf_len){
+		log_info(LOG_WARN,"send length:%ld,buffer size:%ld",
+				send_len,buf_len);
 		return -1;
 	}
-	return (int)sendlen;
+	return (int)send_len;
 }
 
-/* 
- * ===  FUNCTION  ======================================================================
- *         Name:  msg_receiver_send
- *  Description:  send msg for tcpcopy
- * =====================================================================================
- */
-int msg_receiver_send(int sock,struct receiver_msg_st * msg){
-	ssize_t msgLen=(ssize_t)(sizeof(*msg));
-	ssize_t sendlen = send(sock,(const void *)msg,
-			sizeof(struct receiver_msg_st),0);
-	if(sendlen!=-1)
+/* send msg to client*/
+int msg_server_send(int sock,struct msg_server_s * msg){
+	ssize_t msg_len=(ssize_t)(sizeof(*msg));
+	ssize_t send_len = send(sock,(const void *)msg,
+			sizeof(struct msg_server_s),0);
+	if(send_len!=-1)
 	{
-		if(sendlen != msgLen){
-			logInfo(LOG_NOTICE,"send length is not equal to msg size:%u",
-					sendlen);	
+		if(send_len != msg_len){
+			log_info(LOG_NOTICE,"send length is not equal to msg size:%u",
+					send_len);	
 			return -1;
 		}
 	}
-	return (int)sendlen;
+	return (int)send_len;
 }
-
 

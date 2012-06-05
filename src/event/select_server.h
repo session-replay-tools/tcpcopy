@@ -6,9 +6,6 @@ extern "C"
 {
 #endif
 
-#define MAX_FD_VALUE 1023
-#define MAX_FD_NUM 1024
-
 	typedef void (*select_server_func)(int fd);
 
 	void select_sever_set_callback(select_server_func func);
