@@ -18,19 +18,19 @@
 
 static void release_resources()
 {
-	logInfo(LOG_NOTICE,"release_resources begin");
+	log_info(LOG_NOTICE, "release_resources begin");
 	interception_over();
-	logInfo(LOG_NOTICE,"release_resources end except log file");
+	log_info(LOG_NOTICE, "release_resources end except log file");
 	end_log_info();
 }
 
 static void signal_handler(int sig)
 {
-	logInfo(LOG_ERR,"set signal handler:%d",sig);
-	printf("set signal handler:%d\n",sig);
+	log_info(LOG_ERR,"set signal handler:%d", sig);
+	printf("set signal handler:%d\n", sig);
 	if(SIGSEGV == sig)
 	{    
-		logInfo(LOG_ERR, "SIGSEGV error");
+		log_info(LOG_ERR, "SIGSEGV error");
 		release_resources();
 		/*avoid dead loop*/
 		signal(SIGSEGV, SIG_DFL);
@@ -71,7 +71,7 @@ static int retrieve_ip_addr(const char* ips)
 			len = strlen(p);
 		}   
 		strncpy(tmp, p, len);
-		address=inet_addr(tmp);    
+		address = inet_addr(tmp);    
 		passed_ips.ips[count++] = address;
 		if(NULL == split)
 		{
@@ -83,7 +83,7 @@ static int retrieve_ip_addr(const char* ips)
 		memset(tmp, 0, 32);
 
 	}
-	passed_ips.num=count;
+	passed_ips.num = count;
 	return 1;
 }
 
