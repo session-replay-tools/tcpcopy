@@ -1,70 +1,12 @@
 #ifndef  _TCP_SESSION_H_INC
 #define  _TCP_SESSION_H_INC
 
-typedef struct ip_port_pair_mapping_s
-{
-	uint32_t src_ip;
-	uint32_t dst_ip;
-	uint16_t src_port;
-	uint16_t dst_port;
-}ip_port_pair_mapping_t;
+#include <xcopy.h>
 
-typedef struct ip_port_pair_mappings_s
-{
-	ip_port_pair_mapping_t *mappings;
-	int num;
-}ip_port_pair_mappings_t;
-
-/* global variables*/
-extern ip_port_pair_mappings_t g_transfer_target;
-
-/* the following two are for avoiding port collisions 
- * in multiple tcpcopy occations
- */ 
-extern uint16_t g_port_shift_factor;
-extern uint16_t g_rand_port_shift;
 
 /*global functions*/
 void process(char *packet);
 bool is_packet_needed(const char *packet);
-void strace_packet_info(int level,int flag,struct iphdr *ip_header,
-		struct tcphdr *tcp_header);
-
-enum session_status{
-	SYN_SEND,
-	SYN_CONFIRM,
-	SEND_REQUEST,
-	RECV_RESP,
-	SERVER_FIN,
-	CLIENT_FIN
-};
-
-enum packet_classification{
-	CLIENT_FLAG,
-	BACKEND_FLAG,
-	FAKED_CLIENT_FLAG,
-	TO_BAKEND_FLAG,
-	UNKNOWN_FLAG
-};
-
-#if (TCPCOPY_MYSQL_BASICS)
-#define COM_STMT_PREPARE 22
-#define COM_QUERY 3
-#endif
-
-#if (TCPCOPY_MYSQL_ADVANCED) 
-#define SCRAMBLE_LENGTH 20
-#define SEED_323_LENGTH 8
-#define MAX_PASSWORD_LEN 256
-#endif
-
-#define FAKED_SYN_BUF_SIZE 52
-#define RECV_BUF_SIZE 8192
-
-
-#ifdef TCPCOPY_MYSQL_ADVANCED
-#include "../mysql/protocol.h"
-#endif
 
 typedef struct session_s
 {
@@ -239,7 +181,8 @@ typedef struct session_s
 
 }session_t;
 
-/*session functions*/
+
+/* session functions begin */
 void process_recv(session_t *s);
 void update_virtual_status(session_t *s);
 
@@ -266,6 +209,7 @@ uint32_t wrap_send_ip_packet(session_t *s,unsigned char *data,uint32_t ack);
 int mysql_check_reconnection(struct iphdr *ip_header);
 void restore_buffered_next_session(session_t *s);
 int check_session_over(session_t *s);
+/* session functions end */
 
 #endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
 
