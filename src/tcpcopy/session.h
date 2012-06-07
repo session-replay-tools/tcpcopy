@@ -165,14 +165,14 @@ typedef struct session_s
 	/*this indicates if the first excution is met*/
 	uint32_t mysql_first_excution:1;
 	/*mysql special packets for reconnection*/
-	linklist *mysql_special_packets;
+	link_list *mysql_special_packets;
 #endif
 
-	linklist *unsend_packets;
-	linklist *next_session_packets;
-	linklist *unack_packets;
-	linklist *lost_packets;
-	linklist *handshake_packets;
+	link_list *unsend_packets;
+	link_list *next_session_packets;
+	link_list *unack_packets;
+	link_list *lost_packets;
+	link_list *handshake_packets;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	char mysql_scramble[SCRAMBLE_LENGTH+1];
 	char mysql_seed323[SEED_323_LENGTH+1];

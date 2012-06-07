@@ -18,7 +18,7 @@ void link_node_free(p_link_node p){
 }
 
 link_list *link_list_create(){
-	link_list *l= (link_list *)malloc(sizeof(struct link_list ));
+	link_list *l = (link_list *)malloc(sizeof(struct link_list ));
 	if(NULL == l){
 		perror("malloc");
 		return NULL;
@@ -31,7 +31,7 @@ link_list *link_list_create(){
 static int link_list_clear(link_list *l){
 	p_link_node p = l->head.next;
 	p_link_node next;
-	int count=0;
+	int count = 0;
 	while(p != &(l->head)){
 		next = p->next;
 		if(p->data!=NULL)
@@ -46,7 +46,7 @@ static int link_list_clear(link_list *l){
 }
 
 int link_list_destory(link_list *l){
-	int count=link_list_clear(l);
+	int count = link_list_clear(l);
 	return count;
 }
 
@@ -55,7 +55,7 @@ void link_list_append(link_list *l,p_link_node p){
 	node->next = p;
 	p->prev = node;
 	l->head.prev = p;
-	p->next =&(l->head);
+	p->next = &(l->head);
 }
 
 void link_list_push(link_list *l,p_link_node p){
@@ -76,13 +76,13 @@ p_link_node link_list_remove(p_link_node node){
 }
 
 p_link_node link_list_first(link_list *l){
-	if(l->head.next ==&(l->head)){
+	if(l->head.next == &(l->head)){
 		return NULL;
 	}
 	return l->head.next;
 }
 p_link_node link_list_tail(link_list *l){
-	if(l->head.next ==&(l->head)){
+	if(l->head.next == &(l->head)){
 		return NULL;
 	}
 	return l->head.prev;

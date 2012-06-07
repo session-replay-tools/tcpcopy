@@ -1,0 +1,67 @@
+#include <xcopy.h>
+
+/* strace packet info for debug */
+void strace_packet_info(int level, int flag,
+		struct iphdr *ip_header, struct tcphdr *tcp_header)
+{
+	if(g_log_level < level)
+	{
+		return;
+	}
+	struct in_addr src_addr;
+	struct in_addr dst_addr;
+	char           *tmp_buf;
+	char           src_ip[1024], dst_ip[1024];
+	unsigned int   seq, ack_seq;
+	uint32_t       pack_size;
+	uint16_t       window;
+
+	src_addr.s_addr = ip_header->saddr;
+	tmp_buf = inet_ntoa(src_addr);
+	memset(src_ip, 0, 1024);
+	strcpy(src_ip, tmp_buf);
+	dst_addr.s_addr = ip_header->daddr;
+	tmp_buf = inet_ntoa(dst_addr);
+	memset(dst_ip, 0, 1024);
+	strcpy(dst_ip, tmp_buf);
+	pack_size = ntohs(ip_header->tot_len);
+	seq       = ntohl(tcp_header->seq);
+	ack_seq   = ntohl(tcp_header->ack_seq);
+	window    = tcp_header->window;
+
+	if(BACKEND_FLAG == flag)
+	{
+		log_info(level, "from bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
+
+	}else if(CLIENT_FLAG == flag)
+	{
+		log_info(level, "recv clt:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+
+	}else if(SERVER_BACKEND_FLAG == flag)
+	{
+		log_info(level, "to bak: %s:%u-->%s:%u,len %u ,seq=%u,ack=%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+
+	}else if(FAKE_CLIENT_FLAG == flag)  
+	{
+		log_info(level, "faked clt pack %s:%u-->%s:%u,len %u,seq=%u,ack=%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+	}else if(UNKNOWN_FLAG==flag)
+	{
+		log_info(level, "unkown packet %s:%u-->%s:%u,len %u,seq=%u,ack=%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+	}else
+	{
+		log_info(level, "strange %s:%u-->%s:%u,length %u,seq=%u,ack=%u",
+				src_ip, ntohs(tcp_header->source), dst_ip,
+				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+	}
+}
+

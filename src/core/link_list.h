@@ -10,11 +10,12 @@ extern "C"
 	{
 		struct link_node *prev;
 		struct link_node *next;
-		void *data;
+		void   *data;
 	}link_node,*p_link_node;
 
 	typedef struct link_list{
 		link_node head;
+		int size;
 	}link_list;
 
 

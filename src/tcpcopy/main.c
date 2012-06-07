@@ -17,7 +17,7 @@
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;
 static char pool[RECV_POOL_SIZE];
-static char item[RECV_BUF_SIZE+RECV_BUF_SIZE];
+static char item[DEFAULT_MTU+DEFAULT_MTU];
 static int raw_sock, read_over_flag = 1, replica_num = 1;
 static uint64_t read_cnt  = 0, write_cnt = 0;
 static uint64_t event_cnt = 0, packs_put_cnt=0;
@@ -262,7 +262,7 @@ static int retrieve_raw_sockets(int sock)
 #if (MULTI_THREADS)  
 			packet_num=1;
 			/*if packet length larger than 1500,we split it */
-			if(recv_len > 1500)
+			if(recv_len > DEFAULT_MTU)
 			{
 				/*calculate packet number*/
 				ip_header  = (struct iphdr*)packet;
@@ -275,6 +275,13 @@ static int retrieve_raw_sockets(int sock)
 				packet_num = (cont_size+max_payload_len-1)/max_payload_len;
 				syn        = ntohl(tcp_header->seq);
 				memset(recv_buf,0,DEFAULT_MTU);
+				if(tot_len > RECV_BUF_SIZE)
+				{
+					log_info(LOG_ERR, "receive an abnormal packet:%d",
+							tot_len);
+					count++;
+					continue;
+				}
 				for(; i<packet_num; i++)
 				{
 					tcp_header->seq = htonl(syn + i * max_payload_len);
@@ -388,7 +395,6 @@ static void dispose_event(int fd){
 			log_info(LOG_ERR, "msg is null from msg_client_recv");
 			exit(1);
 		}   
-		//it is tricked as if from tested machine
 #if (MULTI_THREADS)  
 		put_packet_to_pool((const char*)msg, sizeof(msg_server_s));
 #else
