@@ -37,12 +37,12 @@ static void delay_table_delete_obsolete(uint64_t key)
 			break;
 		}   
 		hn1 = (hash_node *)ln->data;
-		if(hn1->access_time+table->timeout < nowtime){
+		if( (hn1->access_time + table->timeout) < nowtime){
 			p_link_node tail = link_list_pop_tail(l);
 			hn2 = (hash_node *)tail->data;
 			if(NULL != hn2)
 			{   
-				if(hn2->data!=NULL)
+				if(hn2->data != NULL)
 				{
 					msg_list = (link_list *)hn2->data;
 					msg_item_destr_cnt += link_list_destory(msg_list);
