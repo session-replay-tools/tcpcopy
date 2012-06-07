@@ -8,9 +8,20 @@
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 
-typedef struct session_s
-{
-	/*src or client ip address*/
+typedef struct packet_info{
+	/* current ip header to be processed*/
+	struct iphdr  *ip_header;
+	/* current tcp header to be processed*/
+	struct tcphdr *tcp_header
+
+}
+typedef struct session_s{
+	/* current ip header to be processed*/
+	struct iphdr  *ip_header;
+	/* current tcp header to be processed*/
+	struct tcphdr *tcp_header
+
+    /*src or client ip address*/
 	uint32_t src_addr;
 	/*dst or backend ip address*/
 	uint32_t dst_addr;
@@ -59,7 +70,7 @@ typedef struct session_s
 	uint32_t req_last_cont_seq;
 	/*last syn sequence of client packet*/
 	uint32_t req_last_syn_seq;
-	/*last ack sequence of client packet*/
+	/*last ack sequence of client packet which is sent to bakend*/
 	uint32_t req_last_ack_seq;
 
 	/*the number of client content packets*/
@@ -143,6 +154,8 @@ typedef struct session_s
 	uint32_t sess_more:1;
 	/*the times of syn retransmission to backend*/
 	uint32_t vir_syn_retrans_times:4;
+	/*if set, it will not save the packet to unack list*/
+	uint32_t unack_pack_omit_save_flag:1;
 #if (TCPCOPY_MYSQL_BASIC)
 	/*mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation)*/
 	uint32_t mysql_excute_times:8;
@@ -205,7 +218,7 @@ void send_faked_ack(session_t *s);
 void send_faked_fin(session_t *s);
 void send_faked_fin_by_client(session_t *s);
 void save_header_info(session_t *s);
-uint32_t wrap_send_ip_packet(session_t *s,unsigned char *data,uint32_t ack);
+int wrap_send_ip_packet(session_t *s, unsigned char *data);
 int mysql_check_reconnection(struct iphdr *ip_header);
 void restore_buffered_next_session(session_t *s);
 int check_session_over(session_t *s);

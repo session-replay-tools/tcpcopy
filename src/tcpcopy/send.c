@@ -49,7 +49,7 @@ int send_close()
  * send the ip packet to the remote test server
  * (it will not go through ip fragmentation))
  */
-uint32_t send_ip_packet(uint32_t dst_ip, struct iphdr* ip_header,
+ssize_t send_ip_packet(uint32_t dst_ip, struct iphdr* ip_header,
 		uint16_t tot_len)
 {
 	/*
@@ -62,7 +62,7 @@ uint32_t send_ip_packet(uint32_t dst_ip, struct iphdr* ip_header,
 	 * is returned. On the other hand, normal raw socket frag.
 	 * if tot_len is more than 1500,it will fail
 	 */
-	int send_len = 0;
+	ssize_t send_len = 0;
 	if(sock > 0)
 	{
 		dst_addr.sin_addr.s_addr = dst_ip;
