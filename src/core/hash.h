@@ -6,37 +6,31 @@ extern "C"
 {
 #endif
 
-#include <time.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdint.h>
-
-#include "link_list.h"
+#include <xcopy.h>
 
 #define DEFAULT_TIMEOUT   1200
 
-	typedef struct hash_node_st{
+	typedef struct hash_node_s{
 		uint64_t key;
 		time_t   access_time;
 		void     *data;
-	}hash_node;
+	}hash_node_t, hash_node;
 
-	typedef struct hash_table_st{
+	typedef struct hash_table_s{
 		uint32_t total;
 		uint32_t size;
 		int      timeout;
 		char     name[64];
-		struct link_list **lists;
-	}hash_table;
+		struct   link_list_t **lists;
+	}hash_table_t, hash_table;
 
-	hash_table * hash_create(size_t size);
-	link_list * get_link_list(hash_table *table,uint64_t key);
-	void hash_set_timeout(hash_table *,int);
-	void hash_destory(hash_table *);
-	void hash_add(hash_table *,uint64_t ,void *);
-	void *hash_find(hash_table *,uint64_t);
-	void hash_del(hash_table *,uint64_t);
+	hash_table *hash_create(size_t size);
+	link_list_t *get_link_list(hash_table *table,uint64_t key);
+	void hash_set_timeout(hash_table*,int);
+	void hash_destory(hash_table*);
+	void hash_add(hash_table*,uint64_t ,void *);
+	void *hash_find(hash_table*,uint64_t);
+	void hash_del(hash_table*,uint64_t);
 
 #ifdef __cplusplus
 }

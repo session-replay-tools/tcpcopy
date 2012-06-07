@@ -21,7 +21,7 @@ int nl_init(int protocol, int groups){
 }
 
 /* set mode for netlink socket*/
-void nl_set_mode(int sock,uint8_t mode,size_t range){
+void nl_set_mode(int sock, uint8_t mode, size_t range){
 	struct sockaddr_nl addr;
 	struct {
 		struct nlmsghdr head;

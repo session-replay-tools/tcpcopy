@@ -10,10 +10,10 @@ static inline uint64_t get_key(uint32_t ip, uint16_t port){
 
 static void route_table_delete_obsolete(uint64_t key)
 {       
-	time_t cur_time = time(NULL);
-	hash_node   *hn = NULL;
-	link_list    *l = get_link_list(table, key);
-	p_link_node  ln =NULL;
+	time_t      cur_time = time(NULL);
+	hash_node   *hn;
+	p_link_node ln ;
+	link_list   *l = get_link_list(table, key);
 
 	while(1){
 		ln = link_list_tail(l); 
@@ -59,12 +59,12 @@ void router_add(uint32_t ip, uint16_t port, int fd){
 /* update router table */
 void router_update(struct iphdr *ip_header){
 	uint32_t               size_ip;
-	struct tcphdr          *tcp_header = NULL;
+	struct tcphdr          *tcp_header;
 	uint64_t               key;
-	void                   *fd         = NULL;
+	void                   *fd;
 	struct msg_server_s    msg;
 #if (TCPCOPY_MYSQL_ADVANCED) 
-	unsigned char          *payload    =NULL;
+	unsigned char          *payload;
 	uint32_t               size_tcp, cont_len, tot_len;
 #endif
 
@@ -85,7 +85,7 @@ void router_update(struct iphdr *ip_header){
 	cont_len = tot_len - size_ip - size_tcp;
 	if(cont_len > 0)
 	{
-		payload=(unsigned char*)((char*)tcp_header + size_tcp);
+		payload =(unsigned char*)((char*)tcp_header + size_tcp);
 		if(cont_len <= MAX_PAYLOAD_LEN)
 		{
 			/*

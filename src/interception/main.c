@@ -56,7 +56,7 @@ static int retrieve_ip_addr(const char* ips)
 	int         count=0;
 	const char  *split, *p=ips;
 	char        tmp[32];
-	uint32_t    address=0;
+	uint32_t    address;
 
 	memset(tmp, 0, 32);
 
@@ -83,7 +83,9 @@ static int retrieve_ip_addr(const char* ips)
 		memset(tmp, 0, 32);
 
 	}
+
 	passed_ips.num = count;
+
 	return 1;
 }
 

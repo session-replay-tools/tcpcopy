@@ -18,38 +18,13 @@ static void set_sock_no_delay(int sock){
 	return;
 }
 
-static void output_debug(int level,struct iphdr *ip_header)
+static void output_debug(int level, struct iphdr *ip_header)
 {
-	struct        in_addr src_addr,dest_addr;
-	char          s_buf[1024], d_buf[1024];
-	char          *tmp_buf    = NULL;
 	size_t        size_ip;
-	uint32_t      tot_len;
-	unsigned int  seq, ack_seq;
-	struct tcphdr *tcp_header = NULL;
-
-	if(g_log_level < level)
-	{
-		return;
-	}
-	src_addr.s_addr  = ip_header->saddr;
-	dest_addr.s_addr = ip_header->daddr;
-	tmp_buf = inet_ntoa(src_addr);
-	memset(s_buf, 0, 1024);
-	strcpy(s_buf, tmp_buf);
-	tmp_buf =inet_ntoa(dest_addr);
-	memset(d_buf, 0, 1024);
-	strcpy(d_buf, tmp_buf);
-
+	struct tcphdr *tcp_header;
 	size_ip    = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-	tot_len    = ntohs(ip_header->tot_len);
-	seq        = ntohl(tcp_header->seq);
-	ack_seq    = ntohl(tcp_header->ack_seq);
-
-	log_info(level,"%s:%u-->%s:%u, length %u, seq=%u, ack_seq=%u", 
-			s_buf, ntohs(tcp_header->source), d_buf,
-			ntohs(tcp_header->dest), tot_len, seq, ack_seq);
+	strace_packet_info(level, SERVER_BACKEND_FLAG, ip_header, tcp_header);
 }
 
 static uint32_t seq = 1;
@@ -58,7 +33,7 @@ static unsigned char buffer[128];
 static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 {
 	struct nlmsghdr *nl_header = (struct nlmsghdr*)buffer;
-	struct ipq_verdict_msg *ver_data = NULL;
+	struct ipq_verdict_msg *ver_data;
 	struct sockaddr_nl addr;
 
 	/*
@@ -101,8 +76,8 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 static void interception_process(int fd){
 	int                     new_fd, i, pass_through_flag = 0;
 	unsigned long           packet_id;
-	struct iphdr            *ip_header = NULL;
-	struct copyer_msg_st    *c_msg = NULL;
+	struct iphdr            *ip_header;
+	struct copyer_msg_st    *c_msg;
 
 	if(fd == msg_listen_sock){
 		new_fd = accept(msg_listen_sock, NULL, NULL);	
@@ -132,7 +107,7 @@ static void interception_process(int fd){
 			{
 				router_update(ip_header);
 #if (DEBUG_TCPCOPY)
-				formatOutput(LOG_DEBUG, ip_header);
+				output_debug(LOG_DEBUG, ip_header);
 #endif
 				 /* drop the packet */
 				dispose_netlink_packet(NF_DROP, packet_id);  	
