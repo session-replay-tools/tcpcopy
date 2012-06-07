@@ -206,7 +206,7 @@ void delete_session(session_t *s);
 int send_reserved_lost_packets(session_t *s);
 int send_reserved_packets(session_t *s);
 int retransmit_packets(session_t *s);
-int update_retransmission_packets(session_t *s);
+void update_retransmission_packets(session_t *s);
 int check_reserved_content_left(session_t *s);
 int check_packet_lost(session_t *s);
 int check_dead_reqs(session_t *s);
@@ -217,11 +217,13 @@ void send_faked_third_handshake(session_t *s);
 void send_faked_ack(session_t *s);
 void send_faked_fin(session_t *s);
 void send_faked_fin_by_client(session_t *s);
-void save_header_info(session_t *s);
 int wrap_send_ip_packet(session_t *s, unsigned char *data);
-int mysql_check_reconnection(struct iphdr *ip_header);
 void restore_buffered_next_session(session_t *s);
 int check_session_over(session_t *s);
+#if (TCPCOPY_MYSQL_BASIC)
+int mysql_check_reconnection(struct iphdr *ip_header);
+#endif
+
 /* session functions end */
 
 #endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
