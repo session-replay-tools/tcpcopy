@@ -3,6 +3,8 @@
 
 #include <xcopy.h>
 
+#define FAKE_SYN_BUF_SIZE 52
+#define FAKE_ACK_BUF_SIZE 40
 
 /*global functions*/
 void process(char *packet);

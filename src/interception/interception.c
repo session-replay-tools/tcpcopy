@@ -24,7 +24,7 @@ static void output_debug(int level, struct iphdr *ip_header)
 	struct tcphdr *tcp_header;
 	size_ip    = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-	strace_packet_info(level, SERVER_BACKEND_FLAG, ip_header, tcp_header);
+	strace_pack(level, SERVER_BACKEND_FLAG, ip_header, tcp_header);
 }
 
 static uint32_t seq = 1;
