@@ -1,14 +1,12 @@
 #include <xcopy.h>
 
 
-uint16_t getPortRandomAddition()
-{
+uint16_t getPortRandomAddition(){
 	static unsigned int seed = 0;
 	struct timeval  tp;
 	uint16_t        port_add;
 
-	if(0 == seed)
-	{    
+	if(0 == seed){    
 		gettimeofday(&tp, NULL);
 		seed = tp.tv_usec;
 	}    
@@ -18,15 +16,12 @@ uint16_t getPortRandomAddition()
 	return port_add;
 }
 
-int check_local_valid(uint32_t ip, uint16_t port)
-{
+int check_local_valid(uint32_t ip, uint16_t port){
 	int i = 0;
 	ip_port_pair_mapping_t *pair;
-	for(;i < g_transfer_target.num; i++)
-	{
+	for(; i < g_transfer_target.num; i++){
 		pair = g_transfer_target[i];
-		if(ip == pair->dst_ip && port == pair->dst_port)
-		{
+		if(ip == pair->dst_ip && port == pair->dst_port){
 			return 1;
 		}
 	}
@@ -49,56 +44,51 @@ inline uint32_t plus_one(uint32_t seq){
 
 int check_seq_valid(struct tcphdr *tcp_header, uint32_t last_seq){
 	uint32_t cur_seq = ntohl(tcp_header->seq);
-	if(cur_seq <= last_seq)
-	{
+	if(cur_seq <= last_seq){
 		return 0;
 	}
 	return 1;
 }
 
 bool check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq){
-	uint32_t cur_seq= ntohl(tcp_header->seq);
-	if(cur_seq <= last_seq)
-	{
+	uint32_t cur_seq = ntohl(tcp_header->seq);
+	if(cur_seq <= last_seq){
 		return 1;
 	}
 	return 0;
 }
 
-unsigned char *copy_ip_packet(struct iphdr *ip_header)
-{
+unsigned char *copy_ip_packet(struct iphdr *ip_header){
 	uint16_t tot_len    = ntohs(ip_header->tot_len);
 	unsigned char *data = (unsigned char *)malloc(tot_len);
-	if(NULL != data)
-	{    
+	if(NULL != data){    
 		memcpy(data, ip_header, tot_len);
 	}    
 	return data;
 }
 
-unsigned short csum (unsigned short *packet, int pack_len) 
-{ 
+unsigned short csum (unsigned short *packet, int pack_len) { 
 	register unsigned long sum = 0; 
 	while (pack_len > 1) {
 		sum += *(packet++); 
 		pack_len -= 2; 
 	} 
-	if (pack_len > 0) 
+	if (pack_len > 0) {
 		sum += *(unsigned char *)packet; 
-	while (sum >> 16) 
+	}
+	while (sum >> 16){
 		sum = (sum & 0xffff) + (sum >> 16); 
+	}
 	return (unsigned short) ~sum; 
 } 
 
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len)
-{       
+		int pack_len){       
 	static unsigned short buf[2048]; 
 	unsigned short        res;
 
-	if(pack_len > DEFAULT_MTU)
-	{
+	if(pack_len > DEFAULT_MTU){
 		log_info(LOG_ERR, "packet is too long:%d", pack_len);
 		return 0;
 	}

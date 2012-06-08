@@ -7,7 +7,7 @@ extern "C"
 #endif
 
 	void init_log();
-	void log_info(int level,const char *fmt, ...);
+	void log_info(int level, const char *fmt, ...);
 	void end_log();
 
 #ifdef __cplusplus

@@ -25,10 +25,9 @@ static uint64_t raw_packets = 0, raw_valid_packets = 0;
 static uint64_t recv_pack_cnt_from_pool = 0;
 
 /*
- * put the packet to the buffered pool
+ * Put the packet to the buffered pool
  */
-static void put_packet_to_pool(const char *packet,int len)
-{
+static void put_packet_to_pool(const char *packet, int len){
 	int       act_len = len, next_w_pointer = 0, writePointer = 0;
 	int       *size_p = NULL;
 	uint64_t  next_w_cnt = 0, diff = 0;
@@ -46,7 +45,7 @@ static void put_packet_to_pool(const char *packet,int len)
 		len += RECV_POOL_SIZE - next_w_pointer;
 	}
 	diff = next_w_cnt - read_cnt;
-	while(true)
+	while(1)
 	{
 		if(diff > RECV_POOL_SIZE)
 		{
@@ -64,7 +63,7 @@ static void put_packet_to_pool(const char *packet,int len)
 	size_p       = (int*)(pool + writePointer);
 	p            = pool + writePointer + sizeof(int);
 	write_cnt    = next_w_cnt;
-	/* put packet to pool */
+	/* Put packet to pool */
 	memcpy(p, packet, act_len);
 	*size_p      = len;
 	pthread_cond_signal(&full);
@@ -73,15 +72,14 @@ static void put_packet_to_pool(const char *packet,int len)
 
 
 /*
- * get one packet from buffered pool
+ * Get one packet from buffered pool
  */
-static char *getPacketFromPool()
-{
-	int read_pos, len;
+static char *get_packt_from_pool(){
+	int  read_pos, len;
 	char *p;
 
 	recv_pack_cnt_from_pool++;
-	read_over_flag=0;
+	read_over_flag = 0;
 
 	pthread_mutex_lock (&mutex);
 	if(read_cnt >= write_cnt)
@@ -91,59 +89,53 @@ static char *getPacketFromPool()
 	}
 	read_pos = read_cnt%RECV_POOL_SIZE;
 	p        = pool + read_pos + sizeof(int);
-	len      =*(int*)(pool + read_pos);
+	len      = *(int*)(pool + read_pos);
 	memcpy(item, p, len);
 	read_cnt = read_cnt + len + sizeof(int);
 	pthread_cond_signal(&empty);
 	pthread_mutex_unlock (&mutex);
 
-	if(len < 40)
-	{
-		log_info(LOG_WARN,"packet len is less than 40");
+	/* The min packet length is 40 bytes */
+	if(len < 40){
+		log_info(LOG_WARN, "packet len is less than 40");
 	}
-	if(recv_pack_cnt_from_pool%10000==0)
-	{
-		log_info(LOG_INFO,"recv from pool :%llu,put in pool:%llu",
-				recv_pack_cnt_from_pool,packs_put_cnt);
+	if(recv_pack_cnt_from_pool%10000 == 0){
+		log_info(LOG_INFO, "recv from pool :%llu,put in pool:%llu",
+				recv_pack_cnt_from_pool, packs_put_cnt);
 	}
 
 	return item;
 }
 
 /*
- * process packets here
+ * Process packets here
  */
-static void *dispose(void *thread_id) 
-{
+static void *dispose(void *thread_id) {
 	char *packet;
 
-	if(NULL != thread_id)
-	{
+	if(NULL != thread_id){
 		printf("I am booted,thread id:%d\n", *((int*)thread_id));
 		log_info(LOG_NOTICE, "I am booted,thread id:%d",
 				*((int*)thread_id));
-	}else
-	{
+	}else{
 		printf("I am booted\n");
 		log_info(LOG_NOTICE, "I am booted with no thread id");
 	}
-	while(1)
-	{
-		packet = getPacketFromPool();
+	while(1){
+		packet = get_packt_from_pool();
 		process(packet);
 	}
 
 	return NULL;
 }
 
-static void set_nonblock(int socket)
-{
+static void set_nonblock(int socket){
 	int flags;
 	flags = fcntl(socket, F_GETFL, 0);
 	fcntl(socket, F_SETFL, flags | O_NONBLOCK);
 }
 
-/* initiate input raw socket */
+/* Initiate input raw socket */
 static int init_raw_socket()
 {
 	int       sock, recv_buf_opt, result;
@@ -163,49 +155,44 @@ static int init_raw_socket()
 	/* copy ip datagram from IP layer*/
 	sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 #endif
-	if(-1 == sock)
-	{
+	if(-1 == sock){
 		perror("socket");
-		logInfo(LOG_ERR, "%s", strerror(errno));	
+		log_info(LOG_ERR, "%s", strerror(errno));	
 	}
 	set_nonblock(sock);
 	rcv_buf_opt   = 67108864;
 	opt_len = sizeof(int);
-	int ret = setsockopt(sock,SOL_SOCKET,SO_RCVBUF,&rcv_buf_opt,opt_len);
-	if(-1 == ret)
-	{
+	int ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv_buf_opt,
+			opt_len);
+	if(-1 == ret){
 		perror("setsockopt");
-		logInfo(LOG_ERR, "%s", strerror(errno));	
+		log_info(LOG_ERR, "%s", strerror(errno));	
 	}
 
 	return sock;
 }
 
-/* replicate packets */
-static int replicate_packs(const char *packet,int length)
-{			
-	int           i = 1;
-	struct tcphdr *tcp_header = NULL;
-	struct iphdr  *ip_header  = NULL;
+/* Replicate packets */
+static int replicate_packs(const char *packet,int length){			
+	int           i;
+	struct tcphdr *tcp_header;
+	struct iphdr  *ip_header;
 	uint32_t      size_ip;
 	uint16_t      tmp_port_addition, transfered_port;
 	
-	for(; i<replica_num; i++)
-	{
+	for(i = 1; i<replica_num; i++){
 		ip_header  = (struct iphdr*)packet;
-		size_ip    = ip_header->ihl<<2;
+		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		tmp_port_addition= (1024<<((i<<1)-1)) + rand_shift_port;
+		tmp_port_addition= (1024 << ((i << 1)-1)) + rand_shift_port;
 		transfered_port  = ntohs(tcp_header->source);
-		if(transfered_port <= (65535-tmp_port_addition))
-		{    
+		if(transfered_port <= (65535-tmp_port_addition)){    
 			transfered_port = transfered_port + tmp_port_addition;
-		}else
-		{    
+		}else{    
 			transfered_port = 1024 + tmp_port_addition;
 		}    
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_DEBUG,"shift port:%u",tmp_port_addition);
+		log_info(LOG_DEBUG, "shift port:%u", tmp_port_addition);
 #endif
 		tcp_header->source = htons(transfered_port);
 		put_packet_to_pool((const char*)packet, length);
@@ -216,98 +203,79 @@ static int replicate_packs(const char *packet,int length)
 }
 
 /*
- * retrieve raw packets here
+ * Retrieve raw packets
  */
-static int retrieve_raw_sockets(int sock)
-{
+static int retrieve_raw_sockets(int sock){
+
 	char recv_buf[RECV_BUF_SIZE], tmp_packet[DEFAULT_MTU];
 	char *packet;
-	int  i, err, count = 0, recv_len, packet_num, max_payload_len;
+	int  i, err, count = 0, recv_len, packet_num, m_payload_len;
 	struct tcphdr *tcp_header;
-	struct iphdr *ip_header;
+	struct iphdr  *ip_header;
 	uint32_t size_ip, size_tcp, tot_len, cont_size, syn;
 
-	memset(recv_buf,0,RECV_BUF_SIZE);
-
-	while(true)
-	{
+	while(1){
 		recv_len = recvfrom(sock, recv_buf, RECV_BUF_SIZE, 0,
 				NULL, NULL);
-		if(recv_len < 0)
-		{
+		if(recv_len < 0){
 			err = errno;
-			if(EAGAIN == err)
-			{
+			if(EAGAIN == err){
 				break;
 			}
 			perror("recvfrom");
-			log_info(LOG_ERR,"recvfrom:%s",strerror(errno));
+			log_info(LOG_ERR, "recvfrom:%s", strerror(errno));
 		}
-		if(0 == recv_len)
-		{
-			log_info(LOG_ERR,"recv len is 0");
+		if(0 == recv_len){
+			log_info(LOG_ERR, "recv len is 0");
 			break;
 		}
 		raw_packets++;
-		if(recv_len > RECV_BUF_SIZE)
-		{
-			printf("recv_len:%d ,it is too long\n",recv_len);
-			log_info(LOG_ERR,"recv_len:%d ,it is too long",
+		if(recv_len > RECV_BUF_SIZE){
+			log_info(LOG_ERR, "recv_len:%d ,it is too long",
 					recv_len);
 		}
 		packet = recv_buf;
-		if(isPacketNeeded((const char *)packet))
-		{
+		if(isPacketNeeded((const char *)packet)){
 			raw_valid_packets++;
 #if (MULTI_THREADS)  
-			packet_num=1;
-			/*if packet length larger than 1500,we split it */
-			if(recv_len > DEFAULT_MTU)
-			{
-				/*calculate packet number*/
+			packet_num = 1;
+			/* If packet length larger than 1500,we split it */
+			if(recv_len > DEFAULT_MTU){
+				/* Calculate packet number */
 				ip_header  = (struct iphdr*)packet;
 				size_ip    = ip_header->ihl << 2;
-				tot_len    = ntohs(ip_header->tot_len);
+				tot_len    = ntohs(ip_header -> tot_len);
 				tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 				size_tcp   = tcp_header->doff << 2;
 				cont_size  = tot_len - size_tcp - size_ip;
-				max_payload_len = DEFAULT_MTU - size_tcp - size_ip;
-				packet_num = (cont_size+max_payload_len-1)/max_payload_len;
+				m_payload_len = DEFAULT_MTU - size_tcp - size_ip;
+				packet_num = (cont_size + m_payload_len - 1)/m_payload_len;
 				syn        = ntohl(tcp_header->seq);
-				memset(recv_buf,0,DEFAULT_MTU);
-				if(tot_len > RECV_BUF_SIZE)
-				{
+				if(tot_len > RECV_BUF_SIZE){
 					log_info(LOG_ERR, "receive an abnormal packet:%d",
 							tot_len);
 					count++;
 					continue;
 				}
-				for(; i<packet_num; i++)
-				{
-					tcp_header->seq = htonl(syn + i * max_payload_len);
-					if(i != (packet_num-1))
-					{
+				for(i = 0 ; i<packet_num; i++){
+					tcp_header->seq = htonl(syn + i * m_payload_len);
+					if(i != (packet_num-1)){
 						ip_header->tot_len = DEFAULT_MTU;
-					}else
-					{
+					}else{
 						ip_header->tot_len = size_tcp + size_ip +
-							(cont_size - i * max_payload_len);
+							(cont_size - i * m_payload_len);
 					}
 					put_packet_to_pool((const char*)packet, 
 							ip_header->tot_len);
-					if(replica_num > 1)
-					{
-						memset(tmp_packet, 0, 1500);
+					if(replica_num > 1){
 						memcpy(tmp_packet, packet, ip_header->tot_len);
 						replicate_packs(tmp_packet, ip_header->tot_len);
 					}
 				}
-			}else
-			{
+			}else{
 				put_packet_to_pool((const char*)packet, recv_len);
-				/*multi-copy is only supported in multithreading mode*/
-				if(replica_num > 1)
-				{
+				/* Multi-copy is only supported in multithreading mode */
+				if(replica_num > 1){
 					replicate_packs(packet, recv_len);
 				}
 			}
@@ -316,8 +284,7 @@ static int retrieve_raw_sockets(int sock)
 #endif
 		}
 		count++;
-		if(raw_packets%100000 == 0)
-		{
+		if(raw_packets%100000 == 0){
 			log_info(LOG_NOTICE,
 					"raw packets:%llu, valid :%llu, total in pool:%llu",
 					raw_packets, raw_valid_packets, packs_put_cnt);
@@ -327,40 +294,35 @@ static int retrieve_raw_sockets(int sock)
 	return 0;
 }
 
-static void checkMemoryUsage(const char* path)
-{
+static void check_memory_usage(const char* path){
 	FILE      *fp ;
-	const int BUF_SIZE=2048;
+	const int BUF_SIZE = 2048;
 	char      buf[BUF_SIZE];
 	char      *p=NULL;
 	int       index = 0, memory = 0;
 
-	fp=fopen(path,"r");
-	if(!fp)
-	{
-		log_info(LOG_ERR,"%s can't be opened",path);
+	fp = fopen(path, "r");
+	if(!fp){
+		log_info(LOG_ERR, "%s can't be opened", path);
 		exit(1);
 	}
 
-	while(fgets(buf,BUF_SIZE,fp) != NULL)
-	{
-		if(strlen(buf) > 0&&strstr(buf, MEMORY_USAGE) != NULL)
-		{
+	while(fgets(buf,BUF_SIZE,fp) != NULL){
+		if(strlen(buf) > 0 && strstr(buf, MEMORY_USAGE) != NULL){
+
 			log_info(LOG_WARN, "memory usage:%s", buf);
 			index = strlen(MEMORY_USAGE);
 			p     = buf + index;
 
-			while(index < 2048&&!isdigit(p[0]))
-			{
+			while(index < BUF_SIZE && !isdigit(p[0])){
 				index++;
 				p++;
 			}
-			if(index < 2048)
-			{
+
+			if(index < BUF_SIZE){
 				memory = atoi(p);
 				//if more than 0.5G,then we exit
-				if(memory > MAX_MEMORY_SIZE)
-				{
+				if(memory > MAX_MEMORY_SIZE){
 					log_info(LOG_ERR, "it occupies too much memory:%d KB",
 							memory);
 					fclose(fp);
@@ -376,10 +338,9 @@ static void checkMemoryUsage(const char* path)
 	}
 
 	fclose(fp);
-
 }
 
-/* dispose event*/
+/* Dispose one event*/
 static void dispose_event(int fd){
 	struct msg_server_s *msg;
 	int                 pid;
@@ -401,11 +362,10 @@ static void dispose_event(int fd){
 		process((char*)msg);
 #endif
 	}   
-	if((event_cnt%1000000) == 0)
-	{
+	if((event_cnt%1000000) == 0){
 		pid = getpid();
 		sprintf(path, "/proc/%d/status", pid);
-		checkMemoryUsage(path);
+		check_memory_usage(path);
 	}
 }
 
@@ -420,8 +380,7 @@ static void tcp_copy_over(const int sig){
 	int total = 0;
 
 	log_info(LOG_WARN, "sig %d received", sig);
-	while(!read_over_flag)
-	{
+	while(!read_over_flag){
 		log_info(LOG_WARN, "sleep one second");
 		sleep(1);
 		total++;
@@ -447,17 +406,15 @@ static void set_signal_handler(){
 	signal(SIGTERM, tcp_copy_over);
 }
 
-static int init_tcp_copy()
-{
+static int init_tcp_copy(){
 #if (MULTI_THREADS)  
 	pthread_t thread;
 #endif
 	select_sever_set_callback(dispose_event);
 	raw_sock = init_raw_socket();
-	if(raw_sock != -1)
-	{
+	if(raw_sock != -1){
 		select_sever_add(raw_sock);
-		/*init output raw socket info*/
+		/* Init output raw socket info */
 		send_init();
 #if (MULTI_THREADS)  
 		pthread_mutex_init(&mutex, NULL);
@@ -465,7 +422,7 @@ static int init_tcp_copy()
 		pthread_cond_init(&empty, NULL);
 		pthread_create(&thread, NULL, dispose, NULL);
 #endif
-		//add a connection to the tested server for exchanging info
+		/* Add a connection to the tested server for exchanging info */
 		add_msg_connetion(local_port, remote_ip, remote_port);
 		log_info(LOG_NOTICE,"add a tunnel for exchanging info:%u",
 				ntohs(remote_port));
@@ -478,12 +435,11 @@ static int init_tcp_copy()
 
 }
 
-/**
- * retrieve all valid local ip addresses
+/*
+ * Retrieve all valid local ip addresses
  * 127.0.0.1 or localhost is not valid here
  */
-static int retrieveVirtualIPAddress(const char* ips)
-{
+static int retrieveVirtualIPAddress(const char* ips){
 	size_t     len;
 	int        count = 0;
 	const char *split, *p = ips;
@@ -493,40 +449,32 @@ static int retrieveVirtualIPAddress(const char* ips)
 
 	memset(tmp,0,32);
 
-	while(true)
-	{
+	while(1){
 		split=strchr(p, ':');
-		if(split != NULL)
-		{
+		if(split != NULL){
 			len = (size_t)(split-p);
-		}else
-		{
+		}else{
 			len = strlen(p);
 		}
 		strncpy(tmp, p, len);
 		inetAddr = inet_addr(tmp);	
-		if(inetAddr == localhost)
-		{
-			return false;
+		if(inetAddr == localhost){
+			return 0;
 		}
 		local_ips.ips[count++] = inetAddr;
-		if(NULL == split)
-		{
+		if(NULL == split){
 			break;
-		}else
-		{
+		}else{
 			p = split + 1;
 		}
 		memset(tmp, 0, 32);
-
 	}
 	local_ips.num = count;
-	return true;
+	return 1;
 }
 
 
-int readArgs (int argc, char **argv)
-{
+int readArgs (int argc, char **argv){
 	char pairs[512];
 	int  c, result=0, option_index;
 	while (1) {
@@ -547,7 +495,7 @@ int readArgs (int argc, char **argv)
 		switch (c) {			
 			case 'p':
 #if (TCPCOPY_MYSQL_ADVANCED)  
-				strcpy(pairs,optarg);
+				strcpy(pairs, optarg);
 				retrieveMysqlUserPwdInfo(pairs);
 				result = 1;
 #endif
@@ -590,7 +538,7 @@ int readArgs (int argc, char **argv)
 }
 
 /*
- * main entry point
+ * Main entry point
  */
 int main(int argc ,char **argv)
 {
@@ -619,7 +567,7 @@ int main(int argc ,char **argv)
 	if(!result)
 	{
 		fprintf(stderr, "local ip or domain is not supported:\n");
-		log_info(LOG_ERR,"local ip or domain is not supported");
+		log_info(LOG_ERR, "local ip or domain is not supported");
 	}
 	local_port  = htons(atoi(argv[2]));
 	remote_ip   = inet_addr(argv[3]);
@@ -657,7 +605,7 @@ int main(int argc ,char **argv)
 		{
 			log_info(LOG_NOTICE, "replica num:%d", replica_num);
 		}
-		log_info(LOG_NOTICE,"random shift port:%u", rand_shift_port);
+		log_info(LOG_NOTICE, "random shift port:%u", rand_shift_port);
 	}
 
 	set_signal_handler();
