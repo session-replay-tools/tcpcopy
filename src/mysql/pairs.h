@@ -11,8 +11,8 @@ typedef struct mysql_user{
 	char password[256];
 }mysql_user;
 
-char *retrieveUserPwd(char *user);
-void retrieveMysqlUserPwdInfo(char *pairs);
+char *retrieve_user_pwd(char *user);
+void retrieve_mysql_user_pwd_info(char *pairs);
 
 #ifdef __cplusplus
 }

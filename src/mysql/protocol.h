@@ -1,5 +1,6 @@
 #ifndef  _PROTOCOL_INC
 #define  _PROTOCOL_INC
+
 #ifdef __cplusplus
 extern "C" 
 {
@@ -12,13 +13,13 @@ extern "C"
  */
 
 int parse_handshake_init_content(unsigned char *payload,
-		size_t length,char *scramble);
+		size_t length, char *scramble);
 int change_client_auth_content(unsigned char *payload,
-		size_t length,char *message,const char* password);
-void new_crypt(char* result,const char* password,char *message);
+		size_t length, char *message, const char* password);
+void new_crypt(char *result, const char *password, char *message);
 int is_last_data_packet(unsigned char *payload);
 int change_client_second_auth_content(unsigned char *payload,
-		size_t length,char* newContent);
+		size_t length, char *new_content);
 
 #ifdef __cplusplus
 }
