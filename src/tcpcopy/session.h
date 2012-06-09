@@ -3,8 +3,9 @@
 
 #include <xcopy.h>
 
-#define FAKE_SYN_BUF_SIZE 52
-#define FAKE_ACK_BUF_SIZE 40
+#define FAKE_SYN_BUF_SIZE  52
+#define FAKE_ACK_BUF_SIZE  40
+#define FAKE_IP_HEADER_LEN 20
 
 /*global functions*/
 void process(char *packet);
@@ -145,7 +146,7 @@ typedef struct session_s{
 	uint32_t faked_fin_sent:1;
 	/*this indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets*/
-	uint32_t req_syn_intercepted:1;
+	uint32_t req_syn_ok:1;
 	/*this indicates if we intercepted the packets halfway*/
 	uint32_t req_halfway_intercepted:1;
 	/*this indicates if the syn packets from backend is received*/
@@ -217,8 +218,8 @@ void est_conn_for_closed_conn(session_t *s);
 void send_faked_syn(session_t *s);
 void send_faked_third_handshake(session_t *s);
 void send_faked_ack(session_t *s);
-void send_faked_fin(session_t *s);
-void send_faked_fin_by_client(session_t *s);
+void send_faked_rst(session_t *s);
+void send_faked_rst_by_client(session_t *s);
 int wrap_send_ip_packet(session_t *s, unsigned char *data);
 void restore_buffered_next_session(session_t *s);
 int check_session_over(session_t *s);

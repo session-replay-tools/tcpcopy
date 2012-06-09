@@ -1,7 +1,7 @@
 #include <xcopy.h>
 
 
-uint16_t getPortRandomAddition(){
+uint16_t get_port_rand_addition(){
 	static unsigned int seed = 0;
 	struct timeval  tp;
 	uint16_t        port_add;
