@@ -50,7 +50,8 @@ int check_seq_valid(struct tcphdr *tcp_header, uint32_t last_seq){
 	return 1;
 }
 
-bool check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq){
+/* TODO it will have to change function name */
+int check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq){
 	uint32_t cur_seq = ntohl(tcp_header->seq);
 	if(cur_seq <= last_seq){
 		return 1;

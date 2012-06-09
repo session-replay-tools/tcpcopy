@@ -11,19 +11,18 @@
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 
-typedef struct packet_info{
+typedef struct ip_detail_s{
 	/* current ip header to be processed*/
 	struct iphdr  *ip_header;
 	/* current tcp header to be processed*/
-	struct tcphdr *tcp_header
+	struct tcphdr *tcp_header;
+#if (TCPCOPY_MYSQL_BASIC)
+	unsigned char *payload;
+#endif
+	uint16_t      cont_size;
+}ip_detail_t;
 
-}
 typedef struct session_s{
-	/* current ip header to be processed*/
-	struct iphdr  *ip_header;
-	/* current tcp header to be processed*/
-	struct tcphdr *tcp_header
-
     /*src or client ip address*/
 	uint32_t src_addr;
 	/*dst or backend ip address*/
@@ -170,8 +169,6 @@ typedef struct session_s{
 	uint32_t mysql_resp_greet_received:1;
 	/*this indicates if it needs second auth*/
 	uint32_t mysql_sec_auth:1;
-	/*this indicates if it can send login packet*/
-	uint32_t mysql_can_login_send:1;
 	/*this indicates if it has sent the first auth*/
 	uint32_t mysql_first_auth_sent:1;
 	/*this indicates if the session has received login packet from client*/
