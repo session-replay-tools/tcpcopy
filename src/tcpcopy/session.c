@@ -2338,12 +2338,21 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 void restore_buffered_next_session(session_t *s)
 {
-	unsigned char *data = unsend.front();
-	unsend.pop_front();
-	struct iphdr *ip_header=(struct iphdr*)((char*)data);
-	uint32_t size_ip = ip_header->ihl<<2;
-	struct tcphdr* tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+    p_link_node   ln;
+	unsigned char *data;
+	struct iphdr  *ip_header;
+	struct tcphdr *tcp_header;
+	uint16_t      size_ip;
+
+	ln     = link_list_first(s->unsend_packets);	
+	data   = (unsigned char*)ln->data;
+	link_list_remove(ln);
+	ip_header  =(struct iphdr*)((char*)data);
+	size_ip    = ip_header->ihl << 2;
+	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+
 	process_recv(ip_header,tcp_header);
+
 	free(data);
 }
 
@@ -2352,212 +2361,200 @@ void restore_buffered_next_session(session_t *s)
  */
 int isPacketNeeded(const char *packet)
 {
-	int isNeeded=0;
+	int           isNeeded = 0;
 	struct tcphdr *tcp_header;
-	struct iphdr *ip_header;
-	uint32_t size_ip;
-	uint32_t size_tcp;
+	struct iphdr  *ip_header;
+	uint16_t      size_ip, size_tcp, pack_size;
 
 	ip_header = (struct iphdr*)packet;
-	//check if it is a tcp packet
+
+	/* check if it is a tcp packet */
 	if(ip_header->protocol != IPPROTO_TCP)
 	{
 		return isNeeded;
 	}
 
-	size_ip = ip_header->ihl<<2;
-	uint32_t pack_size=ntohs(ip_header->tot_len);
+	size_ip   = ip_header->ihl << 2;
+	pack_size =ntohs(ip_header->tot_len);
 	if (size_ip < 20) {
-		log_info(LOG_WARN,"Invalid IP header length: %d", size_ip);
+		log_info(LOG_WARN, "Invalid IP header length: %d", size_ip);
 		return isNeeded;
 	}
-	tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
-	size_tcp = tcp_header->doff<<2;
+
+	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+	size_tcp   = tcp_header->doff << 2;
 	if (size_tcp < 20) {
-		log_info(LOG_WARN,"Invalid TCP header length: %d bytes,packet len:%d",
-				size_tcp,pack_size);
+		log_info(LOG_WARN,"Invalid TCP header len: %d bytes,pack len:%d",
+				size_tcp, pack_size);
 		return isNeeded;
 	}
-	if(pack_size>RECV_BUF_SIZE)
+
+	if(pack_size > RECV_BUF_SIZE)
 	{
-		strace_packet_info(LOG_NOTICE,CLIENT_FLAG,ip_header,
-							tcp_header);
-		log_info(LOG_WARN,"packet sizeis wrong:%u",pack_size);
+		strace_packet_info(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+		log_info(LOG_WARN, "packet size is wrong:%u", pack_size);
 		return isNeeded;
 	}
-	//here we filter the packets we do care about
+
+	/* here we filter the packets we do care about */
+	if(check_pack_src(ip_header->daddr, tcp_header->dest))
 	{
-		//because it may use several virtual ip addresses 
-		if(checkLocalIPValid(ip_header->daddr) && 
-				(tcp_header->dest==local_port))
+		isNeeded = 1;
+		if(tcp_header->syn)
 		{
-			isNeeded=1;
-			if(tcp_header->syn)
-			{
-				clt_syn_cnt++;
-			}
-			clt_packs_cnt++;
+			clt_syn_cnt++;
 		}
+		clt_packs_cnt++;
 	}
+
 	return isNeeded;
+
 }
 
-/**
+/*
  * the main procedure for processing the filtered packets
  */
 void process(char *packet)
 {
-	struct tcphdr *tcp_header=NULL;
-	struct iphdr *ip_header=NULL;
-	uint32_t size_ip;
-	time_t now=time(0);
-	double diff=now-last_stat_time;
+	struct tcphdr  *tcp_header;
+	struct iphdr   *ip_header;
+	uint16_t       size_ip, size_tcp, pack_size;
+	uint64_t       key;
+	time_t         now  = time(0);
+	struct timeval start, end;
+	double         ratio;
+	int            diff, sock, ret;
+	p_link_node    ln, tmp_ln;
+	session_t      *s;
+	
+	diff = now - last_stat_time;
 	if(diff > 10)
 	{
-		last_stat_time=now;
-		//this is for checking memory leak
+		last_stat_time = now;
+		/* this is for checking memory leak */
 		log_info(LOG_WARN,
-				"active_sess_cnt:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
-				active_sess_cnt,enter_cnt,leave_cnt,del_obs_cnt);
-		log_info(LOG_WARN,"total conns:%llu,total reqs:%llu,total resps:%llu",
-				conn_cnt,req_cnt,resp_cnt);
-		if(bak_cnt>0)
+				"active:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
+				active_sess_cnt, enter_cnt, leave_cnt, del_obs_cnt);
+		log_info(LOG_WARN,
+				"total conns:%llu,total reqs:%llu,total resps:%llu",
+				conn_cnt, req_cnt, resp_cnt);
+		if(bak_cnt > 0)
 		{
-			log_info(LOG_WARN,"bak_cnt:%llu,bak_cnt_t:%f,avg=%f",
-					bak_cnt,bak_cnt_t,bak_cnt_t/bak_cnt);
+			log_info(LOG_WARN, "bak_cnt:%llu,bak_cnt_t:%f,avg=%f",
+					bak_cnt, bak_cnt_t, bak_cnt_t/bak_cnt);
 		}
-		log_info(LOG_WARN,"clt_cnt:%llu,clt_cnt_t:%f,avg=%f",
-				clt_cnt,clt_cnt_t,clt_cnt_t/clt_cnt);
-		log_info(LOG_WARN,"send Packets:%llu,send content packets:%llu",
-				packs_sent_cnt,con_packs_sent_cnt);
-		log_info(LOG_WARN,"total cont Packs from clt:%llu",clt_con_packs_cnt);
+		log_info(LOG_WARN, "clt_cnt:%llu,clt_cnt_t:%f,avg=%f",
+				clt_cnt, clt_cnt_t, clt_cnt_t/clt_cnt);
+		log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
+				packs_sent_cnt, con_packs_sent_cnt);
+		log_info(LOG_WARN, "total cont Packs from clt:%llu",
+				clt_con_packs_cnt);
+		log_info(LOG_NOTICE,
+				"total reconnect for closed :%llu,for no syn:%llu",
+				recon_for_closed_cnt, recon_for_no_syn_cnt);
+		log_info(LOG_NOTICE, "total successful retransmit:%llu",
+				retrans_succ_cnt);
+		log_info(LOG_NOTICE, "syn total:%llu,all client packets:%llu",
+				clt_syn_cnt, clt_packs_cnt);
+
 		clear_timeout_sessions();
-		double ratio=0;
+
 		if(enter_cnt>0)
 		{
-			ratio=100.0*conn_cnt/enter_cnt;
+			ratio = 100.0*conn_cnt/enter_cnt;
 		}else
 		{
-			ratio=100.0*conn_cnt/(enter_cnt+1);
+			ratio = 100.0*conn_cnt/(enter_cnt+1);
 		}
-
-		log_info(LOG_NOTICE,"total reconnect for closed :%llu,for no syn:%llu",
-				recon_for_closed_cnt,recon_for_no_syn_cnt);
-		log_info(LOG_NOTICE,"total successful retransmit:%llu",
-				retrans_succ_cnt);
-		log_info(LOG_NOTICE,"syn total:%llu,all client packets:%llu",
-				clt_syn_cnt,clt_packs_cnt);
-		if(enter_cnt>100&&ratio<80)
+		if(enter_cnt > 100 && ratio < 80)
 		{
-			log_info(LOG_WARN,"many connections can't be established");
+			log_info(LOG_WARN, "many connections can't be established");
 		}
 	}
-	if(last_ch_dead_sess_time>0)
+	if(last_ch_dead_sess_time > 0)
 	{
-		double diff=now-last_ch_dead_sess_time;
-		if(diff>2)
+		diff = now - last_ch_dead_sess_time;
+		if(diff > 2)
 		{
-			if(sessions.size()>0)
+			if(sessions_table->total > 0)
 			{
 				send_deadly_sessions();
-				last_ch_dead_sess_time=now;
+				last_ch_dead_sess_time = now;
 			}
 		}
 	}
 
-	ip_header = (struct iphdr*)packet;
-	size_ip = ip_header->ihl<<2;
-	tcp_header = (struct tcphdr*)((char *)ip_header+size_ip);
+	ip_header  = (struct iphdr*)packet;
+	size_ip    = ip_header->ihl<<2;
+	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 
-	if((ip_header->saddr==remote_ip) && (tcp_header->source==remote_port) )
+	if(check_pack_src(ip_header->saddr, tcp_header->source) == SRC_REMOTE)
 	{
-		//when the packet comes from the targeted test machine
-		uint32_t clientIP=ip_header->daddr;
-		uint64_t key=get_ip_port_value(ip_header->daddr,tcp_header->dest);
-		{
-			//try to find session through fake ip
-			IPIterator ipIter=trueIPContainer.find(key);
-			if(ipIter!= trueIPContainer.end())
-			{
-				clientIP=ipIter->second;
-			}
-		}
-		SessIterator iter = sessions.find(get_ip_port_value(clientIP,
-					tcp_header->dest));
-		if(iter != sessions.end())
-		{
-			iter->second.lastUpdateTime=now;
-			struct timeval start=getTime();
+		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
+		/* when the packet comes from the targeted test machine */
+		ln  = hash_find(sessions_table, key);
+		if(ln){
+			s = (session_t *)ln->data;
+			s->last_update_time = now;
+			start = getTime();
 			bak_cnt++;
-			iter->second.update_virtual_status(ip_header,tcp_header);
-			struct timeval end=getTime();
-			bak_cnt_t+=end.tv_sec-start.tv_sec;
-			bak_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
-			if( iter->second.is_over())
+			update_virtual_status(s, ip_header, tcp_header);
+			end   = getTime();
+			bak_cnt_t += end.tv_sec - start.tv_sec;
+			bak_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+			if(check_session_over(s))
 			{
-				if(iter->second.s->sess_more)
+				if(s->sess_more)
 				{
-					iter->second.initForNextSession();
-					log_info(LOG_NOTICE,"init for next session from backend");
-					iter->second.restore_buffered_next_session();
+					init_next_session(s);
+					log_info(LOG_NOTICE,"init for next sess from bak");
+					restore_buffered_next_session(s);
 					return;
 				}else
 				{
 					active_sess_cnt--;
 					leave_cnt++;
-					sessions.erase(iter);
+					hash_del(sessions_table, key);
+					delete_session(s);
 				}
 			}
-		}else
-		{
-			//it may happen when the last packet comes from backend
 		}
 	}
-	else if(checkLocalIPValid(ip_header->daddr) && 
-			(tcp_header->dest==local_port))
+	else if(check_pack_src(ip_header->daddr, tcp_header->dest)) 
 	{
-		//when the packet comes from client
-		last_ch_dead_sess_time=now;
+		/* when the packet comes from client */
+		last_ch_dead_sess_time = now;
 		if(port_shift_factor)
 		{
-			uint16_t tmp_port_addition=(2048<<port_shift_factor)+rand_shift_port;
-			uint16_t transferred_port=ntohs(tcp_header->source);
-			if(transferred_port<=(65535-tmp_port_addition))
-			{
-				transferred_port=transferred_port+tmp_port_addition;
-			}else
-			{
-				transferred_port=1024+tmp_port_addition;
-			}
-			tcp_header->source=htons(transferred_port);
+			tcp_header->source = get_port_from_shift(tcp_header->source);
 		}
-		uint64_t value=get_ip_port_value(ip_header->saddr,tcp_header->source);
+		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
 		if(tcp_header->syn)
 		{
 			enter_cnt++;
-			SessIterator iter = sessions.find(value);
-			if(iter != sessions.end())
-			{
-				//check if it is a duplicate syn
-				int diff=now-iter->second.s->createTime;
-				if(tcp_header->seq==iter->second.synSeq)
+			ln  = hash_find(sessions_table, key);
+			if(ln){
+				s = (session_t *)ln->data;
+				/* check if it is a duplicate syn */
+				diff = now - s->createTime;
+				if(tcp_header->seq == s->req_last_syn_seq)
 				{
 					enter_cnt--;
 #if (DEBUG_TCPCOPY)
-					log_info(LOG_INFO,"duplicate syn,time diff:%d",diff);
-					strace_packet_info(LOG_INFO,CLIENT_FLAG,ip_header,
+					log_info(LOG_INFO, "duplicate syn,time diff:%d", diff);
+					strace_packet_info(LOG_INFO, CLIENT_FLAG, ip_header,
 							tcp_header);
 #endif
 					return;
 				}else
 				{
-					//buffer the next session to current session
-					iter->second.s->sess_more=1;
-					iter->second.nextSessionBuffer.push_back
-						(copy_ip_packet(ip_header));
+					/* buffer the next session to current session */
+					s->sess_more = 1;
+					ln = link_node_malloc(copy_ip_packet(ip_header));
+					link_list_append(s->next_session_packets, ln);
 #if (DEBUG_TCPCOPY)
-					log_info(LOG_INFO,"buffer the new session");
-					strace_packet_info(LOG_INFO,CLIENT_FLAG,ip_header,
+					log_info(LOG_INFO, "buffer the new session");
+					strace_packet_info(LOG_INFO, CLIENT_FLAG, ip_header,
 							tcp_header);
 #endif
 					return;
@@ -2565,92 +2562,86 @@ void process(char *packet)
 			}else
 			{
 				active_sess_cnt++;
+				/* TODO create new session */
+				
 			}
-			int sock=address_find_sock(tcp_header->dest);
+			sock = address_find_sock(tcp_header->dest);
 			if(-1 == sock)
 			{
-				log_info(LOG_WARN,"sock is invalid in process");
-				strace_packet_info(LOG_WARN,CLIENT_FLAG,ip_header,tcp_header);
+				log_info(LOG_ERR, "sock is invalid in process");
+				strace_packet_info(LOG_WARN, CLIENT_FLAG, 
+						ip_header, tcp_header);
 				return;
 			}
-			int result=msg_client_send(sock,ip_header->saddr,
-					tcp_header->source,CLIENT_ADD);
-			if(-1 == result)
+			ret = msg_client_send(sock, ip_header->saddr,
+					tcp_header->source, CLIENT_ADD);
+			if(-1 == ret)
 			{
-				log_info(LOG_ERR,"msg coper send error");
+				log_info(LOG_ERR, "msg coper send error");
 				return;
 			}else
 			{
-				struct timeval start=getTime();
+				start = getTime();
 				clt_cnt++;
-				sessions[value].process_recv(ip_header,tcp_header);
-				struct timeval end=getTime();
-				clt_cnt_t+=end.tv_sec-start.tv_sec;
-				clt_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
-				iter = sessions.find(value);
-				iter->second.synSeq=tcp_header->seq;
+				process_recv(s, ip_header, tcp_header);
+				end   = getTime();
+				clt_cnt_t += end.tv_sec - start.tv_sec;
+				clt_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+				s->req_last_syn_seq = tcp_header->seq;
 			}
 		}
 		else
-		{
-			SessIterator iter = sessions.find(value);
-			if(iter != sessions.end())
-			{
-				struct timeval start=getTime();
+			ln  = hash_find(sessions_table, key);
+			if(ln){
+				start = getTime();
 				clt_cnt++;
-				iter->second.process_recv(ip_header,tcp_header);
-				struct timeval end=getTime();
-				clt_cnt_t+=end.tv_sec-start.tv_sec;
-				clt_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
-				iter->second.lastUpdateTime=now;
-				if( (iter->second.is_over()))
+				process_recv(s, ip_header, tcp_header);
+				end   = getTime();
+				clt_cnt_t += end.tv_sec - start.tv_sec;
+				clt_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+				s->last_update_time = now;
+				if(check_session_over(s))
 				{
-					if(iter->second.s->sess_more)
+					if(s->sess_more)
 					{
-						iter->second.initForNextSession();
-						log_info(LOG_NOTICE,"init for next session from client");
-						iter->second.restore_buffered_next_session();
+						init_next_session(s);
+						log_info(LOG_NOTICE,"init for next sess from clt");
+						restore_buffered_next_session(s);
 						return;
 					}else
 					{
 						active_sess_cnt--;
 						leave_cnt++;
-						sessions.erase(iter);
+						hash_del(sessions_table, key);
+						delete_session(s);
 					}
 				}
 			}else
 			{
-				//we check if we can pad tcp handshake for this request
-				if(check_padding(ip_header,tcp_header))
+				/* we check if we can pad tcp handshake */
+				if(check_padding(ip_header, tcp_header))
 				{
 					active_sess_cnt++;
 #if (TCPCOPY_MYSQL_BASIC)
-					if(check_mysql_padding(ip_header,tcp_header))
+					if(!check_mysql_padding(ip_header,tcp_header))
 					{
-						struct timeval start=getTime();
-						clt_cnt++;
-						sessions[value].process_recv(ip_header,tcp_header);
-						struct timeval end=getTime();
-						clt_cnt_t+=end.tv_sec-start.tv_sec;
-						clt_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
+						return;
 					}
-#else
+#endif
 					struct timeval start=getTime();
 					clt_cnt++;
 					sessions[value].process_recv(ip_header,tcp_header);
 					struct timeval end=getTime();
 					clt_cnt_t+=end.tv_sec-start.tv_sec;
 					clt_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
-
-#endif
 				}
 			}
 		}
 	}else
 	{
-		//we don't know where the packet comes from
-		log_info(LOG_WARN,"unknown packet");
-		strace_packet_info(LOG_WARN,UNKNOWN_FLAG,ip_header,tcp_header);
+		/* we don't know where the packet comes from */
+		log_info(LOG_WARN, "unknown packet");
+		strace_packet_info(LOG_WARN, UNKNOWN_FLAG, ip_header, tcp_header);
 	}
 }
 

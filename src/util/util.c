@@ -16,16 +16,35 @@ uint16_t get_port_rand_addition(){
 	return port_add;
 }
 
-int check_local_valid(uint32_t ip, uint16_t port){
-	int i = 0;
+uint16_t get_port_from_shift(uint16_t ori_port){
+	uint16_t        port_add, transferred_port;
+	port_add = (2048 << port_shift_factor) + rand_shift_port;
+	transferred_port = ntohs(ori_port);
+	if(transferred_port <= (65535 - port_add))
+	{    
+		transferred_port = transferred_port + port_add;
+	}else
+	{    
+		transferred_port = 1024 + port_add;
+	}    
+	return transferred_port;
+}
+
+int check_pack_src(uint32_t ip, uint16_t port){
+	int i   = 0;
+	int ret = SRC_UNKNOWN;
 	ip_port_pair_mapping_t *pair;
 	for(; i < g_transfer_target.num; i++){
 		pair = g_transfer_target[i];
-		if(ip == pair->dst_ip && port == pair->dst_port){
-			return 1;
+		if(ip == pair->src_ip && port == pair->src_port){
+			ret = SRC_LOCAL;
+			break;
+		}else if(ip == pair->dst_ip && port == pair->dst_port){
+			ret = SRC_REMOTE;
+			break;
 		}
 	}
-	return 0;
+	return ret;
 }
 
 struct timeval getTime(){
