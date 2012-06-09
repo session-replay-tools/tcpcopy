@@ -401,7 +401,8 @@ int send_reserved_lost_packets(session_t *s)
 	 * If not sorted,the following logic will not work 
 	 * for long content requests 
 	 */
-	uint32_t size_ip, size_tcp, pack_size, cont_size, cur_seq;
+	uint16_t size_ip, size_tcp, pack_size, cont_len;
+	uint32_t cur_seq;
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
@@ -467,7 +468,8 @@ int retransmit_packets(session_t *s)
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
-	uint32_t size_ip, size_tcp, pack_size, cont_size, cur_seq;
+	uint16_t size_ip, size_tcp, pack_size, cont_len;
+	uint32_t cur_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list, *buffered;
 	int need_pause = 0, is_success = 0;
@@ -543,7 +545,8 @@ void update_retransmission_packets(session_t *s)
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
-	uint32_t      size_ip, cur_seq;
+	uint16_t      size_ip;
+	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
 
@@ -607,7 +610,7 @@ int check_reserved_content_left(session_t *s)
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
-	uint32_t size_ip, size_tcp, pack_size, cont_size;
+	uint16_t size_ip, size_tcp, pack_size, cont_size;
 
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG,"check_reserved_content_left");
@@ -642,7 +645,8 @@ int send_reserved_packets(session_t *s)
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
-	uint32_t size_ip, size_tcp, pack_size, cont_size, cur_ack;
+	uint16_t      size_ip, size_tcp, pack_size, cont_size;
+	uint32_t      cur_ack;
 	int need_pause = 0, cand_pause = 0, count = 0, omit_transfer = 0; 
 #if (TCPCOPY_MYSQL_ADVANCED)
 	void          *value;
@@ -839,7 +843,7 @@ void send_faked_syn(session_t *s, struct iphdr* ip_header,
 	struct iphdr  *tmp_ip_header;
 	struct tcphdr *tmp_tcp_header;
 	link_list     *list;
-	size_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
+	uint16_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
 	uint32_t total_cont_len, base_seq;
 
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -1308,64 +1312,74 @@ void est_conn_for_closed_conn(session_t *s)
 }
 
 /*
- * check if the packet is needed for reconnection by mysql tcpcopy
+ * check if the packet is needed for reconnection by mysql 
  */
-bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
+int mysql_check_reconnection(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	uint32_t size_ip = ip_header->ihl<<2;
-	uint32_t size_tcp = tcp_header->doff<<2;
-	uint32_t pack_size=ntohs(ip_header->tot_len);
-	uint32_t cont_size=pack_size-size_tcp-size_ip;
+	unsigned char *payload, *data, command;
+	uint16_t      size_ip, size_tcp, tot_len, cont_len;
+	p_link_node   ln;
+	link_list     *list;
 
-	if(cont_size>0)
+	size_ip   = ip_header->ihl << 2;
+	size_tcp  = tcp_header->doff << 2;
+	pack_size = ntohs(ip_header->tot_len);
+	cont_size = pack_size - size_tcp - size_ip;
+
+	if(cont_size > 0)
 	{
-		unsigned char* payload;
-		payload=(unsigned char*)((char*)tcp_header+size_tcp);
-		//skip  Packet Length
-		payload=payload+3;
-		//skip  Packet Number
-		payload=payload+1;
-		unsigned char command=payload[0];
+		payload = (unsigned char*)((char*)tcp_header + size_tcp);
+		/* Skip  Packet Length */
+		payload = payload + 3;
+		/* Skip  Packet Number */
+		payload = payload + 1;
+		command = payload[0];
 		if(COM_STMT_PREPARE == command||
-				(hasPrepareStat&&isExcuteForTheFirstTime))
+				(mysql_prepare_stat && mysql_first_excution))
 		{
 			if(COM_STMT_PREPARE == command)
 			{
-				hasPrepareStat=1;
+				mysql_prepare_stat = 1;
 			}else
 			{
-				if(COM_QUERY == command&&hasPrepareStat)
+				if(COM_QUERY == command && mysql_prepare_stat)
 				{
-					if(numberOfExcutes>0)
+					if(mysql_excute_times > 0)
 					{
-						isExcuteForTheFirstTime=0;
+						mysql_first_excution = 0;
 					}
-					numberOfExcutes++;
+					mysql_excute_times++;
 				}
-				if(!isExcuteForTheFirstTime)
+				if(!mysql_first_excution)
 				{
 					return 0;
 				}
 			}
-			unsigned char *data=copy_ip_packet(ip_header);
-			mysqlSpecialPackets.push_back(data);
+			data = copy_ip_packet(ip_header);
+			ln   = link_node_malloc(data);
+			link_list_append(s->mysql_special_packets, ln);
+
 #if (DEBUG_TCPCOPY)
-			log_info(LOG_WARN,"push back necc statement:%u",
-					src_port);
+			log_info(LOG_NOTICE, "push back necc statement:%u", src_port);
 #endif
-			MysqlIterator iter=mysqlContainer.find(src_port);
-			dataContainer* datas=NULL;
-			if(iter!= mysqlContainer.end())
-			{
-				datas=iter->second;
-			}else
-			{
-				datas=new dataContainer();
-				mysqlContainer[src_port]=datas;
+			list = (link_list *)hash_find(mysql_table, src_port);
+			if(!list){
+				list = link_list_create();
+				if(NULL == list)
+				{
+					log_info(LOG_ERR, "list create err");
+					return 0;
+				}else{
+					hash_add(mysql_table, src_port, list);
+				}
 			}
-			data=copy_ip_packet(ip_header);
-			datas->push_back(data);
+			if(list)
+			{
+				data = copy_ip_packet(ip_header);
+				ln   = link_node_malloc(data);
+				link_list_append(list, ln);
+			}
 
 			return 1;
 		}
@@ -1373,11 +1387,11 @@ bool session_st::checkMysqlPacketNeededForReconnection(struct iphdr *ip_header,
 	return 0;
 }
 
-/**
+/*
  * check if the packet is the right packet for  starting a new session 
  * by mysql tcpcopy
  */
-static bool checkPacketPaddingForMysql(struct iphdr *ip_header,
+static int checkPacketPaddingForMysql(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	uint32_t size_ip = ip_header->ihl<<2;
@@ -1414,7 +1428,7 @@ static bool checkPacketPaddingForMysql(struct iphdr *ip_header,
 /**
  * check if the packet is the right packet for noraml tcpcopy
  */
-static bool checkPacketPadding(struct iphdr *ip_header,
+static int checkPacketPadding(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	uint32_t size_ip = ip_header->ihl<<2;
@@ -1648,7 +1662,7 @@ void session_st::update_virtual_status(struct iphdr *ip_header,
 		return;
 	}
 	uint32_t next_seq = htonl(ntohl(tcp_header->seq)+cont_size);
-	bool isGreetReceivedPacket=0; 
+	int isGreetReceivedPacket=0; 
 	
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG,"cont size:%d",cont_size);
@@ -1974,8 +1988,8 @@ void session_st::process_recv(struct iphdr *ip_header,
 
 
 	uint32_t tmpLastAck=last_ack;
-	bool isNewRequest=0;
-	bool isNeedOmit=0;
+	int isNewRequest=0;
+	int isNeedOmit=0;
 	if(!req_syn_ok)
 	{
 		req_halfway_intercepted=1;
@@ -2146,7 +2160,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 					}
 				}
 			}
-			checkMysqlPacketNeededForReconnection(ip_header,tcp_header);
+			mysql_check_reconnection(ip_header,tcp_header);
 			if(!mysql_resp_greet_received)
 			{
 #if (DEBUG_TCPCOPY)
@@ -2268,7 +2282,7 @@ void session_st::process_recv(struct iphdr *ip_header,
 			{
 				if(candidate_response_waiting)
 				{
-					bool savePacket=0;
+					int savePacket=0;
 					if(isNewRequest&&checkTcpSeg(tcp_header,req_last_cont_seq))
 					{
 						savePacket=1;
@@ -2426,9 +2440,9 @@ void session_st::restoreBufferedSession()
 /**
  * filter packets 
  */
-bool isPacketNeeded(const char *packet)
+int isPacketNeeded(const char *packet)
 {
-	bool isNeeded=0;
+	int isNeeded=0;
 	struct tcphdr *tcp_header;
 	struct iphdr *ip_header;
 	uint32_t size_ip;
