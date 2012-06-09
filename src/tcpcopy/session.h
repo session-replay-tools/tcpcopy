@@ -114,7 +114,7 @@ typedef struct session_s{
 	/*
 	 * the number of the response packets last received 
 	 * which have the same acknowledgement sequence.
-	 * this is for checking retransmission required from backend
+	 * this is for checking retransmission Required from backend
 	 */
 	uint32_t resp_last_same_ack_num:8;
 	/*the id from client ip header*/
