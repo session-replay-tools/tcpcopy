@@ -447,15 +447,15 @@ static int send_reserved_lost_packets(session_t *s)
 }
 
 /*
- * retransmit the packets to backend
+ * Retransmit the packets to backend
  */
-int retransmit_packets(session_t *s)
+static int retransmit_packets(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
-	uint16_t size_ip, size_tcp, pack_size, cont_len;
-	uint32_t cur_seq;
+	uint16_t      size_ip, size_tcp, pack_size, cont_len;
+	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list, *buffered;
 	int need_pause = 0, is_success = 0;
@@ -468,12 +468,11 @@ int retransmit_packets(session_t *s)
 		ip_header  = (struct iphdr*)((char*)data);
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		if(SYN_SEND == s->status)
-		{
-			req_last_ack_seq = ntohl(tcp_header->ack_seq);
+		if(SYN_SEND == s->status){
+			s->req_last_ack_seq = ntohl(tcp_header->ack_seq);
 			s->unack_pack_omit_save_flag = 1;
 			wrap_send_ip_packet(s, data);
-			vir_syn_retrans_times++;
+			s->vir_syn_retrans_times++;
 			break;
 		}
 		size_tcp  = tcp_header->doff << 2;
@@ -493,26 +492,22 @@ int retransmit_packets(session_t *s)
 				need_pause = 1;
 			}
 		}
-		if(is_success)
-		{
-			if(cur_seq < s->vir_next_seq)
-			{
-				req_last_ack_seq = ntohl(tcp_header->ack_seq);
+		if(is_success){
+			if(cur_seq < s->vir_next_seq){
+				s->req_last_ack_seq = ntohl(tcp_header->ack_seq);
 				s->unack_pack_omit_save_flag = 1;
 				wrap_send_ip_packet(s, data);
 				tmp_ln = link_node_malloc(data);
 				link_list_append(bufferd, tmp_ln); 
 				link_list_remove(ln);
-			}else
-			{
+			}else{
 				need_pause=1;	
 			}
 		}
 	}
 	
-	if(!link_list_is_empty(buffered))
-	{
-		/* append all buffered packets to unack link list */
+	if(!link_list_is_empty(buffered)){
+		/* Append all buffered packets to unack link list */
 		ln = link_list_first(buffered);	
 		while(ln){
 			link_list_append(list, ln);
@@ -524,9 +519,9 @@ int retransmit_packets(session_t *s)
 }
 
 /*
- * update retransmission packets
+ * Update retransmission packets
  */
-void update_retransmission_packets(session_t *s)
+static void update_retransmission_packets(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;
@@ -539,21 +534,18 @@ void update_retransmission_packets(session_t *s)
 	list = s->unack_packets;
 	ln = link_list_first(list);	
 
-	while(ln)
-	{
+	while(ln){
 		data = ln->data;
 		ip_header  = (struct iphdr*)((char*)data);
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 		cur_seq    = ntohl(tcp_header->seq);  
-		if(cur_seq < s->resp_last_ack_seq)
-		{
+		if(cur_seq < s->resp_last_ack_seq){
 			tmp_ln = ln;
 			ln = link_list_get_next(list, ln);
 			link_list_remove(tmp_ln);
 			free(data);
-		}else
-		{
+		}else{
 			break;
 		}
 	}
@@ -562,13 +554,13 @@ void update_retransmission_packets(session_t *s)
 
 
 /*
- * check if it needs sending dead requests
- * this happens in the following situations:
- * 1)online requests are finished completely,but test are not,
- *   therefore there are no events that send buffered requests
+ * Check if it needs sending dead requests
+ * This happens in the following situations:
+ * 1)Online requests are finished completely,but test are not,
+ *   therefore there are no events that trigger the session 
  * 2)...
  */
-int check_dead_reqs(session_t *s)
+static int check_dead_reqs(session_t *s)
 {
 	int    packs_unsend = 0, diff, result = 0;
 	int    diff;
@@ -578,7 +570,9 @@ int check_dead_reqs(session_t *s)
 	}
 	diff = time(0) - r->req_last_send_cont_time;
 
+	/* More than 2 seconds */
 	if(diff > 2){
+		/* If there are more than 5 packets unsend */
 		if(packs_unsend > 5){
 			return 1;
 		}
@@ -587,9 +581,9 @@ int check_dead_reqs(session_t *s)
 }
 
 /*
- * check if the reserved container has content left
+ * Check if the reserved container has content left
  */
-int check_reserved_content_left(session_t *s)
+static int check_reserved_content_left(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;
@@ -606,12 +600,12 @@ int check_reserved_content_left(session_t *s)
 
 	while(ln){
 		data = ln->data;
-		ip_header =(struct iphdr*)((char*)data);
-		size_ip   = ip_header->ihl << 2;
+		ip_header  =(struct iphdr*)((char*)data);
+		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		size_tcp  = tcp_header->doff << 2;
-		pack_size = ntohs(ip_header->tot_len);
-		cont_size = pack_size - size_tcp - size_ip;
+		size_tcp   = tcp_header->doff << 2;
+		pack_size  = ntohs(ip_header->tot_len);
+		cont_size  = pack_size - size_tcp - size_ip;
 		if(cont_size>0)
 		{
 			return 1;
@@ -622,9 +616,9 @@ int check_reserved_content_left(session_t *s)
 }
 
 /*
- * send reserved packets to backend
+ * Send reserved packets to backend
  */
-int send_reserved_packets(session_t *s)
+static int send_reserved_packets(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;

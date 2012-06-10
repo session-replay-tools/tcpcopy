@@ -201,32 +201,6 @@ typedef struct session_s{
 /* session functions begin */
 void process_recv(session_t *s);
 void update_virtual_status(session_t *s);
-
-void init_session(session_t *s);
-void init_keepalive_session(session_t *s);
-void init_next_session(session_t *s);
-void delete_session(session_t *s);
-int send_reserved_lost_packets(session_t *s);
-int send_reserved_packets(session_t *s);
-int retransmit_packets(session_t *s);
-void update_retransmission_packets(session_t *s);
-int check_reserved_content_left(session_t *s);
-int check_packet_lost(session_t *s);
-int check_dead_reqs(session_t *s);
-void est_conn_with_no_syn_packets(session_t *s);
-void est_conn_for_closed_conn(session_t *s);
-void send_faked_syn(session_t *s);
-void send_faked_third_handshake(session_t *s);
-void send_faked_ack(session_t *s);
-void send_faked_rst(session_t *s);
-void send_faked_rst_by_client(session_t *s);
-int wrap_send_ip_packet(session_t *s, unsigned char *data);
-void restore_buffered_next_session(session_t *s);
-int check_session_over(session_t *s);
-#if (TCPCOPY_MYSQL_BASIC)
-int mysql_check_reconnection(struct iphdr *ip_header);
-#endif
-
 /* session functions end */
 
 #endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
