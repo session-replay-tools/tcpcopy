@@ -378,7 +378,7 @@ static int check_packet_lost(session_t *s, struct iphdr *ip_header,
  */
 static int send_reserved_lost_packets(session_t *s)
 {
-	int      need_more_check, loop_over = 0;
+	int      need_more_check, loop_over = 0, need_free;
 	uint16_t size_ip, size_tcp, pack_size, cont_len;
 	uint32_t cur_seq;
 	unsigned char *data;
@@ -405,10 +405,11 @@ static int send_reserved_lost_packets(session_t *s)
 			pack_size  = ntohs(ip_header->tot_len);
 			cont_size  = pack_size - size_tcp - size_ip;
 			cur_seq    = ntohl(tcp_header->seq);
+			need_free  = 0;
 
 			if(s->vir_next_seq == cur_seq){
 #if (DEBUG_TCPCOPY)
-				log_info(LOG_DEBUG,"send packets for lost:%u", src_port);
+				log_info(LOG_DEBUG, "send packets for lost:%u", src_port);
 #endif
 				s->req_last_ack_seq = ntohl(tcp_header->ack_seq);
 				if(cont_size > 0)
@@ -417,11 +418,17 @@ static int send_reserved_lost_packets(session_t *s)
 					s->req_last_cont_seq = ntohl(tcp_header->seq);
 				}
 				wrap_send_ip_packet(s, data);
+				need_more_check = 1;
+				need_free = 1;
+			}else if(s->vir_next_seq > cur_seq){
+				need_free = 1;
+				log_info(LOG_NOTICE, "abnormal packets in lost");
+			}
+			if(need_free){
 				tmp_ln = ln;
 				ln = link_list_get_next(list, ln);
 				link_list_remove(tmp_ln);
 				free(data);
-				need_more_check = 1;
 			}
 		}
 		if(!need_more_check){
