@@ -10,30 +10,51 @@ static hash_table *fir_auth_pack_table;
 static hash_table *sec_auth_pack_table;
 #endif
 
-/* client syn count */
-static uint64_t clt_syn_cnt     = 0;
-static uint64_t clt_packs_cnt   = 0;
-static uint64_t active_sess_cnt = 0;
-static uint64_t enter_cnt       = 0;
-static uint64_t leave_cnt       = 0;
-static uint64_t del_obs_cnt     = 0;
-static uint64_t resp_cnt        = 0;
-static uint64_t req_cnt         = 0;
-static uint64_t conn_cnt        = 0;
-static uint64_t bak_cnt         = 0;
-static uint64_t clt_cnt         = 0;
-static uint64_t packs_sent_cnt  = 0;
-static uint32_t g_seq_omit      = 0;
-static double   bak_cnt_t       = 0;
-static double   clt_cnt_t       = 0;
-static time_t   last_stat_time  = 0;
-static uint64_t retrans_succ_cnt   = 0;
+/* total client syn packets */
+static uint64_t clt_syn_cnt         = 0;
+/* total client packets */
+static uint64_t clt_packs_cnt       = 0;
+/* total sessions created */
+static uint64_t enter_cnt           = 0;
+/* total sessions deleted */
+static uint64_t leave_cnt           = 0;
+/* total obsolete sessions */
+static uint64_t obs_cnt             = 0;
+/* total client packets */
+static uint64_t clt_cnt             = 0;
+/* total client content packets */
+static uint64_t clt_con_packs_cnt   = 0;
+/* total client packets sent to backend */
+static uint64_t packs_sent_cnt      = 0;
+/* total client content packets sent to backend */
 static uint64_t con_packs_sent_cnt  = 0;
-static uint64_t recon_for_closed_cnt = 0;
-static uint64_t clt_con_packs_cnt     = 0;
+/* total response packets */
+static uint64_t resp_cnt            = 0;
+/* total response content packets */
+static uint64_t resp_cont_cnt       = 0;
+/* total connections successfully cheated */
+static uint64_t conn_cnt            = 0;
+/* total time for disposing response packets */
+static double   resp_disp_t         = 0;
+/* total time for disposing client packets */
+static double   clt_disp_t          = 0;
+/* last time for statistics */
+static time_t   last_stat_time      = 0;
+/* start time for excuting the process function */
+static time_t   start_p_time        = 0;
+/* total successful retransmission */
+static uint64_t retrans_succ_cnt    = 0;
+/* total reconnections for backend */
+static uint64_t recon_for_closed_cnt   = 0;
+/* total reconnections for halfway interception */
 static uint64_t recon_for_no_syn_cnt   = 0;
-static time_t   last_ch_dead_sess_time  = 0;
+/* last time for checking dead sessions */
+static time_t   last_ch_dead_sess_time = 0;
+
 #if (TCPCOPY_MYSQL_BASIC)
+/* global sequence omission */
+static uint32_t g_seq_omit        = 0;
+/* the global first auth user packet */
 static struct iphdr *fir_auth_u_p = NULL;
 #endif
 
@@ -50,9 +71,7 @@ static int check_overwhelming(session_t *s, const char *message,
 
 			return CANDIDATE_OBSOLETE;
 		}
-		del_obs_cnt++;
-		active_sess_cnt--;
-		leave_cnt++;
+		obs_cnt++;
 		log_info(LOG_WARN,":%s:too many packets:%u,p:%u",
 				message, size, s->src_port);
 
@@ -136,9 +155,7 @@ static int check_session_obsolete(session_t *s, time_t timeout)
 			s->sess_candidate_erased = 1;
 			return CANDIDATE_OBSOLETE;
 		}
-		del_obs_cnt++;
-		active_sess_cnt--;
-		leave_cnt++;
+		obs_cnt++;
 		log_info(LOG_INFO,"session timeout,p:%u",s->src_port);
 		if(s->unsend_packets->size > 10)
 		{
@@ -165,7 +182,7 @@ static int clear_timeout_sessions()
 	time_t      norm_timeout      = current-60;
 	time_t      keepalive_timeout = current-120;
 	time_t      timeout;
-	double      ratio          = 100.0*enter_cnt/(req_cnt+1);
+	double      ratio          = 100.0*enter_cnt/(resp_cnt+1);
 	size_t      max_hold_packs = 200;
 	size_t      size, i;           
 	int         result;
@@ -355,7 +372,7 @@ int wrap_send_ip_packet(session_t *s,unsigned char *data)
 #if (DEBUG_TCPCOPY)
 	strace_packet_info(LOG_DEBUG,SERVER_BACKEND_FLAG,ip_header,tcp_header);
 #endif
-	s->packs_sent_cnt++;
+	packs_sent_cnt++;
 	send_len = send_ip_packet(ip_header,tot_len);
 	if(-1 == send_len)
 	{
@@ -1463,6 +1480,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	unsigned char *payload;
 #endif
 
+    resp_cnt++;
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 #endif
@@ -1637,9 +1655,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 			return;
 		}
 		if(s->candidate_response_waiting){
-			if(!response_waiting){
-				req_cnt++;
-			}
 			response_waiting = 1;
 		}
 	}
@@ -1663,6 +1678,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	 */
 	if(cont_size > 0)
 	{
+		resp_cont_cnt++;
 		s->vir_next_seq = next_seq;
 		if(s->src_closed)
 		{
@@ -1734,7 +1750,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 #if (DEBUG_TCPCOPY)
 				log_info(LOG_DEBUG,"receive back server's resp");
 #endif
-				resp_cnt++;
 				s->candidate_response_waiting = 0;
 				response_waiting = 0;
 				s->vir_next_seq  = next_seq;
@@ -1793,6 +1808,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	link_list     *list;
 #endif
 
+	clt_cnt++;
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
@@ -2422,11 +2438,16 @@ void process(char *packet)
 	uint64_t       key;
 	time_t         now  = time(0);
 	struct timeval start, end;
-	double         ratio;
-	int            diff, sock, ret;
+	int            diff, run_time = 0, sock, ret;
 	p_link_node    ln, tmp_ln;
 	session_t      *s;
-	
+	double         ratio;
+
+	if(0 == start_p_time){
+		start_p_time = now;
+	}else{
+		run_time = now -start_p_time;
+	}
 	diff = now - last_stat_time;
 	if(diff > 10)
 	{
@@ -2434,17 +2455,17 @@ void process(char *packet)
 		/* this is for checking memory leak */
 		log_info(LOG_WARN,
 				"active:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
-				active_sess_cnt, enter_cnt, leave_cnt, del_obs_cnt);
+				enter_cnt - leave_cnt, enter_cnt, leave_cnt, obs_cnt);
 		log_info(LOG_WARN,
-				"total conns:%llu,total reqs:%llu,total resps:%llu",
-				conn_cnt, req_cnt, resp_cnt);
+				"total conns:%llu,total resp packs:%llu,c-resp packs:%llu",
+				conn_cnt, resp_cnt, resp_cont_cnt);
 		if(bak_cnt > 0)
 		{
-			log_info(LOG_WARN, "bak_cnt:%llu,bak_cnt_t:%f,avg=%f",
-					bak_cnt, bak_cnt_t, bak_cnt_t/bak_cnt);
+			log_info(LOG_WARN, "bak_cnt:%llu,resp_disp_t:%f,avg=%f",
+					resp_cnt, resp_disp_t, resp_disp_t/resp_cnt);
 		}
-		log_info(LOG_WARN, "clt_cnt:%llu,clt_cnt_t:%f,avg=%f",
-				clt_cnt, clt_cnt_t, clt_cnt_t/clt_cnt);
+		log_info(LOG_WARN, "clt_cnt:%llu,clt_disp_t:%f,avg=%f",
+				clt_cnt, clt_disp_t, clt_disp_t/clt_cnt);
 		log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
 				packs_sent_cnt, con_packs_sent_cnt);
 		log_info(LOG_WARN, "total cont Packs from clt:%llu",
@@ -2459,16 +2480,18 @@ void process(char *packet)
 
 		clear_timeout_sessions();
 
-		if(enter_cnt>0)
-		{
-			ratio = 100.0*conn_cnt/enter_cnt;
-		}else
-		{
-			ratio = 100.0*conn_cnt/(enter_cnt+1);
-		}
-		if(enter_cnt > 100 && ratio < 80)
-		{
-			log_info(LOG_WARN, "many connections can't be established");
+		if(run_time > 3){
+			if(0 == resp_cont_cnt){
+				log_info(LOG_WARN, "no responses after %d secends", 
+						run_time);
+			}
+			if(enter_cnt > 0){
+				ratio = 100*conn_cnt/enter_cnt;
+				if(ratio < 80){
+					log_info(LOG_WARN, 
+							"many connections can't be established");
+				}
+			}
 		}
 	}
 	if(last_ch_dead_sess_time > 0)
@@ -2497,11 +2520,10 @@ void process(char *packet)
 			s = (session_t *)ln->data;
 			s->last_update_time = now;
 			start = getTime();
-			bak_cnt++;
 			update_virtual_status(s, ip_header, tcp_header);
 			end   = getTime();
-			bak_cnt_t += end.tv_sec - start.tv_sec;
-			bak_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+			resp_disp_t += end.tv_sec - start.tv_sec;
+			resp_disp_t += (end.tv_usec - start.tv_usec)/1000000.0;
 			if(check_session_over(s))
 			{
 				if(s->sess_more)
@@ -2513,7 +2535,6 @@ void process(char *packet)
 				}else
 				{
 					active_sess_cnt--;
-					leave_cnt++;
 					hash_del(sessions_table, key);
 					delete_session(s);
 				}
@@ -2531,7 +2552,6 @@ void process(char *packet)
 		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
 		if(tcp_header->syn)
 		{
-			enter_cnt++;
 			ln  = hash_find(sessions_table, key);
 			if(ln){
 				s = (session_t *)ln->data;
@@ -2539,7 +2559,6 @@ void process(char *packet)
 				diff = now - s->createTime;
 				if(tcp_header->seq == s->req_last_syn_seq)
 				{
-					enter_cnt--;
 #if (DEBUG_TCPCOPY)
 					log_info(LOG_INFO, "duplicate syn,time diff:%d", diff);
 					strace_packet_info(LOG_INFO, CLIENT_FLAG, ip_header,
@@ -2561,7 +2580,6 @@ void process(char *packet)
 				}
 			}else
 			{
-				active_sess_cnt++;
 				/* TODO create new session */
 				
 			}
@@ -2582,11 +2600,10 @@ void process(char *packet)
 			}else
 			{
 				start = getTime();
-				clt_cnt++;
 				process_recv(s, ip_header, tcp_header);
 				end   = getTime();
-				clt_cnt_t += end.tv_sec - start.tv_sec;
-				clt_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+				clt_disp_t += end.tv_sec - start.tv_sec;
+				clt_disp_t += (end.tv_usec - start.tv_usec)/1000000.0;
 				s->req_last_syn_seq = tcp_header->seq;
 			}
 		}
@@ -2594,11 +2611,10 @@ void process(char *packet)
 			ln  = hash_find(sessions_table, key);
 			if(ln){
 				start = getTime();
-				clt_cnt++;
 				process_recv(s, ip_header, tcp_header);
 				end   = getTime();
-				clt_cnt_t += end.tv_sec - start.tv_sec;
-				clt_cnt_t += (end.tv_usec - start.tv_usec)/1000000.0;
+				clt_disp_t += end.tv_sec - start.tv_sec;
+				clt_disp_t += (end.tv_usec - start.tv_usec)/1000000.0;
 				s->last_update_time = now;
 				if(check_session_over(s))
 				{
@@ -2611,7 +2627,6 @@ void process(char *packet)
 					}else
 					{
 						active_sess_cnt--;
-						leave_cnt++;
 						hash_del(sessions_table, key);
 						delete_session(s);
 					}
@@ -2621,7 +2636,6 @@ void process(char *packet)
 				/* we check if we can pad tcp handshake */
 				if(check_padding(ip_header, tcp_header))
 				{
-					active_sess_cnt++;
 #if (TCPCOPY_MYSQL_BASIC)
 					if(!check_mysql_padding(ip_header,tcp_header))
 					{
@@ -2629,11 +2643,10 @@ void process(char *packet)
 					}
 #endif
 					struct timeval start=getTime();
-					clt_cnt++;
 					sessions[value].process_recv(ip_header,tcp_header);
 					struct timeval end=getTime();
-					clt_cnt_t+=end.tv_sec-start.tv_sec;
-					clt_cnt_t+=(end.tv_usec-start.tv_usec)/1000000.0;
+					clt_disp_t+=end.tv_sec-start.tv_sec;
+					clt_disp_t+=(end.tv_usec-start.tv_usec)/1000000.0;
 				}
 			}
 		}
