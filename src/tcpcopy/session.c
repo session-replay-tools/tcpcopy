@@ -60,7 +60,101 @@ static struct iphdr *fir_auth_u_p = NULL;
 
 static int create_session_table()
 {
-	/* TODO Create 65536 slots for session table*/
+	/* Create 65536 slots for session table */
+	sessions_table = hash_create(65536);
+	strcpy(sessions_table->name, "session-table");
+}
+
+static void session_init(session_t *s, int keepalive)
+{
+	link_list *hl, *ml;
+	int       handshake_pack_num;
+	if(s->unsend_packets){
+		link_list_destory(s->unsend_packets);
+	}
+	if(s->lost_packets){
+		link_list_destory(s->lost_packets);
+	}
+	if(s->unack_packets){
+		link_list_destory(s->unack_packets);
+	}
+	if(!keepalive)
+	{
+		if(s->handshake_packets){
+			link_list_destory(s->handshake_packets);
+		}
+#if (TCPCOPY_MYSQL_BASIC)
+		if(s->mysql_special_packets){
+			link_list_destory(s->mysql_special_packets);
+		}
+#endif
+	}else{
+		hl = s->handshake_packets;
+		ml = s->mysql_special_packets;
+		handshake_pack_num = s->expected_handshake_pack_num;
+	}
+	memset(s, 0 , sizeof(session_t));
+
+	s->expected_handshake_pack_num = 2;
+	
+	s->status      = SYN_SEND;
+	s->create_time      = time(0);
+	s->last_update_time = s->create_time;
+	s->resp_last_recv_cont_time = s->create_time;
+	s->req_last_send_cont_time  = s->create_time;
+
+	if(keepalive){
+		s->handshake_packets = hl;
+		s->mysql_special_packets = ml;
+		s->expected_handshake_pack_num = handshake_pack_num;
+	}
+#if (TCPCOPY_MYSQL_BASIC)
+	s->mysql_first_excution = 1;
+#endif
+
+}
+
+static void session_init_for_next(session_t *s)
+{
+	link_list   *list = s->next_session_packets;
+	session_init(s, 1);
+
+	if(NULL != list){
+		s->unsend_packets = list;
+	}
+}
+
+static session_t *session_create(struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	ip_port_pair_mapping_t *test;
+    session_t *s = (session_t *)malloc(sizeof(session_t));
+	if(NULL == s){
+		return NULL;
+	}
+	session_init(s);
+	s->src_addr    = ip_header->saddr;
+	s->online_addr = ip_header->daddr;
+	s->src_port    = tcp_header->source;
+	s->online_port = tcp_header->source;
+	test = get_test_pair(s->online_addr, s->online_port);
+	s->dst_addr    = test->dst_ip;
+	s->dst_port    = test->dst_port;
+}
+
+static session_t *session_add(uint64_t key, struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	link_list           *list;
+	p_link_node         ln;
+	session_t           *s;
+	s = hash_find(sessions_table, key);
+	if(NULL == s){
+		s = session_create(ip_header, tcp_header);
+		if(NULL != s){
+			hash_add(sessions_table, key, s);
+		}
+	}
 }
 
 static void delete_session(session_t *s){

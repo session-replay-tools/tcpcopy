@@ -1,7 +1,7 @@
 #include <xcopy.h>
 
-
-uint16_t get_port_rand_addition(){
+uint16_t get_port_rand_addition()
+{
 	static unsigned int seed = 0;
 	struct timeval  tp;
 	uint16_t        port_add;
@@ -16,7 +16,8 @@ uint16_t get_port_rand_addition(){
 	return port_add;
 }
 
-uint16_t get_port_from_shift(uint16_t ori_port){
+uint16_t get_port_from_shift(uint16_t ori_port)
+{
 	uint16_t        port_add, transferred_port;
 	port_add = (2048 << port_shift_factor) + rand_shift_port;
 	transferred_port = ntohs(ori_port);
@@ -30,11 +31,25 @@ uint16_t get_port_from_shift(uint16_t ori_port){
 	return transferred_port;
 }
 
-int check_pack_src(uint32_t ip, uint16_t port){
-	int i   = 0;
+ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
+{
+	int i;
+	ip_port_pair_mapping_t *pair;
+	for(i = 0; i < g_transfer_target.num; i++){
+		pair = g_transfer_target[i];
+		if(ip == pair->dst_ip && port == pair->dst_port){
+			break;
+		}
+	}
+	return pair;
+}
+
+int check_pack_src(uint32_t ip, uint16_t port)
+{
+	int i;
 	int ret = SRC_UNKNOWN;
 	ip_port_pair_mapping_t *pair;
-	for(; i < g_transfer_target.num; i++){
+	for(i = 0; i < g_transfer_target.num; i++){
 		pair = g_transfer_target[i];
 		if(ip == pair->src_ip && port == pair->src_port){
 			ret = SRC_LOCAL;
@@ -47,21 +62,25 @@ int check_pack_src(uint32_t ip, uint16_t port){
 	return ret;
 }
 
-struct timeval getTime(){
+struct timeval get_time()
+{
 	struct timeval tp; 
 	gettimeofday(&tp, NULL);
 	return tp; 
 }
 
-inline uint32_t minus_one(uint32_t seq){
+inline uint32_t minus_one(uint32_t seq)
+{
 	return htonl(ntohl(seq) - 1);
 }
 
-inline uint32_t plus_one(uint32_t seq){
+inline uint32_t plus_one(uint32_t seq)
+{
 	return htonl(ntohl(seq) + 1);
 }
 
-int check_seq_valid(struct tcphdr *tcp_header, uint32_t last_seq){
+int check_seq_valid(struct tcphdr *tcp_header, uint32_t last_seq)
+{
 	uint32_t cur_seq = ntohl(tcp_header->seq);
 	if(cur_seq <= last_seq){
 		return 0;
@@ -70,7 +89,8 @@ int check_seq_valid(struct tcphdr *tcp_header, uint32_t last_seq){
 }
 
 /* TODO it will have to change function name */
-int check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq){
+int check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq)
+{
 	uint32_t cur_seq = ntohl(tcp_header->seq);
 	if(cur_seq <= last_seq){
 		return 1;
@@ -78,7 +98,8 @@ int check_retransmission(struct tcphdr *tcp_header, uint32_t last_seq){
 	return 0;
 }
 
-unsigned char *copy_ip_packet(struct iphdr *ip_header){
+unsigned char *copy_ip_packet(struct iphdr *ip_header)
+{
 	uint16_t tot_len    = ntohs(ip_header->tot_len);
 	unsigned char *data = (unsigned char *)malloc(tot_len);
 	if(NULL != data){    
@@ -87,7 +108,8 @@ unsigned char *copy_ip_packet(struct iphdr *ip_header){
 	return data;
 }
 
-unsigned short csum (unsigned short *packet, int pack_len) { 
+unsigned short csum (unsigned short *packet, int pack_len) 
+{ 
 	register unsigned long sum = 0; 
 	while (pack_len > 1) {
 		sum += *(packet++); 
@@ -104,7 +126,8 @@ unsigned short csum (unsigned short *packet, int pack_len) {
 
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len){       
+		int pack_len)
+{       
 	static unsigned short buf[2048]; 
 	unsigned short        res;
 

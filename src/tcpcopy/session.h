@@ -86,7 +86,7 @@ typedef struct session_s{
 	uint64_t resp_cont_pack_num;
 
 	/*the hash key for this session*/
-	uint32_t hash_key;
+	uint64_t hash_key;
 
 	/*record time*/
 	/*last update time*/
