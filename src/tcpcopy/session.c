@@ -207,6 +207,9 @@ static int clear_timeout_sessions()
 
 	for(i = 0; i < sessions_table->size; i++){
 		list = table->lists[i];
+		if(!list){
+			continue;
+		}
 	    ln   = link_list_first(list);	
 		while(ln){
 			hn = (hash_node *)ln->data;
@@ -228,7 +231,7 @@ static int clear_timeout_sessions()
 			tmp_ln = ln;
 			ln = link_list_get_next(list, ln);
 			if(OBSOLETE == result){
-				link_list_remove(tmp_ln);
+				link_list_remove(list, tmp_ln);
 			}
 		}
 	}
@@ -427,7 +430,7 @@ static int send_reserved_lost_packets(session_t *s)
 			if(need_free){
 				tmp_ln = ln;
 				ln = link_list_get_next(list, ln);
-				link_list_remove(tmp_ln);
+				link_list_remove(list, tmp_ln);
 				free(data);
 			}
 		}
@@ -485,7 +488,7 @@ static int retransmit_packets(session_t *s)
 			}else if(cur_seq < resp_last_ack_seq){
 				tmp_ln = ln;
 				ln = link_list_get_next(list, ln);
-				link_list_remove(tmp_ln);
+				link_list_remove(list, tmp_ln);
 				free(data);
 			}else{
 				log_info(LOG_NOTICE, "no retrans packs:%u", src_port);
@@ -499,7 +502,7 @@ static int retransmit_packets(session_t *s)
 				wrap_send_ip_packet(s, data);
 				tmp_ln = link_node_malloc(data);
 				link_list_append(bufferd, tmp_ln); 
-				link_list_remove(ln);
+				link_list_remove(list, ln);
 			}else{
 				need_pause=1;	
 			}
@@ -543,7 +546,7 @@ static void update_retransmission_packets(session_t *s)
 		if(cur_seq < s->resp_last_ack_seq){
 			tmp_ln = ln;
 			ln = link_list_get_next(list, ln);
-			link_list_remove(tmp_ln);
+			link_list_remove(list, tmp_ln);
 			free(data);
 		}else{
 			break;
@@ -797,7 +800,7 @@ static int send_reserved_packets(session_t *s)
 		}
 		tmp_ln = ln;
 		ln = link_list_get_next(list, ln);
-		link_list_remove(tmp_ln);
+		link_list_remove(list, tmp_ln);
 		free(data);
 
 		omit_transfer = 0;
@@ -1867,7 +1870,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 			while(ln){
 				tmp_ln = ln;
 				ln = link_list_get_next(list, ln);
-				link_list_remove(tmp_ln);
+				link_list_remove(list, tmp_ln);
 				free(tmp_ln->data);
 			}
 		}
@@ -2321,7 +2324,7 @@ void restore_buffered_next_session(session_t *s)
 
 	ln     = link_list_first(s->unsend_packets);	
 	data   = (unsigned char*)ln->data;
-	link_list_remove(ln);
+	link_list_remove(s->unsend_packets, ln);
 	ip_header  =(struct iphdr*)((char*)data);
 	size_ip    = ip_header->ihl << 2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);

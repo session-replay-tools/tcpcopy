@@ -26,7 +26,7 @@ extern "C"
 	int link_list_destory(link_list *l);
 	void link_list_append(link_list *l, p_link_node);
 	void link_list_push(link_list *l, p_link_node p);
-	p_link_node link_list_remove(p_link_node node);
+	p_link_node link_list_remove(link_list *l, p_link_node node);
 	p_link_node link_list_first(link_list *l);
 	p_link_node link_list_tail(link_list *l);
 	p_link_node link_list_pop_first(link_list *l);

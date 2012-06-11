@@ -30,7 +30,7 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key){
 		if(hn->key == key){
 			hn->access_time = time(NULL);
 			/* put the lastest item to the head of the linked list */
-			(void)link_list_remove(ln);
+			(void)link_list_remove(l, ln);
 			link_list_push(l, ln);
 			return ln;
 		}
@@ -97,13 +97,16 @@ void hash_add(hash_table *table, uint64_t key, void *data){
 		ln  = link_node_malloc(tmp);
 		l   = get_link_list(table, key);
 		link_list_push(l , ln);
+		table->total++;
 	}
 }
 
 void hash_del(hash_table *table, uint64_t key){
+	link_list   *l =get_link_list(table, key); 
 	p_link_node ln = hash_find_node(table,key);
 	if(ln != NULL){
-		link_list_remove(ln);
+		table->total--;
+		link_list_remove(l, ln);
 		if(ln->data != NULL)
 		{
 			free(ln->data);
