@@ -1,7 +1,9 @@
 #include <xcopy.h>
 
-p_link_node link_node_malloc(void *data){
+p_link_node link_node_malloc(void *data)
+{
 	p_link_node p;
+
 	p = (p_link_node)malloc(sizeof(link_node));
 	if(NULL == p){
 		return NULL;
@@ -28,11 +30,13 @@ link_list *link_list_create(){
 	return l;
 }
 
-static int link_list_clear(link_list *l){
-	p_link_node p = l->head.next;
-	p_link_node next;
-	int         count = 0;
+static int link_list_clear(link_list *l)
+{
+	p_link_node p ,next;
+	int count;
 
+	p = l->head.next;
+	count = 0;
 	while(p != &(l->head)){
 		next = p->next;
 		if(p->data != NULL)
@@ -48,13 +52,16 @@ static int link_list_clear(link_list *l){
 
 }
 
-int link_list_destory(link_list *l){
+int link_list_destory(link_list *l)
+{
 	int count = link_list_clear(l);
 	return count;
 }
 
-void link_list_append(link_list *l, p_link_node p){
-	p_link_node node = l->head.prev;
+void link_list_append(link_list *l, p_link_node p)
+{
+	p_link_node node;
+	node = l->head.prev;
 	node->next       = p;
 	p->prev          = node;
 	l->head.prev     = p;
@@ -63,7 +70,8 @@ void link_list_append(link_list *l, p_link_node p){
 }
 
 void link_list_push(link_list *l, p_link_node p){
-	p_link_node node = l->head.next;
+	p_link_node node;
+	node = l->head.next;
 	node->prev       = p;
 	p->next          = node;
 	l->head.next     = p;
@@ -74,29 +82,35 @@ void link_list_push(link_list *l, p_link_node p){
 
 p_link_node link_list_remove(link_list *l, p_link_node node)
 {
-	p_link_node next = node->next;
-	p_link_node prev = node->prev;
+	p_link_node next, prev;
+	next = node->next;
+	prev = node->prev;
 	next->prev = prev;
 	prev->next = next;
 	l->size--;
 	return node;
 }
 
-p_link_node link_list_first(link_list *l){
+p_link_node link_list_first(link_list *l)
+{
 	if(l->head.next == &(l->head)){
 		return NULL;
 	}
 	return l->head.next;
 }
-p_link_node link_list_tail(link_list *l){
+
+p_link_node link_list_tail(link_list *l)
+{
 	if(l->head.next == &(l->head)){
 		return NULL;
 	}
 	return l->head.prev;
 }
 
-p_link_node link_list_pop_first(link_list *l){
-	p_link_node first = link_list_first(l);
+p_link_node link_list_pop_first(link_list *l)
+{
+	p_link_node first;
+	first = link_list_first(l);
 	if(! first){
 		return first;
 	}

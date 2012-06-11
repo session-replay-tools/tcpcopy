@@ -665,9 +665,9 @@ static int check_dead_reqs(session_t *s)
 	int    diff;
 
 	if(s->req_cont_pack_num >= s->vir_send_cont_pack_num){
-		packs_unsend = r->req_cont_pack_num - r->vir_send_cont_pack_num;
+		packs_unsend = s->req_cont_pack_num - s->vir_send_cont_pack_num;
 	}
-	diff = time(0) - r->req_last_send_cont_time;
+	diff = time(0) - s->req_last_send_cont_time;
 
 	/* More than 2 seconds */
 	if(diff > 2){
@@ -765,7 +765,7 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 		memset(encryption, 0, 16);
 		memset(s->seed323, 0, SEED_323_LENGTH + 1);
 		memcpy(s->seed323, scrambleBuf, SEED_323_LENGTH);
-		new_crypt(encryption, s->password, r->seed323);
+		new_crypt(encryption, s->password, s->seed323);
 		log_info(LOG_NOTICE, "change second req:%u", src_port);
 		/* change sec auth content from client auth packets */
 		change_client_second_auth_content(payload, cont_size, encryption);
@@ -807,6 +807,10 @@ static int send_reserved_packets(session_t *s)
 #endif
 
 	list = s->unsend_packets;
+	if(NULL == list){
+		log_info(LOG_WARN, "list is null");
+		return count;
+	}
 	ln = link_list_first(list);	
 
 	while(ln && (!need_pause)){
@@ -830,21 +834,18 @@ static int send_reserved_packets(session_t *s)
 			cur_ack = ntohl(tcp_header->ack_seq);
 			if(cand_pause){
 				if(cur_ack != s->last_ack){
-#if (DEBUG_TCPCOPY)
-					log_info(LOG_DEBUG, "cease to send:%u", src_port);
-#endif
 					break;
 				}
 			}
 			cand_pause   = 1;
-			r->candidate_response_waiting = 1;
+			s->candidate_response_waiting = 1;
 			s->req_last_cont_seq = ntohl(tcp_header->seq);
 			s->last_ack = ntohl(tcp_header->ack_seq);
 		}else if(tcp_header->rst){
 			if(s->candidate_response_waiting){
 				break;
 			}
-			r->reset      = 1;
+			s->reset      = 1;
 			omit_transfer = 0;
 			need_pause    = 1;
 		}else if(tcp_header->fin){
@@ -852,38 +853,24 @@ static int send_reserved_packets(session_t *s)
 				break;
 			}
 			need_pause = 1;
-			if(req_last_ack_seq == ntohl(tcp_heades->ack_seq)){
+			if(s->req_last_ack_seq == ntohl(tcp_header->ack_seq)){
 				/* active close from client */
 				s->src_closed = 1;
-#if (DEBUG_TCPCOPY)
-				log_info(LOG_INFO, "set client closed flag:%u", src_port);
-#endif
 				status |= CLIENT_FIN;
 			}else{
+				/* server active close */
 				omit_transfer = 1;
 			}
-		}else if(0 == cont_size && s->candidate_response_waiting)
+		}else if(0 == cont_size)
 		{
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG, "omit tranfer:size 0 and wait resp:%u",
-					src_port);
-#endif
-			omit_transfer = 1;
-		}else if (0 == cont_size)
-		{
-			if(SYN_CONFIRM != status)
-			{
-#if (DEBUG_TCPCOPY)
-				log_info(LOG_DEBUG, "omit tranfer:notsynack,%u",
-						src_port);
-#endif
+			/* Waiting the response pack or the sec handshake pack */
+			if(s->candidate_response_waiting || SYN_CONFIRM != s->status){
 				omit_transfer = 1;
 			}
 		}
 
 		s->req_last_ack_seq = ntohl(tcp_header->ack_seq);
-		if(!omit_transfer)
-		{
+		if(!omit_transfer){
 			count++;
 			wrap_send_ip_packet(s, data);
 		}
@@ -899,11 +886,11 @@ static int send_reserved_packets(session_t *s)
 }
 
 /*
- * send faked syn packet for backend.
+ * Send faked syn packet to backend.
  */
 void send_faked_syn(session_t *s, struct iphdr *ip_header,
-		struct tcphdr *tcp_header){
-
+		struct tcphdr *tcp_header)
+{
 	unsigned char f_s_buf[FAKE_SYN_BUF_SIZE], *data;
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
@@ -917,7 +904,6 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	link_list     *list;
 	uint16_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
 	uint32_t total_cont_len, base_seq;
-
 #if (TCPCOPY_MYSQL_ADVANCED)
 	struct iphdr  *sec_auth_packet;
 	struct iphdr  *sec_ip_header;
@@ -925,10 +911,6 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	uint64_t      key;
 	void          *value;
 #endif
-#endif
-
-#if (DEBUG_TCPCOPY)
-	log_info(LOG_DEBUG,"send_faked_syn:%u",src_port);
 #endif
 
 	memset(f_s_buf,0,FAKE_SYN_BUF_SIZE);
@@ -947,29 +929,28 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	f_tcp_header->source  = tcp_header->source;
 	f_tcp_header->dest    = tcp_header->dest;
 	f_tcp_header->syn     = 1;
-	f_tcp_header->seq     = minus_1(tcp_header->seq);
+	f_tcp_header->seq     = minus_one(tcp_header->seq);
 	f_tcp_header->window  = 65535;
 	s->vir_next_seq       = tcp_header->seq;
 	ln = link_node_malloc(copy_ip_packet(f_ip_header));
 	link_list_append(s->handshake_packets, ln);
 #if (TCPCOPY_MYSQL_BASIC)
 	mysql_req_begin = 1;
+	/* Use the global first auth user packet for mysql skip-grant-tables */
 	fir_auth_pack = fir_auth_u_p;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	key = get_ip_port_value(ip_header->saddr, tcp_header->source);
 	value = hash_find(fir_auth_pack_table, key);
-	if(NULL != value)
-	{
+	if(NULL != value){
+		/* Use the private first auth user packet */
 		fir_auth_pack = (struct iphdr *)value;
 	}
 	value = hash_find(sec_auth_pack_table, key);
-	if(NULL != value)
-	{
+	if(NULL != value){
 		sec_auth_packet = (struct iphdr *)value;
 	}
 #endif
-	if(fir_auth_pack)
-	{
+	if(fir_auth_pack){
 		fir_ip_header  = (struct iphdr*)copy_ip_packet(fir_auth_pack);
 		fir_ip_header->saddr = f_ip_header->saddr;
 		size_ip        = fir_ip_header->ihl << 2;
@@ -979,11 +960,10 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		fir_cont_len   = total_len - size_ip - size_tcp;
 		fir_tcp_header->source = f_tcp_header->source;
 		ln = link_node_malloc(fir_ip_header);
-		link_list_append(s->unack_packets, ln);
+		link_list_append(s->unsend_packets, ln);
 		s->mysql_vir_req_seq_diff = g_seq_omit;
 #if (TCPCOPY_MYSQL_ADVANCED)
-		if(sec_auth_packet)
-		{
+		if(sec_auth_packet){
 			sec_ip_header = (struct iphdr*)copy_ip_packet(sec_auth_packet);
 			sec_ip_header->saddr = f_ip_header->saddr;
 			size_ip   = sec_ip_header->ihl << 2;
@@ -994,10 +974,9 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 			sec_cont_len = total_len - size_ip - size_tcp;
 			sec_tcp_header->source = f_tcp_header->source;
 			ln = link_node_malloc(sec_ip_header);
-			link_list_append(s->unack_packets, ln);
+			link_list_append(s->unsend_packets, ln);
 			log_info(LOG_NOTICE, "set second auth for non-skip");
-		}else
-		{
+		}else{
 			log_info(LOG_WARN,"no sec auth packet here");
 		}
 #endif
@@ -1009,12 +988,10 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 #endif
 
 		list = (link_list *)hash_find(mysql_table, src_port);
-		if(list)
-		{
+		if(list){
 			/* calculate the total content length */
 			ln = link_list_first(list);	
-			while(ln)
-			{
+			while(ln){
 				data = ln->data;
 				tmp_ip_header = (struct iphdr *)data;
 				size_ip   = tmp_ip_header->ihl << 2;
@@ -1034,8 +1011,7 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		f_tcp_header->seq = htonl(ntohl(f_tcp_header->seq) - total_cont_len);
 		fir_tcp_header->seq = plus_1(f_tcp_header->seq);
 #if (TCPCOPY_MYSQL_ADVANCED)
-		if(sec_tcp_header!=NULL)
-		{
+		if(sec_tcp_header != NULL){
 			sec_tcp_header->seq = htonl(ntohl(fir_tcp_header->seq)
 					+ fir_cont_len);
 		}
@@ -1045,12 +1021,10 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 #else
 		base_seq = ntohl(fir_tcp_header->seq) + fir_cont_len;
 #endif
-		if(list)
-		{
-			/* check if it needs to insert prepare statements */
+		if(list){
+			/* insert prepare statements */
 			ln = link_list_first(list);	
-			while(ln)
-			{
+			while(ln){
 				data = ln->data;
 				tmp_ip_header = (struct iphdr *)data;
 				tmp_ip_header = (struct iphdr*)copy_ip_packet(tmp_ip_header);
@@ -1061,15 +1035,13 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 				size_tcp  = tmp_tcp_header->doff << 2;
 				tmp_cont_len = total_len - size_ip - size_tcp;
 				tmp_tcp_header->seq = htonl(base_seq);
-				ln = link_node_malloc(tmp_tcp_header);
-				link_list_append(list, ln);
-				total_cont_len += tmp_cont_len;
+				tmp_ln = link_node_malloc(tmp_ip_header);
+				link_list_append(s->unsend_packets, tmp_ln);
 				base_seq += tmp_cont_len;
 				ln = link_list_get_next(list, ln);
 			}
 		}
-	}else
-	{
+	}else{
 		log_info(LOG_WARN,"no first auth packets here");
 	}
 #endif
@@ -1083,7 +1055,8 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 }
 
 /*
- * send faked syn ack packet(the third handshake packet) to back
+ * Send faked syn ack packet(the third handshake packet) to back from 
+ * the client packet
  */
 void send_faked_third_handshake(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
@@ -1126,7 +1099,7 @@ void send_faked_third_handshake(session_t *s, struct iphdr *ip_header,
 }
 
 /*
- * Send faked ack packet to backend from the client packet
+ * Send faked ack packet to backend from the backend packet
  */
 void send_faked_ack(session_t *s , struct iphdr *ip_header, 
 		struct tcphdr *tcp_header, int change_seq)
@@ -1150,11 +1123,9 @@ void send_faked_ack(session_t *s , struct iphdr *ip_header,
 	f_tcp_header->source  = tcp_header->dest;
 	f_tcp_header->ack     = 1;
 	f_tcp_header->ack_seq = s->vir_next_seq;
-	if(change_seq)
-	{
+	if(change_seq){
 		f_tcp_header->seq = htonl(s->vir_next_seq);
-	}else
-	{
+	}else{
 		f_tcp_header->seq = tcp_header->ack_seq;
 	}
 	f_tcp_header->window  = 65535;
@@ -1162,7 +1133,7 @@ void send_faked_ack(session_t *s , struct iphdr *ip_header,
 }
 
 /*
- * send faked reset packet to backend according to the backend packet
+ * Send faked reset packet to backend from the backend packet
  */
 void send_faked_rst(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
@@ -1172,7 +1143,7 @@ void send_faked_rst(session_t *s,
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
 	uint16_t size_ip, size_tcp, tot_len, cont_len;
-	uint32_t seq, expect_seq, next_ack;
+	uint32_t next_ack, h_next_ack, expect_h_ack;
 
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG, "send faked rst To Back:%u", src_port);
@@ -1198,31 +1169,35 @@ void send_faked_rst(session_t *s,
 	size_tcp      = tcp_header->doff << 2;
 	tot_len       = ntohs(ip_header->tot_len);
 	cont_len      = tot_len- size_ip- size_tcp;
-	seq           = ntohl(tcp_header->seq);
-	expect_seq    = ntohl(s->vir_next_seq);
+	expect_h_ack  = ntohl(s->vir_ack_seq);
+	next_ack      = tcp_header->seq;
+	h_next_ack    = ntohl(next_ack);
+
+	/* 
+	 * The following logic is just from experience.
+	 * Need to be optimized
+	 */
 	if(cont_len > 0){   
-		next_ack  = htonl(seq + cont_len); 
-		f_tcp_header->ack_seq = next_ack;
+		h_next_ack  += tont_len;
+		next_ack  = htonl(h_next_ack); 
+		s->vir_ack_seq = next_ack;
 	}else{
-		if(s->src_closed && !dst_closed)
-		{
-			if(seq > expect_seq)
-			{
-				log_info(LOG_NOTICE, "set vir_next_seq larger");
-				s->vir_next_seq = tcp_header->seq;
-				dst_closed = 1;
+		if(s->src_closed && !dst_closed){
+			if(h_next_ack > expect_h_ack){
+				log_info(LOG_NOTICE, "set ack seq larger");
+				s->vir_ack_seq = next_ack;
+				dst_closed     = 1;
 			}
-			f_tcp_header->fin = 0;
 		}
-		f_tcp_header->ack_seq = s->vir_next_seq;
 	}
+	f_tcp_header->ack_seq = s->vir_ack_seq;
 	f_tcp_header->seq = tcp_header->ack_seq;
 	f_tcp_header->window = 65535;
 	wrap_send_ip_packet(s, faked_rst_buf);
 }
 
 /*
- * Send faked rst packet to backend according to the client packet
+ * Send faked rst packet to backend from the client packet
  */
 void send_faked_rst_by_client(session_t *s,
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
@@ -1231,7 +1206,7 @@ void send_faked_rst_by_client(session_t *s,
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_DEBUG, "send faked rst To Back from clt pack:%u",
+	log_info(LOG_DEBUG, "send faked rst To back from clt pack:%u",
 			src_port);
 #endif
 	memset(faked_rst_buf, 0, FAKE_ACK_BUF_SIZE);
@@ -1252,11 +1227,10 @@ void send_faked_rst_by_client(session_t *s,
 	f_tcp_header->ack     = 1;
 	
 	f_tcp_header->ack_seq = s->vir_next_seq;
-	if(s->src_closed)
-	{
+	if(s->src_closed){
+		/* this is because of '++' in wrap_send_ip_packet */
 		f_tcp_header->seq = htonl(s->vir_next_seq - 1); 
-	}else
-	{
+	}else{
 		f_tcp_header->seq = htonl(s->vir_next_seq); 
 	}
 	f_tcp_header->window  = 65535;
