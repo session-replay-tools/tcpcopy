@@ -65,8 +65,8 @@ typedef struct session_s{
 	uint32_t resp_last_ack_seq;
 
 	/*captured variables*/
-	/*last sequence of client content packet*/
-	uint32_t req_last_cont_seq;
+	/*last sequence of client content packet which has been sent*/
+	uint32_t req_last_cont_sent_seq;
 	/*last syn sequence of client packet*/
 	uint32_t req_last_syn_seq;
 	/*last ack sequence of client packet which is sent to bakend*/
