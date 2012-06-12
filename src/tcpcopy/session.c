@@ -22,8 +22,6 @@ static uint64_t leave_cnt           = 0;
 static uint64_t obs_cnt             = 0;
 /* Total client packets */
 static uint64_t clt_cnt             = 0;
-/* Total client content packets */
-static uint64_t clt_con_packs_cnt   = 0;
 /* Total client packets sent to backend */
 static uint64_t packs_sent_cnt      = 0;
 /* Total client content packets sent to backend */
@@ -1785,11 +1783,28 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	}
 }
 
+static int check_syn_retransmisson(session_t *s, 
+		struct iphdr *ip_header, struct tcphdr *tcp_header)
+{
+	p_link_node ln;
+	time_t      now = time(0);
+	diff = now - s->createTime;
+	if(diff > 3){
+		/* retransmit the first syn packet */
+		retransmit_packets();
+		s->createTime = now;
+		ln = link_node_malloc(copy_ip_packet(ip_header));
+		link_list_append(s->unsend_packets, ln);
+		return DISP_STOP;
+	}
+	return SUCCESS;
+}
+
 /*
  * Processing client packets
  * TODO
  * TCP is always allowed to send 1 byte of data 
- * beyond the end of a closed window which confuses tcpcopy
+ * beyond the end of a closed window which confuses tcpcopy.
  * It will be resolved later
  * 
  */
@@ -1810,63 +1825,56 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
-	if(SYN_SEND == status){
-		now  = time(0);
-		diff = now - s->createTime;
-		if(diff > 3){
-			/* retransmit the first syn packet */
-			retransmit_packets();
-			s->createTime = now;
+	/* change source port for multiple uses */
+	if(s->fake_src_port != 0)
+	{
+		/*TODO why change seq */
+		tcp_header->seq = htonl(s->vir_next_seq);
+		tcp_header->source = s->fake_src_port;
+	}
+
+	if(SYN_SEND == s->status){
+		/* Check if it needs to retransmit the syn packet */
+		if(DISP_STOP == check_syn_retransmisson(s, ip_header)){
+			return;
 		}
 	}
-	if(s->sess_more)
-	{
+	/* If the packet is the next session's packet */
+	if(s->sess_more){
 		ln = link_node_malloc(copy_ip_packet(ip_header));
 		link_list_append(s->next_session_packets, ln);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO,"buffer for next session:%u",s->src_port);
+		log_info(LOG_INFO,"buffer for next session:%u", s->src_port);
 #endif
 		return;
 	}
 
+	/* Check if it needs sending rst pack to backend */
+	if(s->sess_candidate_erased)
+	{
+		if(!s->src_closed){
+			s->src_closed=1;
+		}
+		send_faked_rst_by_client(s, ip_header, tcp_header);
+		return;
+	}
+
+	/* Retrieve Packet info */
 	tot_len   = ntohs(ip_header->tot_len);
 	size_ip   = ip_header->ihl << 2;
 	size_tcp  = tcp_header->doff << 2;
 	cont_size = tot_len - size_tcp - size_ip;
-	if(cont_size > 0){
-		clt_con_packs_cnt++;
-	}
-	/* check if it needs sending close pack to backend */
-	if(s->sess_candidate_erased)
-	{
-		if(!s->src_closed)
-		{
-			send_faked_rst_by_client(s, ip_header, tcp_header);
-			s->src_closed=1;
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_INFO,"set client closed flag:%u", s->src_port);
-#endif
-		}else
-		{
-			send_faked_rst_by_client(s, ip_header, tcp_header);
-		}
-		return;
-	}
 
-	s->online_addr = ip_header->daddr;
+	s->online_addr  = ip_header->daddr;
+	s->online_port  = ip_header->dest;
+	s->client_ip_id = ip_header->id;
+
 #if (TCPCOPY_MYSQL_BASIC)
 	if(s->mysql_req_begin){
 		tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_seq_omit);
 	}
 #endif
-	tcp_header -> window = 65535;
-	s->client_ip_id = ip_header->id;
 
-	if(s->fake_src_port != 0)
-	{
-		tcp_header->seq = htonl(s->vir_next_seq);
-		tcp_header->source = s->fake_src_port;
-	}
 	/* Process the reset packet */
 	if(tcp_header->rst)
 	{
@@ -2405,8 +2413,6 @@ void process(char *packet)
 				clt_cnt, clt_disp_t, clt_disp_t/clt_cnt);
 		log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
 				packs_sent_cnt, con_packs_sent_cnt);
-		log_info(LOG_WARN, "total cont Packs from clt:%llu",
-				clt_con_packs_cnt);
 		log_info(LOG_NOTICE,
 				"total reconnect for closed :%llu,for no syn:%llu",
 				recon_for_closed_cnt, recon_for_no_syn_cnt);
