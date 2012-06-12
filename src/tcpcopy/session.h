@@ -48,8 +48,6 @@ typedef struct session_s{
 	uint32_t src_ack_seq;
 
 	/*virtual variables*/
-	/*virtual sequence that sends to backend*/
-	uint32_t vir_seq;
 	/*virtual acknowledgement sequence that sends to backend*/
 	uint32_t vir_ack_seq;
 	/*virtual next expected sequence*/
@@ -61,8 +59,6 @@ typedef struct session_s{
 #endif
 
 	/*response variables*/
-	/*acknowledgement sequence from backend response*/
-	uint32_t resp_ack_seq;
 	/*last sequence from backend response*/
 	uint32_t resp_last_seq;
 	/*last acknowledgement sequence from backend response*/
@@ -75,6 +71,8 @@ typedef struct session_s{
 	uint32_t req_last_syn_seq;
 	/*last ack sequence of client packet which is sent to bakend*/
 	uint32_t req_last_ack_seq;
+	/*last client content packet's ack sequence */
+	uint32_t req_cont_last_ack_seq;
 
 	/*the number of client content packets*/
 	uint64_t req_cont_pack_num;
