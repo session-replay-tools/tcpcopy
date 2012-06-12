@@ -2175,7 +2175,7 @@ static int check_conn_keepalive(session_t *s)
 	return s->conn_keepalive;
 }
 
-/**/
+/* Process client packet info after the main body */
 static void process_client_after_main_body(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
@@ -2398,7 +2398,7 @@ void restore_buffered_next_session(session_t *s)
 }
 
 /*
- * filter packets 
+ * Filter packets 
  */
 int isPacketNeeded(const char *packet)
 {
@@ -2437,7 +2437,7 @@ int isPacketNeeded(const char *packet)
 		return isNeeded;
 	}
 
-	/* here we filter the packets we do care about */
+	/* Here we filter the packets we do care about */
 	if(check_pack_src(ip_header->daddr, tcp_header->dest))
 	{
 		isNeeded = 1;
@@ -2452,8 +2452,54 @@ int isPacketNeeded(const char *packet)
 
 }
 
+/* Output statistics */
+static void output_stat(time_t now, int run_time)
+{
+	double         ratio;
+	last_stat_time = now;
+	log_info(LOG_WARN,
+			"active:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
+			enter_cnt - leave_cnt, enter_cnt, leave_cnt, obs_cnt);
+	log_info(LOG_WARN,
+			"total conns:%llu,total resp packs:%llu,c-resp packs:%llu",
+			conn_cnt, resp_cnt, resp_cont_cnt);
+	if(bak_cnt > 0)
+	{
+		log_info(LOG_WARN, "bak_cnt:%llu,resp_disp_t:%f,avg=%f",
+				resp_cnt, resp_disp_t, resp_disp_t/resp_cnt);
+	}
+	log_info(LOG_WARN, "clt_cnt:%llu,clt_disp_t:%f,avg=%f",
+			clt_cnt, clt_disp_t, clt_disp_t/clt_cnt);
+	log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
+			packs_sent_cnt, con_packs_sent_cnt);
+	log_info(LOG_NOTICE,
+			"total reconnect for closed :%llu,for no syn:%llu",
+			recon_for_closed_cnt, recon_for_no_syn_cnt);
+	log_info(LOG_NOTICE, "total successful retransmit:%llu",
+			retrans_succ_cnt);
+	log_info(LOG_NOTICE, "syn total:%llu,all client packets:%llu",
+			clt_syn_cnt, clt_packs_cnt);
+
+	/* This is for checking memory leak */
+	clear_timeout_sessions();
+
+	if(run_time > 3){
+		if(0 == resp_cont_cnt){
+			log_info(LOG_WARN, "no responses after %d secends", 
+					run_time);
+		}
+		if(enter_cnt > 0){
+			ratio = 100*conn_cnt/enter_cnt;
+			if(ratio < 80){
+				log_info(LOG_WARN, 
+						"many connections can't be established");
+			}
+		}
+	}
+}
+
 /*
- * the main procedure for processing the filtered packets
+ * The main procedure for processing the filtered packets
  */
 void process(char *packet)
 {
@@ -2462,11 +2508,9 @@ void process(char *packet)
 	uint16_t       size_ip, size_tcp, pack_size;
 	uint64_t       key;
 	time_t         now  = time(0);
-	struct timeval start, end;
 	int            diff, run_time = 0, sock, ret;
 	p_link_node    ln, tmp_ln;
 	session_t      *s;
-	double         ratio;
 
 	if(0 == start_p_time){
 		start_p_time = now;
@@ -2474,56 +2518,15 @@ void process(char *packet)
 		run_time = now -start_p_time;
 	}
 	diff = now - last_stat_time;
-	if(diff > 10)
-	{
-		last_stat_time = now;
-		/* this is for checking memory leak */
-		log_info(LOG_WARN,
-				"active:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
-				enter_cnt - leave_cnt, enter_cnt, leave_cnt, obs_cnt);
-		log_info(LOG_WARN,
-				"total conns:%llu,total resp packs:%llu,c-resp packs:%llu",
-				conn_cnt, resp_cnt, resp_cont_cnt);
-		if(bak_cnt > 0)
-		{
-			log_info(LOG_WARN, "bak_cnt:%llu,resp_disp_t:%f,avg=%f",
-					resp_cnt, resp_disp_t, resp_disp_t/resp_cnt);
-		}
-		log_info(LOG_WARN, "clt_cnt:%llu,clt_disp_t:%f,avg=%f",
-				clt_cnt, clt_disp_t, clt_disp_t/clt_cnt);
-		log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
-				packs_sent_cnt, con_packs_sent_cnt);
-		log_info(LOG_NOTICE,
-				"total reconnect for closed :%llu,for no syn:%llu",
-				recon_for_closed_cnt, recon_for_no_syn_cnt);
-		log_info(LOG_NOTICE, "total successful retransmit:%llu",
-				retrans_succ_cnt);
-		log_info(LOG_NOTICE, "syn total:%llu,all client packets:%llu",
-				clt_syn_cnt, clt_packs_cnt);
-
-		clear_timeout_sessions();
-
-		if(run_time > 3){
-			if(0 == resp_cont_cnt){
-				log_info(LOG_WARN, "no responses after %d secends", 
-						run_time);
-			}
-			if(enter_cnt > 0){
-				ratio = 100*conn_cnt/enter_cnt;
-				if(ratio < 80){
-					log_info(LOG_WARN, 
-							"many connections can't be established");
-				}
-			}
-		}
+	if(diff > 10){
+		/* Output statistics */
+		output_stat(now, run_time);
 	}
-	if(last_ch_dead_sess_time > 0)
-	{
+	if(last_ch_dead_sess_time > 0){
+		/* Check dead session */
 		diff = now - last_ch_dead_sess_time;
-		if(diff > 2)
-		{
-			if(sessions_table->total > 0)
-			{
+		if(diff > 2){
+			if(sessions_table->total > 0){
 				activate_dead_sessions();
 				last_ch_dead_sess_time = now;
 			}
@@ -2534,25 +2537,22 @@ void process(char *packet)
 	size_ip    = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 
-	if(check_pack_src(ip_header->saddr, tcp_header->source) == SRC_REMOTE)
-	{
+	if(check_pack_src(ip_header->saddr, tcp_header->source) == SRC_REMOTE){
+		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
-		/* when the packet comes from the targeted test machine */
 		ln  = hash_find(sessions_table, key);
 		if(ln){
 			s = (session_t *)ln->data;
 			s->last_update_time = now;
 			update_virtual_status(s, ip_header, tcp_header);
-			if(check_session_over(s))
-			{
-				if(s->sess_more)
-				{
+			if(check_session_over(s)){
+				if(s->sess_more){
+					/* Restore the next session which has the key */
 					init_next_session(s);
 					log_info(LOG_NOTICE,"init for next sess from bak");
 					restore_buffered_next_session(s);
 					return;
-				}else
-				{
+				}else{
 					active_sess_cnt--;
 					hash_del(sessions_table, key);
 					delete_session(s);
@@ -2560,31 +2560,27 @@ void process(char *packet)
 			}
 		}
 	}
-	else if(check_pack_src(ip_header->daddr, tcp_header->dest)) 
-	{
-		/* when the packet comes from client */
+	else if(check_pack_src(ip_header->daddr, tcp_header->dest)){
+		/* When the packet comes from client */
 		last_ch_dead_sess_time = now;
-		if(port_shift_factor)
-		{
+		if(port_shift_factor){
+		    /* Change source port*/
 			tcp_header->source = get_port_from_shift(tcp_header->source);
 		}
 		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		if(tcp_header->syn)
-		{
+		if(tcp_header->syn){
 			s  = hash_find(sessions_table, key);
 			if(s){
 				/* check if it is a duplicate syn */
 				diff = now - s->createTime;
-				if(tcp_header->seq == s->req_last_syn_seq)
-				{
+				if(tcp_header->seq == s->req_last_syn_seq){
 #if (DEBUG_TCPCOPY)
 					log_info(LOG_INFO, "duplicate syn,time diff:%d", diff);
 					strace_packet_info(LOG_INFO, CLIENT_FLAG, ip_header,
 							tcp_header);
 #endif
 					return;
-				}else
-				{
+				}else{
 					/* buffer the next session to current session */
 					s->sess_more = 1;
 					ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -2596,16 +2592,16 @@ void process(char *packet)
 #endif
 					return;
 				}
-			}else
-			{
+			}else{
+				/* Create a new session */
 				s = session_add(ip_header, tcp_header);
 				if(NULL == s){
 					return;
 				}
 			}
+			/* Find the right sock to send router info */
 			sock = address_find_sock(tcp_header->dest);
-			if(-1 == sock)
-			{
+			if(-1 == sock){
 				log_info(LOG_ERR, "sock is invalid in process");
 				strace_packet_info(LOG_WARN, CLIENT_FLAG, 
 						ip_header, tcp_header);
@@ -2613,31 +2609,25 @@ void process(char *packet)
 			}
 			ret = msg_client_send(sock, ip_header->saddr,
 					tcp_header->source, CLIENT_ADD);
-			if(-1 == ret)
-			{
-				log_info(LOG_ERR, "msg coper send error");
+			if(-1 == ret){
+				log_info(LOG_ERR, "msg client send error");
 				return;
-			}else
-			{
+			}else{
 				process_recv(s, ip_header, tcp_header);
 				s->req_last_syn_seq = tcp_header->seq;
 			}
-		}
-		else
+		}else{
 			s = hash_find(sessions_table, key);
 			if(s){
 				process_recv(s, ip_header, tcp_header);
 				s->last_update_time = now;
-				if(check_session_over(s))
-				{
-					if(s->sess_more)
-					{
+				if(check_session_over(s)){
+					if(s->sess_more){
 						init_next_session(s);
 						log_info(LOG_NOTICE,"init for next sess from clt");
 						restore_buffered_next_session(s);
 						return;
-					}else
-					{
+					}else{
 						active_sess_cnt--;
 						hash_del(sessions_table, key);
 						delete_session(s);
@@ -2646,11 +2636,9 @@ void process(char *packet)
 			}else
 			{
 				/* we check if we can pad tcp handshake */
-				if(check_padding(ip_header, tcp_header))
-				{
+				if(check_padding(ip_header, tcp_header)){
 #if (TCPCOPY_MYSQL_BASIC)
-					if(!check_mysql_padding(ip_header,tcp_header))
-					{
+					if(!check_mysql_padding(ip_header,tcp_header)){
 						return;
 					}
 #endif
@@ -2662,9 +2650,8 @@ void process(char *packet)
 				}
 			}
 		}
-	}else
-	{
-		/* we don't know where the packet comes from */
+	}else{
+		/* We don't know where the packet comes from */
 		log_info(LOG_WARN, "unknown packet");
 		strace_packet_info(LOG_WARN, UNKNOWN_FLAG, ip_header, tcp_header);
 	}
