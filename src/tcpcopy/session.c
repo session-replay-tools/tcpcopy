@@ -888,7 +888,7 @@ static int send_reserved_packets(session_t *s)
 /*
  * Send faked syn packet to backend.
  */
-void send_faked_syn(session_t *s, struct iphdr *ip_header,
+static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	unsigned char f_s_buf[FAKE_SYN_BUF_SIZE], *data;
@@ -896,18 +896,15 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	struct tcphdr *f_tcp_header;
 	p_link_node   ln, tmp_ln;
 #if (TCPCOPY_MYSQL_BASIC)
-	struct iphdr  *fir_auth_pack;
-	struct iphdr  *fir_ip_header;
-	struct tcphdr *fir_tcp_header;
-	struct iphdr  *tmp_ip_header;
-	struct tcphdr *tmp_tcp_header;
-	link_list     *list;
-	uint16_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
+	struct iphdr  *fir_auth_pack, *fir_ip_header, *tmp_ip_header;
+	struct tcphdr *fir_tcp_header, *tmp_ip_header;
 	uint32_t total_cont_len, base_seq;
+	uint16_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
+	link_list     *list;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	struct iphdr  *sec_auth_packet;
 	struct iphdr  *sec_ip_header;
-	size_t sec_cont_len;
+	uint16_t      sec_cont_len;
 	uint64_t      key;
 	void          *value;
 #endif
@@ -1058,8 +1055,8 @@ void send_faked_syn(session_t *s, struct iphdr *ip_header,
  * Send faked syn ack packet(the third handshake packet) to back from 
  * the client packet
  */
-void send_faked_third_handshake(session_t *s, struct iphdr *ip_header,
-		struct tcphdr *tcp_header)
+static void send_faked_third_handshake(session_t *s, 
+		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
 	unsigned char fake_ack_buf[FAKE_ACK_BUF_SIZE];
 	struct iphdr  *f_ip_header;
@@ -1080,9 +1077,11 @@ void send_faked_third_handshake(session_t *s, struct iphdr *ip_header,
 	f_ip_header->protocol = 6;
 	f_ip_header->id       = htons(client_ip_id + 2);;
 	f_ip_header->saddr    = s->src_addr;
+	/* here we must recored online ip address */
 	f_ip_header->daddr    = s->online_addr; 
 	f_tcp_header->doff    = 5;
 	f_tcp_header->source  = tcp_header->dest;
+	/* here we must recored online port */
 	f_tcp_header->dest    = s->online_port;
 	f_tcp_header->ack     = 1;
 	f_tcp_header->ack_seq = s->vir_next_seq;
@@ -1101,7 +1100,7 @@ void send_faked_third_handshake(session_t *s, struct iphdr *ip_header,
 /*
  * Send faked ack packet to backend from the backend packet
  */
-void send_faked_ack(session_t *s , struct iphdr *ip_header, 
+static void send_faked_ack(session_t *s , struct iphdr *ip_header, 
 		struct tcphdr *tcp_header, int change_seq)
 {
 	unsigned char fake_ack_buf[FAKE_ACK_BUF_SIZE];
@@ -1135,7 +1134,7 @@ void send_faked_ack(session_t *s , struct iphdr *ip_header,
 /*
  * Send faked reset packet to backend from the backend packet
  */
-void send_faked_rst(session_t *s, 
+static void send_faked_rst(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
 
@@ -1199,7 +1198,7 @@ void send_faked_rst(session_t *s,
 /*
  * Send faked rst packet to backend from the client packet
  */
-void send_faked_rst_by_client(session_t *s,
+static void send_faked_rst_by_client(session_t *s,
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
 	unsigned char faked_rst_buf[FAKE_ACK_BUF_SIZE];
@@ -1238,24 +1237,22 @@ void send_faked_rst_by_client(session_t *s,
 }
 
 /*
- * Establish a new connection for intercepting already 
+ * Fake the first handshake packet for intercepting already 
  * connected online packets
  */
-void est_conn_with_no_syn_packets(session_t *s, 
-		struct iphdr *ip_header, struct tcphdr *tcp_header)
+static void fake_syn(session_t *s, struct iphdr *ip_header, 
+		struct tcphdr *tcp_header)
 {
 	int sock, result;
 #if (TCPCOPY_MYSQL_BASIC)
-	log_info(LOG_WARN, "establish conn for already connected:%u",
-			src_port);
+	log_info(LOG_WARN, "fake syn for halfway:%u", src_port);
 #else
-	log_info(LOG_DEBUG, "establish conn for already connected:%u",
-			src_port);
+	log_info(LOG_DEBUG, "fake syn for halfway:%u", src_port);
 #endif
 	sock = address_find_sock(tcp_header->dest);
 	if(-1 == sock)
 	{
-		log_info(LOG_WARN, "sock invalid in est_conn_with_no_syn_packets");
+		log_info(LOG_WARN, "sock invalid in fake_syn");
 		strace_pack(LOG_ERR, CLIENT_FLAG, ip_header, tcp_header);
 		return;
 	}
@@ -1263,7 +1260,7 @@ void est_conn_with_no_syn_packets(session_t *s,
 			tcp_header->source, CLIENT_ADD);
 	if(-1 == result)
 	{
-		log_info(LOG_ERR, "msg copyer send error");
+		log_info(LOG_ERR, "msg client send error");
 		return;
 	}
 	send_faked_syn(s, ip_header, tcp_header);
@@ -1273,30 +1270,29 @@ void est_conn_with_no_syn_packets(session_t *s,
 }
 
 /*
- * Establish a connection for already closed connection
+ * Try to fake syn packet to backend which is already closed
  * Attension:
  *   if the server does the active close,it lets the client
  *   continually reuse the same port number at each end for successive 
  *   incarnations of the same connection
  */
-void est_conn_for_closed_conn(session_t *s)
+void fake_syn_hardly(session_t *s)
 {
-	int size, sock, result;
 	unsigned char *data, tmp_data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
+	int      size, sock, result;
 	uint16_t size_ip, size_tcp, tot_len, cont_len;
-	uint16_t tmp_port_addition, transferred_port; 
+	uint16_t dest_port; 
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_NOTICE,"reestablish conn for keepalive:%u", src_port);
+	log_info(LOG_NOTICE,"fake syn hardly:%u", src_port);
 #endif
 	size = r->handshake_packets->size;
-	if(size != (int) expected_handshake_pack_num){
-		log_info(LOG_WARN, "hand Packets size not expected:%d,exp:%u",
+	if(size != expected_handshake_pack_num){
+		log_info(LOG_WARN, "hand Packets size not expected:%d,exp:%d",
 				size, expected_handshake_pack_num);
-	}else
-	{
+	}else{
 		ln   = link_list_first(s->handshake_packets);
 		data = ln->data;
 		ip_header  = (struct iphdr*)data;
@@ -1304,30 +1300,24 @@ void est_conn_for_closed_conn(session_t *s)
 		ip_header  = (struct iphdr*)tmp_data;
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		sock = address_find_sock(local_port);
+		sock = address_find_sock(tcp_header->dest);
 		if(-1 == sock)
 		{
 			free(tmp_data);
-			log_info(LOG_ERR, "sock invalid in est_conn_for_closed_conn");
+			log_info(LOG_ERR, "sock invalid in fake_syn_hardly");
 #if (DEBUG_TCPCOPY)
 			strace_pack(LOG_INFO,CLIENT_FLAG,ip_header,tcp_header);
 #endif
 			return;
 		}
-		tmp_port_addition = get_port_rand_addition();
-		transferred_port  = ntohs(tcp_header->source);
-		if(transferred_port <= (65535-tmp_port_addition))
-		{
-			transferred_port += tmp_port_addition;
-		}else
-		{
-			transferred_port  = 32768 + tmp_port_addition;
-		}
-		tcp_header->source = htons(transferred_port);
-		s->fake_src_port   = tcp_header->source;
+		dest_port = get_port_by_rand_addition(tcp_header->source);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_NOTICE, "change port,port add:%u", tmp_port_addition);
+		log_info(LOG_NOTICE, "change port from %u to %u",
+				ntohs(tcp_header->source), dest_port);
 #endif
+		tcp_header->source = htons(dest_port);
+		s->fake_src_port   = tcp_header->source;
+
 		result = msg_client_send(sock, ip_header->saddr, 
 				tcp_header->source, CLIENT_ADD);
 		if(-1 == result)
@@ -2123,7 +2113,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	if(SYN_SEND == status)
 	{
 		if(!req_syn_ok){
-			est_conn_with_no_syn_packets(s, ip_header, tcp_header);
+			fake_syn(s, ip_header, tcp_header);
 			ln = link_node_malloc(copy_ip_packet(ip_header));
 			link_list_append(s->unsend_packets, ln);
 			return;
@@ -2168,13 +2158,13 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 				if(check_mysql_padding(ip_header, tcp_header))
 				{
 					init_keepalive_session();
-					est_conn_with_no_syn_packets(ip_header, tcp_header);
+					fake_syn(ip_header, tcp_header);
 					ln = link_node_malloc(copy_ip_packet(ip_header));
 					link_list_append(s->unsend_packets, ln);
 				}
 #else
 				init_keepalive_session();
-				est_conn_for_closed_conn();
+				fake_syn_hardly();
 				ln = link_node_malloc(copy_ip_packet(ip_header));
 				link_list_append(s->unsend_packets, ln);
 #endif
@@ -2182,7 +2172,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 			}
 			if(!req_syn_ok)
 			{
-				est_conn_with_no_syn_packets(ip_header,tcp_header);
+				fake_syn(ip_header,tcp_header);
 				ln = link_node_malloc(copy_ip_packet(ip_header));
 				link_list_append(s->unsend_packets, ln);
 				return;

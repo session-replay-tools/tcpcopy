@@ -1,10 +1,21 @@
 #include <xcopy.h>
 
-uint16_t get_port_rand_addition()
+static uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
+{
+	uint16_t dest_port;
+	dest_port = ntohs(orig_port);
+	if(dest_port < (65536 - add)){
+		dest_port += add;
+	}else{
+		dest_port  = 32768 + add;
+	}
+	return dest_port;
+}
+uint16_t get_port_by_rand_addition(uint16_t orig_port)
 {
 	static unsigned int seed = 0;
 	struct timeval  tp;
-	uint16_t        port_add;
+	uint16_t        port_add, dest_port;
 
 	if(0 == seed){    
 		gettimeofday(&tp, NULL);
@@ -13,22 +24,16 @@ uint16_t get_port_rand_addition()
 	port_add = (uint16_t)(4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
 	port_add = port_add + 1024;
 
-	return port_add;
+	return get_appropriate_port(orig_port, port_add);
+	
 }
 
-uint16_t get_port_from_shift(uint16_t ori_port)
+uint16_t get_port_from_shift(uint16_t orig_port)
 {
-	uint16_t        port_add, transferred_port;
+	uint16_t        port_add, dest_port;
 	port_add = (2048 << port_shift_factor) + rand_shift_port;
-	transferred_port = ntohs(ori_port);
-	if(transferred_port <= (65535 - port_add))
-	{    
-		transferred_port = transferred_port + port_add;
-	}else
-	{    
-		transferred_port = 1024 + port_add;
-	}    
-	return transferred_port;
+
+	return get_appropriate_port(orig_port, port_add);
 }
 
 ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
