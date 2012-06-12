@@ -67,8 +67,6 @@ typedef struct session_s{
 	uint32_t resp_last_seq;
 	/*last acknowledgement sequence from backend response*/
 	uint32_t resp_last_ack_seq;
-	/*last packet size from backend response*/
-	uint32_t resp_last_pack_size;
 
 	/*captured variables*/
 	/*last sequence of client content packet*/
@@ -138,8 +136,6 @@ typedef struct session_s{
 	uint32_t dst_closed:1;
 	/*candidate response waiting flag*/
 	uint32_t candidate_response_waiting:1;
-	/*response waiting flag*/
-	uint32_t response_waiting:1;
 	/*this indicates if the session needs to wait previous packets or not*/
 	uint32_t previous_packet_waiting:1;
 	/*connection keepalive flag*/
@@ -165,7 +161,7 @@ typedef struct session_s{
 	/*mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation)*/
 	uint32_t mysql_excute_times:8;
 	/*the number of greet content packets receiving from backend*/
-	uint32_t mysql_cont_pack_num_after_recv_greet:4;
+	uint32_t mysql_cont_num_aft_greet:4;
 	/*request begin flag for mysql*/
 	uint32_t mysql_req_begin:1;
 	/*this indicates if greeting from bakend is received*/

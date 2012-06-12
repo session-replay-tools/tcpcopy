@@ -1006,7 +1006,7 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		log_info(LOG_INFO,"total len subtracted:%u", total_cont_len);
 #endif
 		f_tcp_header->seq = htonl(ntohl(f_tcp_header->seq) - total_cont_len);
-		fir_tcp_header->seq = plus_1(f_tcp_header->seq);
+		fir_tcp_header->seq = plus_one(f_tcp_header->seq);
 #if (TCPCOPY_MYSQL_ADVANCED)
 		if(sec_tcp_header != NULL){
 			sec_tcp_header->seq = htonl(ntohl(fir_tcp_header->seq)
@@ -1469,16 +1469,8 @@ static int check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
 
 /* Check ack from backend */
 static int check_backend_ack(session_t *s,struct iphdr *ip_header,
-		 struct tcphdr *tcp_header)
+		 struct tcphdr *tcp_header, uint32_t ack, uint16_t cont_len)
 {
-	uint32_t ack;
-	uint16_t size_ip, size_tcp, tot_len, cont_len;
-
-	ack       = ntohl(tcp_header->ack_seq);
-	tot_len   = ntohs(ip_header->tot_len);
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	cont_size = tot_len-size_tcp-size_ip;
 	/* if ack from test server is more than what we expect */
 	if(ack > s->vir_next_seq)
 	{
@@ -1486,8 +1478,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		log_info(LOG_INFO, "bak ack more than vir_next_seq:%u,%u,p:%u",
 				ack, s->vir_next_seq, s->src_port);
 #endif
-		if(!s->resp_syn_received)
-		{
+		if(!s->resp_syn_received){
 #if (DEBUG_TCPCOPY)
 			log_info(LOG_NOTICE,"not recv back syn,p:%u", s->src_port);
 #endif
@@ -1495,36 +1486,32 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 			return DISP_STOP;
 		}
 		s->vir_next_seq = ack;
-	}else if(ack < s->vir_next_seq)
-	{
+	}else if(ack < s->vir_next_seq){
 		/* if ack from test server is less than what we expect */
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_INFO, "bak ack less than vir_next_seq:%u,%u, p:%u",
 				ack, s->vir_next_seq, s->src_port);
 #endif
 		if(!s->resp_syn_received){
-			s->vir_ack_seq = tcp_header->seq;
-			send_faked_rst(ip_header, tcp_header);
+			send_faked_rst(s, ip_header, tcp_header);
 			s->faked_fin_sent = 1;
 			s->src_closed = 1;
 			return DISP_STOP;
 		}
 		if(s->src_closed && !tcp_header->fin){
-			send_faked_rst(ip_header, tcp_header);
+			send_faked_rst(s, ip_header, tcp_header);
 			return DISP_STOP;
 		}else{
 			/* simulaneous close */
-			if(s->src_closed && tcp_header->fin)
-			{
+			if(s->src_closed && tcp_header->fin){
 				s->simul_closing = 1;
 			}
 		}
 		/* when the slide window in test server is full*/
-		if(0 == tcp_header->window)
-		{
+		if(0 == tcp_header->window){
 			log_info(LOG_NOTICE, "slide window is zero now");
 			s->resp_last_ack_seq = ack;
-			update_retransmission_packets();
+			update_retransmission_packets(s);
 			return DISP_STOP;
 		}
 
@@ -1537,9 +1524,9 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 						/* It needs retransmission */
 						log_info(LOG_WARN,"bak lost packs:%u", s->src_port);
 						if(!s->vir_already_retransmit){
-							if(!retransmit_packets()){
+							if(!retransmit_packets(s)){
 								/* Retransmit failure */
-								send_faked_rst(ip_header, tcp_header);
+								send_faked_rst(s, ip_header, tcp_header);
 								faked_fin_sent = 1;
 								s->src_closed = 1;
 							}
@@ -1559,29 +1546,123 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 	}
 }
 
+static void process_back_syn_pack(session_t *s, struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	if(s->resp_syn_received){
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_DEBUG,"recv syn from back again");
+#endif
+	}else{
+		conn_cnt++;
+		r->resp_syn_received = 1;
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_DEBUG,"recv syn from back:%u", s->src_port);
+#endif
+	}
+	s->vir_ack_seq = plus_one(tcp_header->seq);
+	s->status = SYN_CONFIRM;
+	if(s->req_halfway_intercepted){
+		send_faked_third_handshake(s, ip_header, tcp_header);
+		send_reserved_packets(s);
+	}else{
+		send_reserved_packets(s);
+	}
+}
+
+static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+#if (DEBUG_TCPCOPY)
+	log_info(LOG_INFO,"recv fin from back:%u", s->src_port);
+#endif
+	s->dst_closed = 1;
+	s->candidate_response_waiting = 0;
+	s->status  |= SERVER_FIN;
+	send_faked_ack(s, ip_header, tcp_header, s->simul_closing);
+	if(!s->src_closed){
+		/* Send the constructed reset packet to backend */
+		send_faked_rst(s, ip_header, tcp_header);
+		s->faked_fin_sent  = 1;
+		s->status |= CLIENT_FIN;
+	}else
+	{
+		s->sess_over = 1;
+	}
+
+}
+
+static int mysql_process_greet(session_t *s, struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	int           is_greet_packet = 0, ret; 
+#if (TCPCOPY_MYSQL_ADVANCED)
+	unsigned char *payload;
+#endif
+	if(!s->mysql_resp_greet_received){
+		/* this is just a guess */
+		log_info(LOG_NOTICE, "recv greeting from back");
+		s->mysql_cont_num_aft_greet  = 0;
+		s->mysql_resp_greet_received = 1;
+		is_greet_packet = 1;
+#if (TCPCOPY_MYSQL_ADVANCED) 
+		payload =(unsigned char*)((char*)tcp_header + sizeof(struct tcphdr));
+		memset(s->scrambleBuf, 0, SCRAMBLE_LENGTH + 1);
+		ret = parse_handshake_init_cont(payload, cont_size, scrambleBuf);
+		log_info(LOG_WARN, "scramble:%s,p:%u", scrambleBuf, s->src_port);
+		if(!ret){
+			/* Try to print error info*/
+			if(cont_size > 11){
+				strace_packet_info(LOG_WARN, BACKEND_FLAG, 
+						ip_header, tcp_header);
+				log_info(LOG_WARN, "port:%u,payload:%s",
+						src_port, (char*)(payload + 11));
+			}
+			s->sess_over = 1;
+			return DISP_STOP;
+		}
+#endif
+	}else{
+#if (TCPCOPY_MYSQL_ADVANCED) 
+		if(0 == s->mysql_cont_num_aft_greet){
+			log_info(LOG_NOTICE, "check if it needs second auth");
+			payload = (unsigned char*)((char*)tcp_header + 
+					sizeof(struct tcphdr));
+			/* 
+			 * If it is the last data packet, 
+			 * then it means it needs sec auth
+			 */
+			if(is_last_data_packet(payload)){
+				strace_packet_info(LOG_WARN, BACKEND_FLAG,
+						ip_header, tcp_header);
+				log_info(LOG_WARN, "it needs sec auth:%u", s->src_port);
+				s->mysql_sec_auth = 1;
+			}
+		}
+#endif
+		mysql_cont_num_aft_greet++;
+	}
+	return SUCCESS;
+
+}
+
 /*
  * Processing backend packets
  */
 void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-
 	uint16_t      size_ip, size_tcp, tot_len, cont_len;
-	uint32_t      ack, next_seq;
+	uint32_t      ack;
 	time_t        current;
-#if (TCPCOPY_MYSQL_BASIC)
-	int           is_greet_packet, result; 
-#endif
-#if (TCPCOPY_MYSQL_ADVANCED)
-	unsigned char *payload;
-#endif
 
     resp_cnt++;
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 #endif
-	if( tcp_header->rst)
-	{
+
+	/* When meeting reset, it means the session is over */
+	if( tcp_header->rst){
 		s->reset = 1;
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_INFO, "reset from backend:%u", s->src_port);
@@ -1590,12 +1671,11 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* Retrieve packet info */
-	s->vir_ack_seq = tcp_header->ack_seq;
 	ack       = ntohl(tcp_header->ack_seq);
 	tot_len   = ntohs(ip_header->tot_len);
 	size_ip   = ip_header->ihl << 2;
 	size_tcp  = tcp_header->doff << 2;
-	cont_size = tot_len-size_tcp-size_ip;
+	cont_size = tot_len - size_tcp - size_ip;
 
 	current=time(0);
 
@@ -1605,203 +1685,104 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 			retrans_succ_cnt++;
 			s->vir_new_retransmit = 0;
 		}
-		resp_cont_pack_num++;
+		resp_cont_cnt++;
+		s->resp_cont_pack_num++;
 		resp_last_recv_cont_time=current;
+		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_size + 1);
+	}else{
+		s->vir_ack_seq = tcp_header->ack_seq;
 	}
-		resp_last_ack_seq = ack;
+	/* Needs to check ack */
+	if(check_backend_ack(s, ip_header, tcp_header, ack,  cont_size) 
+			== DISP_STOP){
+		s->resp_last_ack_seq = ack;
+		return;
+	}
+	s->resp_last_ack_seq = ack;
+	/* Update session's retransmisson packets */
 	update_retransmission_packets();
 
-	if( tcp_header->syn)
-	{
-		if(r->resp_syn_received)
-		{
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG,"recv syn from back again");
-#endif
-		}else
-		{
-			conn_cnt++;
-			r->resp_syn_received = 1;
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG,"recv syn from back:%u", s->src_port);
-#endif
-		}
-		s->vir_ack_seq   = plus_1(tcp_header->seq);
-		s->status = SYN_CONFIRM;
-		if(s->req_halfway_intercepted)
-		{
-			send_faked_third_handshake(ip_header, tcp_header);
-			send_reserved_packets();
-		}else
-		{
-			send_reserved_packets();
-		}
-		s->resp_last_pack_size = tot_len;
+	/*
+	 * Process syn, fin or ack packet here
+	 */
+	if( tcp_header->syn){
+		/* Process syn packet */
+		process_back_syn_pack(s, ip_header, tcp_header);
 		return;
 	}else if(tcp_header->fin){
-#if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO,"recv fin from back:%u", s->src_port);
-#endif
-		s->dst_closed = 1;
-		s->candidate_response_waiting = 0;
-		response_waiting = 0;
-		status  |= SERVER_FIN;
-		if(cont_size > 0)
-		{
-			s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_size + 1);
-		}else
-		{
-			s->vir_ack_seq = plus_1(tcp_header->seq);
-		}
-		send_faked_ack(ip_header, tcp_header, simul_closing);
-		if(!s->src_closed)
-		{
-			/* send constructed server fin to the backend */
-			send_faked_rst(ip_header, tcp_header);
-			faked_fin_sent  = 1;
-			status |= CLIENT_FIN;
-		}else
-		{
-			s->sess_over = 1;
-		}
+		/* Process fin packet */
+		process_back_fin_pack(s, ip_header, tcp_header);
 		return;
-	}else if(tcp_header->ack)
-	{
+	}else if(tcp_header->ack){
+		/* Process ack packet */
 		if(s->src_closed && dst_closed){
 			s->sess_over = 1;
 			return;
 		}
-		if(s->candidate_response_waiting){
-			response_waiting = 1;
-		}
 	}
-	if(!resp_syn_received)
+
+	/* We don't know if it will come here */
+	if(!s->resp_syn_received)
 	{
+		log_info(LOG_NOTICE,"unbelievable");
+		/* Try to solve backend's obstacle */
 		s->vir_ack_seq = tcp_header->seq;
-		send_faked_rst(ip_header, tcp_header);
-		faked_fin_sent = 1;
+		send_faked_rst(s, ip_header, tcp_header);
+		s->faked_fin_sent = 1;
 		s->src_closed     = 1;
 		return;
 	}
 
-	next_seq = htonl(ntohl(tcp_header->seq) + cont_size);
 #if (TCPCOPY_MYSQL_BASIC)
 	is_greet_packet = 0; 
 #endif
 	
 	/* 
 	 * it is nontrivial to check if the packet is the last packet 
-	 * of response
+	 * of the response
 	 */
-	if(cont_size > 0)
-	{
-		resp_cont_cnt++;
-		s->vir_ack_seq = next_seq;
-		if(s->src_closed)
-		{
+	if(cont_size > 0){
+		if(s->src_closed){
+			/* Try to solve the obstacle */ 
 			send_faked_rst(s, ip_header, tcp_header);
 			return;
 		}
-
-		if(!s->sess_candidate_erased)
-		{
+		if(!s->sess_candidate_erased){
 #if (TCPCOPY_MYSQL_BASIC)
-			if(!s->mysql_resp_greet_received)
-			{
-				log_info(LOG_NOTICE, "recv greeting from back");
-				s->mysql_cont_pack_num_after_recv_greet = 0;
-				s->mysql_resp_greet_received = 1;
-				is_greet_packet = 1;
-#if (TCPCOPY_MYSQL_ADVANCED) 
-				payload =(unsigned char*)((char*)tcp_header + 
-						sizeof(struct tcphdr));
-				memset(scrambleBuf, 0, SCRAMBLE_LENGTH + 1);
-				result = parse_handshake_init_content(payload,
-						cont_size, scrambleBuf);
-				log_info(LOG_WARN, "scramble:%s,p:%u",
-						scrambleBuf, s->src_port);
-				if(!result)
-				{
-					if(cont_size > 11)
-					{
-						strace_packet_info(LOG_WARN, BACKEND_FLAG,
-								ip_header, tcp_header);
-						log_info(LOG_WARN, "port:%u,payload:%s",
-								src_port, (char*)(payload + 11));
-					}
-					s->sess_over=1;
-					return;
-				}
-#endif
-			}else{
-#if (TCPCOPY_MYSQL_ADVANCED) 
-				if(0 == mysql_cont_pack_num_after_recv_greet)
-				{
-#if (DEBUG_TCPCOPY)
-					log_info(LOG_INFO, "check if it needs second auth");
-#endif
-					payload = (unsigned char*)((char*)tcp_header + 
-							sizeof(struct tcphdr));
-					if(isLastDataPacket(payload))
-					{
-						strace_packet_info(LOG_WARN, BACKEND_FLAG,
-								ip_header, tcp_header);
-						log_info(LOG_WARN, "it needs second auth:%u",
-								s->src_port);
-						mysql_sec_auth = 1;
-					}
-				}
-#endif
-				mysql_cont_pack_num_after_recv_greet++;
+			if(DISP_STOP == mysql_process_greet(s, ip_header, tcp_header)){
+				return;
 			}
 #endif
-
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG, "receive from bak");
-#endif
-#if (!TCPCOPY_MYSQL_BASIC)
-			send_faked_ack(s, ip_header, tcp_header, 1);
-#endif
-			if(s->candidate_response_waiting || is_greet_packet)
-			{
+			if(s->candidate_response_waiting || s->is_greet_packet){
 #if (DEBUG_TCPCOPY)
 				log_info(LOG_DEBUG,"receive back server's resp");
 #endif
 				s->candidate_response_waiting = 0;
-				response_waiting = 0;
-				s->vir_ack_seq  = next_seq;
-				status   = SEND_RESPONSE_CONFIRM;
-				resp_cont_pack_num++;
-				send_reserved_packets();
-				s->resp_last_pack_size = tot_len;
+				s->status = SEND_RESPONSE_CONFIRM;
+				send_reserved_packets(s);
 				return;
 			}
 		}
-	}else
-	{
-		if(s->src_closed && !dst_closed)
-		{
+	}else{
+		/* There are no content in packet */
+		if(s->src_closed && !s->dst_closed){
 			send_faked_rst(s, ip_header, tcp_header);
+			return;
 		}
 	}
-	s->vir_ack_seq = next_seq;
-	if(s->sess_candidate_erased)
-	{
-		if(!s->src_closed)
-		{
+
+	if(s->sess_candidate_erased){
+		/* Do a violent close to backend */
+		if(!s->src_closed){
 #if (DEBUG_TCPCOPY)
-			log_info(LOG_INFO,"candidate erased true:%u",s->src_port);
+			log_info(LOG_INFO,"candidate erased true:%u", s->src_port);
 #endif
-			/* send constructed server fin to the backend */
+			/* Send the faked reset packet to backend */
 			send_faked_rst(s, ip_header, tcp_header);
-			faked_fin_sent = 1;
+			s->faked_fin_sent = 1;
 			s->src_closed = 1;
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_INFO, "set client closed flag:%u", s->src_port);
-#endif
 		}
 	}
-	s->resp_last_pack_size = tot_len;
 }
 
 /*
@@ -2211,7 +2192,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 						return;
 					}
 				}
-				if(!s->response_waiting)
+				//if(!s->response_waiting)
 				{
 					if(check_packet_lost(s, ip_header, tcp_header))
 					{

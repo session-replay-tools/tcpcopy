@@ -98,7 +98,7 @@ int is_last_data_packet(unsigned char *payload){
 	return 0;
 }
 
-int parse_handshake_init_content(unsigned char *payload,
+int parse_handshake_init_cont(unsigned char *payload,
 		                size_t length, char *scramble_buff){
 	/*
 	 * the following is the protocol format of mysql handshake
