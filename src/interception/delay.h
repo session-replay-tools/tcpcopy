@@ -7,6 +7,7 @@ extern "C"
 #endif
 
 #include "../core/xcopy.h"
+#include "../communication/msg.h"
 
 	void delay_table_init();
 	void delay_table_add(uint64_t key, struct msg_server_s *);

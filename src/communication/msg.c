@@ -1,4 +1,4 @@
-#include "../core/xcopy.h"
+#include "msg.h"
 
 static int tcp_sock_init(){
 	int sock = socket(AF_INET, SOCK_STREAM, 0);

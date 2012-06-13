@@ -12,7 +12,9 @@
  */
 
 #include "../core/xcopy.h"
+#include "../communication/msg.h"
 
+#define MEMORY_USAGE "VmRSS:"
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;
 static char pool[RECV_POOL_SIZE];
@@ -22,7 +24,10 @@ static uint64_t read_cnt  = 0, write_cnt = 0;
 static uint64_t event_cnt = 0, packs_put_cnt=0;
 static uint64_t raw_packets = 0, raw_valid_packets = 0;
 static uint64_t recv_pack_cnt_from_pool = 0;
+uint16_t g_port_shift_factor;
+uint16_t g_rand_port_shift;
 
+ip_port_pair_mappings_t g_transfer_target;
 /*
  * Put the packet to the buffered pool
  */
@@ -137,7 +142,7 @@ static void set_nonblock(int socket){
 /* Initiate input raw socket */
 static int init_raw_socket()
 {
-	int       sock, recv_buf_opt, result;
+	int       sock, recv_buf_opt, ret;
 	socklen_t opt_len;
 #if (COPY_LINK_PACKETS)
 	/* 
@@ -159,9 +164,9 @@ static int init_raw_socket()
 		log_info(LOG_ERR, "%s", strerror(errno));	
 	}
 	set_nonblock(sock);
-	rcv_buf_opt   = 67108864;
+	recv_buf_opt   = 67108864;
 	opt_len = sizeof(int);
-	int ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcv_buf_opt,
+	ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &recv_buf_opt,
 			opt_len);
 	if(-1 == ret){
 		perror("setsockopt");
@@ -183,7 +188,7 @@ static int replicate_packs(const char *packet,int length){
 		ip_header  = (struct iphdr*)packet;
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		tmp_port_addition= (1024 << ((i << 1)-1)) + rand_shift_port;
+		tmp_port_addition= (1024 << ((i << 1)-1)) + g_rand_port_shift;
 		transfered_port  = ntohs(tcp_header->source);
 		if(transfered_port <= (65535-tmp_port_addition)){    
 			transfered_port = transfered_port + tmp_port_addition;
@@ -356,7 +361,7 @@ static void dispose_event(int fd){
 			exit(1);
 		}   
 #if (MULTI_THREADS)  
-		put_packet_to_pool((const char*)msg, sizeof(msg_server_s));
+		put_packet_to_pool((const char*)msg, sizeof(struct msg_server_s));
 #else
 		process((char*)msg);
 #endif
@@ -422,9 +427,9 @@ static int init_tcp_copy(){
 		pthread_create(&thread, NULL, dispose, NULL);
 #endif
 		/* Add a connection to the tested server for exchanging info */
-		add_msg_connetion(local_port, remote_ip, remote_port);
-		log_info(LOG_NOTICE,"add a tunnel for exchanging info:%u",
-				ntohs(remote_port));
+		//add_msg_connetion(local_port, remote_ip, remote_port);
+		//log_info(LOG_NOTICE,"add a tunnel for exchanging info:%u",
+		//		ntohs(remote_port));
 
 		return SUCCESS;
 	}else
@@ -460,7 +465,7 @@ static int retrieveVirtualIPAddress(const char* ips){
 		if(inetAddr == localhost){
 			return 0;
 		}
-		local_ips.ips[count++] = inetAddr;
+		//local_ips.ips[count++] = inetAddr;
 		if(NULL == split){
 			break;
 		}else{
@@ -468,7 +473,7 @@ static int retrieveVirtualIPAddress(const char* ips){
 		}
 		memset(tmp, 0, 32);
 	}
-	local_ips.num = count;
+	//local_ips.num = count;
 	return 1;
 }
 
@@ -511,7 +516,7 @@ int readArgs (int argc, char **argv){
 				break;
 
 			case 'f':
-				port_shift_factor = atoi(optarg);
+				g_port_shift_factor = atoi(optarg);
 #if (!TCPCOPY_MYSQL_ADVANCED)  
 				result = 1;
 #endif
@@ -568,9 +573,9 @@ int main(int argc ,char **argv)
 		fprintf(stderr, "local ip or domain is not supported:\n");
 		log_info(LOG_ERR, "local ip or domain is not supported");
 	}
-	local_port  = htons(atoi(argv[2]));
-	remote_ip   = inet_addr(argv[3]);
-	remote_port = htons(atoi(argv[4]));
+	//local_port  = htons(atoi(argv[2]));
+	//remote_ip   = inet_addr(argv[3]);
+	//remote_port = htons(atoi(argv[4]));
 
 	if(argc > 5)
 	{
@@ -590,21 +595,21 @@ int main(int argc ,char **argv)
 #endif
 	}
 
-	if(port_shift_factor || replica_num > 1)
+	if(g_port_shift_factor || replica_num > 1)
 	{
 		gettimeofday(&tp, NULL);
 		seed = tp.tv_usec;
-		rand_shift_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
+		g_rand_port_shift= (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
 
-		if(port_shift_factor)
+		if(g_port_shift_factor)
 		{
 			log_info(LOG_NOTICE, "port shift factor:%u",
-					port_shift_factor);
+					g_port_shift_factor);
 		}else
 		{
 			log_info(LOG_NOTICE, "replica num:%d", replica_num);
 		}
-		log_info(LOG_NOTICE, "random shift port:%u", rand_shift_port);
+		log_info(LOG_NOTICE, "random shift port:%u", g_rand_port_shift);
 	}
 
 	set_signal_handler();

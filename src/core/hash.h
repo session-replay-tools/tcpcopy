@@ -7,6 +7,7 @@ extern "C"
 #endif
 
 #include "xcopy.h"
+#include "link_list.h"
 
 #define DEFAULT_TIMEOUT   1200
 

@@ -1,5 +1,5 @@
 #include "address.h"
-#include "../core/xcopy.h"
+#include "../communication/msg.h"
 
 static address_node_t addr[65536];
 

@@ -1,4 +1,5 @@
 #include "xcopy.h"
+#include "link_list.h"
 
 p_link_node link_node_malloc(void *data)
 {

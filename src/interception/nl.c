@@ -1,4 +1,4 @@
-#include "../core/xcopy.h"
+#include "nl.h"
 
 static int sock_init(int protocol){
 	int sock = socket(AF_NETLINK, SOCK_RAW, protocol);

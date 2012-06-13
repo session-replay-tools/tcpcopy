@@ -1,11 +1,6 @@
 #ifndef  _PAIRS_H_INC
 #define  _PAIRS_H_INC
 
-#ifdef __cplusplus
-extern "C" 
-{
-#endif
-
 #define MD5_LEN 16
 
 typedef struct mysql_user{
@@ -15,10 +10,6 @@ typedef struct mysql_user{
 
 char *retrieve_user_pwd(char *user);
 void retrieve_mysql_user_pwd_info(char *pairs);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
 

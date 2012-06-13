@@ -1,4 +1,12 @@
-#include "../core/xcopy.h"
+#include "../core/hash.h"
+#include "util.h"
+
+inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port)
+{
+	uint64_t value =((uint64_t)s_ip) << 16;
+	value += s_port;
+	return value;
+}
 
 static uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
 {
@@ -41,8 +49,10 @@ ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
 {
 	int i;
 	ip_port_pair_mapping_t *pair;
+	ip_port_pair_mapping_t **mappings = g_transfer_target.mappings;
+	mappings = g_transfer_target.mappings;
 	for(i = 0; i < g_transfer_target.num; i++){
-		pair = &(g_transfer_target.mappings[i]);
+		pair = mappings[i];
 		if(ip == pair->dst_ip && port == pair->dst_port){
 			break;
 		}
@@ -55,8 +65,9 @@ int check_pack_src(uint32_t ip, uint16_t port)
 	int i;
 	int ret = SRC_UNKNOWN;
 	ip_port_pair_mapping_t *pair;
+	ip_port_pair_mapping_t **mappings = g_transfer_target.mappings;
 	for(i = 0; i < g_transfer_target.num; i++){
-		pair = &(g_transfer_target.mappings[i]);
+		pair = mappings[i];
 		if(ip == pair->src_ip && port == pair->src_port){
 			ret = SRC_LOCAL;
 			break;

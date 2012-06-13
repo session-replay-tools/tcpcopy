@@ -1,4 +1,5 @@
-#include "../core/xcopy.h"
+#include "delay.h"
+#include "../core/hash.h"
 
 static uint64_t msg_item_cnt;
 static uint64_t msg_item_free_cnt;

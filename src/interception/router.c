@@ -1,4 +1,6 @@
-#include "../core/xcopy.h"
+#include "router.h"
+#include "../communication/msg.h"
+#include "../core/hash.h"
 
 static hash_table *table;
 

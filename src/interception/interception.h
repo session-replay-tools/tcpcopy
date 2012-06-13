@@ -7,8 +7,6 @@ extern "C"
 {
 #endif
 
-#include "../core/xcopy.h"
-
 	void interception_init();
 	void interception_run();
 	void interception_over();

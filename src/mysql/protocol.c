@@ -1,4 +1,5 @@
 #include "../core/xcopy.h"
+#include "protocol.h"
 
 static inline unsigned char char_val(unsigned char X){
 	return (unsigned char) (X >= '0' && X <= '9' ? X-'0' :

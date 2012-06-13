@@ -2,6 +2,7 @@
 #define  _TCP_SESSION_H_INC
 
 #include "../core/xcopy.h"
+#include "../core/hash.h"
 
 #define FAKE_SYN_BUF_SIZE  52
 #define FAKE_ACK_BUF_SIZE  40
@@ -67,7 +68,7 @@ typedef struct session_s{
 	uint32_t req_last_syn_seq;
 	/*last ack sequence of client packet which is sent to bakend*/
 	uint32_t req_last_ack_sent_seq;
-	/*last client content packet's ack sequence */
+	/*last client content packet's ack sequence which is captured */
 	uint32_t req_cont_last_ack_seq;
 	/***********************end***************************/
 

@@ -1,4 +1,6 @@
 #include "../core/xcopy.h"
+#include "../communication/msg.h"
+#include "interception.h"
 
 static  int firewall_sock;
 static  int msg_listen_sock;

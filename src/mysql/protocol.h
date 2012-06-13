@@ -14,8 +14,8 @@ extern "C"
 
 int parse_handshake_init_content(unsigned char *payload,
 		size_t length, char *scramble);
-int change_client_auth_content(unsigned char *payload,
-		size_t length, char *message, const char* password);
+int change_client_auth_content(unsigned char *payload, 
+		size_t length, char *password, char *message);
 void new_crypt(char *result, const char *password, char *message);
 int is_last_data_packet(unsigned char *payload);
 int change_client_second_auth_content(unsigned char *payload,

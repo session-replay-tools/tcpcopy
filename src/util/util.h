@@ -8,6 +8,7 @@ extern "C"
 
 #include "../core/xcopy.h"
 
+inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port);
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
 uint16_t get_port_from_shift(uint16_t orig_port);
 
@@ -30,6 +31,4 @@ unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
 #endif
 
 #endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */
-
-#include <xcopy.h>
 

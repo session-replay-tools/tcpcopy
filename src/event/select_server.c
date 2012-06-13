@@ -1,3 +1,4 @@
+#include "select_server.h"
 #include "../core/xcopy.h"
 
 static int              	max_fd;

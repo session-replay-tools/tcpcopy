@@ -1,4 +1,5 @@
 #include "../core/xcopy.h"
+#include "log.h"
 
 static FILE           *file = NULL;
 static pthread_mutex_t mutex;
