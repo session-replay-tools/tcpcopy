@@ -11,6 +11,7 @@ extern "C"
 		struct link_node *prev;
 		struct link_node *next;
 		void   *data;
+		uint32_t key;
 	}link_node_t, link_node, *p_link_node;
 
 	typedef struct link_list_s{
@@ -25,6 +26,7 @@ extern "C"
 	link_list *link_list_create();
 	int link_list_destory(link_list *l);
 	void link_list_append(link_list *l, p_link_node);
+	void link_list_order_append(link_list *l, p_link_node);
 	void link_list_push(link_list *l, p_link_node p);
 	p_link_node link_list_remove(link_list *l, p_link_node node);
 	p_link_node link_list_first(link_list *l);

@@ -8,6 +8,7 @@ p_link_node link_node_malloc(void *data)
 	if(NULL == p){
 		return NULL;
 	}
+	p->key  = 0;
 	p->data = data;
 	p->next = NULL;
 	p->prev = NULL;
@@ -68,6 +69,27 @@ void link_list_append(link_list *l, p_link_node p)
 	l->head.prev     = p;
 	p->next          = &(l->head);
 	l->size++;
+}
+
+void link_list_order_append(link_list *l, p_link_node p)
+{
+	p_link_node node, next;
+	if(l->size > 0){
+		node = l->head.prev;
+		next = node->next;
+		/* find the node which key is less than the key of p */
+		while(node->key > p->key){
+			next = node;
+			node = node ->prev;
+		}
+		node->next       = p;
+		p->prev          = node;
+		next->prev       = p;
+		p->next          = next;
+		l->size++;
+	}else{
+		link_list_append(l, p);
+	}
 }
 
 void link_list_push(link_list *l, p_link_node p){

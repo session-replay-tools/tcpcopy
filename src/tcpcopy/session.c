@@ -499,7 +499,8 @@ static int check_packet_lost(session_t *s, struct iphdr *ip_header,
 	if(cur_seq > s->vir_next_seq){
 		if(send_reserved_packets(s) > 0){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 		}else{
 #if (DEBUG_TCPCOPY)
 			log_info(LOG_INFO, "seq now:%u,expected seq:%u",
@@ -952,7 +953,8 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	f_tcp_header->window  = 65535;
 	s->vir_next_seq       = tcp_header->seq;
 	ln = link_node_malloc(copy_ip_packet(f_ip_header));
-	link_list_append(s->handshake_packets, ln);
+	ln->key = ntohl(f_ip_header->seq);
+	link_list_order_append(s->handshake_packets, ln);
 #if (TCPCOPY_MYSQL_BASIC)
 	mysql_req_begin = 1;
 	/* Use the global first auth user packet for mysql skip-grant-tables */
@@ -977,7 +979,8 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		fir_cont_len = get_pack_cont_len(fir_ip_header, fir_tcp_header);
 		fir_tcp_header->source = f_tcp_header->source;
 		ln = link_node_malloc(fir_ip_header);
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(fir_ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 		s->mysql_vir_req_seq_diff = g_seq_omit;
 #if (TCPCOPY_MYSQL_ADVANCED)
 		if(sec_auth_packet){
@@ -989,7 +992,8 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 			sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
 			sec_tcp_header->source = f_tcp_header->source;
 			ln = link_node_malloc(sec_ip_header);
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(sec_ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 			log_info(LOG_NOTICE, "set second auth for non-skip");
 		}else{
 			log_info(LOG_WARN,"no sec auth packet here");
@@ -1044,7 +1048,8 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 						tmp_tcp_header);
 				tmp_tcp_header->seq = htonl(base_seq);
 				tmp_ln = link_node_malloc(tmp_ip_header);
-				link_list_append(s->unsend_packets, tmp_ln);
+				ln->key = ntohl(tmp_ip_header->seq);
+				link_list_order_append(s->unsend_packets, tmp_ln);
 				base_seq += tmp_cont_len;
 				ln = link_list_get_next(list, ln);
 			}
@@ -1100,7 +1105,8 @@ static void send_faked_third_handshake(session_t *s,
 	f_tcp_header->window  = 65535;
 	
 	ln = link_node_malloc(copy_ip_packet(f_ip_header));
-	link_list_append(s->handshake_packets, ln);
+	ln->key = ntohl(f_ip_header->seq);
+	link_list_order_append(s->handshake_packets, ln);
 
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, FAKE_CLIENT_FLAG, f_ip_header, f_tcp_header);
@@ -1348,7 +1354,8 @@ void fake_syn_hardly(session_t *s)
 			tcp_header =(struct tcphdr*)((char *)ip_header + size_ip);
 			tcp_header->source = faked_src_port;
 			tmp_ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, tmp_ln);
+			tmp_ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, tmp_ln);
 			ln =link_list_get_next(s->handshake_packets, ln);
 		}
 		recon_for_closed_cnt++;
@@ -1395,7 +1402,8 @@ int mysql_check_reconnection(struct iphdr *ip_header,
 				}
 			}
 			ln   = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->mysql_special_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->mysql_special_packets, ln);
 
 #if (DEBUG_TCPCOPY)
 			log_info(LOG_NOTICE, "push back necc statement:%u", s->src_port);
@@ -1412,7 +1420,8 @@ int mysql_check_reconnection(struct iphdr *ip_header,
 				}
 			}
 			ln   = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(list, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(list, ln);
 			return 1;
 		}
 	}
@@ -1802,7 +1811,8 @@ static int check_syn_retransmisson(session_t *s,
 		retransmit_packets();
 		s->createTime = now;
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 		return DISP_STOP;
 	}
 	return DISP_CONTINUE;
@@ -1817,7 +1827,8 @@ static int process_client_rst(session_t *s, struct iphdr *ip_header,
 #endif
 	if(s->candidate_response_waiting){
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 	}else{
 		wrap_send_ip_packet(s,(unsigned char *) ip_header);
 		s->reset = 1;
@@ -1852,7 +1863,8 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 	hash_del(mysql_table, s->src_port);
 #endif
 	ln = link_node_malloc(copy_ip_packet(ip_header));
-	link_list_append(s->handshake_packets, ln);
+	ln->key = ntohl(ip_header->seq);
+	link_list_order_append(s->handshake_packets, ln);
 	wrap_send_ip_packet(s,(unsigned char *)ip_header);
 
 }
@@ -1881,7 +1893,8 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 	if(s->resp_last_ack_seq == tcp_header->seq){
 		if(s->candidate_response_waiting){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 		}else{
 			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 			s->status |= CLIENT_FIN;
@@ -1889,7 +1902,8 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		}
 	}else{
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 		if(check_dead_reqs(s))
 		{
 			send_reserved_packets(s);
@@ -1899,18 +1913,15 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 }
 
 static int process_mysql_clt_half_bf_greet(session_t *s, 
-		struct iphdr *ip_header, struct tcphdr *tcp_header, 
-		uint16_t cont_size)	
+		struct iphdr *ip_header, struct tcphdr *tcp_header)	
 {
 	p_link_node   ln;
 
 	if(s->req_syn_ok){
 		if(!s->mysql_resp_greet_received && s->req_halfway_intercepted){
-			if(cont_size > 0){
-				s->req_cont_pack_num++;
-			}
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 			return DISP_STOP;
 		}
 	}
@@ -1971,7 +1982,8 @@ static int process_mysql_clt_auth_pack(session_t *s,
 		{
 			expected_handshake_pack_num++;
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->handshake_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->handshake_packets, ln);
 			if(!fir_auth_u_p){
 				fir_auth_u_p = (struct iphdr*)copy_ip_packet(ip_header);
 			}
@@ -1981,7 +1993,8 @@ static int process_mysql_clt_auth_pack(session_t *s,
 				if(!s->mysql_req_login_received){
 					s->mysql_req_login_received = 1;
 					ln = link_node_malloc(copy_ip_packet(ip_header));
-					link_list_append(s->unsend_packets, ln);
+					ln->key = ntohl(ip_header->seq);
+					link_list_order_append(s->unsend_packets, ln);
 					return DISP_STOP;
 				}
 			}
@@ -1990,7 +2003,8 @@ static int process_mysql_clt_auth_pack(session_t *s,
 		if(!s->mysql_resp_greet_received)
 		{
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 			return DISP_STOP;
 		}
 	}
@@ -2039,11 +2053,13 @@ static void wait_for_backend_syn(session_t *s, struct iphdr *ip_header,
 		log_info(LOG_DEBUG, "buffer the handshake packet");
 #endif
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->handshake_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->handshake_packets, ln);
 	}
 	/* when clt sends multi-packs more quickly than the local network */
 	ln = link_node_malloc(copy_ip_packet(ip_header));
-	link_list_append(s->unsend_packets, ln);
+	ln->key = ntohl(ip_header->seq);
+	link_list_order_append(s->unsend_packets, ln);
 }
 
 static void proc_clt_cont_when_bak_closed(session_t *s,
@@ -2067,7 +2083,8 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 	fake_syn_hardly();
 #endif
 	ln = link_node_malloc(copy_ip_packet(ip_header));
-	link_list_append(s->unsend_packets, ln);
+	ln->key = ntohl(ip_header->seq);
+	link_list_order_append(s->unsend_packets, ln);
 
 }
 
@@ -2106,7 +2123,8 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	}
 	if(is_save){
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 		if(check_dead_reqs(s)){
 			send_reserved_packets(s);
 		}
@@ -2122,11 +2140,13 @@ static int check_wait_prev_packet(session_t *s,
 	if(check_packet_lost(s, ip_header, tcp_header)){
 		if(check_reserved_content_left(s)){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 			return DISP_STOP;
 		}
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->lost_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->lost_packets, ln);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE,"lost and need previous packet");
 #endif
@@ -2181,7 +2201,8 @@ static void process_client_after_main_body(session_t *s,
 	if(s->candidate_response_waiting)
 	{
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_DEBUG, "strange here,wait backend's response");
 #endif
@@ -2191,7 +2212,8 @@ static void process_client_after_main_body(session_t *s,
 	}else{
 		if(s->src_closed){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->unsend_packets, ln);
 #if (DEBUG_TCPCOPY)
 			log_info(LOG_DEBUG, "save client ack for server fin");
 #endif
@@ -2202,7 +2224,14 @@ static void process_client_after_main_body(session_t *s,
 			if(SEND_REQUEST == s->status){
 				s->candidate_response_waiting = 1;
 			}
-			wrap_send_ip_packet(s, (unsigned char *)ip_header);
+			if(0 == s->unsend_packets->size){
+				wrap_send_ip_packet(s, (unsigned char *)ip_header);
+			}else{
+				log_info(LOG_NOTICE, "strange,it comes here");
+				ln = link_node_malloc(copy_ip_packet(ip_header));
+				ln->key = ntohl(ip_header->seq);
+				link_list_order_append(s->unsend_packets, ln);
+			}
 		}
 	}
 }
@@ -2233,6 +2262,36 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		tcp_header->source = s->faked_src_port;
 	}
 
+#if (TCPCOPY_MYSQL_BASIC)
+	/* subtract client packet's seq for mysql */
+	if(s->mysql_req_begin){
+		tcp_header->seq = htonl(ntohl(tcp_header->seq) - 
+				s->mysql_vir_req_seq_diff);
+	}
+#endif
+
+	/* If the packet is the next session's packet */
+	if(s->sess_more){
+		/* TODO Some statitics are not right because of this */
+		ln = link_node_malloc(copy_ip_packet(ip_header));
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->next_session_packets, ln);
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_INFO,"buffer for next session:%u", s->src_port);
+#endif
+		return;
+	}
+
+	/* Retrieve the content length of tcp payload */
+	cont_size = get_pack_cont_len(ip_header, tcp_header);
+	if(cont_size > 0){
+		s->req_cont_pack_num++;
+	}
+
+	s->online_addr  = ip_header->daddr;
+	s->online_port  = ip_header->dest;
+	s->client_ip_id = ip_header->id;
+
 	/* Syn packet has been sent to back,but not recv back's syn */
 	if(SYN_SENT == s->status){
 		/* Check if it needs to retransmit the syn packet */
@@ -2240,16 +2299,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 			return;
 		}
 		wait_for_backend_syn(s, ip_header, tcp_header);
-		return;
-	}
-
-	/* If the packet is the next session's packet */
-	if(s->sess_more){
-		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->next_session_packets, ln);
-#if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO,"buffer for next session:%u", s->src_port);
-#endif
 		return;
 	}
 
@@ -2261,21 +2310,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		send_faked_rst_by_client(s, ip_header, tcp_header);
 		return;
 	}
-
-	/* Retrieve the content length of tcp payload */
-	cont_size = get_pack_cont_len(ip_header, tcp_header);
-
-	s->online_addr  = ip_header->daddr;
-	s->online_port  = ip_header->dest;
-	s->client_ip_id = ip_header->id;
-
-#if (TCPCOPY_MYSQL_BASIC)
-	/* subtract client packet's seq for mysql */
-	if(s->mysql_req_begin){
-		tcp_header->seq = htonl(ntohl(tcp_header->seq) - 
-				s->mysql_vir_req_seq_diff);
-	}
-#endif
 
 	/* Process the reset packet */
 	if(tcp_header->rst){
@@ -2301,18 +2335,18 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		s->req_halfway_intercepted=1;
 		fake_syn(s, ip_header, tcp_header);
 		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
+		ln->key = ntohl(ip_header->seq);
+		link_list_order_append(s->unsend_packets, ln);
 		return;
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	/* process mysql client halfway packet before receiving greet */
 	if(DISP_STOP == process_mysql_clt_half_bf_greet(s, 
-				ip_header, tcp_header,cont_size)){
+				ip_header, tcp_header)){
 		return;
 	}
 #endif
 	if(cont_size > 0){
-		s->req_cont_pack_num++;
 #if (TCPCOPY_MYSQL_BASIC)
 		/* process mysql client auth packet */
 		if(DISP_STOP == process_mysql_clt_auth_pack(s, ip_header, 
@@ -2340,7 +2374,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 		/* Check if the packet is to be saved for later use */
 		if(s->candidate_response_waiting){
-			if(DISP_STOP == check_packet_save_or_not(s, 
+			if(DISP_STOP == check_pack_save_or_not(s, 
 						ip_header, tcp_header, &is_new_req)){
 				return;
 			}
@@ -2365,7 +2399,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		/* If the 3-way handshake is not completed */
 		if(s->handshake_packets->size < expected_handshake_pack_num){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->handshake_packets, ln);
+			ln->key = ntohl(ip_header->seq);
+			link_list_order_append(s->handshake_packets, ln);
 		}
 	}
 	/* post disposure*/
@@ -2391,26 +2426,6 @@ void restore_buffered_next_session(session_t *s)
 
 	free(data);
 }
-
-static int process_unsend_packet(session_t *s, struct iphdr *ip_header)
-{
-	p_link_node ln;
-	uint16_t    size_ip;
-
-	/* Save the packet first */
-	ln = link_node_malloc(copy_ip_packet(ip_header));
-	link_list_append(s->unsend_packets, ln);
-	/* Get the first packet of unsend */
-	ln = link_list_first(s->unsend_packets);
-	ip_header  = (struct iphdr* )((char*)ln->data);
-	size_ip   = ip_header->ihl << 2;
-	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-	/* Process the packet */
-	process_recv(s, ip_header, tcp_header);
-	/* pop the disposed packet off the buffer */
-	link_list_pop_first(s->unsend_packets);
-}
-
 
 /*
  * Filter packets 
@@ -2610,7 +2625,8 @@ void process(char *packet)
 						s->next_session_packets = link_list_create();
 					}
 					ln = link_node_malloc(copy_ip_packet(ip_header));
-					link_list_append(s->next_session_packets, ln);
+					ln->key = ntohl(ip_header->seq);
+					link_list_order_append(s->next_session_packets, ln);
 #if (DEBUG_TCPCOPY)
 					log_info(LOG_INFO, "buffer the new session");
 					strace_packet_info(LOG_INFO, CLIENT_FLAG, ip_header,
@@ -2644,12 +2660,7 @@ void process(char *packet)
 		}else{
 			s = hash_find(sessions_table, key);
 			if(s){
-				/* Put the packet to the session's unsend buffer */ 
-				if(s->unsend_packets->size > 0){
-					process_unsend_packet(s, ip_header);
-				}else{
-					process_recv(s, ip_header, tcp_header);
-				}
+				process_recv(s, ip_header, tcp_header);
 				s->last_update_time = now;
 				if(check_session_over(s)){
 					if(s->sess_more){
