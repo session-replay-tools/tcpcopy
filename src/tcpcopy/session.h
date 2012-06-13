@@ -1,7 +1,7 @@
 #ifndef  _TCP_SESSION_H_INC
 #define  _TCP_SESSION_H_INC
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 #define FAKE_SYN_BUF_SIZE  52
 #define FAKE_ACK_BUF_SIZE  40
@@ -9,7 +9,7 @@
 
 /*global functions*/
 void process(char *packet);
-bool is_packet_needed(const char *packet);
+int is_packet_needed(const char *packet);
 
 typedef struct pack_detail_s{
 	/* current ip header to be processed*/

@@ -5,7 +5,8 @@
 extern "C"
 {
 #endif
-#include <xcopy.h>
+
+#include "../core/xcopy.h"
 
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
 uint16_t get_port_from_shift(uint16_t orig_port);

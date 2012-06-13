@@ -7,7 +7,7 @@ extern "C"
 {
 #endif
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 	typedef struct address_node_s{
 		uint32_t ip;

@@ -11,8 +11,7 @@
  *      bo  wang <wangbo@corp.netease.com>
  */
 
-#include <xcopy.h>
-
+#include "../core/xcopy.h"
 
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;

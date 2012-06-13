@@ -1,4 +1,5 @@
-#include <xcopy.h>
+#include "pairs.h"
+#include "../core/xcopy.h"
 
 static hash_table *user_pwd_table;
 
@@ -13,7 +14,7 @@ static uint64_t get_key_from_user(const char *user, unsigned char *md5){
 
 	get_md5(md5,user);
 
-	for(i=0; i<MD5_LEN; i++){
+	for(i = 0; i< MD5_LEN; i++){
 		key = (key<<8) + (unsigned int)md5[i];
 	}
 
@@ -27,7 +28,7 @@ char *retrieve_user_pwd(char *user){
 
 	p_user_info = hash_find(user_pwd_table, key);
 
-	if(NULL != user_info){
+	if(NULL != p_user_info){
 		return p_user_info->password;
 	}
 
@@ -42,7 +43,7 @@ void retrieve_mysql_user_pwd_info( char *pairs){
 	size_t     len;  
 	
 	user_pwd_table = hash_create(256);
-	strcpy(table->name, "user password table");
+	strcpy(user_pwd_table->name, "user password table");
 
 	p = pairs;
 

@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 static inline unsigned char char_val(unsigned char X){
 	return (unsigned char) (X >= '0' && X <= '9' ? X-'0' :
@@ -135,7 +135,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 	/*Skip server_version*/
 	p   = p + len + 1;
 	/*Skip thread_id*/
-	p+  = 4;
+	p   += 4;
 	str = p;
 	count = p - payload + 8;
 	if(count > length){
@@ -160,7 +160,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 	p = p + 10;
 	str = p;
 	str_len = strlen(str) + 8;
-	coun t = p - payload + strlen(str);
+	count = p - payload + strlen(str);
 	if(str_len > SCRAMBLE_LENGTH|| count > length){
 		if(count >length){
 			log_info(LOG_ERR, "payload len is too short for init2:%u,%u",

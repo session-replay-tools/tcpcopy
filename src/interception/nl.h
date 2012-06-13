@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 	int  nl_init(int, int);
 	void nl_set_mode(int sock, uint8_t mode, size_t range);

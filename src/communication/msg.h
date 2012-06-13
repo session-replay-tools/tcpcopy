@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 #pragma pack(push,1)
 	struct msg_client_s{
@@ -28,7 +28,7 @@ extern "C"
 	int msg_server_init();
 
 	int msg_client_send(int, uint32_t, uint16_t, uint16_t);
-	struct receiver_msg_s *msg_client_recv(int sock);
+	struct msg_server_s *msg_client_recv(int sock);
 
 	int msg_server_send(int, struct msg_server_s *);
 	struct msg_client_s *msg_server_recv(int sock);

@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "xcopy.h"
 
 /* strace packet info for debug */
 void strace_packet_info(int level, int flag,
@@ -36,16 +36,16 @@ void strace_packet_info(int level, int flag,
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
-	}else if(SERVER_BACKEND_FLAG == flag){
+	}else if(TO_BAKEND_FLAG == flag){
 		log_info(level, "to bak: %s:%u-->%s:%u,len %u ,seq=%u,ack=%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
-	}else if(FAKE_CLIENT_FLAG == flag){
+	}else if(FAKED_CLIENT_FLAG == flag){
 		log_info(level, "faked clt pack %s:%u-->%s:%u,len %u,seq=%u,ack=%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
-	}else if(UNKNOWN_FLAG==flag){
+	}else if(UNKNOWN_FLAG == flag){
 		log_info(level, "unkown packet %s:%u-->%s:%u,len %u,seq=%u,ack=%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq);

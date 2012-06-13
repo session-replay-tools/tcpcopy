@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 static uint64_t msg_item_cnt;
 static uint64_t msg_item_free_cnt;
@@ -154,6 +154,7 @@ void delay_table_destroy()
 	link_list   *msg_list;
 	p_link_node ln;
 	hash_node   *hn;
+	link_list   *list;
 
 	if(table != NULL)
 	{

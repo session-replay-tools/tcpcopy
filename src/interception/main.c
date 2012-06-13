@@ -14,7 +14,7 @@
 #  include <config.h>
 #endif
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 static void release_resources()
 {

@@ -6,6 +6,8 @@ extern "C"
 {
 #endif
 
+#include "../core/xcopy.h" 
+
 	void router_init();
 	void router_update(struct iphdr *ip_header);
 	void router_add(uint32_t ,uint16_t, int);

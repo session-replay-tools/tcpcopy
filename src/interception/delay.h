@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 	void delay_table_init();
 	void delay_table_add(uint64_t key, struct msg_server_s *);

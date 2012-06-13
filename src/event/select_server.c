@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 static int              	max_fd;
 static fd_set           	read_set;

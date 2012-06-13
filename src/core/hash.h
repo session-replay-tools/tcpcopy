@@ -6,7 +6,7 @@ extern "C"
 {
 #endif
 
-#include <xcopy.h>
+#include "xcopy.h"
 
 #define DEFAULT_TIMEOUT   1200
 
@@ -21,7 +21,7 @@ extern "C"
 		uint32_t size;
 		int      timeout;
 		char     name[64];
-		struct   link_list_t **lists;
+		link_list **lists;
 	}hash_table_t, hash_table;
 
 	hash_table *hash_create(size_t size);

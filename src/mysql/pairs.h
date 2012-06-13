@@ -6,6 +6,8 @@ extern "C"
 {
 #endif
 
+#define MD5_LEN 16
+
 typedef struct mysql_user{
 	unsigned char md5[MD5_LEN];
 	char password[256];

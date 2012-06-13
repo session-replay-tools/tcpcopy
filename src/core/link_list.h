@@ -8,8 +8,8 @@ extern "C"
 
 	typedef struct link_node_s
 	{
-		struct link_node *prev;
-		struct link_node *next;
+		struct link_node_s *prev;
+		struct link_node_s *next;
 		void   *data;
 		uint32_t key;
 	}link_node_t, link_node, *p_link_node;

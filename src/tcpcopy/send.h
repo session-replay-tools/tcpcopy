@@ -1,7 +1,7 @@
 #ifndef  _SEND_H_INC
 #define  _SEND_H_INC
 
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 int send_init();
 int send_close();

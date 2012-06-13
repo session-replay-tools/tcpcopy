@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "../core/xcopy.h"
 
 static int sock;
 static struct sockaddr_in dst_addr;

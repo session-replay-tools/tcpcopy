@@ -1,4 +1,4 @@
-#include <xcopy.h>
+#include "xcopy.h"
 
 static hash_node *hash_node_malloc(uint64_t key, void *data){
 	hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
@@ -50,7 +50,7 @@ hash_table *hash_create(size_t size){
 		exit(errno);
 	}
 	ht->size  = size;
-	ht->lists = (struct link_list **) malloc(sizeof(link_list *) *size);
+	ht->lists = (link_list **) malloc(sizeof(link_list *)*size);
 	if(NULL == ht->lists){
 		perror("can't malloc memory!");
 		logInfo(LOG_ERR, "can't malloc memory for hash lists:%s",
@@ -85,7 +85,6 @@ void hash_add(hash_table *table, uint64_t key, void *data){
 	hash_node   *hn, *tmp;
 	p_link_node ln;
 	link_list   *l;
-	p_link_node ln;
 
 	ln = hash_find_node(table,key);
 	if(ln != NULL){
