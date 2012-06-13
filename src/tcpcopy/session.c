@@ -204,6 +204,23 @@ static void delete_session(session_t *s){
 #endif
 }
 
+static uint16_t  get_pack_cont_len(struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	uint16_t   size_ip, size_tcp, tot_len, cont_size;
+
+	size_ip    = ip_header->ihl << 2;
+	if(NULL == tcp_header){
+		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+	}
+	tot_len   = ntohs(ip_header->tot_len);
+	size_ip   = ip_header->ihl << 2;
+	size_tcp  = tcp_header->doff << 2;
+	cont_size = tot_len - size_tcp - size_ip;
+	
+	return cont_size;
+}
+
 static int check_overwhelming(session_t *s, const char *message, 
 		int size, int max_hold_packs)
 {
@@ -394,7 +411,7 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 {
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
-	uint16_t      size_ip, size_tcp, tot_len, cont_len;
+	uint16_t      size_ip, cont_len;
 	p_link_node   ln;
 	ssize_t       send_len;
 	uint16_t      tmp_req_last_cont_sent_seq;
@@ -433,9 +450,7 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 		tcp_header->ack_seq = s->vir_ack_seq;
 	}
 
-	size_tcp = tcp_header->doff << 2;
-	tot_len  = ntohs(ip_header->tot_len);
-	cont_len = tot_len - size_ip - size_tcp;
+	cont_len = get_pack_cont_len(ip_header, tcp_header);
 	if(cont_len > 0){
 		s->req_last_send_cont_time = time(0);
 		s->req_last_cont_sent_seq  = htonl(tmp_req_last_cont_sent_seq);
@@ -503,7 +518,7 @@ static int check_packet_lost(session_t *s, struct iphdr *ip_header,
 static int send_reserved_lost_packets(session_t *s)
 {
 	int      need_more_check, loop_over = 0, need_free;
-	uint16_t size_ip, size_tcp, pack_size, cont_len;
+	uint16_t size_ip, cont_len;
 	uint32_t cur_seq;
 	unsigned char *data;
 	struct iphdr  *ip_header;
@@ -525,9 +540,7 @@ static int send_reserved_lost_packets(session_t *s)
 			ip_header  =(struct iphdr*)((char*)data);
 			size_ip    = ip_header->ihl << 2;
 			tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-			size_tcp   = tcp_header->doff << 2;
-			pack_size  = ntohs(ip_header->tot_len);
-			cont_size  = pack_size - size_tcp - size_ip;
+			cont_size  = get_pack_cont_len(ip_header, tcp_header);
 			cur_seq    = ntohl(tcp_header->seq);
 			need_free  = 0;
 
@@ -576,7 +589,7 @@ static int retransmit_packets(session_t *s)
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
-	uint16_t      size_ip, size_tcp, pack_size, cont_len;
+	uint16_t      size_ip, cont_len;
 	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list, *buffered;
@@ -596,9 +609,7 @@ static int retransmit_packets(session_t *s)
 			s->vir_syn_retrans_times++;
 			break;
 		}
-		size_tcp  = tcp_header->doff << 2;
-		pack_size = ntohs(ip_header->tot_len);
-		cont_size = pack_size - size_tcp - size_ip;
+		cont_size = get_pack_cont_len(ip_header, tcp_header);
 		cur_seq   = ntohl(tcp_header->seq);  
 		if(!is_success){
 			if(cur_seq == resp_last_ack_seq){
@@ -710,7 +721,7 @@ static int check_reserved_content_left(session_t *s)
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
-	uint16_t size_ip, size_tcp, pack_size, cont_size;
+	uint16_t      cont_size;
 
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG,"check_reserved_content_left");
@@ -720,12 +731,8 @@ static int check_reserved_content_left(session_t *s)
 
 	while(ln){
 		data = ln->data;
-		ip_header  =(struct iphdr*)((char*)data);
-		size_ip    = ip_header->ihl << 2;
-		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		size_tcp   = tcp_header->doff << 2;
-		pack_size  = ntohs(ip_header->tot_len);
-		cont_size  = pack_size - size_tcp - size_ip;
+		ip_header  = (struct iphdr*)((char*)data);
+		cont_size  = get_pack_cont_len(ip_header, NULL);
 		if(cont_size>0)
 		{
 			return 1;
@@ -744,12 +751,10 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 	int           ch_auth_success;
 	uint64_t      key;
 	unsigned char *payload;
-	uint16_t      size_ip, size_tcp, pack_size, cont_size;
+	uint16_t      size_tcp, cont_size;
 
-	size_ip   = ip_header->ihl << 2;
 	size_tcp  = tcp_header->doff << 2;
-	pack_size = ntohs(ip_header->tot_len);
-	cont_size = pack_size - size_tcp - size_ip;
+	cont_size = get_pack_cont_len(ip_header, tcp_header);
 
 	if(!s->mysql_first_auth_sent){
 
@@ -819,7 +824,7 @@ static int send_reserved_packets(session_t *s)
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
-	uint16_t      size_ip, size_tcp, pack_size, cont_size;
+	uint16_t      size_ip, cont_size;
 	uint32_t      cur_ack;
 	int need_pause = 0, cand_pause = 0, count = 0, omit_transfer = 0; 
 
@@ -839,9 +844,7 @@ static int send_reserved_packets(session_t *s)
 		ip_header =(struct iphdr*)((char*)data);
 		size_ip   = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		size_tcp  = tcp_header->doff << 2;
-		pack_size = ntohs(ip_header->tot_len);
-		cont_size = pack_size - size_tcp - size_ip;
+		cont_size = get_pack_cont_len(ip_header, tcp_header);
 		if(cont_size > 0){
 #if (TCPCOPY_MYSQL_BASIC)
 			if(!s->mysql_resp_greet_received){
@@ -916,9 +919,9 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	p_link_node   ln, tmp_ln;
 #if (TCPCOPY_MYSQL_BASIC)
 	struct iphdr  *fir_auth_pack, *fir_ip_header, *tmp_ip_header;
-	struct tcphdr *fir_tcp_header, *tmp_ip_header;
+	struct tcphdr *fir_tcp_header, *tmp_tcp_header;
 	uint32_t total_cont_len, base_seq;
-	uint16_t size_ip, size_tcp, total_len, fir_cont_len, tmp_cont_len;
+	uint16_t size_ip, fir_cont_len, tmp_cont_len;
 	link_list     *list;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	struct iphdr  *sec_auth_packet;
@@ -970,10 +973,8 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		fir_ip_header  = (struct iphdr*)copy_ip_packet(fir_auth_pack);
 		fir_ip_header->saddr = f_ip_header->saddr;
 		size_ip        = fir_ip_header->ihl << 2;
-		total_len      = ntohs(fir_ip_header->tot_len);
 		fir_tcp_header = (struct tcphdr*)((char *)fir_ip_header + size_ip);
-		size_tcp       = fir_tcp_header->doff << 2;
-		fir_cont_len   = total_len - size_ip - size_tcp;
+		fir_cont_len = get_pack_cont_len(fir_ip_header, fir_tcp_header);
 		fir_tcp_header->source = f_tcp_header->source;
 		ln = link_node_malloc(fir_ip_header);
 		link_list_append(s->unsend_packets, ln);
@@ -983,11 +984,9 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 			sec_ip_header = (struct iphdr*)copy_ip_packet(sec_auth_packet);
 			sec_ip_header->saddr = f_ip_header->saddr;
 			size_ip   = sec_ip_header->ihl << 2;
-			total_len = ntohs(sec_ip_header->tot_len);
 			sec_tcp_header = (struct tcphdr*)((char *)sec_ip_header + 
 					size_ip);
-			size_tcp  = sec_tcp_header->doff << 2;
-			sec_cont_len = total_len - size_ip - size_tcp;
+			sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
 			sec_tcp_header->source = f_tcp_header->source;
 			ln = link_node_malloc(sec_ip_header);
 			link_list_append(s->unsend_packets, ln);
@@ -1010,12 +1009,7 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 			while(ln){
 				data = ln->data;
 				tmp_ip_header = (struct iphdr *)data;
-				size_ip   = tmp_ip_header->ihl << 2;
-				total_len = ntohs(tmp_ip_header->tot_len);
-				tmp_tcp_header = (struct tcphdr*)((char *)tmp_ip_header
-						+ size_ip); 
-				size_tcp  = tmp_tcp_header->doff << 2;
-				tmp_cont_len = total_len - size_ip - size_tcp;
+				tmp_cont_len = get_pack_cont_len(tmp_ip_header, NULL);
 				total_cont_len += tmp_cont_len;
 				ln = link_list_get_next(list, ln);
 			}
@@ -1042,14 +1036,12 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 			ln = link_list_first(list);	
 			while(ln){
 				data = ln->data;
-				tmp_ip_header = (struct iphdr *)data;
-				tmp_ip_header = (struct iphdr*)copy_ip_packet(tmp_ip_header);
-				size_ip   = tmp_ip_header->ihl << 2;
-				total_len = ntohs(tmp_ip_header->tot_len);
+				tmp_ip_header  = (struct iphdr *)data;
+				tmp_ip_header  = (struct iphdr*)copy_ip_packet(tmp_ip_header);
 				tmp_tcp_header = (struct tcphdr*)((char *)tmp_ip_header
 						+ size_ip); 
-				size_tcp  = tmp_tcp_header->doff << 2;
-				tmp_cont_len = total_len - size_ip - size_tcp;
+				tmp_cont_len   = get_pack_cont_len(tmp_ip_header, 
+						tmp_tcp_header);
 				tmp_tcp_header->seq = htonl(base_seq);
 				tmp_ln = link_node_malloc(tmp_ip_header);
 				link_list_append(s->unsend_packets, tmp_ln);
@@ -1160,7 +1152,7 @@ static void send_faked_rst(session_t *s,
 	unsigned char faked_rst_buf[FAKE_ACK_BUF_SIZE];
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
-	uint16_t size_ip, size_tcp, tot_len, cont_len;
+	uint16_t cont_len;
 	uint32_t next_ack, h_next_ack, expect_h_ack;
 
 #if (DEBUG_TCPCOPY)
@@ -1183,10 +1175,7 @@ static void send_faked_rst(session_t *s,
 	f_tcp_header->rst     = 1;
 	f_tcp_header->ack     = 1;
 	s->reset      = 1;
-	size_ip       = ip_header->ihl << 2; 
-	size_tcp      = tcp_header->doff << 2;
-	tot_len       = ntohs(ip_header->tot_len);
-	cont_len      = tot_len- size_ip- size_tcp;
+	cont_len      = get_pack_cont_len(ip_header,tcp_header);
 	expect_h_ack  = ntohl(s->vir_ack_seq);
 	next_ack      = tcp_header->seq;
 	h_next_ack    = ntohl(next_ack);
@@ -1302,12 +1291,12 @@ void fake_syn_hardly(session_t *s)
 	struct tcphdr *tcp_header;
 	p_link_node   ln, tmp_ln;
 	int      size, sock, result;
-	uint16_t size_ip, size_tcp, tot_len, cont_len;
+	uint16_t size_ip;
 	uint16_t dest_port; 
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_NOTICE,"fake syn hardly:%u", s->src_port);
 #endif
-	size = r->handshake_packets->size;
+	size = s->handshake_packets->size;
 	if(size != expected_handshake_pack_num){
 		log_info(LOG_WARN, "hand Packets size not expected:%d,exp:%d",
 				size, expected_handshake_pack_num);
@@ -1472,12 +1461,9 @@ static int check_mysql_padding(struct iphdr *ip_header,
  */
 static int check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
-	uint16_t      size_ip, size_tcp, tot_len, cont_len;
+	uint16_t  cont_len;
 
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	pack_size = ntohs(ip_header->tot_len);
-	cont_size = pack_size - size_tcp - size_ip;
+	cont_size = get_pack_cont_len(ip_header, tcp_header);
 
 	if( cont_size > 0){
 		return 1;
@@ -1834,7 +1820,7 @@ static int process_client_rst(session_t *s, struct iphdr *ip_header,
 		link_list_append(s->unsend_packets, ln);
 	}else{
 		wrap_send_ip_packet(s,(unsigned char *) ip_header);
-		r->reset = 1;
+		s->reset = 1;
 	}
 	return DISP_CONTINUE;
 }
@@ -2186,7 +2172,7 @@ static int check_conn_keepalive(session_t *s)
 	return s->conn_keepalive;
 }
 
-/* Process client packet info after the main body */
+/* Process client packet info after the main processing */
 static void process_client_after_main_body(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
@@ -2216,25 +2202,11 @@ static void process_client_after_main_body(session_t *s,
 			if(SEND_REQUEST == s->status){
 				s->candidate_response_waiting = 1;
 			}
-			if(s->candidate_response_waiting){
-				wrap_send_ip_packet(s, (unsigned char *)ip_header);
-			}
+			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 		}
 	}
 }
 
-static uint16_t  get_cont_len_from_packet(struct iphdr *ip_header,
-		struct tcphdr *tcp_header)
-{
-	uint16_t   size_ip, size_tcp, tot_len, cont_size;
-
-	tot_len   = ntohs(ip_header->tot_len);
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	cont_size = tot_len - size_tcp - size_ip;
-	
-	return cont_size;
-}
 
 /*
  * Processing client packets
@@ -2290,8 +2262,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		return;
 	}
 
-	/* Retrieve Packet info */
-	cont_size = get_cont_len_from_packet(ip_header, tcp_header);
+	/* Retrieve the content length of tcp payload */
+	cont_size = get_pack_cont_len(ip_header, tcp_header);
 
 	s->online_addr  = ip_header->daddr;
 	s->online_port  = ip_header->dest;
@@ -2318,7 +2290,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	/* Process the fin packet */
 	if(tcp_header->fin)
 	{
-		if(DISP_STOP == process_client_fin(s, ip_header, tcp_header)){
+		if(DISP_STOP == process_client_fin(s, ip_header, 
+					tcp_header, cont_size)){
 			return;
 		}
 	}
@@ -2377,18 +2350,18 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 					ip_header, tcp_header)){
 			return;
 		}
-		s->status = SEND_REQUEST;
 		/* Check if it is a continuous packet */
 		if(DISP_STOP == is_continuous_packet(s, ip_header, 
 					tcp_header, is_new_req)){
 			return;
 		}
+		s->status = SEND_REQUEST;
 		/* Check if the current session is keepalive */
 		check_conn_keepalive(s);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_DEBUG,"a new request from client");
 #endif
-	}else{
+	}else if(!s->req_halfway_intercepted){
 		/* If the 3-way handshake is not completed */
 		if(s->handshake_packets->size < expected_handshake_pack_num){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -2418,6 +2391,26 @@ void restore_buffered_next_session(session_t *s)
 
 	free(data);
 }
+
+static int process_unsend_packet(session_t *s, struct iphdr *ip_header)
+{
+	p_link_node ln;
+	uint16_t    size_ip;
+
+	/* Save the packet first */
+	ln = link_node_malloc(copy_ip_packet(ip_header));
+	link_list_append(s->unsend_packets, ln);
+	/* Get the first packet of unsend */
+	ln = link_list_first(s->unsend_packets);
+	ip_header  = (struct iphdr* )((char*)ln->data);
+	size_ip   = ip_header->ihl << 2;
+	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+	/* Process the packet */
+	process_recv(s, ip_header, tcp_header);
+	/* pop the disposed packet off the buffer */
+	link_list_pop_first(s->unsend_packets);
+}
+
 
 /*
  * Filter packets 
@@ -2651,7 +2644,12 @@ void process(char *packet)
 		}else{
 			s = hash_find(sessions_table, key);
 			if(s){
-				process_recv(s, ip_header, tcp_header);
+				/* Put the packet to the session's unsend buffer */ 
+				if(s->unsend_packets->size > 0){
+					process_unsend_packet(s, ip_header);
+				}else{
+					process_recv(s, ip_header, tcp_header);
+				}
 				s->last_update_time = now;
 				if(check_session_over(s)){
 					if(s->sess_more){
