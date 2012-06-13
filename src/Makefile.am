@@ -1,1 +1,1 @@
-SUBDIRS=core log mysql event communication interception tcpcopy
+SUBDIRS=core log util mysql event communication interception tcpcopy

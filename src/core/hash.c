@@ -4,7 +4,7 @@ static hash_node *hash_node_malloc(uint64_t key, void *data){
 	hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
 	if(NULL == hn){
 		perror("can't malloc memory!");
-		logInfo(LOG_ERR, "can't malloc memory for hash node:%s",
+		log_info(LOG_ERR, "can't malloc memory for hash node:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
@@ -44,7 +44,7 @@ hash_table *hash_create(size_t size){
 	hash_table *ht = (hash_table *)malloc(sizeof(hash_table));
 	if(NULL == ht){
 		perror("can't malloc memory!");
-		logInfo(LOG_ERR, "can't malloc memory for hash table:%s",
+		log_info(LOG_ERR, "can't malloc memory for hash table:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
@@ -53,7 +53,7 @@ hash_table *hash_create(size_t size){
 	ht->lists = (link_list **) malloc(sizeof(link_list *)*size);
 	if(NULL == ht->lists){
 		perror("can't malloc memory!");
-		logInfo(LOG_ERR, "can't malloc memory for hash lists:%s",
+		log_info(LOG_ERR, "can't malloc memory for hash lists:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
@@ -135,7 +135,7 @@ void hash_destory(hash_table *table)
 		}
 	}
 	free(table->lists);
-	logInfo(LOG_NOTICE, "destroy items %d in table name:%s",
+	log_info(LOG_NOTICE, "destroy items %d in table name:%s",
 			count, table->name);
 }
 

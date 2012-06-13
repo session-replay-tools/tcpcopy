@@ -1,3 +1,4 @@
+#include "address.h"
 #include "../core/xcopy.h"
 
 static address_node_t addr[65536];

@@ -11,6 +11,7 @@ static uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
 	}
 	return dest_port;
 }
+
 uint16_t get_port_by_rand_addition(uint16_t orig_port)
 {
 	static unsigned int seed = 0;
@@ -31,7 +32,7 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 uint16_t get_port_from_shift(uint16_t orig_port)
 {
 	uint16_t        port_add, dest_port;
-	port_add = (2048 << port_shift_factor) + rand_shift_port;
+	port_add = (2048 << g_port_shift_factor) + g_rand_port_shift;
 
 	return get_appropriate_port(orig_port, port_add);
 }
@@ -41,7 +42,7 @@ ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
 	int i;
 	ip_port_pair_mapping_t *pair;
 	for(i = 0; i < g_transfer_target.num; i++){
-		pair = g_transfer_target[i];
+		pair = &(g_transfer_target.mappings[i]);
 		if(ip == pair->dst_ip && port == pair->dst_port){
 			break;
 		}
@@ -55,7 +56,7 @@ int check_pack_src(uint32_t ip, uint16_t port)
 	int ret = SRC_UNKNOWN;
 	ip_port_pair_mapping_t *pair;
 	for(i = 0; i < g_transfer_target.num; i++){
-		pair = g_transfer_target[i];
+		pair = &(g_transfer_target.mappings[i]);
 		if(ip == pair->src_ip && port == pair->src_port){
 			ret = SRC_LOCAL;
 			break;

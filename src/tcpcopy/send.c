@@ -43,7 +43,7 @@ int send_close(){
  * Send the ip packet to the remote test server
  * (it will not go through ip fragmentation))
  */
-ssize_t send_ip_packet(uint32_t dst_ip, struct iphdr *ip_header,
+ssize_t send_ip_packet(struct iphdr *ip_header,
 		uint16_t tot_len)
 {
 	/*
@@ -59,7 +59,7 @@ ssize_t send_ip_packet(uint32_t dst_ip, struct iphdr *ip_header,
 	ssize_t send_len = 0;
 	if(sock > 0)
 	{
-		dst_addr.sin_addr.s_addr = dst_ip;
+		dst_addr.sin_addr.s_addr = ip_header->daddr;
 		send_len = sendto(sock, (char *)ip_header, tot_len, 0,
 				(struct sockaddr *)&dst_addr, sizeof(dst_addr));
 		if(-1 == send_len)

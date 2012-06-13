@@ -111,7 +111,7 @@ void delay_table_send(uint64_t key,int fd){
 	while(! link_list_is_empty(msg_list)){
 		first = link_list_pop_first(msg_list);
 		msg = (first->data);
-		(void)msg_receiver_send(fd, msg);
+		(void)msg_server_send(fd, msg);
 		if(msg != NULL)
 		{
 			free(msg);

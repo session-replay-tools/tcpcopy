@@ -190,11 +190,5 @@ typedef struct session_s{
 
 }session_t;
 
-
-/* session functions begin */
-void process_recv(session_t *s);
-void update_virtual_status(session_t *s);
-/* session functions end */
-
 #endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
 

@@ -55,8 +55,8 @@ am_intercept_OBJECTS = router.$(OBJEXT) delay.$(OBJEXT) \
 	interception.$(OBJEXT) nl_firewall.$(OBJEXT) nl.$(OBJEXT) \
 	main.$(OBJEXT)
 intercept_OBJECTS = $(am_intercept_OBJECTS)
-intercept_DEPENDENCIES = ../core/libcore.a ../event/libevent.a \
-	../log/liblog.a ../communication/libmsg.a
+intercept_DEPENDENCIES = ../core/libcore.a ../log/liblog.a \
+	../event/libevent.a ../communication/libmsg.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -180,8 +180,8 @@ intercept_SOURCES = \
 
 intercept_LDADD = \
 				   ../core/libcore.a\
-				   ../event/libevent.a\
 				   ../log/liblog.a\
+				   ../event/libevent.a\
 				   ../communication/libmsg.a
 
 all: all-am

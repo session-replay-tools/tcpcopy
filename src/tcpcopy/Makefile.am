@@ -8,7 +8,7 @@ tcpcopy_SOURCES=\
 tcpcopy_LDADD=\
 				   ../core/libcore.a\
 				   ../log/liblog.a\
-				   ../util/util.a\
+				   ../util/libutil.a\
 				   ../mysql/libmysql.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a\

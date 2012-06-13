@@ -16,6 +16,8 @@
 
 #include "../core/xcopy.h"
 
+passed_ip_addr_t passed_ips;
+
 static void release_resources()
 {
 	log_info(LOG_NOTICE, "release_resources begin");

@@ -24,7 +24,7 @@ static void output_debug(int level, struct iphdr *ip_header)
 	struct tcphdr *tcp_header;
 	size_ip    = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-	strace_pack(level, SERVER_BACKEND_FLAG, ip_header, tcp_header);
+	strace_pack(level, BACKEND_FLAG, ip_header, tcp_header);
 }
 
 static uint32_t seq = 1;
@@ -74,10 +74,10 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 }
 
 static void interception_process(int fd){
-	int                     new_fd, i, pass_through_flag = 0;
-	unsigned long           packet_id;
-	struct iphdr            *ip_header;
-	struct copyer_msg_st    *c_msg;
+	int                    new_fd, i, pass_through_flag = 0;
+	unsigned long          packet_id;
+	struct iphdr           *ip_header;
+	struct msg_client_s    *c_msg;
 
 	if(fd == msg_listen_sock){
 		new_fd = accept(msg_listen_sock, NULL, NULL);	
@@ -87,7 +87,7 @@ static void interception_process(int fd){
 		}
 	}else if(fd == firewall_sock){
 		packet_id = 0;
-		ip_header = nl_firewall_recv(firewall_sock,&packet_id);
+		ip_header = nl_firewall_recv(firewall_sock, &packet_id);
 		if(ip_header != NULL)
 		{
 			/*check if it is the valid user to pass through firewall*/
@@ -114,7 +114,7 @@ static void interception_process(int fd){
 			}
 		}
 	}else{
-		c_msg = msg_receiver_recv(fd);
+		c_msg = msg_server_recv(fd);
 		if(c_msg){
 			if(c_msg->type == CLIENT_ADD){
 				router_add(c_msg->client_ip, c_msg->client_port, fd);
@@ -133,7 +133,7 @@ void interception_init(){
 	delay_table_init();
 	router_init();
 	select_sever_set_callback(interception_process);
-	msg_listen_sock = msg_receiver_init();
+	msg_listen_sock = msg_server_init();
 	log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);
 	select_sever_add(msg_listen_sock);
 	firewall_sock = nl_firewall_init();
@@ -149,7 +149,7 @@ void interception_run(){
 
 /* clear resources for interception */
 void interception_over(){
-	if(firewall_sock! = -1){
+	if(firewall_sock != -1){
 		close(firewall_sock);
 		firewall_sock = -1;
 		log_info(LOG_NOTICE, "firewall sock is closed");

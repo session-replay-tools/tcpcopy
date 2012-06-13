@@ -55,7 +55,7 @@ am_tcpcopy_OBJECTS = address.$(OBJEXT) send.$(OBJEXT) \
 	session.$(OBJEXT) getopt.$(OBJEXT) main.$(OBJEXT)
 tcpcopy_OBJECTS = $(am_tcpcopy_OBJECTS)
 tcpcopy_DEPENDENCIES = ../core/libcore.a ../log/liblog.a \
-	../util/util.a ../mysql/libmysql.a ../event/libevent.a \
+	../util/libutil.a ../mysql/libmysql.a ../event/libevent.a \
 	../communication/libmsg.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -180,7 +180,7 @@ tcpcopy_SOURCES = \
 tcpcopy_LDADD = \
 				   ../core/libcore.a\
 				   ../log/liblog.a\
-				   ../util/util.a\
+				   ../util/libutil.a\
 				   ../mysql/libmysql.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a\

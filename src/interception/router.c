@@ -104,7 +104,7 @@ void router_update(struct iphdr *ip_header){
 		delay_table_add(key, &msg);
 		return ;
 	}
-	msg_receiver_send((int)(long)fd, &msg);
+	msg_server_send((int)(long)fd, &msg);
 
 }
 

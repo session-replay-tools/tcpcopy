@@ -1,3 +1,5 @@
+#include "send.h"
+#include "../core/hash.h"
 #include "../core/xcopy.h"
 
 static hash_table *sessions_table;
@@ -478,7 +480,7 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 #endif
 	packs_sent_cnt++;
 
-	send_len = send_ip_packet(ip_header,tot_len);
+	send_len = send_ip_packet(ip_header, tot_len);
 
 	if(-1 == send_len){
 		log_info(LOG_ERR,"send to back error,tot_len is:%d,cont_len:%d",

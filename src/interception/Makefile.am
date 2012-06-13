@@ -8,6 +8,6 @@ intercept_SOURCES=\
 					 main.c
 intercept_LDADD=\
 				   ../core/libcore.a\
-				   ../event/libevent.a\
 				   ../log/liblog.a\
+				   ../event/libevent.a\
 				   ../communication/libmsg.a

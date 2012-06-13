@@ -50,7 +50,7 @@ CONFIG_CLEAN_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 liblog_a_AR = $(AR) $(ARFLAGS)
-liblog_a_LIBADD =
+liblog_a_DEPENDENCIES = ../core/libcore.a
 am_liblog_a_OBJECTS = log.$(OBJEXT)
 liblog_a_OBJECTS = $(am_liblog_a_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
@@ -170,7 +170,7 @@ noinst_LIBRARIES = liblog.a
 liblog_a_SOURCES = \
 				  log.h log.c
 
-libevent_a_LIBADD = \
+liblog_a_LIBADD = \
 				  ../core/libcore.a
 
 all: all-am

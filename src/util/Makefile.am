@@ -1,6 +1,7 @@
-noinst_LIBRARIES=libevent.a                                                                                                          
+noinst_LIBRARIES=libutil.a                                                                                                          
 
-libevent_a_SOURCES=\
+libutil_a_SOURCES=\
 				  util.h util.c
-libevent_a_LIBADD=\
-				 ../core/libcore.a
+libutil_a_LIBADD=\
+				 ../core/libcore.a\
+				 ../log/liblog.a

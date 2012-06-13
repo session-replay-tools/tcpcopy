@@ -17,10 +17,10 @@ extern "C"
 	}hash_node_t, hash_node;
 
 	typedef struct hash_table_s{
-		uint32_t total;
-		uint32_t size;
-		int      timeout;
-		char     name[64];
+		uint32_t    total;
+		uint32_t    size;
+		int         timeout;
+		char        name[64];
 		link_list **lists;
 	}hash_table_t, hash_table;
 
