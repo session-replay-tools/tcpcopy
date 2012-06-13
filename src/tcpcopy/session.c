@@ -56,7 +56,7 @@ static uint32_t g_seq_omit        = 0;
 static struct iphdr *fir_auth_u_p = NULL;
 #endif
 
-static int create_session_table()
+int create_session_table()
 {
 	/* Create 65536 slots for session table */
 	sessions_table = hash_create(65536);
@@ -67,23 +67,47 @@ static void session_init(session_t *s, int keepalive)
 {
 	link_list *hl, *ml;
 	int       handshake_pack_num;
+
 	if(s->unsend_packets){
-		link_list_destory(s->unsend_packets);
+		if(s->unsend_packets->size > 0){
+			link_list_destory(s->unsend_packets);
+		}
+	}else{
+		s->unsend_packets = link_list_create();
 	}
+
 	if(s->lost_packets){
-		link_list_destory(s->lost_packets);
+		if(s->lost_packets->size > 0){
+			link_list_destory(s->lost_packets);
+		}
+	}else{
+		s->lost_packets = link_list_create();
 	}
+
 	if(s->unack_packets){
-		link_list_destory(s->unack_packets);
+		if(s->unack_packets->size >0){
+			link_list_destory(s->unack_packets);
+		}
+	}else{
+		s->unack_packets = link_list_create();
 	}
+
 	if(!keepalive)
 	{
 		if(s->handshake_packets){
-			link_list_destory(s->handshake_packets);
+			if(s->handshake_packets->size > 0){
+				link_list_destory(s->handshake_packets);
+			}
+		}else{
+			s->handshake_packets = link_list_create();
 		}
 #if (TCPCOPY_MYSQL_BASIC)
 		if(s->mysql_special_packets){
-			link_list_destory(s->mysql_special_packets);
+			if(s->mysql_special_packets->size > 0){
+				link_list_destory(s->mysql_special_packets);
+			}
+		}else{
+			s->mysql_special_packets = link_list_create();
 		}
 #endif
 	}else{
@@ -95,7 +119,7 @@ static void session_init(session_t *s, int keepalive)
 
 	s->expected_handshake_pack_num = 2;
 	
-	s->status      = SYN_SEND;
+	s->status      = CLOSED;
 	s->create_time      = time(0);
 	s->last_update_time = s->create_time;
 	s->resp_last_recv_cont_time = s->create_time;
@@ -351,7 +375,7 @@ static void activate_dead_sessions()
 					log_info(LOG_NOTICE,"send dead reqs from global");
 					send_reserved_packets(s);
 				}else{
-					if(SYN_SEND == s->status && 
+					if(SYN_SENT == s->status && 
 							s->vir_syn_retrans_times <= 3){
 						/* Retransmit the syn packet */
 						retransmit_packets(s);
@@ -384,7 +408,7 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 	size_ip    = ip_header->ihl << 2;
 	tcp_header = (struct tcphdr *)(data + size_ip);
     tmp_req_last_cont_sent_seq = s->seq;
-	s->req_last_ack_seq = ntohl(tcp_header->ack_seq);
+	s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
 
 	if(!s->unack_pack_omit_save_flag){
 		ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -394,16 +418,15 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 	ip_header->daddr = s->dst_addr;
 	tcp_header->dest = s->dst_port;
 
-	/* This is the special disposure */
-	if(s->faked_src_port != 0){
-		tcp_header->syn = htonl(s->vir_next_seq);
-		tcp_header->source = fake_src_port;
-	}else{
-		s->vir_next_seq = ntohl(tcp_header->seq);
-	}
-
+	s->vir_next_seq = ntohl(tcp_header->seq);
 	/* Add seq when meeting syn or fin packet */
 	if(tcp_header->syn || tcp_header->fin){
+		if(tcp_header->syn){
+			s->status = SYN_SENT;
+			s->req_last_syn_seq = tcp_header->seq;
+		}else{
+			s->fin_add_seq = 1;
+		}
 		s->vir_next_seq = s->vir_next_seq + 1;
 	}
 	if(tcp_header->ack){
@@ -567,7 +590,7 @@ static int retransmit_packets(session_t *s)
 		ip_header  = (struct iphdr*)((char*)data);
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		if(SYN_SEND == s->status){
+		if(SYN_SENT == s->status){
 			s->unack_pack_omit_save_flag = 1;
 			wrap_send_ip_packet(s, data);
 			s->vir_syn_retrans_times++;
@@ -850,7 +873,7 @@ static int send_reserved_packets(session_t *s)
 				break;
 			}
 			need_pause = 1;
-			if(s->req_last_ack_seq == ntohl(tcp_header->ack_seq)){
+			if(s->req_last_ack_sent_seq == ntohl(tcp_header->ack_seq)){
 				/* active close from client */
 				s->src_closed = 1;
 				status |= CLIENT_FIN;
@@ -915,7 +938,7 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	f_ip_header->frag_off = 64; 
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
-	f_ip_header->id       = htons(client_ip_id + 2);
+	f_ip_header->id       = htons(s->client_ip_id + 2);
 	f_ip_header->saddr    = ip_header->saddr;
 	f_ip_header->daddr    = ip_header->daddr;
 	f_tcp_header->doff    = 8;
@@ -1071,7 +1094,7 @@ static void send_faked_third_handshake(session_t *s,
 	f_ip_header->frag_off = 64; 
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
-	f_ip_header->id       = htons(client_ip_id + 2);;
+	f_ip_header->id       = htons(s->client_ip_id + 2);
 	f_ip_header->saddr    = s->src_addr;
 	/* here we must recored online ip address */
 	f_ip_header->daddr    = s->online_addr; 
@@ -1112,7 +1135,7 @@ static void send_faked_ack(session_t *s , struct iphdr *ip_header,
 	f_ip_header->frag_off = 64; 
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
-	f_ip_header->id       = htons(client_ip_id + 2);;
+	f_ip_header->id       = htons(s->client_ip_id + 2);
 	f_ip_header->saddr    = ip_header->daddr;
 	f_tcp_header->doff    = 5;
 	f_tcp_header->source  = tcp_header->dest;
@@ -1153,7 +1176,7 @@ static void send_faked_rst(session_t *s,
 	f_ip_header->frag_off = 64; 
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
-	f_ip_header->id       = htons(client_ip_id + 2);
+	f_ip_header->id       = htons(s->client_ip_id + 2);
 	f_ip_header->saddr    = ip_header->daddr;
 	f_tcp_header->doff    = 5;
 	f_tcp_header->source  = tcp_header->dest;
@@ -1213,7 +1236,7 @@ static void send_faked_rst_by_client(session_t *s,
 	f_ip_header->frag_off = 64; 
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
-	f_ip_header->id       = htons(client_ip_id + 2);
+	f_ip_header->id       = htons(s->client_ip_id + 2);
 	f_ip_header->saddr    = ip_header->saddr;
 	f_tcp_header->doff    = 5;
 	f_tcp_header->source  = tcp_header->source;
@@ -1222,7 +1245,7 @@ static void send_faked_rst_by_client(session_t *s,
 	f_tcp_header->ack     = 1;
 	
 	f_tcp_header->ack_seq = s->vir_ack_seq;
-	if(s->src_closed){
+	if(s->fin_add_seq){
 		/* this is because of '++' in wrap_send_ip_packet */
 		f_tcp_header->seq = htonl(s->vir_next_seq - 1); 
 	}else{
@@ -1312,7 +1335,7 @@ void fake_syn_hardly(session_t *s)
 				ntohs(tcp_header->source), dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
-		s->fake_src_port   = tcp_header->source;
+		s->faked_src_port   = tcp_header->source;
 
 		result = msg_client_send(sock, ip_header->saddr, 
 				tcp_header->source, CLIENT_ADD);
@@ -1334,7 +1357,7 @@ void fake_syn_hardly(session_t *s)
 			ip_header  = (struct iphdr *) data;
 			size_ip    = ip_header->ihl << 2;
 			tcp_header =(struct tcphdr*)((char *)ip_header + size_ip);
-			tcp_header->source = fake_src_port;
+			tcp_header->source = faked_src_port;
 			tmp_ln = link_node_malloc(copy_ip_packet(ip_header));
 			link_list_append(s->unsend_packets, tmp_ln);
 			ln =link_list_get_next(s->handshake_packets, ln);
@@ -1490,7 +1513,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 #endif
 		if(!s->resp_syn_received){
 			send_faked_rst(s, ip_header, tcp_header);
-			s->faked_fin_sent = 1;
+			s->faked_rst_sent = 1;
 			s->src_closed = 1;
 			return DISP_STOP;
 		}
@@ -1523,7 +1546,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 							if(!retransmit_packets(s)){
 								/* Retransmit failure */
 								send_faked_rst(s, ip_header, tcp_header);
-								faked_fin_sent = 1;
+								s->faked_rst_sent = 1;
 								s->src_closed = 1;
 							}
 							r->vir_already_retransmit = 1;
@@ -1580,7 +1603,7 @@ static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
 	if(!s->src_closed){
 		/* Send the constructed reset packet to backend */
 		send_faked_rst(s, ip_header, tcp_header);
-		s->faked_fin_sent  = 1;
+		s->faked_rst_sent  = 1;
 		s->status |= CLIENT_FIN;
 	}else
 	{
@@ -1725,7 +1748,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		/* Try to solve backend's obstacle */
 		s->vir_ack_seq = tcp_header->seq;
 		send_faked_rst(s, ip_header, tcp_header);
-		s->faked_fin_sent = 1;
+		s->faked_rst_sent = 1;
 		s->src_closed     = 1;
 		return;
 	}
@@ -1776,7 +1799,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 #endif
 			/* Send the faked reset packet to backend */
 			send_faked_rst(s, ip_header, tcp_header);
-			s->faked_fin_sent = 1;
+			s->faked_rst_sent = 1;
 			s->src_closed = 1;
 		}
 	}
@@ -1864,7 +1887,7 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 #endif
 		return DISP_CONTINUE;
 	}
-	if(s->faked_fin_sent){
+	if(s->faked_rst_sent){
 		return DISP_STOP;
 	}
 
@@ -1889,7 +1912,7 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 	return DISP_STOP;
 }
 
-static int process_mysql_clt_pack_before_greet(session_t *s, 
+static int process_mysql_clt_half_bf_greet(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header, 
 		uint16_t cont_size)	
 {
@@ -1900,11 +1923,6 @@ static int process_mysql_clt_pack_before_greet(session_t *s,
 			if(cont_size > 0){
 				s->req_cont_pack_num++;
 			}
-			ln = link_node_malloc(copy_ip_packet(ip_header));
-			link_list_append(s->unsend_packets, ln);
-			return DISP_STOP;
-		}
-		if(0 == cont_size && !s->mysql_resp_greet_received){
 			ln = link_node_malloc(copy_ip_packet(ip_header));
 			link_list_append(s->unsend_packets, ln);
 			return DISP_STOP;
@@ -2028,13 +2046,6 @@ static void wait_for_backend_syn(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {		
 	p_link_node ln;
-
-	if(!s->req_syn_ok){
-		fake_syn(s, ip_header, tcp_header);
-		ln = link_node_malloc(copy_ip_packet(ip_header));
-		link_list_append(s->unsend_packets, ln);
-		return;
-	}
 	if(!s->req_halfway_intercepted &&
 			s->handshake_packets->size< expected_handshake_pack_num)
 	{
@@ -2212,6 +2223,19 @@ static void process_client_after_main_body(session_t *s,
 	}
 }
 
+static uint16_t  get_cont_len_from_packet(struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	uint16_t   size_ip, size_tcp, tot_len, cont_size;
+
+	tot_len   = ntohs(ip_header->tot_len);
+	size_ip   = ip_header->ihl << 2;
+	size_tcp  = tcp_header->doff << 2;
+	cont_size = tot_len - size_tcp - size_ip;
+	
+	return cont_size;
+}
+
 /*
  * Processing client packets
  * TODO
@@ -2224,7 +2248,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	int           diff, is_save = 0, is_new_req;
-	uint16_t      size_ip, size_tcp, tot_len, cont_size;
+	uint16_t      cont_size;
 	p_link_node   ln ;
 
 	clt_cnt++;
@@ -2232,23 +2256,21 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
-	/* change source port for multiple uses */
-	if(s->fake_src_port != 0){
-		tcp_header->source = s->fake_src_port;
+	/* Change source port for multiple copying,etc */
+	if(s->faked_src_port != 0){
+		tcp_header->source = s->faked_src_port;
 	}
 
-	if(SYN_SEND == s->status){
+	/* Syn packet has been sent to back,but not recv back's syn */
+	if(SYN_SENT == s->status){
 		/* Check if it needs to retransmit the syn packet */
 		if(DISP_STOP == check_syn_retransmisson(s, ip_header)){
 			return;
 		}
-		/* 
-		 * For mysql, the first packet coming here is 
-		 * content valid packet
-		 */
 		wait_for_backend_syn(s, ip_header, tcp_header);
 		return;
 	}
+
 	/* If the packet is the next session's packet */
 	if(s->sess_more){
 		ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -2269,10 +2291,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* Retrieve Packet info */
-	tot_len   = ntohs(ip_header->tot_len);
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	cont_size = tot_len - size_tcp - size_ip;
+	cont_size = get_cont_len_from_packet(ip_header, tcp_header);
 
 	s->online_addr  = ip_header->daddr;
 	s->online_port  = ip_header->dest;
@@ -2281,7 +2300,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 #if (TCPCOPY_MYSQL_BASIC)
 	/* subtract client packet's seq for mysql */
 	if(s->mysql_req_begin){
-		tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_seq_omit);
+		tcp_header->seq = htonl(ntohl(tcp_header->seq) - 
+				s->mysql_vir_req_seq_diff);
 	}
 #endif
 
@@ -2290,13 +2310,11 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		process_client_rst(s, ip_header, tcp_header);
 		return;
 	}
-
 	/* Process the syn packet */
 	if(tcp_header->syn){
 		process_client_syn(s, ip_header, tcp_header);
 		return;
 	}
-
 	/* Process the fin packet */
 	if(tcp_header->fin)
 	{
@@ -2306,12 +2324,16 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* If not receiving syn packet */ 
-	if(!req_syn_ok){
+	if(!s->req_syn_ok){
 		s->req_halfway_intercepted=1;
+		fake_syn(s, ip_header, tcp_header);
+		ln = link_node_malloc(copy_ip_packet(ip_header));
+		link_list_append(s->unsend_packets, ln);
+		return;
 	}
 #if (TCPCOPY_MYSQL_BASIC)
-	/* process mysql client packet before receiving greet */
-	if(DISP_STOP == process_mysql_clt_pack_before_greet(s, 
+	/* process mysql client halfway packet before receiving greet */
+	if(DISP_STOP == process_mysql_clt_half_bf_greet(s, 
 				ip_header, tcp_header,cont_size)){
 		return;
 	}
@@ -2548,7 +2570,7 @@ void process(char *packet)
 			if(check_session_over(s)){
 				if(s->sess_more){
 					/* Restore the next session which has the key */
-					init_next_session(s);
+					session_init_for_next(s);
 					log_info(LOG_NOTICE,"init for next sess from bak");
 					restore_buffered_next_session(s);
 					return;
@@ -2581,8 +2603,19 @@ void process(char *packet)
 #endif
 					return;
 				}else{
-					/* buffer the next session to current session */
+					/*
+					 * Buffer the next session to current session
+					 * We only support one more session which has the hash
+					 * key
+					 */
 					s->sess_more = 1;
+					if(s->next_session_packets){
+						if(s->next_session_packets->size > 0){
+							link_list_destory(s->next_session_packets);
+						}
+					}else{
+						s->next_session_packets = link_list_create();
+					}
 					ln = link_node_malloc(copy_ip_packet(ip_header));
 					link_list_append(s->next_session_packets, ln);
 #if (DEBUG_TCPCOPY)
@@ -2614,7 +2647,6 @@ void process(char *packet)
 				return;
 			}else{
 				process_recv(s, ip_header, tcp_header);
-				s->req_last_syn_seq = tcp_header->seq;
 			}
 		}else{
 			s = hash_find(sessions_table, key);

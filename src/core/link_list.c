@@ -25,6 +25,7 @@ link_list *link_list_create(){
 		perror("malloc");
 		return NULL;
 	}
+	l->size      = 0;
 	l->head.next = &(l->head);
 	l->head.prev = &(l->head);
 	return l;

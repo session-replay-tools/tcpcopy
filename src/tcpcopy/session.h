@@ -38,14 +38,8 @@ typedef struct session_s{
 	uint16_t dst_port;
 	/*online port*/
 	uint16_t online_port;
-	/*faked src or client  port*/
+	/*faked src or client port*/
 	uint16_t faked_src_port;
-
-	/*src variables are also captured variables*/
-	/*src or client sequence*/
-	uint32_t src_seq;
-	/*src or client acknowledgement sequence*/
-	uint32_t src_ack_seq;
 
 	/*virtual variables*/
 	/*virtual acknowledgement sequence that sends to backend*/
@@ -65,14 +59,17 @@ typedef struct session_s{
 	uint32_t resp_last_ack_seq;
 
 	/*captured variables*/
+	/* this variables only refer to online values*/
+	/***********************begin************************/
 	/*last sequence of client content packet which has been sent*/
 	uint32_t req_last_cont_sent_seq;
 	/*last syn sequence of client packet*/
 	uint32_t req_last_syn_seq;
 	/*last ack sequence of client packet which is sent to bakend*/
-	uint32_t req_last_ack_seq;
+	uint32_t req_last_ack_sent_seq;
 	/*last client content packet's ack sequence */
 	uint32_t req_cont_last_ack_seq;
+	/***********************end***************************/
 
 	/*the number of client content packets*/
 	uint64_t req_cont_pack_num;
@@ -126,6 +123,8 @@ typedef struct session_s{
 	uint32_t simul_closing:1;
 	/*reset flag either from client or from backend*/
 	uint32_t reset:1;
+	/* seq added because of fin */
+	uint32_t fin_add_seq:1;
 	/*session over flag*/
 	uint32_t sess_over:1;
 	/*src or client closed flag*/
@@ -138,8 +137,8 @@ typedef struct session_s{
 	uint32_t previous_packet_waiting:1;
 	/*connection keepalive flag*/
 	uint32_t conn_keepalive:1;
-	/*this indicates if faked fin sent to backend*/
-	uint32_t faked_fin_sent:1;
+	/*this indicates if faked rst sent to backend*/
+	uint32_t faked_rst_sent:1;
 	/*this indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets*/
 	uint32_t req_syn_ok:1;
