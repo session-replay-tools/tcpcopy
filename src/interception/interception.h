@@ -1,19 +1,9 @@
 #ifndef  _INTERCEPTION_H_INC
 #define  _INTERCEPTION_H_INC
 
-
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 	void interception_init();
 	void interception_run();
 	void interception_over();
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif   /* ----- #ifndef _INTERCEPTION_H_INC  ----- */
 

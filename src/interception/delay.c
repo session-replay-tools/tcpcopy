@@ -10,7 +10,8 @@ static uint64_t msg_list_destr_cnt;
 
 static hash_table  *table;
 
-static struct msg_server_s *copy_message(struct msg_server_s *msg){
+static struct msg_server_s *copy_message(struct msg_server_s *msg)
+{
 	struct msg_server_s *cmsg;
 	cmsg=(struct msg_server_s *)malloc(sizeof(struct msg_server_s));
 	if(NULL == cmsg){
@@ -41,10 +42,8 @@ static void delay_table_delete_obsolete(uint64_t key)
 		if( (hn1->access_time + table->timeout) < nowtime){
 			p_link_node tail = link_list_pop_tail(l);
 			hn2 = (hash_node *)tail->data;
-			if(NULL != hn2)
-			{   
-				if(hn2->data != NULL)
-				{
+			if(NULL != hn2){   
+				if(hn2->data != NULL){
 					msg_list = (link_list *)hn2->data;
 					msg_item_destr_cnt += link_list_destory(msg_list);
 					free(msg_list);  	
@@ -63,7 +62,8 @@ static void delay_table_delete_obsolete(uint64_t key)
 
 
 /* init delay table */
-void delay_table_init(){
+void delay_table_init()
+{
 	/* we support 64k slots here */
 	table = hash_create(65536);
 	hash_set_timeout(table, 30);
@@ -78,7 +78,8 @@ void delay_table_init(){
 }
 
 /* add message to delay table*/
-void delay_table_add(uint64_t key,struct msg_server_s *msg){
+void delay_table_add(uint64_t key,struct msg_server_s *msg)
+{
 	link_list           *msg_list;
 	struct msg_server_s *cmsg;
 	p_link_node         ln;
@@ -99,7 +100,8 @@ void delay_table_add(uint64_t key,struct msg_server_s *msg){
 
 
 /* send delayed message according to the key*/
-void delay_table_send(uint64_t key,int fd){
+void delay_table_send(uint64_t key,int fd)
+{
 	link_list           *msg_list;
 	p_link_node         first;
 	struct msg_server_s *msg ;
@@ -123,7 +125,8 @@ void delay_table_send(uint64_t key,int fd){
 }
 
 /* delete delay table item according to the key */
-void delay_table_del(uint64_t key){
+void delay_table_del(uint64_t key)
+{
 	link_list           *msg_list;
 	p_link_node         first;
 	struct msg_server_s *msg;
@@ -157,17 +160,14 @@ void delay_table_destroy()
 	hash_node   *hn;
 	link_list   *list;
 
-	if(table != NULL)
-	{
+	if(table != NULL){
 		log_info(LOG_NOTICE,"destroy delayed table");
-		for(i = 0; i < table->size; i++)
-		{
+		for(i = 0; i < table->size; i++){
 			list = table->lists[i];
 			ln   = link_list_first(list);
 			while(ln){
 				hn = (hash_node *)ln->data;
-				if(hn->data != NULL)
-				{
+				if(hn->data != NULL){
 					msg_list=(link_list *)hn->data;
 					msg_item_destr_cnt+=link_list_destory(msg_list);
 					free(msg_list);

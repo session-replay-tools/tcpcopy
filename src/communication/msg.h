@@ -1,11 +1,6 @@
 #ifndef  _TCPCOPY_MSG_H__INC
 #define  _TCPCOPY_MSG_H__INC
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "../core/xcopy.h"
 
 #pragma pack(push,1)
@@ -33,9 +28,6 @@ extern "C"
 	int msg_server_send(int, struct msg_server_s *);
 	struct msg_client_s *msg_server_recv(int sock);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif   /* ----- #ifndef _TCPCOPY_MSG_H__INC  ----- */
 

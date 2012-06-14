@@ -1,11 +1,6 @@
 #ifndef  _ROUTER_H_INC
 #define  _ROUTER_H_INC
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "../core/xcopy.h" 
 
 	void router_init();
@@ -15,8 +10,5 @@ extern "C"
 	void router_destroy();
 
 
-#ifdef __cplusplus
-}
-#endif
 #endif   /* ----- #ifndef _ROUTER_H_INC  ----- */
 

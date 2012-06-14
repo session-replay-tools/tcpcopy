@@ -75,11 +75,14 @@ static int retrieve_ip_addr(const char* ips)
 		strncpy(tmp, p, len);
 		address = inet_addr(tmp);    
 		srv_settings.passed_ips.ips[count++] = address;
-		if(NULL == split)
-		{
+
+		if(count == MAX_ALLOWED_IP_NUM){
 			break;
-		}else
-		{
+		}
+
+		if(NULL == split){
+			break;
+		}else{
 			p = split + 1;
 		}
 		memset(tmp, 0, 32);

@@ -1,11 +1,6 @@
 #ifndef  _TCPCOPY_HASH_H_INC
 #define  _TCPCOPY_HASH_H_INC
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 #include "xcopy.h"
 #include "link_list.h"
 
@@ -33,9 +28,6 @@ extern "C"
 	void *hash_find(hash_table*,uint64_t);
 	void hash_del(hash_table*,uint64_t);
 
-#ifdef __cplusplus
-}
-#endif
 
 #endif   /* ----- #ifndef _TCPCOPY_HASH_H_INC ----- */
 

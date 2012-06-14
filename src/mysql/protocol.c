@@ -1,13 +1,15 @@
 #include "../core/xcopy.h"
 #include "protocol.h"
 
-static inline unsigned char char_val(unsigned char X){
+static inline unsigned char char_val(unsigned char X)
+{
 	return (unsigned char) (X >= '0' && X <= '9' ? X-'0' :
 			X >= 'A' && X <= 'Z' ? X-'A'+10 : X-'a'+10);
 }
 
 static void hex_to_octet(unsigned char *to, const char *str, 
-		unsigned int len){
+		unsigned int len)
+{
 	const char *str_end= str + len;
 	while (str < str_end){
 		register char tmp = char_val(*str++);
@@ -15,7 +17,8 @@ static void hex_to_octet(unsigned char *to, const char *str,
 	}
 }
 
-static void new_hash(uint64_t *result, const char *password){
+static void new_hash(uint64_t *result, const char *password)
+{
 	uint64_t nr  = 1345345333L, add = 7;
 	uint64_t nr2 = 0x12345671L, tmp;
 	int        i = 0, length;
@@ -42,7 +45,8 @@ static void new_hash(uint64_t *result, const char *password){
 /*
  * Right from Monty's code
  */
-void new_crypt(char *result, const char *password, char *message){
+void new_crypt(char *result, const char *password, char *message)
+{
 	char   b;
 	double d;
 	uint64_t pw[2], msg[2], max, seed1, seed2;
@@ -74,12 +78,14 @@ void new_crypt(char *result, const char *password, char *message){
 
 /* Convert scrambled password from asciiz hex string to binary form. */
 static void get_salt_from_password(unsigned char *hash_stage2, 
-		const char *password){
+		const char *password)
+{
 	  hex_to_octet(hash_stage2, password+1 /* skip '*' */, 
 			  SHA1_HASH_SIZE * 2);
 }
 
-int is_last_data_packet(unsigned char *payload){
+int is_last_data_packet(unsigned char *payload)
+{
 	unsigned char *p;
 	char          *str;
 	size_t        len;
@@ -100,7 +106,8 @@ int is_last_data_packet(unsigned char *payload){
 }
 
 int parse_handshake_init_cont(unsigned char *payload,
-		                size_t length, char *scramble_buff){
+		                size_t length, char *scramble_buff)
+{
 	/*
 	 * the following is the protocol format of mysql handshake
 	 *
@@ -178,7 +185,8 @@ int parse_handshake_init_cont(unsigned char *payload,
 }
 
 int change_client_auth_content(unsigned char *payload,
-		                int length, char *password, char *message){
+		                int length, char *password, char *message)
+{
 	/*
 	 * 4                            client_flags
 	 * 4                            max_packet_size
@@ -247,7 +255,8 @@ int change_client_auth_content(unsigned char *payload,
 }
 
 int change_client_second_auth_content(unsigned char *payload,size_t length,
-		char *new_content){
+		char *new_content)
+{
 	/*
 	 * 4                            client_flags
 	 * 4                            max_packet_size
@@ -267,15 +276,13 @@ int change_client_second_auth_content(unsigned char *payload,size_t length,
 	/*Skip Packet Number*/
 	p = p + 1;
 	len = p - payload + 8;
-	if(len > length)
-	{
+	if(len > length){
 		log_info(LOG_ERR, "payload len is too short for sec :%u,%u",
 				length, len);
 		return 0;
 	}
 	/*change scramble_buff according to the target server scramble*/
-	for(i = 0; i < 8; i++)
-	{
+	for(i = 0; i < 8; i++){
 		p[i] = new_content[i];
 	}
 	return 1;

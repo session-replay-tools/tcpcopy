@@ -1,11 +1,6 @@
 #ifndef  _LINK_LIST_H_INC
 #define  _LINK_LIST_H_INC
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-
 	typedef struct link_node_s
 	{
 		struct link_node_s *prev;
@@ -36,8 +31,5 @@ extern "C"
 	p_link_node link_list_get_next(link_list *l, p_link_node p);
 	int link_list_is_empty(link_list *l);
 
-#ifdef __cplusplus
-}
-#endif
 #endif   /* ----- #ifndef _LINK_LIST_H_INC  ----- */
 

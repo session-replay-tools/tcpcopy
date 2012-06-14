@@ -1,6 +1,7 @@
 #include "nl.h"
 
-static int sock_init(int protocol){
+static int sock_init(int protocol)
+{
 	int sock = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if(-1 == sock){
 		perror("socket:");
@@ -13,7 +14,8 @@ static int sock_init(int protocol){
 }
 
 /* initiate for netlink socket */
-int nl_init(int protocol, int groups){
+int nl_init(int protocol, int groups)
+{
 	int rcvbuf = 1048576;
 	int sock = sock_init(protocol);
 	setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &rcvbuf, sizeof(rcvbuf));
@@ -21,7 +23,8 @@ int nl_init(int protocol, int groups){
 }
 
 /* set mode for netlink socket*/
-void nl_set_mode(int sock, uint8_t mode, size_t range){
+void nl_set_mode(int sock, uint8_t mode, size_t range)
+{
 	struct sockaddr_nl addr;
 	struct {
 		struct nlmsghdr head;
@@ -48,14 +51,14 @@ void nl_set_mode(int sock, uint8_t mode, size_t range){
 				strerror(errno));
 		sync(); 
 		exit(errno);
-	}else
-	{
+	}else{
 		log_info(LOG_NOTICE, "sendto for ip queue is ok");
 	}
 }
 
 /* receive message from netlink socket*/
-ssize_t nl_recv(int sock, void *buffer, size_t length){
+ssize_t nl_recv(int sock, void *buffer, size_t length)
+{
 	ssize_t recv_len = recv(sock, buffer, length, 0);
 	if(recv_len < 0){
 		log_info(LOG_ERR,"recv length less than 0 for netlink");
@@ -72,5 +75,4 @@ ssize_t nl_recv(int sock, void *buffer, size_t length){
 void *nl_get_payload(void *buf){
 	return NLMSG_DATA((struct nlmsghdr *)(buf));
 }
-
 

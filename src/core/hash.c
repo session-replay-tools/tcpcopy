@@ -1,7 +1,8 @@
 #include "xcopy.h"
 #include "hash.h"
 
-static hash_node *hash_node_malloc(uint64_t key, void *data){
+static hash_node *hash_node_malloc(uint64_t key, void *data)
+{
 	hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
 	if(NULL == hn){
 		perror("can't malloc memory!");
@@ -18,11 +19,13 @@ static hash_node *hash_node_malloc(uint64_t key, void *data){
 	return hn;
 }
 
-static inline size_t get_slot(uint64_t key,size_t size){
+static inline size_t get_slot(uint64_t key,size_t size)
+{
 	return key%size;
 }
 
-static p_link_node hash_find_node(hash_table *table, uint64_t key){
+static p_link_node hash_find_node(hash_table *table, uint64_t key)
+{
 	link_list   *l  = get_link_list(table, key);
 	p_link_node ln  = link_list_first(l);
 	hash_node   *hn;
@@ -40,7 +43,8 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key){
 	return NULL;
 }
 
-hash_table *hash_create(size_t size){
+hash_table *hash_create(size_t size)
+{
 	size_t i;
 	hash_table *ht = (hash_table *)malloc(sizeof(hash_table));
 	if(NULL == ht){
@@ -67,12 +71,14 @@ hash_table *hash_create(size_t size){
 	return ht;
 }
 
-link_list *get_link_list(hash_table *table, uint64_t key){
+link_list *get_link_list(hash_table *table, uint64_t key)
+{
 	size_t slot = get_slot(key, table->size);
 	return table->lists[slot];
 }
 
-void *hash_find(hash_table *table, uint64_t key){
+void *hash_find(hash_table *table, uint64_t key)
+{
 	hash_node   *hn;
 	p_link_node ln = hash_find_node(table,key);
 	if(ln != NULL){
@@ -82,7 +88,8 @@ void *hash_find(hash_table *table, uint64_t key){
 	return NULL;
 }
 
-void hash_add(hash_table *table, uint64_t key, void *data){
+void hash_add(hash_table *table, uint64_t key, void *data)
+{
 	hash_node   *hn, *tmp;
 	p_link_node ln;
 	link_list   *l;
@@ -91,8 +98,7 @@ void hash_add(hash_table *table, uint64_t key, void *data){
 	if(ln != NULL){
 		hn = (hash_node *) ln->data;
 		hn->data = data;
-	}else
-	{
+	}else{
 		tmp = hash_node_malloc(key, data);
 		ln  = link_node_malloc(tmp);
 		l   = get_link_list(table, key);
@@ -101,7 +107,8 @@ void hash_add(hash_table *table, uint64_t key, void *data){
 	}
 }
 
-void hash_del(hash_table *table, uint64_t key){
+void hash_del(hash_table *table, uint64_t key)
+{
 	link_list   *l =get_link_list(table, key); 
 	p_link_node ln = hash_find_node(table,key);
 	if(ln != NULL){
@@ -117,7 +124,8 @@ void hash_del(hash_table *table, uint64_t key){
 	return;
 }
 
-void hash_set_timeout(hash_table *table, int t){
+void hash_set_timeout(hash_table *table, int t)
+{
 	table->timeout = t;
 }
 
@@ -126,11 +134,9 @@ void hash_destory(hash_table *table)
 	uint32_t     index = 0;
 	link_list    *l    = NULL;
 	int          count = 0;
-	for(; index < table->size; index++)
-	{
+	for(; index < table->size; index++){
 		l = table->lists[index];
-		if(l != NULL)
-		{
+		if(l != NULL){
 			count += link_list_destory(l);
 			free(l);
 		}

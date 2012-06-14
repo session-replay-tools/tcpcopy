@@ -9,12 +9,14 @@ static int              	fd_nums;
 
 
 /* Set select event callback function */
-void select_sever_set_callback(select_server_func func){
+void select_sever_set_callback(select_server_func func)
+{
 	callback_func = func;
 }
 
 /* Add fd to select read set */
-void select_sever_add(int fd){
+void select_sever_add(int fd)
+{
 	if(fd > MAX_FD_VALUE){
 		log_info(LOG_WARN, "fd:%d which is more than 1023", fd);
 	}else{
@@ -32,7 +34,8 @@ void select_sever_add(int fd){
 }
 
 /* Delete fd from select read set */
-void select_sever_del(int fd){
+void select_sever_del(int fd)
+{
 	int i, j;
 	if(fd <= MAX_FD_VALUE){
 		FD_CLR(fd, &read_set);
@@ -58,7 +61,8 @@ void select_sever_del(int fd){
 }
 
 /* Run for receiving messages */
-void select_server_run(){
+void select_server_run()
+{
 	fd_set r_set;
 	int    i, ret;
 	while(1){

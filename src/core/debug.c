@@ -2,7 +2,8 @@
 
 /* strace packet info for debug */
 void strace_pack(int level, int flag,
-		struct iphdr *ip_header, struct tcphdr *tcp_header){
+		struct iphdr *ip_header, struct tcphdr *tcp_header)
+{
 
 	struct in_addr src_addr, dst_addr;
 	char           *tmp_buf, src_ip[1024], dst_ip[1024];
@@ -10,8 +11,7 @@ void strace_pack(int level, int flag,
 	uint32_t       pack_size;
 	uint16_t       window;
 
-	if(g_log_level < level)
-	{
+	if(g_log_level < level){
 		return;
 	}
 

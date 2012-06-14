@@ -5,7 +5,8 @@
 static  int firewall_sock;
 static  int msg_listen_sock;
 
-static void set_sock_no_delay(int sock){
+static void set_sock_no_delay(int sock)
+{
 	int flag = 1;
 	if(setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
 				sizeof(flag)) == -1){
@@ -13,8 +14,7 @@ static void set_sock_no_delay(int sock){
 		log_info(LOG_ERR,"setsockopt error:%s",strerror(errno));
 		sync(); 
 		exit(errno);
-	}else
-	{
+	}else{
 		log_info(LOG_NOTICE,"setsockopt ok");
 	}
 	return;
@@ -63,8 +63,7 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 	 *
 	 */
 	if(sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
-				(struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
-	{
+				(struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0){
 		perror("unable to send mode message");
 		log_info(LOG_ERR,"unable to send mode message:%s",
 				strerror(errno));
@@ -75,7 +74,8 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 	return 1;
 }
 
-static void interception_process(int fd){
+static void interception_process(int fd)
+{
 	int                    new_fd, i, pass_through_flag = 0;
 	unsigned long          packet_id;
 	struct iphdr           *ip_header;
@@ -90,23 +90,18 @@ static void interception_process(int fd){
 	}else if(fd == firewall_sock){
 		packet_id = 0;
 		ip_header = nl_firewall_recv(firewall_sock, &packet_id);
-		if(ip_header != NULL)
-		{
+		if(ip_header != NULL){
 			/*check if it is the valid user to pass through firewall*/
-			for(i=0; i<srv_settings.passed_ips.num; i++)
-			{
-				if(srv_settings.passed_ips.ips[i] == ip_header->daddr)
-				{
+			for(i=0; i<srv_settings.passed_ips.num; i++){
+				if(srv_settings.passed_ips.ips[i] == ip_header->daddr){
 					pass_through_flag = 1;
 					break;
 				}
 			}
-			if(pass_through_flag)
-			{
+			if(pass_through_flag){
 				/* pass through the firewall */
 				dispose_netlink_packet(NF_ACCEPT, packet_id);  	
-			}else
-			{
+			}else{
 				router_update(ip_header);
 #if (DEBUG_TCPCOPY)
 				output_debug(LOG_DEBUG, ip_header);
@@ -131,7 +126,8 @@ static void interception_process(int fd){
 }
 
 /* initiate for tcpcopy server*/
-void interception_init(){
+void interception_init()
+{
 	delay_table_init();
 	router_init();
 	select_sever_set_callback(interception_process);
@@ -145,12 +141,14 @@ void interception_init(){
 
 
 /* main procedure for interception*/
-void interception_run(){
+void interception_run()
+{
 	select_server_run();
 }
 
 /* clear resources for interception */
-void interception_over(){
+void interception_over()
+{
 	if(firewall_sock != -1){
 		close(firewall_sock);
 		firewall_sock = -1;

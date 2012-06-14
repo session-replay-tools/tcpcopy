@@ -17,7 +17,8 @@ static char *err_levels[] = {
 	"debug"
 };
 
-void log_init(const char* path){
+void log_init(const char* path)
+{
 #if (DEBUG_TCPCOPY)
 	g_log_level = LOG_DEBUG;
 #else 
@@ -32,13 +33,15 @@ void log_init(const char* path){
 	pthread_mutex_unlock(&mutex);
 }
 
-static struct timeval get_time(){
+static struct timeval get_time()
+{
 	struct timeval tp;
 	gettimeofday(&tp, NULL);
 	return tp;
 }
 
-void log_info(int level, const char *fmt, ...){
+void log_info(int level, const char *fmt, ...)
+{
 	va_list         args;
 	struct tm       local_time, *p_local_time;
 	time_t          t;
@@ -73,7 +76,8 @@ void log_info(int level, const char *fmt, ...){
 	}
 }
 
-void log_end(){
+void log_end()
+{
 	pthread_mutex_lock(&mutex);
 	if(file){
 		(void)fclose(file);

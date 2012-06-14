@@ -3,12 +3,14 @@
 
 static hash_table *user_pwd_table;
 
-static void get_md5(unsigned char *md, const char *src){   
+static void get_md5(unsigned char *md, const char *src)
+{   
 	unsigned int len = strlen(src);
 	MD5((const unsigned char *)src, len, md);
 } 
 
-static uint64_t get_key_from_user(const char *user, unsigned char *md5){
+static uint64_t get_key_from_user(const char *user, unsigned char *md5)
+{
 	int i;
 	uint64_t key = 0;
 
@@ -21,7 +23,8 @@ static uint64_t get_key_from_user(const char *user, unsigned char *md5){
 	return key;
 }
 
-char *retrieve_user_pwd(char *user){
+char *retrieve_user_pwd(char *user)
+{
 	unsigned char  md5[MD5_LEN];
 	mysql_user     *p_user_info;
 	uint64_t       key = get_key_from_user(user,md5);
@@ -35,7 +38,8 @@ char *retrieve_user_pwd(char *user){
 	return NULL;
 }
 
-void retrieve_mysql_user_pwd_info( char *pairs){
+void retrieve_mysql_user_pwd_info( char *pairs)
+{
 	char       *p, *end, *q, *next, *pair_end;
 	char       user[256];
 	mysql_user *p_user_info;
