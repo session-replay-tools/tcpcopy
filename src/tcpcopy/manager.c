@@ -320,14 +320,14 @@ static void dispose_event(int fd){
 	}
 }
 
-static void exit_tcp_copy(){
+void exit_tcp_copy(){
 	close(raw_sock);
 	raw_sock = -1;
 	send_close();
 	exit(0);
 }
 
-static void tcp_copy_over(const int sig){
+void tcp_copy_over(const int sig){
 	int total = 0;
 
 	log_info(LOG_WARN, "sig %d received", sig);
@@ -346,13 +346,6 @@ static void tcp_copy_over(const int sig){
 	exit(0);
 }
 
-static void set_signal_handler(){
-	atexit(exit_tcp_copy);
-	signal(SIGINT,  tcp_copy_over);
-	signal(SIGPIPE, tcp_copy_over);
-	signal(SIGHUP,  tcp_copy_over);
-	signal(SIGTERM, tcp_copy_over);
-}
 
 /* Initiate tcpcopy client */
 static int init_tcp_copy(){

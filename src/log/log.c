@@ -17,14 +17,18 @@ static char *err_levels[] = {
 	"debug"
 };
 
-void init_log_info(){
+void init_log_info(const char* path){
 #if (DEBUG_TCPCOPY)
 	g_log_level = LOG_DEBUG;
 #else 
 	g_log_level = LOG_NOTICE;
 #endif
 	pthread_mutex_lock(&mutex);
-	file = fopen("error.log", "a+");
+	if(NULL == path){
+		file = fopen("error.log", "a+");
+	}else{
+		file = fopen(path, "a+");
+	}
 	pthread_mutex_unlock(&mutex);
 }
 
