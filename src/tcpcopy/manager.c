@@ -295,6 +295,10 @@ static void check_resource_usage()
 	log_info(LOG_NOTICE, "sys  time used:%ld",usage.ru_stime.tv_sec);
 	/* Maximum resident set size (in kilobytes) */
 	log_info(LOG_NOTICE, "max memory size:%ld",usage.ru_maxrss);
+	if(usage.ru_maxrss > clt_settings.max_rss){
+		log_info(LOG_WARN, "occupies too much memory,limit:%ld",
+				clt_settings.max_rss);
+	}
 }
 
 /* Dispose one event*/
