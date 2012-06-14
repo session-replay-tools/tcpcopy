@@ -57,7 +57,8 @@ static void put_packet_to_pool(const char *packet, int len)
 /*
  * Get one packet from buffered pool
  */
-static char *get_pack_from_pool(){
+static char *get_pack_from_pool()
+{
 	int  read_pos, len;
 	char *p;
 
@@ -156,7 +157,7 @@ static int replicate_packs(const char *packet,int length, int replica_num)
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
 	uint32_t      size_ip;
-	uint16_t      orig_port, addition, dest_port;
+	uint16_t      orig_port, addition, dest_port, rand_port;
 	
 	ip_header  = (struct iphdr*)packet;
 	size_ip    = ip_header->ihl << 2;
@@ -164,13 +165,14 @@ static int replicate_packs(const char *packet,int length, int replica_num)
 	orig_port  = ntohs(tcp_header->source);
 
 #if (DEBUG_TCPCOPY)
-	logInfo(LOG_DEBUG,"orig port:%u",orig_port);
+	log_info(LOG_DEBUG, "orig port:%u", orig_port);
 #endif
+	rand_port = clt_settings.rand_port_shifted;
 	for(i = 1; i < replica_num; i++){
-		addition   = (1024 << ((i << 1)-1)) + g_rand_port_shift;
+		addition   = (1024 << ((i << 1)-1)) + rand_port;
 		dest_port  = get_appropriate_port(orig_port, addition);
 #if (DEBUG_TCPCOPY)
-		logInfo(LOG_DEBUG,"new port:%u",dest_port);
+		log_info(LOG_DEBUG, "new port:%u", dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
 		put_packet_to_pool((const char*)packet, length);
@@ -183,11 +185,12 @@ static int replicate_packs(const char *packet,int length, int replica_num)
 /*
  * Retrieve raw packets
  */
-static int retrieve_raw_sockets(int sock){
+static int retrieve_raw_sockets(int sock)
+{
 
 	char     recv_buf[RECV_BUF_SIZE], tmp_packet[DEFAULT_MTU];
 	char     *packet;
-	int      i, last, err, recv_len, packet_num, max_payload;
+	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
 	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
 	uint32_t seq;
 	struct tcphdr *tcp_header;
@@ -215,6 +218,7 @@ static int retrieve_raw_sockets(int sock){
 		packet = recv_buf;
 		if(is_packet_needed((const char *)packet)){
 			valid_raw_packs++;
+			replica_num = clt_settings.replica_num;
 #if (MULTI_THREADS)  
 			packet_num = 1;
 			/* 
@@ -249,14 +253,14 @@ static int retrieve_raw_sockets(int sock){
 					put_packet_to_pool((const char*)packet, pack_len);
 					if(replica_num > 1){
 						memcpy(tmp_packet, packet, pack_len);
-						replicate_packs(tmp_packet, pack_len);
+						replicate_packs(tmp_packet, pack_len, replica_num);
 					}
 				}
 			}else{
 				put_packet_to_pool((const char*)packet, recv_len);
 				/* Multi-copying is only supported in multithreading mode */
 				if(replica_num > 1){
-					replicate_packs(packet, recv_len);
+					replicate_packs(packet, recv_len, replica_num);
 				}
 			}
 #else
@@ -294,7 +298,8 @@ static void check_resource_usage()
 }
 
 /* Dispose one event*/
-static void dispose_event(int fd){
+static void dispose_event(int fd)
+{
 	struct msg_server_s *msg;
 	int                 pid;
 	char                path[512];
@@ -320,14 +325,16 @@ static void dispose_event(int fd){
 	}
 }
 
-void exit_tcp_copy(){
+void tcp_copy_exit()
+{
 	close(raw_sock);
 	raw_sock = -1;
 	send_close();
 	exit(0);
 }
 
-void tcp_copy_over(const int sig){
+void tcp_copy_over(const int sig)
+{
 	int total = 0;
 
 	log_info(LOG_WARN, "sig %d received", sig);
@@ -342,13 +349,14 @@ void tcp_copy_over(const int sig){
 		close(raw_sock);
 	}
 	send_close();
-	end_log_info();
+	log_end();
 	exit(0);
 }
 
 
 /* Initiate tcpcopy client */
-static int init_tcp_copy(){
+int tcp_copy_init()
+{
 	int                    i;
 	ip_port_pair_mapping_t *pair;
 	ip_port_pair_mapping_t **mappings;
@@ -373,15 +381,15 @@ static int init_tcp_copy(){
 		pthread_create(&thread, NULL, dispose, NULL);
 #endif
 		/* Add connections to the tested server for exchanging info */
-		mappings = g_transfer_target.mappings;
-		for(i = 0; i < g_transfer_target.num; i++){
+		mappings = clt_settings.transfer.mappings;
+		for(i = 0; i < clt_settings.transfer.num; i++){
 			pair = mappings[i];
 			online_port = pair->online_port;
 			target_ip   = pair->target_ip;
 			target_port = pair->target_port;
 			address_add_msg_conn(online_port, target_ip, target_port);
 			log_info(LOG_NOTICE,"add a tunnel for exchanging info:%u",
-					ntohs(remote_port));
+					ntohs(target_port));
 		}
 		return SUCCESS;
 	}else

@@ -37,21 +37,23 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 	
 }
 
-uint16_t get_port_from_shift(uint16_t orig_port)
+uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,
+		int shift_factor)
 {
 	uint16_t        port_add, dest_port;
-	port_add = (2048 << g_port_shift_factor) + g_rand_port_shift;
+	port_add = (2048 << shift_factor) + rand_port;
 
 	return get_appropriate_port(ntohs(orig_port), port_add);
 }
 
-ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
+ip_port_pair_mapping_t *get_test_pair(ip_port_pair_mappings_t *transfer,
+		uint32_t ip, uint16_t port)
 {
 	int i;
 	ip_port_pair_mapping_t *pair;
 	ip_port_pair_mapping_t **mappings;
-	mappings = g_transfer_target.mappings;
-	for(i = 0; i < g_transfer_target.num; i++){
+	mappings = transfer->mappings;
+	for(i = 0; i < transfer->num; i++){
 		pair = mappings[i];
 		if(ip == pair->target_ip && port == pair->target_port){
 			break;
@@ -60,19 +62,20 @@ ip_port_pair_mapping_t *get_test_pair(uint32_t ip, uint16_t port)
 	return pair;
 }
 
-int check_pack_src(uint32_t ip, uint16_t port)
+int check_pack_src(ip_port_pair_mappings_t *transfer,
+		uint32_t ip, uint16_t port)
 {
 	int i;
-	int ret = SRC_UNKNOWN;
+	int ret = UNKNOWN;
 	ip_port_pair_mapping_t *pair;
-	ip_port_pair_mapping_t **mappings = g_transfer_target.mappings;
-	for(i = 0; i < g_transfer_target.num; i++){
+	ip_port_pair_mapping_t **mappings = transfer->mappings;
+	for(i = 0; i < transfer->num; i++){
 		pair = mappings[i];
 		if(ip == pair->online_ip && port == pair->online_port){
-			ret = SRC_LOCAL;
+			ret = LOCAL;
 			break;
 		}else if(ip == pair->target_ip && port == pair->target_port){
-			ret = SRC_REMOTE;
+			ret = REMOTE;
 			break;
 		}
 	}

@@ -173,7 +173,8 @@ static session_t *session_create(struct iphdr *ip_header,
 	s->online_addr = ip_header->daddr;
 	s->src_port    = tcp_header->source;
 	s->online_port = tcp_header->source;
-	test = get_test_pair(s->online_addr, s->online_port);
+	test = get_test_pair(&(clt_settings.transfer), 
+			s->online_addr, s->online_port);
 	s->dst_addr    = test->target_ip;
 	s->dst_port    = test->target_port;
 	return s;
@@ -1729,7 +1730,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 			s->vir_new_retransmit = 0;
 		}
 		resp_cont_cnt++;
-		s->resp_cont_pack_num++;
 		s->resp_last_recv_cont_time = current;
 		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len + 1);
 	}else{
@@ -2483,7 +2483,8 @@ int is_packet_needed(const char *packet)
 	}
 
 	/* Here we filter the packets we do care about */
-	if(check_pack_src(ip_header->daddr, tcp_header->dest))
+	if(check_pack_src(&(clt_settings.transfer), 
+				ip_header->daddr, tcp_header->dest))
 	{
 		isNeeded = 1;
 		if(tcp_header->syn)
@@ -2556,6 +2557,7 @@ void process(char *packet)
 	int            diff, run_time = 0, sock, ret;
 	p_link_node    ln, tmp_ln;
 	session_t      *s;
+	ip_port_pair_mappings_t *tf;
 
 	if(0 == start_p_time){
 		start_p_time = now;
@@ -2581,8 +2583,9 @@ void process(char *packet)
 	ip_header  = (struct iphdr*)packet;
 	size_ip    = ip_header->ihl<<2;
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+	tf         = &(clt_settings.transfer);
 
-	if(check_pack_src(ip_header->saddr, tcp_header->source) == SRC_REMOTE){
+	if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
 		ln  = hash_find(sessions_table, key);
@@ -2604,12 +2607,13 @@ void process(char *packet)
 			}
 		}
 	}
-	else if(check_pack_src(ip_header->daddr, tcp_header->dest)){
+	else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){
 		/* When the packet comes from client */
 		last_ch_dead_sess_time = now;
-		if(g_port_shift_factor){
+		if(clt_settings.factor){
 		    /* Change source port*/
-			tcp_header->source = get_port_from_shift(tcp_header->source);
+			tcp_header->source = get_port_from_shift(tcp_header->source,
+					clt_settings.rand_port_shifted, clt_settings.factor);
 		}
 		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
 		if(tcp_header->syn){

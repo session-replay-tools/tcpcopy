@@ -93,9 +93,9 @@ static void interception_process(int fd){
 		if(ip_header != NULL)
 		{
 			/*check if it is the valid user to pass through firewall*/
-			for(i=0; i<passed_ips.num; i++)
+			for(i=0; i<srv_settings.passed_ips.num; i++)
 			{
-				if(passed_ips.ips[i] == ip_header->daddr)
+				if(srv_settings.passed_ips.ips[i] == ip_header->daddr)
 				{
 					pass_through_flag = 1;
 					break;

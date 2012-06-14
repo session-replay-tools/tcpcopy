@@ -16,14 +16,14 @@
 
 #include "../core/xcopy.h"
 
-passed_ip_addr_t passed_ips;
+xcopy_srv_settings srv_settings;
 
 static void release_resources()
 {
 	log_info(LOG_NOTICE, "release_resources begin");
 	interception_over();
 	log_info(LOG_NOTICE, "release_resources end except log file");
-	end_log_info();
+	log_end();
 }
 
 static void signal_handler(int sig)
@@ -74,7 +74,7 @@ static int retrieve_ip_addr(const char* ips)
 		}   
 		strncpy(tmp, p, len);
 		address = inet_addr(tmp);    
-		passed_ips.ips[count++] = address;
+		srv_settings.passed_ips.ips[count++] = address;
 		if(NULL == split)
 		{
 			break;
@@ -86,7 +86,7 @@ static int retrieve_ip_addr(const char* ips)
 
 	}
 
-	passed_ips.num = count;
+	srv_settings.passed_ips.num = count;
 
 	return 1;
 }
@@ -98,7 +98,7 @@ int main(int argc ,char **argv){
 		retrieve_ip_addr(argv[1]);
 	}
 
-	init_log_info();
+	log_init();
 	set_signal_handler();
 	interception_init();
 	interception_run();

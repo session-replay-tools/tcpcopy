@@ -2,6 +2,7 @@ bin_PROGRAMS=tcpcopy
 tcpcopy_SOURCES=\
 				address.c address.h\
 				send.c send.h\
+				manager.c manager.h\
 				session.c session.h\
 				main.c
 tcpcopy_LDADD=\

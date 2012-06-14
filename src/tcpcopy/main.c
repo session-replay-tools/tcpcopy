@@ -12,16 +12,38 @@
  */
 
 #include "../core/xcopy.h"
+#include "manager.h"
 
 /* Global variables */
 xcopy_clt_settings clt_settings;
 
 static void set_signal_handler(){
-	atexit(exit_tcp_copy);
+	atexit(tcp_copy_exit);
 	signal(SIGINT,  tcp_copy_over);
 	signal(SIGPIPE, tcp_copy_over);
 	signal(SIGHUP,  tcp_copy_over);
 	signal(SIGTERM, tcp_copy_over);
+}
+
+
+static void usage(void) {  
+	printf("tcpcopy " VERSION "\n");
+	printf("-t <tranfer>  what we copy and where to send \n"
+		   "              transfer format:\n"
+		   "              online_ip:online_port->target_ip:target_port|...\n"
+		   "-p <pair>     user password pair for mysql\n"
+		   "              pair format:\n"
+		   "              user1@psw1:user2@psw2:...\n"
+		   "-n <num>      the number of replication for multi-copying\n"
+		   "-f <num>      port shift factor for mutiple tcpcopy instances\n"
+		   "-m <num>      max memory to use for tcpcopy in megabytes\n"
+		   "-M <num>      MTU sent to backend\n"
+		   "-l <file>     log file path\n"
+		   "-P <file>     save PID in <file>, only used with -d option\n"
+		   "-h            print this help and exit\n"
+		   "-v            version\n"
+		   "-d            run as a daemon\n");
+	return;
 }
 
 static int read_args(int argc, char **argv){
@@ -35,46 +57,43 @@ static int read_args(int argc, char **argv){
 		 "M:" /* MTU sent to backend */
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
-		 "hi" /* help, licence info */   
+		 "h" /* help, licence info */   
 		 "v"  /* verbose */
 		 "d"  /* daemon mode */
 	    ))) {
 		switch (c) {
 			case 't':
-				settings.target = strdup(optarg);
+				clt_settings.raw_transfer= strdup(optarg);
 				break;
 			case 'p':
-				settings.user_pwd = strdup(optarg);
+				clt_settings.user_pwd = strdup(optarg);
 				break;
 			case 'n':
-				settings.replica_num = atoi(optarg);
+				clt_settings.replica_num = atoi(optarg);
 				break;
 			case 'f':
-				settings.factor = atoi(optarg);
+				clt_settings.factor = atoi(optarg);
 				break;
 			case 'm':
-				settings.max_rss = 1024*atoi(optarg);
+				clt_settings.max_rss = 1024*atoi(optarg);
 				break;
 			case 'l':
-				settings.log_path = strdup(optarg);
+				clt_settings.log_path = strdup(optarg);
 				break;
 			case 'M':
-				settings.mtu = atoi(optarg);
+				clt_settings.mtu = atoi(optarg);
 				break;
 			case 'h':
 				usage();
 				exit(EXIT_SUCCESS);
-			case 'i':
-				usage_license();
-				exit(EXIT_SUCCESS); 
 			case 'v':
 				printf ("tcpcopy version:%s\n", VERSION);
 				exit(EXIT_SUCCESS);
 			case 'd':
-				do_daemonize = true;
+				clt_settings.do_daemonize = 1;
 				break;
 			case 'P':
-				pid_file = optarg;
+				clt_settings.pid_file = optarg;
 				break;
 			default:
 				fprintf(stderr, "Illegal argument \"%c\"\n", c);
@@ -90,7 +109,7 @@ static void output_for_debug(int argc, char **argv)
 	/* Print tcpcopy version */
 	log_info(LOG_NOTICE, "tcpcopy version:%s", VERSION);
 	/* Print target */
-	log_info(LOG_NOTICE, "target:%s", clt_settings.target);
+	log_info(LOG_NOTICE, "target:%s", clt_settings.raw_transfer);
 
 	/* Print tcpcopy working mode */
 #if (TCPCOPY_MYSQL_SKIP)
@@ -112,7 +131,7 @@ static void parse_one_target(int index, const char *target)
 	uint32_t   localhost  = inet_addr("127.0.0.1");	
 	uint32_t   inetAddr;
 	ip_port_pair_mapping_t *map;
-	map = clt_settings.g_transfer_target.mappings[index];
+	map = clt_settings.transfer.mappings[index];
 
 	/* Parse online ip address */
 	split = strchr(p, ':');
@@ -176,7 +195,7 @@ static void parse_one_target(int index, const char *target)
 static int retrieve_target_addresses(){
 	size_t     len, size;
 	int        count = 1, i;
-	const char *split, *p = clt_settings.target;
+	const char *split, *p = clt_settings.raw_transfer;
 	char       buffer[128];
 	ip_port_pair_mapping_t **mappings;
 
@@ -194,17 +213,17 @@ static int retrieve_target_addresses(){
 	}
 
 	/* Allocate resources for target */
-	clt_settings.g_transfer_target.num = count;
+	clt_settings.transfer.num = count;
 	size = sizeof(ip_port_pair_mapping_t *);
 	mappings = calloc(count, size);
 	size = sizeof(ip_port_pair_mapping_t);
 	for(i = 0; i < count; i++){
 		mappings[i] = (ip_port_pair_mapping_t *)calloc(1, size);
 	}
-	clt_settings.g_transfer_target.mappings = mappings;
+	clt_settings.transfer.mappings = mappings;
 
 	/* Retrieve every target detail info */
-	p = clt_settings.target;
+	p = clt_settings.raw_transfer;
 	i = 0;
 	while(1){
 		split = strchr(p, '|');
@@ -258,13 +277,13 @@ int main(int argc ,char **argv)
 	/* Read args */
 	read_args(argc, argv);
 	/* Init log for outputing debug info */
-	init_log_info(clt_settings.log_path);
+	log_init(clt_settings.log_path);
 	/* Output debug info */
 	output_for_debug(argc, argv);
 	/* Set details for running */
 	set_details();
 	/* Initiate tcpcopy client*/
-	ret = init_tcp_copy();
+	ret = tcp_copy_init();
 	if(SUCCESS != ret){
 		exit(EXIT_FAILURE);
 	}

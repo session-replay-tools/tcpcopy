@@ -17,7 +17,7 @@ static char *err_levels[] = {
 	"debug"
 };
 
-void init_log_info(const char* path){
+void log_init(const char* path){
 #if (DEBUG_TCPCOPY)
 	g_log_level = LOG_DEBUG;
 #else 
@@ -73,7 +73,7 @@ void log_info(int level, const char *fmt, ...){
 	}
 }
 
-void end_log_info(){
+void log_end(){
 	pthread_mutex_lock(&mutex);
 	if(file){
 		(void)fclose(file);
