@@ -233,16 +233,16 @@ static int check_session_over(session_t *s)
 static uint16_t  get_pack_cont_len(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	uint16_t   size_ip, size_tcp, tot_len, cont_len;
+	uint16_t  size_ip, size_tcp, tot_len, cont_len;
 
-	size_ip    = ip_header->ihl << 2;
+	size_ip   = ip_header->ihl << 2;
 	if(NULL == tcp_header){
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 	}
 	tot_len   = ntohs(ip_header->tot_len);
 	size_ip   = ip_header->ihl << 2;
 	size_tcp  = tcp_header->doff << 2;
-	cont_len = tot_len - size_tcp - size_ip;
+	cont_len  = tot_len - size_tcp - size_ip;
 	
 	return cont_len;
 }
@@ -543,9 +543,9 @@ static int check_packet_lost(session_t *s, struct iphdr *ip_header,
  */
 static int send_reserved_lost_packets(session_t *s)
 {
-	int      need_more_check, loop_over = 0, need_free;
-	uint16_t size_ip, cont_len;
-	uint32_t cur_seq;
+	int           need_more_check, loop_over = 0, need_free;
+	uint16_t      size_ip, cont_len;
+	uint32_t      cur_seq;
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
@@ -566,7 +566,7 @@ static int send_reserved_lost_packets(session_t *s)
 			ip_header  =(struct iphdr*)((char*)data);
 			size_ip    = ip_header->ihl << 2;
 			tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-			cont_len  = get_pack_cont_len(ip_header, tcp_header);
+			cont_len   = get_pack_cont_len(ip_header, tcp_header);
 			cur_seq    = ntohl(tcp_header->seq);
 			need_free  = 0;
 
@@ -692,7 +692,7 @@ static void update_retransmission_packets(session_t *s)
 	ln = link_list_first(list);	
 
 	while(ln){
-		data = ln->data;
+		data       = ln->data;
 		ip_header  = (struct iphdr*)((char*)data);
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
@@ -754,7 +754,7 @@ static int check_reserved_content_left(session_t *s)
 
 	while(ln){
 		data = ln->data;
-		ip_header  = (struct iphdr*)((char*)data);
+		ip_header = (struct iphdr*)((char*)data);
 		cont_len  = get_pack_cont_len(ip_header, NULL);
 		if(cont_len>0)
 		{
@@ -776,7 +776,7 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 	unsigned char *payload;
 	uint16_t      size_tcp, cont_len;
 
-	size_tcp  = tcp_header->doff << 2;
+	size_tcp = tcp_header->doff << 2;
 	cont_len = get_pack_cont_len(ip_header, tcp_header);
 
 	if(!s->mysql_first_auth_sent){
@@ -864,10 +864,10 @@ static int send_reserved_packets(session_t *s)
 
 	while(ln && (!need_pause)){
 		data = ln->data;
-		ip_header =(struct iphdr*)((char*)data);
-		size_ip   = ip_header->ihl << 2;
+		ip_header  =(struct iphdr*)((char*)data);
+		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		cont_len = get_pack_cont_len(ip_header, tcp_header);
+		cont_len   = get_pack_cont_len(ip_header, tcp_header);
 		if(cont_len > 0){
 #if (TCPCOPY_MYSQL_BASIC)
 			if(!s->mysql_resp_greet_received){
@@ -1223,7 +1223,7 @@ static void send_faked_rst(session_t *s,
 			if(h_next_ack > expect_h_ack){
 				log_info(LOG_NOTICE, "set ack seq larger");
 				s->vir_ack_seq = next_ack;
-				s->dst_closed     = 1;
+				s->dst_closed  = 1;
 			}
 		}
 	}
@@ -1398,9 +1398,9 @@ int mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 	p_link_node   ln;
 	link_list     *list;
 
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	tot_len = ntohs(ip_header->tot_len);
+	size_ip  = ip_header->ihl << 2;
+	size_tcp = tcp_header->doff << 2;
+	tot_len  = ntohs(ip_header->tot_len);
 	cont_len = tot_len - size_tcp - size_ip;
 
 	if(cont_len > 0){
@@ -1463,9 +1463,9 @@ static int check_mysql_padding(struct iphdr *ip_header,
 	unsigned char *payload, *data, command, pack_number;
 	uint16_t      size_ip, size_tcp, tot_len, cont_len;
 
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
-	tot_len = ntohs(ip_header->tot_len);
+	size_ip  = ip_header->ihl << 2;
+	size_tcp = tcp_header->doff << 2;
+	tot_len  = ntohs(ip_header->tot_len);
 	cont_len = tot_len - size_tcp - size_ip;
 
 	if(cont_len > 0){
@@ -1715,13 +1715,13 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* Retrieve packet info */
-	ack       = ntohl(tcp_header->ack_seq);
-	tot_len   = ntohs(ip_header->tot_len);
-	size_ip   = ip_header->ihl << 2;
-	size_tcp  = tcp_header->doff << 2;
+	ack      = ntohl(tcp_header->ack_seq);
+	tot_len  = ntohs(ip_header->tot_len);
+	size_ip  = ip_header->ihl << 2;
+	size_tcp = tcp_header->doff << 2;
 	cont_len = tot_len - size_tcp - size_ip;
 
-	current=time(0);
+	current  = time(0);
 
 	if(cont_len > 0){
 		/* calculate the total successful retransmissson */
@@ -2103,7 +2103,7 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 		return;
 	}
 #else
-	session_init(s,1);
+	session_init(s, 1);
 	fake_syn_hardly(s);
 #endif
 	ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -2120,7 +2120,7 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	uint32_t    tmp_last_ack, cur_seq;
 	p_link_node ln;
 
-	*is_new_req = 0;
+	*is_new_req  = 0;
 	tmp_last_ack = s->req_cont_last_ack_seq;
 	s->req_cont_last_ack_seq = ntohl(tcp_header->ack_seq);
 	/*
@@ -2131,7 +2131,7 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	 *   the last content packet may not be sent to backend
 	 */
 	if(s->req_cont_last_ack_seq != tmp_last_ack){
-		*is_new_req   = 1;
+		*is_new_req = 1;
 	}
 
 	if(*is_new_req){
@@ -2328,7 +2328,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	/* Check if it needs sending rst pack to backend */
 	if(s->sess_candidate_erased){
 		if(!s->src_closed){
-			s->src_closed=1;
+			s->src_closed = 1;
 		}
 		send_faked_rst_by_client(s, ip_header, tcp_header);
 		return;
@@ -2355,7 +2355,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 	/* If not receiving syn packet */ 
 	if(!s->req_syn_ok){
-		s->req_halfway_intercepted=1;
+		s->req_halfway_intercepted = 1;
 		fake_syn(s, ip_header, tcp_header);
 		ln = link_node_malloc(copy_ip_packet(ip_header));
 		ln->key = ntohl(tcp_header->seq);
