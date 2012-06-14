@@ -72,13 +72,6 @@ typedef struct session_s{
 	uint32_t req_cont_last_ack_seq;
 	/***********************end***************************/
 
-	/*the number of client content packets*/
-	uint64_t req_cont_pack_num;
-	/*the number of content packets sent to backend*/
-	uint64_t vir_send_cont_pack_num;
-	/*the number of content packets from backend response*/
-	uint64_t resp_cont_pack_num;
-
 	/*the hash key for this session*/
 	uint64_t hash_key;
 

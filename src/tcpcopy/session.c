@@ -277,7 +277,7 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 		if(diff < 3){
 			threshold = threshold << 1;
 		}
-		packs_unsend = s->req_cont_pack_num - s->vir_send_cont_pack_num;
+		packs_unsend = s->unsend_packets->size;
 		if(packs_unsend < threshold){
 			return 0;
 		}else{
@@ -481,7 +481,6 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 		s->req_last_send_cont_time = time(0);
 		s->req_last_cont_sent_seq  = htonl(tmp_req_last_cont_sent_seq);
 		s->vir_next_seq = s->vir_next_seq + cont_len;
-		s->vir_send_cont_pack_num++;
 		if(s->unack_pack_omit_save_flag){
 			s->vir_new_retransmit = 1;
 		}else{
@@ -721,9 +720,7 @@ static int check_dead_reqs(session_t *s)
 {
 	int    packs_unsend = 0, diff, result = 0;
 
-	if(s->req_cont_pack_num >= s->vir_send_cont_pack_num){
-		packs_unsend = s->req_cont_pack_num - s->vir_send_cont_pack_num;
-	}
+	packs_unsend = s->unsend_packets->size;
 	diff = time(0) - s->req_last_send_cont_time;
 
 	/* More than 2 seconds */
@@ -2007,7 +2004,6 @@ static int process_mysql_clt_auth_pack(session_t *s,
 			log_info(LOG_NOTICE, "omit sec validation for mysql");
 			s->mysql_vir_req_seq_diff = cont_len;
 			g_seq_omit = s->mysql_vir_req_seq_diff;
-			s->req_cont_pack_num--;
 			return DISP_STOP;
 		}
 		if(!s->mysql_req_begin)
@@ -2060,17 +2056,12 @@ static int process_client_timeout(session_t *s)
 	 * for more than 5 min,then enter 
 	 * the suicide process
 	 */
-	log_info(LOG_WARN,"300 timeout,no resp back,req:%llu,res:%llu,p:%u",
-			s->req_cont_pack_num, s->req_cont_pack_num, s->src_port);
-	if(s->req_cont_pack_num > s->vir_send_cont_pack_num)
+	log_info(LOG_WARN,"300 timeout,no resp back,p:%u", s->src_port);
+	if(s->unsend_packets->size > 512)
 	{
-		diff = s->req_cont_pack_num - s->vir_send_cont_pack_num;
-		if(diff > 200)
-		{
-			log_info(LOG_WARN, "lost packets:%d,p:%u", diff, s->src_port);
-			s->sess_over = 1;
-			return DISP_STOP;
-		}
+		log_info(LOG_WARN, "it may lose packets,p:%u", s->src_port);
+		s->sess_over = 1;
+		return DISP_STOP;
 	}
 	return DISP_CONTINUE;
 }
@@ -2127,7 +2118,6 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 {
 	int         is_save = 0;
 	uint32_t    tmp_last_ack, cur_seq;
-	uint64_t    base_cont_pack_num;
 	p_link_node ln;
 
 	*is_new_req = 0;
@@ -2148,8 +2138,7 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 		cur_seq = ntohl(tcp_header->seq);
 		is_save = check_seq_valid(cur_seq, s->req_last_cont_sent_seq);
 	}else{
-		base_cont_pack_num = s->req_cont_pack_num - 1;
-		if(s->vir_send_cont_pack_num < base_cont_pack_num){
+		if(s->unsend_packets->size > 0){
 			if(check_reserved_content_left(s)){
 				is_save = 1;
 			}
@@ -2320,9 +2309,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 	/* Retrieve the content length of tcp payload */
 	cont_len = get_pack_cont_len(ip_header, tcp_header);
-	if(cont_len > 0){
-		s->req_cont_pack_num++;
-	}
 
 	s->online_addr  = ip_header->daddr;
 	s->online_port  = tcp_header->dest;
@@ -2402,7 +2388,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		}
 		/* Check if it is a retransmission packet */
 		if(check_retransmission(tcp_header, s->req_last_cont_sent_seq)){
-			s->req_cont_pack_num--;
 #if (DEBUG_TCPCOPY)
 			log_info(LOG_DEBUG," a retransmission packet from client");
 #endif

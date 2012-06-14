@@ -52,7 +52,7 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_tcpcopy_OBJECTS = address.$(OBJEXT) send.$(OBJEXT) \
-	session.$(OBJEXT) getopt.$(OBJEXT) main.$(OBJEXT)
+	session.$(OBJEXT) main.$(OBJEXT)
 tcpcopy_OBJECTS = $(am_tcpcopy_OBJECTS)
 tcpcopy_DEPENDENCIES = ../core/libcore.a ../log/liblog.a \
 	../util/libutil.a ../mysql/libmysql.a ../event/libevent.a \
@@ -174,7 +174,6 @@ tcpcopy_SOURCES = \
 				address.c address.h\
 				send.c send.h\
 				session.c session.h\
-				getopt.c getopt.h\
 				main.c
 
 tcpcopy_LDADD = \
@@ -258,7 +257,6 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/address.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getopt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session.Po@am__quote@

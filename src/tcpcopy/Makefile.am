@@ -3,7 +3,6 @@ tcpcopy_SOURCES=\
 				address.c address.h\
 				send.c send.h\
 				session.c session.h\
-				getopt.c getopt.h\
 				main.c
 tcpcopy_LDADD=\
 				   ../core/libcore.a\
