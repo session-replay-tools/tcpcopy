@@ -178,7 +178,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 }
 
 int change_client_auth_content(unsigned char *payload,
-		                size_t length, char *password, char *message){
+		                int length, char *password, char *message){
 	/*
 	 * 4                            client_flags
 	 * 4                            max_packet_size
@@ -218,7 +218,7 @@ int change_client_auth_content(unsigned char *payload,
 	/* Retrieve user */
 	memset(user, 0, 256);
 	strcpy(user, str);
-	pwd = retrieveUserPwd(user);
+	pwd = retrieve_user_pwd(user);
 	if(pwd != NULL){
 		log_info(LOG_WARN, "user:%s,pwd:%s", user, pwd);
 	}else{

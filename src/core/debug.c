@@ -1,7 +1,7 @@
 #include "xcopy.h"
 
 /* strace packet info for debug */
-void strace_packet_info(int level, int flag,
+void strace_pack(int level, int flag,
 		struct iphdr *ip_header, struct tcphdr *tcp_header){
 
 	struct in_addr src_addr, dst_addr;
