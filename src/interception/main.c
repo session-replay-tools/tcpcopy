@@ -104,7 +104,6 @@ static void usage(void) {
 }
 
 static int read_args(int argc, char **argv){
-	int tcp_specified = 0;
 	int  c;
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* ip list passed through ip firewall */
@@ -121,7 +120,6 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'p':
 				srv_settings.port = strdup(optarg);
-				tcp_specified = 1;
 				break;
 			case 'h':
 				usage();
@@ -145,10 +143,6 @@ static int read_args(int argc, char **argv){
 
 	}
 
-	if(!tcp_specified){
-		srv_settings.port = SERVER_PORT;
-	}
-
 	return 0;
 }
 
@@ -169,6 +163,12 @@ static int set_details()
 			exit(EXIT_FAILURE);
 		}    
 	}    
+}
+
+/* defaults */
+static void settings_init(void)
+{
+	srv_settings.port = SERVER_PORT;
 }
 
 int main(int argc ,char **argv){
