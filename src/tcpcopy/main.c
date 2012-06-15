@@ -30,7 +30,7 @@ static void usage(void) {
 	printf("tcpcopy " VERSION "\n");
 	printf("-x <transfer,> what we copy and where to send \n"
 		   "               transfer format:\n"
-		   "               online_ip:online_port#target_ip:target_port,...\n"
+		   "               online_ip:online_port-target_ip:target_port,...\n"
 		   "-p <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
 		   "               user1@psw1:user2@psw2:...\n"
@@ -120,77 +120,80 @@ static void output_for_debug(int argc, char **argv)
 #endif
 }
 
+static int parse_ip_port_pair(const char *pair, uint32_t *ip,
+		uint16_t *port)
+{
+	size_t     len;
+	uint32_t   localhost  = inet_addr("127.0.0.1");	
+	char       buffer[128];
+	const char *split, *p = pair;
+	uint32_t   inetAddr;
+
+	split = strchr(p, ':');
+	if(split != NULL){
+		len = (size_t)(split - p);
+		memset(buffer, 0 , 128);
+		strncpy(buffer, p, len);
+		inetAddr = inet_addr(buffer);	
+		if(inetAddr == localhost){
+			log_info(LOG_WARN, "ip address can not be loalhost");
+			fprintf(stderr, "ip address can not be loalhost\n");
+			exit(EXIT_FAILURE);
+		}else{
+			*ip = inetAddr;
+		}
+	}else{
+		log_info(LOG_NOTICE,"ip does not exist:%s", p);
+	}
+
+	*port = atoi(p);
+
+}
+
 /*
- * 192.168.0.1:80->192.168.0.2:8080 
+ * One target format:
+ * 192.168.0.1:80-192.168.0.2:8080 
+ * or
+ * 80-192.168.0.2:8080
  */
 static void parse_one_target(int index, const char *target)
 {
 	size_t     len;
 	char       buffer[128];
 	const char *split, *p = target;
-	uint32_t   localhost  = inet_addr("127.0.0.1");	
-	uint32_t   inetAddr;
+	uint32_t   ip;
+	uint16_t   port;
 	ip_port_pair_mapping_t *map;
 	map = clt_settings.transfer.mappings[index];
 
-	/* Parse online ip address */
-	split = strchr(p, ':');
+	/* Parse online ip and port */
+	split = strchr(p, '-');
 	if(split != NULL){
 		len = (size_t)(split - p);
 	}else{
-		log_info(LOG_WARN,"online ip is not valid:%s", p);
+		log_info(LOG_WARN,"target info is not valid:%s", p);
 		return;
 	}
 	strncpy(buffer, p, len);
-	inetAddr = inet_addr(buffer);	
-	if(inetAddr == localhost){
-		log_info(LOG_WARN,"src ip address is not valid:%s", p);
-		return;
-	}else{
-		map->online_ip= inetAddr;
-	}
+	port = 0;
+	ip   = 0;
+	parse_ip_port_pair(buffer, &ip, &port);
+	map->online_ip   = ip;
+	map->online_port = port;
 	p = split + 1;
 
-	/* Parse online port */
-	split = strchr(p, '#');
-	if(split != NULL){
-		len = (size_t)(split - p);
-	}else{
-		log_info(LOG_WARN,"online port is not valid:%s", p);
-		return;
-	}
-	memset(buffer, 0 , 128);
-	strncpy(buffer, p, len);
-	map->online_port = atoi(buffer);
-	p = split + 1;
-
-	/* Parse target ip address */
-	split = strchr(p, ':');
-	if(split != NULL){
-		len = (size_t)(split - p);
-	}else{
-		log_info(LOG_WARN,"target ip is not valid:%s", p);
-		return;
-	}
-	memset(buffer, 0 , 128);
-	inetAddr = inet_addr(buffer);	
-	if(inetAddr == localhost){
-		log_info(LOG_WARN,"dst ip address is not valid");
-		return;
-	}else{
-		map->target_ip= inetAddr;
-	}
-	p = split + 1;
-
-	/* Parse target port */
-	map->target_port = atoi(p);
-
+	/* Parse target ip and port */
+	port = 0;
+	ip   = 0;
+	parse_ip_port_pair(p, &ip ,&port);
+	map->target_ip   = ip;
+	map->target_port = port;
 }
 
 /* 
  * Retrieve target addresses
  * Format(by -x argument): 
- * 192.168.0.1:80#192.168.0.2:8080,192.168.0.1:3306#192.168.0.3:3306
+ * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:3306-192.168.0.3:3306
  */
 static int retrieve_target_addresses(){
 	size_t     len, size;
@@ -277,7 +280,20 @@ static int set_details()
 
 	}
 #endif
+
+	/* Daemonize */
+	if (clt_settings.do_daemonize) {
+		if (sigignore(SIGHUP) == -1) {
+			perror("Failed to ignore SIGHUP");
+			log_info(LOG_ERR, "Failed to ignore SIGHUP");
+		}    
+		if (daemonize() == -1) {
+			fprintf(stderr, "failed to daemon() in order to daemonize\n");
+			exit(EXIT_FAILURE);
+		}    
+	}    
 }
+
 
 /*
  * Main entry point

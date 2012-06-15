@@ -158,6 +158,17 @@ static int set_details()
 	set_signal_handler();
 	/* Retrieve ip address */
 	retrieve_ip_addr();
+	/* Daemonize */
+	if (srv_settings.do_daemonize) {
+		if (sigignore(SIGHUP) == -1) {
+			perror("Failed to ignore SIGHUP");
+			log_info(LOG_ERR, "Failed to ignore SIGHUP");
+		}    
+		if (daemonize() == -1) {
+			fprintf(stderr, "failed to daemon() in order to daemonize\n");
+			exit(EXIT_FAILURE);
+		}    
+	}    
 }
 
 int main(int argc ,char **argv){

@@ -2483,7 +2483,7 @@ int is_packet_needed(const char *packet)
 	}
 
 	/* Here we filter the packets we do care about */
-	if(check_pack_src(&(clt_settings.transfer), 
+	if(LOCAL == check_pack_src(&(clt_settings.transfer), 
 				ip_header->daddr, tcp_header->dest))
 	{
 		isNeeded = 1;
