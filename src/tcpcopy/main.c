@@ -37,7 +37,7 @@ static void usage(void) {
 		   "-n <num>       the number of replication for multi-copying\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
-		   "-M <num>       MTU sent to backend\n"
+		   "-M <num>       MTU sent to backend(max value 4096)\n"
 		   "-l <file>      log file path\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
@@ -47,7 +47,7 @@ static void usage(void) {
 }
 
 static int read_args(int argc, char **argv){
-	int  c;
+	int  c, mtu_set = 0;
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where do we copy request from and to */
 		 "p:" /* user password pair for mysql*/
@@ -82,6 +82,7 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'M':
 				clt_settings.mtu = atoi(optarg);
+				mtu_set = 1;
 				break;
 			case 'h':
 				usage();
@@ -101,6 +102,16 @@ static int read_args(int argc, char **argv){
 		}
 
 	}
+
+	if(!mtu_set){
+		clt_settings.mtu = DEFAULT_MTU;
+	}else{
+		/* Check mtu value is more than max mtu supported */
+		if(clt_settings.mtu >MAX_MTU){
+			clt_settings.mtu = MAX_MTU;
+		}
+	}
+
 	return 0;
 }
 

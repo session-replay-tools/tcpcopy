@@ -1,7 +1,7 @@
+#include "../core/xcopy.h"
 #include "my_global.h"
 #include "password.h"
 #include "sha1.h"
-#include "../core/xcopy.h"
 
 static void 
 my_crypt(char *to, const uchar *s1, const uchar *s2, uint len)

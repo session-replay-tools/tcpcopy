@@ -490,7 +490,8 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 	}
 
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
-			(unsigned short *)tcp_header, tot_len-size_ip);
+			(unsigned short *)tcp_header, tot_len - size_ip, 
+			clt_settings.mtu);
 	/*
 	 * for linux 
 	 * The two fields that are always filled in are: the IP checksum 

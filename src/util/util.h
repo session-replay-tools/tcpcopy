@@ -32,7 +32,7 @@ unsigned char *copy_ip_packet(struct iphdr *ip_header);
 unsigned short csum (unsigned short *packet, int pack_len);
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len);
+		int pack_len, int mtu);
 
 
 #endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */

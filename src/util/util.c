@@ -149,12 +149,12 @@ unsigned short csum (unsigned short *packet, int pack_len)
 
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len)
+		int pack_len, int mtu)
 {       
 	static unsigned short buf[2048]; 
 	unsigned short        res;
 
-	if(pack_len > DEFAULT_MTU){
+	if(pack_len > mtu){
 		log_info(LOG_ERR, "packet is too long:%d", pack_len);
 		return 0;
 	}

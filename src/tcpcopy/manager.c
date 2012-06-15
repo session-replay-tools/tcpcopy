@@ -1,7 +1,7 @@
 #include "../core/xcopy.h"
 #include "../communication/msg.h"
 
-static char      pool[RECV_POOL_SIZE], item[DEFAULT_MTU+DEFAULT_MTU];
+static char      pool[RECV_POOL_SIZE], item[MAX_MTU + MAX_MTU];
 static int       raw_sock, read_over_flag = 1;
 static uint64_t  read_cnt = 0, write_cnt = 0, event_cnt = 0;
 static uint64_t  packs_put_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
@@ -188,7 +188,7 @@ static int replicate_packs(const char *packet,int length, int replica_num)
 static int retrieve_raw_sockets(int sock)
 {
 
-	char     recv_buf[RECV_BUF_SIZE], tmp_packet[DEFAULT_MTU];
+	char     recv_buf[RECV_BUF_SIZE], tmp_packet[MAX_MTU];
 	char     *packet;
 	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
 	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
@@ -225,7 +225,7 @@ static int retrieve_raw_sockets(int sock)
 			 * If packet length larger than 1500, then we split it. 
 			 * This is to solve the ip fragmentation problem
 			 */
-			if(recv_len > DEFAULT_MTU){
+			if(recv_len > clt_settings.mtu){
 				/* Calculate number of packets */
 				ip_header   = (struct iphdr*)packet;
 				size_ip     = ip_header->ihl << 2;
@@ -238,14 +238,14 @@ static int retrieve_raw_sockets(int sock)
 				tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
 				size_tcp    = tcp_header->doff << 2;
 				cont_len    = tot_len - size_tcp - size_ip;
-				max_payload = DEFAULT_MTU - size_tcp - size_ip;
+				max_payload = clt_settings.mtu - size_tcp - size_ip;
 				packet_num  = (cont_len + max_payload - 1)/max_payload;
 				seq         = ntohl(tcp_header->seq);
 				last        = packet_num - 1;
 				for(i = 0 ; i < packet_num; i++){
 					tcp_header->seq = htonl(seq + i * max_payload);
 					if(i != last){
-						pack_len = DEFAULT_MTU;
+						pack_len = clt_settings.mtu;
 					}else{
 						pack_len += (cont_len - packet_num * max_payload);
 					}

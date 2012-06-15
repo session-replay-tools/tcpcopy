@@ -1,11 +1,11 @@
 #ifndef  _PAIRS_H_INC
 #define  _PAIRS_H_INC
 
-#define MD5_LEN 16
 
 typedef struct mysql_user{
-	unsigned char md5[MD5_LEN];
+	char *user;
 	char password[256];
+	struct mysql_user* next;
 }mysql_user;
 
 char *retrieve_user_pwd(char *user);
