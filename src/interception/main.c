@@ -104,9 +104,11 @@ static void usage(void) {
 }
 
 static int read_args(int argc, char **argv){
+	int tcp_specified = 0;
 	int  c;
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* ip list passed through ip firewall */
+		 "p:" /* TCP port number to listen on */
 		 "h"  /* print this help and exit */   
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
@@ -116,6 +118,10 @@ static int read_args(int argc, char **argv){
 		switch (c) {
 			case 'x':
 				srv_settings.raw_ip_list = strdup(optarg);
+				break;
+			case 'p':
+				srv_settings.port = strdup(optarg);
+				tcp_specified = 1;
 				break;
 			case 'h':
 				usage();
@@ -138,6 +144,11 @@ static int read_args(int argc, char **argv){
 		}
 
 	}
+
+	if(!tcp_specified){
+		srv_settings.port = SERVER_PORT;
+	}
+
 	return 0;
 }
 
@@ -157,7 +168,7 @@ int main(int argc ,char **argv){
 	/* Set details */
 	set_details(); 
 	/* Init interception */
-	interception_init();
+	interception_init(srv_settings.port);
 	/* Run now */
 	interception_run();
 

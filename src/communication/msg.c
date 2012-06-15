@@ -56,12 +56,12 @@ int msg_client_init(uint32_t server_ip)
 	return sock;
 }
 
-static void sock_bind(int sock)
+static void sock_bind(int sock, uint16_t port)
 {
 	struct sockaddr_in local_addr;
 	socklen_t length; 
 	memset(&local_addr, 0, sizeof(local_addr));
-	local_addr.sin_port   = ntohs(SERVER_PORT);
+	local_addr.sin_port   = ntohs(port);
 	local_addr.sin_family = AF_INET;
 	length = (socklen_t)(sizeof(local_addr));
 	if(bind(sock,(struct sockaddr *)&local_addr,length) == -1){
@@ -87,10 +87,10 @@ static void sock_listen(int sock)
 }
 
 /* Init msg server */
-int msg_server_init()
+int msg_server_init(uint16_t port)
 {
 	int sock = tcp_sock_init();
-	sock_bind(sock);
+	sock_bind(sock, port);
 	sock_listen(sock);
 	return sock;
 }

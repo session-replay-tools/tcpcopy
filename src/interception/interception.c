@@ -126,12 +126,12 @@ static void interception_process(int fd)
 }
 
 /* initiate for tcpcopy server*/
-void interception_init()
+void interception_init(uint16_t port)
 {
 	delay_table_init();
 	router_init();
 	select_sever_set_callback(interception_process);
-	msg_listen_sock = msg_server_init();
+	msg_listen_sock = msg_server_init(port);
 	log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);
 	select_sever_add(msg_listen_sock);
 	firewall_sock = nl_firewall_init();
