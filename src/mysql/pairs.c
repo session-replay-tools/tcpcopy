@@ -51,10 +51,6 @@ void retrieve_mysql_user_pwd_info( char *pairs)
 
 	p = pairs;
 
-	if(NULL == p){
-		log_info(LOG_WARN, "use password null");
-		exit(1);
-	}
 	len = strlen(p);
 	end = p + len;
 

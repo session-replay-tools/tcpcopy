@@ -2611,7 +2611,7 @@ void process(char *packet)
 		/* When the packet comes from client */
 		last_ch_dead_sess_time = now;
 		if(clt_settings.factor){
-		    /* Change source port*/
+		    /* Change client source port*/
 			tcp_header->source = get_port_from_shift(tcp_header->source,
 					clt_settings.rand_port_shifted, clt_settings.factor);
 		}

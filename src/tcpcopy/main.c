@@ -28,28 +28,28 @@ static void set_signal_handler(){
 
 static void usage(void) {  
 	printf("tcpcopy " VERSION "\n");
-	printf("-t <tranfer>  what we copy and where to send \n"
-		   "              transfer format:\n"
-		   "              online_ip:online_port->target_ip:target_port|...\n"
-		   "-p <pair>     user password pair for mysql\n"
-		   "              pair format:\n"
-		   "              user1@psw1:user2@psw2:...\n"
-		   "-n <num>      the number of replication for multi-copying\n"
-		   "-f <num>      port shift factor for mutiple tcpcopy instances\n"
-		   "-m <num>      max memory to use for tcpcopy in megabytes\n"
-		   "-M <num>      MTU sent to backend\n"
-		   "-l <file>     log file path\n"
-		   "-P <file>     save PID in <file>, only used with -d option\n"
-		   "-h            print this help and exit\n"
-		   "-v            version\n"
-		   "-d            run as a daemon\n");
+	printf("-x <transfer,> what we copy and where to send \n"
+		   "               transfer format:\n"
+		   "               online_ip:online_port#target_ip:target_port,...\n"
+		   "-p <pair>      user password pair for mysql\n"
+		   "               pair format:\n"
+		   "               user1@psw1:user2@psw2:...\n"
+		   "-n <num>       the number of replication for multi-copying\n"
+		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
+		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
+		   "-M <num>       MTU sent to backend\n"
+		   "-l <file>      log file path\n"
+		   "-P <file>      save PID in <file>, only used with -d option\n"
+		   "-h             print this help and exit\n"
+		   "-v             version\n"
+		   "-d             run as a daemon\n");
 	return;
 }
 
 static int read_args(int argc, char **argv){
 	int  c;
 	while (-1 != (c = getopt(argc, argv,
-		 "t:" /* where do we copy request from and to */
+		 "x:" /* where do we copy request from and to */
 		 "p:" /* user password pair for mysql*/
 		 "n:" /* the replicated number of each request for multi-copying */
 		 "f:" /* port shift factor for mutiple tcpcopy instances */
@@ -62,7 +62,7 @@ static int read_args(int argc, char **argv){
 		 "d"  /* daemon mode */
 	    ))) {
 		switch (c) {
-			case 't':
+			case 'x':
 				clt_settings.raw_transfer= strdup(optarg);
 				break;
 			case 'p':
@@ -152,7 +152,7 @@ static void parse_one_target(int index, const char *target)
 	p = split + 1;
 
 	/* Parse online port */
-	split = strchr(p, '-');
+	split = strchr(p, '#');
 	if(split != NULL){
 		len = (size_t)(split - p);
 	}else{
@@ -162,7 +162,7 @@ static void parse_one_target(int index, const char *target)
 	memset(buffer, 0 , 128);
 	strncpy(buffer, p, len);
 	map->online_port = atoi(buffer);
-	p = split + 2;
+	p = split + 1;
 
 	/* Parse target ip address */
 	split = strchr(p, ':');
@@ -189,8 +189,8 @@ static void parse_one_target(int index, const char *target)
 
 /* 
  * Retrieve target addresses
- * Format(by -t parameter): 
- * 192.168.0.1:80->192.168.0.2:8080|192.168.0.1:3306->192.168.0.3:3306
+ * Format(by -x argument): 
+ * 192.168.0.1:80#192.168.0.2:8080,192.168.0.1:3306#192.168.0.3:3306
  */
 static int retrieve_target_addresses(){
 	size_t     len, size;
@@ -199,11 +199,16 @@ static int retrieve_target_addresses(){
 	char       buffer[128];
 	ip_port_pair_mapping_t **mappings;
 
+	if(NULL == p){
+		log_info(LOG_ERR, "it must have -x argument");
+		fprintf(stderr, "no -x argument\n");
+		exit(EXIT_FAILURE);
+	}
 	memset(buffer, 0, 128);
 	
 	/* Retrieve target number */
 	while(1){
-		split = strchr(p, '|');
+		split = strchr(p, ',');
 		if(NULL == split){
 			break;
 		}else{
@@ -226,7 +231,7 @@ static int retrieve_target_addresses(){
 	p = clt_settings.raw_transfer;
 	i = 0;
 	while(1){
-		split = strchr(p, '|');
+		split = strchr(p, ',');
 		if(split != NULL){
 			len = (size_t)(split - p);
 		}else{
@@ -263,7 +268,14 @@ static int set_details()
 	/* Set ip port pair mapping according to settings*/
 	retrieve_target_addresses();
 #if (TCPCOPY_MYSQL_ADVANCED)  
-	retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
+	if(NULL != clt_settings.user_pwd){
+		retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
+	}else{
+		log_info(LOG_ERR, "it must have -p argument");
+		fprintf(stderr, "no -p argument\n");
+		exit(EXIT_FAILURE);
+
+	}
 #endif
 }
 

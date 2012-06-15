@@ -30,15 +30,13 @@ static void signal_handler(int sig)
 {
 	log_info(LOG_ERR,"set signal handler:%d", sig);
 	printf("set signal handler:%d\n", sig);
-	if(SIGSEGV == sig)
-	{    
+	if(SIGSEGV == sig){    
 		log_info(LOG_ERR, "SIGSEGV error");
 		release_resources();
-		/*avoid dead loop*/
+		/* Avoid dead loop*/
 		signal(SIGSEGV, SIG_DFL);
 		kill(getpid(), sig);
-	}else
-	{    
+	}else{    
 		exit(EXIT_SUCCESS);
 	} 
 }
@@ -52,24 +50,21 @@ static void set_signal_handler(){
 	}
 }
 
-static int retrieve_ip_addr(const char* ips)
+static int retrieve_ip_addr()
 {
 	size_t      len;
 	int         count=0;
-	const char  *split, *p=ips;
+	const char  *split, *p = srv_settings.raw_ip_list;
 	char        tmp[32];
 	uint32_t    address;
 
 	memset(tmp, 0, 32);
 
-	while(1)
-	{
-		split=strchr(p, ':');
-		if(split != NULL)
-		{   
+	while(1){
+		split = strchr(p, ',');
+		if(split != NULL){   
 			len = (size_t)(split-p);
-		}else
-		{   
+		}else{   
 			len = strlen(p);
 		}   
 		strncpy(tmp, p, len);
@@ -77,6 +72,7 @@ static int retrieve_ip_addr(const char* ips)
 		srv_settings.passed_ips.ips[count++] = address;
 
 		if(count == MAX_ALLOWED_IP_NUM){
+			log_info(LOG_WARN,"reach the limit for passing firewall");
 			break;
 		}
 
@@ -85,8 +81,8 @@ static int retrieve_ip_addr(const char* ips)
 		}else{
 			p = split + 1;
 		}
-		memset(tmp, 0, 32);
 
+		memset(tmp, 0, 32);
 	}
 
 	srv_settings.passed_ips.num = count;
@@ -94,16 +90,75 @@ static int retrieve_ip_addr(const char* ips)
 	return 1;
 }
 
+static void usage(void) {  
+	printf("intercept " VERSION "\n");
+	printf("-x <passlist,> passed ip list through firewall\n"
+		   "               format:\n"
+		   "               ip1,ip2,...\n"
+		   "-l <file>      log file path\n"
+		   "-P <file>      save PID in <file>, only used with -d option\n"
+		   "-v             intercept version\n"
+		   "-h             help\n"
+		   "-d             run as a daemon\n");
+	return;
+}
+
+static int read_args(int argc, char **argv){
+	int  c;
+	while (-1 != (c = getopt(argc, argv,
+		 "x:" /* ip list passed through ip firewall */
+		 "h"  /* print this help and exit */   
+		 "l:" /* error log file path */
+		 "P:" /* save PID in file */
+		 "v"  /* print version and exit*/
+		 "d"  /* daemon mode */
+	    ))) {
+		switch (c) {
+			case 'x':
+				srv_settings.raw_ip_list = strdup(optarg);
+				break;
+			case 'h':
+				usage();
+				exit(EXIT_SUCCESS);
+			case 'l':
+				srv_settings.log_path = strdup(optarg);
+				break;
+			case 'P':
+				srv_settings.pid_file = optarg;
+				break;
+			case 'v':
+				printf ("intercept version:%s\n", VERSION);
+				exit(EXIT_SUCCESS);
+			case 'd':
+				srv_settings.do_daemonize = 1;
+				break;
+			default:
+				fprintf(stderr, "Illegal argument \"%c\"\n", c);
+				exit(EXIT_FAILURE);
+		}
+
+	}
+	return 0;
+}
+
+static int set_details()
+{
+	/* Set signal handler */	
+	set_signal_handler();
+	/* Retrieve ip address */
+	retrieve_ip_addr();
+}
 
 int main(int argc ,char **argv){
-	if(argc > 1)
-	{
-		retrieve_ip_addr(argv[1]);
-	}
-
+	/* Read args */
+	read_args(argc, argv);
+	/* Init log */
 	log_init();
-	set_signal_handler();
+	/* Set details */
+	set_details(); 
+	/* Init interception */
 	interception_init();
+	/* Run now */
 	interception_run();
 
 	return 0;
