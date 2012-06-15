@@ -1,5 +1,5 @@
 /*
- * tcpcopy - an online replication replication tool
+ *  TCPCopy - an online replication replication tool
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.  See
@@ -44,21 +44,24 @@ static void signal_handler(int sig)
 static void set_signal_handler(){
 	int i=1;
 	atexit(release_resources);
+	/* Just to try */
 	for(; i<SIGTTOU; i++)	
 	{
 		signal(i, signal_handler);
 	}
 }
 
+/* retrieve ip addresses */
 static int retrieve_ip_addr()
 {
 	size_t      len;
-	int         count=0;
-	const char  *split, *p = srv_settings.raw_ip_list;
+	int         count = 0;
+	const char  *split, *p;
 	char        tmp[32];
 	uint32_t    address;
 
 	memset(tmp, 0, 32);
+	p = srv_settings.raw_ip_list;
 
 	while(1){
 		split = strchr(p, ',');

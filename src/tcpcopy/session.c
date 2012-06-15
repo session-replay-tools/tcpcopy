@@ -3,9 +3,9 @@
 #include "../log/log.h"
 #include "session.h"
 
-static int send_reserved_packets(session_t *s);
-static int retransmit_packets(session_t *s);
-static int check_dead_reqs(session_t *s);
+static int  send_reserved_packets(session_t *s);
+static int  retransmit_packets(session_t *s);
+static bool check_dead_reqs(session_t *s);
 
 static hash_table *sessions_table;
 
@@ -21,8 +21,6 @@ static hash_table *sec_auth_pack_table;
 static uint64_t clt_syn_cnt         = 0;
 /* Total client packets */
 static uint64_t clt_packs_cnt       = 0;
-/* Total sessions created */
-static uint64_t enter_cnt           = 0;
 /* Total sessions deleted */
 static uint64_t leave_cnt           = 0;
 /* Total obsolete sessions */
@@ -39,10 +37,6 @@ static uint64_t resp_cnt            = 0;
 static uint64_t resp_cont_cnt       = 0;
 /* Total connections successfully cheated */
 static uint64_t conn_cnt            = 0;
-/* Total time for disposing response packets */
-static double   resp_disp_t         = 0;
-/* Total time for disposing client packets */
-static double   clt_disp_t          = 0;
 /* Last time for statistics */
 static time_t   last_stat_time      = 0;
 /* Start time for excuting the process function */
@@ -68,6 +62,7 @@ int create_session_table()
 	/* Create 65536 slots for session table */
 	sessions_table = hash_create(65536);
 	strcpy(sessions_table->name, "session-table");
+	return 0;
 }
 
 static void session_init(session_t *s, int keepalive)
@@ -102,8 +97,7 @@ static void session_init(session_t *s, int keepalive)
 		s->unack_packets = link_list_create();
 	}
 
-	if(!keepalive)
-	{
+	if(!keepalive){
 		if(s->handshake_packets){
 			if(s->handshake_packets->size > 0){
 				link_list_destory(s->handshake_packets);
@@ -196,38 +190,46 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 	return s;
 }
 
-static void delete_session(session_t *s){
+static void session_del(session_t *s)
+{
+	leave_cnt++;
 	if(NULL != s->unsend_packets){
 		link_list_destory(s->unsend_packets);
+		free(s->unsend_packets);
 	}
 	if(NULL != s->next_session_packets){
 		link_list_destory(s->next_session_packets);
+		free(s->next_session_packets);
 	}
 	if(NULL != s->unack_packets){
 		link_list_destory(s->unack_packets);
+		free(s->unack_packets);
 	}
 	if(NULL != s->lost_packets){
 		link_list_destory(s->lost_packets);
+		free(s->lost_packets);
 	}
 	if(NULL != s->handshake_packets){
 		link_list_destory(s->handshake_packets);
+		free(s->handshake_packets);
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	if(NULL != s->mysql_special_packets){
 		link_list_destory(s->mysql_special_packets);
+		free(s->mysql_special_packets);
 	}
 #endif
 }
 
-static int check_session_over(session_t *s)
+static bool check_session_over(session_t *s)
 {
 	if(s->reset){   
-		return 1;
+		return true;
 	}   
 	if(s->sess_over){   
-		return 1;
+		return true;
 	}   
-	return 0;
+	return false;
 }
 
 static uint16_t  get_pack_cont_len(struct iphdr *ip_header,
@@ -255,13 +257,11 @@ static int check_overwhelming(session_t *s, const char *message,
 			s->sess_candidate_erased = 1;
 			log_info(LOG_WARN, "%s:candidate erased:%u,p:%u",
 				message, size, s->src_port);
-
 			return CANDIDATE_OBSOLETE;
 		}
 		obs_cnt++;
 		log_info(LOG_WARN,":%s:too many packets:%u,p:%u",
 				message, size, s->src_port);
-
 		return OBSOLETE;
 	}
 	return NOT_YET_OBSOLETE;
@@ -280,7 +280,7 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 		}
 		packs_unsend = s->unsend_packets->size;
 		if(packs_unsend < threshold){
-			return 0;
+			return NOT_YET_OBSOLETE;
 		}else{
 			log_info(LOG_WARN,"still live,but too many:%u,threshold:%u",
 					s->src_port, threshold);
@@ -318,26 +318,22 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 		return result;
 	}
 #endif
-
 	if(s->resp_last_recv_cont_time < timeout){
 		if(!s->sess_candidate_erased){
 			s->sess_candidate_erased = 1;
 			return CANDIDATE_OBSOLETE;
 		}
 		obs_cnt++;
-		log_info(LOG_INFO, "session timeout,p:%u", s->src_port);
-		if(s->unsend_packets->size > 10){
-			log_info(LOG_WARN,"timeout,unsend number:%u,p:%u",
-					s->unsend_packets->size, s->src_port);
-		}
+		log_info(LOG_WARN,"timeout,unsend number:%u,p:%u",
+				s->unsend_packets->size, s->src_port);
 		return OBSOLETE;
 	}
 }
 
 /*
- * Clear tcp timeout sessions
+ * Clear TCP timeout sessions
  */
-static int clear_timeout_sessions()
+static void clear_timeout_sessions()
 {
 	/*
 	 * We clear old sessions that receive no content response for 
@@ -349,16 +345,18 @@ static int clear_timeout_sessions()
 	time_t      current, norm_timeout, keepalive_timeout, timeout;
 	double      ratio; 
 	size_t      size, i;           
+	uint32_t    active_s;           
 	int         result;
 	link_list   *list;
 	p_link_node ln, tmp_ln;
 	hash_node   *hn;
 
-	current = time(0);
-	norm_timeout =current -60;
+	current           = time(0);
+	norm_timeout      = current -60;
 	keepalive_timeout = current -120;
+	active_s = sessions_table->total;
 
-	ratio = 100.0*enter_cnt/(resp_cnt + 1);
+	ratio = 100.0*active_s/(active_s + 1);
 	if(ratio < 5){
 		norm_timeout = keepalive_timeout;
 		log_info(LOG_NOTICE, "keepalive connection global");
@@ -385,7 +383,7 @@ static int clear_timeout_sessions()
 				result = check_session_obsolete(s, current, timeout);
 				if(OBSOLETE == result){
 					/* Delete session */
-					delete_session(s);
+					session_del(s);
 					free(s);
 				}
 			}
@@ -433,7 +431,7 @@ static void activate_dead_sessions()
 /*
  * Wrap sending ip packet function
  */
-static int wrap_send_ip_packet(session_t *s, unsigned char *data)
+static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 {
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
@@ -444,7 +442,7 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 
 	if(NULL != data){
 		log_info(LOG_ERR, "error ip data is null");
-		return 0;
+		return;
 	}
 
 	ip_header  = (struct iphdr *)data;
@@ -510,14 +508,12 @@ static int wrap_send_ip_packet(session_t *s, unsigned char *data)
 		log_info(LOG_ERR,"send to back error,tot_len is:%d,cont_len:%d",
 				tot_len,cont_len);
 	}
-
-	return 1;
 }
 
 /*
  * Check if the session has lost previous packets
  */
-static int check_packet_lost(session_t *s, struct iphdr *ip_header, 
+static bool check_packet_lost(session_t *s, struct iphdr *ip_header, 
 		struct tcphdr *tcp_header) 
 {
 	p_link_node  ln;
@@ -532,17 +528,17 @@ static int check_packet_lost(session_t *s, struct iphdr *ip_header,
 			log_info(LOG_INFO, "seq now:%u,expected seq:%u",
 					cur_seq, s->vir_next_seq);
 #endif
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 /*
  * Send reserved lost packets.
  * This is to solve the problem when packets arrive out of order
  */
-static int send_reserved_lost_packets(session_t *s)
+static void send_reserved_lost_packets(session_t *s)
 {
 	int           need_more_check, loop_over = 0, need_free;
 	uint16_t      size_ip, cont_len;
@@ -604,8 +600,6 @@ static int send_reserved_lost_packets(session_t *s)
 		/* Still need previous packet */
 		s->previous_packet_waiting = 0;
 	}
-
-	return 0;
 }
 
 /*
@@ -620,7 +614,7 @@ static int retransmit_packets(session_t *s)
 	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list, *buffered;
-	int need_pause = 0, is_success = 0;
+	bool need_pause = false, is_success = false;
 
 	list = s->unack_packets;
 	ln = link_list_first(list);	
@@ -640,7 +634,7 @@ static int retransmit_packets(session_t *s)
 		cur_seq   = ntohl(tcp_header->seq);  
 		if(!is_success){
 			if(cur_seq == s->resp_last_ack_seq){
-				is_success = 1;
+				is_success = true;
 			}else if(cur_seq < s->resp_last_ack_seq){
 				tmp_ln = ln;
 				ln = link_list_get_next(list, ln);
@@ -648,7 +642,7 @@ static int retransmit_packets(session_t *s)
 				free(data);
 			}else{
 				log_info(LOG_NOTICE, "no retrans packs:%u", s->src_port);
-				need_pause = 1;
+				need_pause = true;
 			}
 		}
 		if(is_success){
@@ -659,7 +653,7 @@ static int retransmit_packets(session_t *s)
 				link_list_append(buffered, tmp_ln); 
 				link_list_remove(list, ln);
 			}else{
-				need_pause=1;	
+				need_pause = true;	
 			}
 		}
 	}
@@ -718,7 +712,7 @@ static void update_retransmission_packets(session_t *s)
  *   therefore there are no events that trigger the session 
  * 2)...
  */
-static int check_dead_reqs(session_t *s)
+static bool check_dead_reqs(session_t *s)
 {
 	int    packs_unsend = 0, diff, result = 0;
 
@@ -729,16 +723,16 @@ static int check_dead_reqs(session_t *s)
 	if(diff > 2){
 		/* If there are more than 5 packets unsend */
 		if(packs_unsend > 5){
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 /*
  * Check if the reserved container has content left
  */
-static int check_reserved_content_left(session_t *s)
+static bool check_reserved_content_left(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;
@@ -759,11 +753,11 @@ static int check_reserved_content_left(session_t *s)
 		cont_len  = get_pack_cont_len(ip_header, NULL);
 		if(cont_len>0)
 		{
-			return 1;
+			return true;
 		}
 		ln = link_list_get_next(list, ln);
 	}
-	return 0;
+	return false;
 }
 
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -1391,7 +1385,7 @@ void fake_syn_hardly(session_t *s)
 /*
  * Check if the packet is needed for reconnection by mysql 
  */
-int mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
+static bool mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	unsigned char *payload, command;
@@ -1424,7 +1418,7 @@ int mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 					s->mysql_excute_times++;
 				}
 				if(!s->mysql_first_excution){
-					return 0;
+					return false;
 				}
 			}
 			ln   = link_node_malloc(copy_ip_packet(ip_header));
@@ -1440,7 +1434,7 @@ int mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 				if(NULL == list)
 				{
 					log_info(LOG_ERR, "list create err");
-					return 0;
+					return false;
 				}else{
 					hash_add(mysql_table, s->src_port, list);
 				}
@@ -1448,17 +1442,17 @@ int mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 			ln   = link_node_malloc(copy_ip_packet(ip_header));
 			ln->key = ntohl(tcp_header->seq);
 			link_list_order_append(list, ln);
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 
 /*
  * Check if the packet is the right packet for starting a new session 
  * by mysql tcpcopy
  */
-static int check_mysql_padding(struct iphdr *ip_header,
+static bool check_mysql_padding(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	unsigned char *payload, *data, command, pack_number;
@@ -1477,32 +1471,32 @@ static int check_mysql_padding(struct iphdr *ip_header,
 		pack_number = payload[0];
 		/* If it is the second authenticate_user,then skip it */
 		if(0 != pack_number){
-			return 0;
+			return false;
 		}
 		/* Skip Packet Number */
 		payload = payload + 1;
 		command = payload[0];
 		if(COM_QUERY == command){
-			return 1;
+			return true;
 		}
 	}
-	return 0;
+	return false;
 }
 #endif
 
 /*
  * Check if the packet is the right packet for noraml copying
  */
-static int check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
+static bool check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
 	uint16_t  cont_len;
 
 	cont_len = get_pack_cont_len(ip_header, tcp_header);
 
 	if( cont_len > 0){
-		return 1;
+		return true;
 	}
-	return 0;
+	return false;
 
 }
 
@@ -2117,7 +2111,7 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, int *is_new_req)
 {
-	int         is_save = 0;
+	bool        is_save = false;
 	uint32_t    tmp_last_ack, cur_seq;
 	p_link_node ln;
 
@@ -2141,7 +2135,7 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	}else{
 		if(s->unsend_packets->size > 0){
 			if(check_reserved_content_left(s)){
-				is_save = 1;
+				is_save = true;
 			}
 		}
 	}
@@ -2453,18 +2447,17 @@ void restore_buffered_next_session(session_t *s)
 /*
  * Filter packets 
  */
-int is_packet_needed(const char *packet)
+bool is_packet_needed(const char *packet)
 {
-	int           isNeeded = 0;
+	bool          isNeeded = false;
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
 	uint16_t      size_ip, size_tcp, tot_len;
 
 	ip_header = (struct iphdr*)packet;
 
-	/* check if it is a tcp packet */
-	if(ip_header->protocol != IPPROTO_TCP)
-	{
+	/* Check if it is a tcp packet */
+	if(ip_header->protocol != IPPROTO_TCP){
 		return isNeeded;
 	}
 
@@ -2485,11 +2478,9 @@ int is_packet_needed(const char *packet)
 
 	/* Here we filter the packets we do care about */
 	if(LOCAL == check_pack_src(&(clt_settings.transfer), 
-				ip_header->daddr, tcp_header->dest))
-	{
-		isNeeded = 1;
-		if(tcp_header->syn)
-		{
+				ip_header->daddr, tcp_header->dest)){
+		isNeeded = true;
+		if(tcp_header->syn){
 			clt_syn_cnt++;
 		}
 		clt_packs_cnt++;
@@ -2503,20 +2494,15 @@ int is_packet_needed(const char *packet)
 static void output_stat(time_t now, int run_time)
 {
 	double         ratio;
+	uint64_t       active_s;
+
 	last_stat_time = now;
-	log_info(LOG_WARN,
-			"active:%llu,total syns:%llu,rel reqs:%llu,obs del:%llu",
-			enter_cnt - leave_cnt, enter_cnt, leave_cnt, obs_cnt);
+	active_s       =sessions_table->total;
+	log_info(LOG_WARN, "active:%llu,rel reqs:%llu,obs del:%llu",
+			active_s, leave_cnt, obs_cnt);
 	log_info(LOG_WARN,
 			"total conns:%llu,total resp packs:%llu,c-resp packs:%llu",
 			conn_cnt, resp_cnt, resp_cont_cnt);
-	if(resp_cnt > 0)
-	{
-		log_info(LOG_WARN, "resp_cnt:%llu,resp_disp_t:%f,avg=%f",
-				resp_cnt, resp_disp_t, resp_disp_t/resp_cnt);
-	}
-	log_info(LOG_WARN, "clt_cnt:%llu,clt_disp_t:%f,avg=%f",
-			clt_cnt, clt_disp_t, clt_disp_t/clt_cnt);
 	log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
 			packs_sent_cnt, con_packs_sent_cnt);
 	log_info(LOG_NOTICE,
@@ -2535,8 +2521,8 @@ static void output_stat(time_t now, int run_time)
 			log_info(LOG_WARN, "no responses after %d secends", 
 					run_time);
 		}
-		if(enter_cnt > 0){
-			ratio = 100*conn_cnt/enter_cnt;
+		if(sessions_table->total > 0){
+			ratio = 100*conn_cnt/sessions_table->total;
 			if(ratio < 80){
 				log_info(LOG_WARN, 
 						"many connections can't be established");
@@ -2603,7 +2589,7 @@ void process(char *packet)
 					return;
 				}else{
 					hash_del(sessions_table, key);
-					delete_session(s);
+					session_del(s);
 				}
 			}
 		}
@@ -2689,7 +2675,7 @@ void process(char *packet)
 						return;
 					}else{
 						hash_del(sessions_table, key);
-						delete_session(s);
+						session_del(s);
 					}
 				}
 			}else

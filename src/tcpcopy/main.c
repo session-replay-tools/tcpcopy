@@ -1,6 +1,6 @@
 /*
- *  tcpcopy 
- *  An online replication replication tool for tcp based applications
+ *  TCPCopy
+ *  An online replication replication tool for TCP based applications
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.
@@ -25,19 +25,20 @@ static void set_signal_handler(){
 	signal(SIGTERM, tcp_copy_over);
 }
 
-
 static void usage(void) {  
-	printf("tcpcopy " VERSION "\n");
-	printf("-x <transfer,> what we copy and where to send \n"
+	printf("TCPCopy " VERSION "\n");
+	printf("-x <transfer,> what we copy and where send to\n"
 		   "               transfer format:\n"
 		   "               online_ip:online_port-target_ip:target_port,...\n"
+		   "               or :\n"
+		   "               online_port-target_ip:target_port,...\n"
 		   "-p <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
 		   "               user1@psw1:user2@psw2:...\n"
 		   "-n <num>       the number of replication for multi-copying\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
-		   "-M <num>       MTU sent to backend(max value 4096)\n"
+		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
 		   "-l <file>      log file path\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
@@ -105,7 +106,7 @@ static int read_args(int argc, char **argv){
 
 	}
 
-	/* Check mtu value is more than max mtu supported */
+	/* Check if mtu value is more than max mtu supported */
 	if(clt_settings.mtu >MAX_MTU){
 		clt_settings.mtu = MAX_MTU;
 	}
@@ -204,7 +205,7 @@ static void parse_one_target(int index, const char *target)
  * Format(by -x argument): 
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:3306-192.168.0.3:3306
  */
-static int retrieve_target_addresses(){
+static void retrieve_target_addresses(){
 	size_t     len, size;
 	int        count = 1, i;
 	const char *split, *p = clt_settings.raw_transfer;
@@ -261,7 +262,6 @@ static int retrieve_target_addresses(){
 		memset(buffer, 0, 128);
 		i++;
 	}
-	return 1;
 }
 
 static int set_details()

@@ -345,6 +345,7 @@ void tcp_copy_over(const int sig)
 	while(!read_over_flag){
 		sleep(1);
 		total++;
+		/* Wait for 30 seconds */
 		if(total > 30){
 			break;
 		}

@@ -102,23 +102,23 @@ inline uint32_t plus_one(uint32_t seq)
 	return htonl(ntohl(seq) + 1);
 }
 
-int check_seq_valid(uint32_t cur_seq, uint32_t last_seq)
+bool check_seq_valid(uint32_t cur_seq, uint32_t last_seq)
 {
 	if(cur_seq <= last_seq){
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
 /* suppose this function is called when the packet is content packet */
-int check_retransmission(struct tcphdr *tcp_header, 
+bool check_retransmission(struct tcphdr *tcp_header, 
 		uint32_t last_cont_sent_seq)
 {
 	uint32_t cur_seq = ntohl(tcp_header->seq);
 	if(cur_seq <= last_cont_sent_seq){
-		return 1;
+		return true;
 	}
-	return 0;
+	return false;
 }
 
 unsigned char *copy_ip_packet(struct iphdr *ip_header)

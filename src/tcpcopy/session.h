@@ -10,7 +10,7 @@
 
 /*global functions*/
 void process(char *packet);
-int is_packet_needed(const char *packet);
+bool is_packet_needed(const char *packet);
 
 typedef struct pack_detail_s{
 	/* current ip header to be processed*/

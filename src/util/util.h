@@ -22,9 +22,9 @@ inline uint32_t minus_one(uint32_t seq);
 
 inline uint32_t plus_one(uint32_t seq);
 
-int check_seq_valid(uint32_t cur_seq, uint32_t last_seq);
+bool check_seq_valid(uint32_t cur_seq, uint32_t last_seq);
 
-int check_retransmission(struct tcphdr *tcp_header, 
+bool check_retransmission(struct tcphdr *tcp_header, 
 		uint32_t last_cont_sent_seq);
 
 unsigned char *copy_ip_packet(struct iphdr *ip_header);
