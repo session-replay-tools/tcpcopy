@@ -154,7 +154,9 @@ static int set_details()
 	/* Set signal handler */	
 	set_signal_handler();
 	/* Retrieve ip address */
-	retrieve_ip_addr();
+	if(srv_settings.raw_ip_list != NULL){
+		retrieve_ip_addr();
+	}
 	/* Daemonize */
 	if (srv_settings.do_daemonize) {
 		if (sigignore(SIGHUP) == -1) {

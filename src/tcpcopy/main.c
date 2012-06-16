@@ -32,14 +32,17 @@ static void usage(void) {
 		   "               online_ip:online_port-target_ip:target_port,...\n"
 		   "               or :\n"
 		   "               online_port-target_ip:target_port,...\n"
-		   "-p <pair>      user password pair for mysql\n"
+#if (TCPCOPY_MYSQL_ADVANCED)  
+		   "-u <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
 		   "               user1@psw1:user2@psw2:...\n"
+#endif
 		   "-n <num>       the number of replication for multi-copying\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
 		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
 		   "-l <file>      log file path\n"
+		   "-p <num>       remote server listening port\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
 		   "-v             version\n"
@@ -54,10 +57,13 @@ static int read_args(int argc, char **argv){
 	
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where do we copy request from and to */
-		 "p:" /* user password pair for mysql*/
+#if (TCPCOPY_MYSQL_ADVANCED)  
+		 "u:" /* user password pair for mysql*/
+#endif
 		 "n:" /* the replicated number of each request for multi-copying */
 		 "f:" /* port shift factor for mutiple tcpcopy instances */
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
+		 "p:" /* remote server listening port */
 		 "M:" /* MTU sent to backend */
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
@@ -69,9 +75,11 @@ static int read_args(int argc, char **argv){
 			case 'x':
 				clt_settings.raw_transfer= strdup(optarg);
 				break;
-			case 'p':
+#if (TCPCOPY_MYSQL_ADVANCED)  
+			case 'u':
 				clt_settings.user_pwd = strdup(optarg);
 				break;
+#endif
 			case 'n':
 				clt_settings.replica_num = atoi(optarg);
 				break;
@@ -95,6 +103,9 @@ static int read_args(int argc, char **argv){
 				exit(EXIT_SUCCESS);
 			case 'd':
 				clt_settings.do_daemonize = 1;
+				break;
+			case 'p':
+				clt_settings.srv_port = atoi(optarg);
 				break;
 			case 'P':
 				clt_settings.pid_file = optarg;
@@ -309,6 +320,7 @@ static int settings_init()
 	/* Init values */
 	clt_settings.mtu = DEFAULT_MTU;
 	clt_settings.max_rss = MAX_MEMORY_SIZE;
+	clt_settings.srv_port = SERVER_PORT;
 }
 
 /*

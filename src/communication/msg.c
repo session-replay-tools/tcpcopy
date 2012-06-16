@@ -15,14 +15,14 @@ static int tcp_sock_init()
 	return sock;
 }
 
-static void connect_to_server(int sock, uint32_t ip)
+static void connect_to_server(int sock, uint32_t ip, uint16_t port)
 {
 	struct sockaddr_in remote_addr;                           
 	socklen_t length;
 	memset(&remote_addr, 0, sizeof(remote_addr));               
 	remote_addr.sin_family = AF_INET;                         
 	remote_addr.sin_addr.s_addr = ip;                
-	remote_addr.sin_port = htons(SERVER_PORT);                       
+	remote_addr.sin_port = htons(port);                       
 	length = (socklen_t)(sizeof(remote_addr));
 	if(connect(sock, (struct sockaddr *)&remote_addr, length) == -1){
 		perror("connect to remote:");                         
@@ -48,10 +48,10 @@ static void set_sock_no_delay(int sock)
 	} 
 }
 
-int msg_client_init(uint32_t server_ip)
+int msg_client_init(uint32_t server_ip, uint16_t port)
 {
 	int sock  = tcp_sock_init();
-	connect_to_server(sock, server_ip);
+	connect_to_server(sock, server_ip, port);
 	set_sock_no_delay(sock);
 	return sock;
 }
