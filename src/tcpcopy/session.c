@@ -183,6 +183,7 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 	session_t           *s;
 	s = session_create(ip_header, tcp_header);
 	if(NULL != s){
+		s->hash_key = key;
 		hash_add(sessions_table, key, s);
 	}
 	return s;
@@ -217,6 +218,7 @@ static void session_del(session_t *s)
 		free(s->mysql_special_packets);
 	}
 #endif
+	hash_del(sessions_table, s->hash_key);
 }
 
 static bool check_session_over(session_t *s)
@@ -346,7 +348,7 @@ static void clear_timeout_sessions()
 	uint32_t    active_s;           
 	int         result;
 	link_list   *list;
-	p_link_node ln, tmp_ln;
+	p_link_node ln;
 	hash_node   *hn;
 
 	current           = time(0);
@@ -381,18 +383,10 @@ static void clear_timeout_sessions()
 				result = check_session_obsolete(s, current, timeout);
 				if(OBSOLETE == result){
 					/* Delete session */
-					hash_del(sessions_table, hn->key);
 					session_del(s);
-					free(s);
 				}
 			}
-			tmp_ln = ln;
 			ln = link_list_get_next(list, ln);
-			if(OBSOLETE == result){
-				link_list_remove(list, tmp_ln);
-				free(hn);
-				free(tmp_ln);
-			}
 		}
 	}
 }
@@ -1732,11 +1726,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		}
 		resp_cont_cnt++;
 		s->resp_last_recv_cont_time = current;
-		if(tcp_header->fin){
-			s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len +1 );
-		}else{
-			s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
-		}
+		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
 	}else{
 		s->vir_ack_seq = tcp_header->ack_seq;
 	}
@@ -1758,6 +1748,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		process_back_syn_pack(s, ip_header, tcp_header);
 		return;
 	}else if(tcp_header->fin){
+		s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
 		/* Process fin packet */
 		process_back_fin_pack(s, ip_header, tcp_header);
 		return;
@@ -2607,9 +2598,7 @@ void process(char *packet)
 					restore_buffered_next_session(s);
 					return;
 				}else{
-					hash_del(sessions_table, key);
 					session_del(s);
-					free(s);
 				}
 			}
 		}
@@ -2694,9 +2683,7 @@ void process(char *packet)
 						restore_buffered_next_session(s);
 						return;
 					}else{
-						hash_del(sessions_table, key);
 						session_del(s);
-						free(s);
 					}
 				}
 			}else

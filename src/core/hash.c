@@ -109,8 +109,8 @@ void hash_add(hash_table *table, uint64_t key, void *data)
 
 void hash_del(hash_table *table, uint64_t key)
 {
-	link_list   *l =get_link_list(table, key); 
-	p_link_node ln = hash_find_node(table,key);
+	link_list   *l = get_link_list(table, key); 
+	p_link_node ln = hash_find_node(table, key);
 	if(ln != NULL){
 		table->total--;
 		link_list_remove(l, ln);
