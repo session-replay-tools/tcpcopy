@@ -2548,6 +2548,7 @@ void process(char *packet)
 
 	if(0 == start_p_time){
 		start_p_time = now;
+		create_session_table();
 	}else{
 		run_time = now -start_p_time;
 	}

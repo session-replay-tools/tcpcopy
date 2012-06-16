@@ -163,6 +163,7 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 		}else{
 			*ip = inetAddr;
 		}
+		p = split + 1;
 	}else{
 		log_info(LOG_NOTICE, "set global port for tcpcopy");
 	}
@@ -201,7 +202,7 @@ static void parse_one_target(int index, const char *target)
 	ip   = 0;
 	parse_ip_port_pair(buffer, &ip, &port);
 	map->online_ip   = ip;
-	map->online_port = port;
+	map->online_port = htons(port);
 	p = split + 1;
 
 	/* Parse target ip and port */
@@ -209,7 +210,7 @@ static void parse_one_target(int index, const char *target)
 	ip   = 0;
 	parse_ip_port_pair(p, &ip ,&port);
 	map->target_ip   = ip;
-	map->target_port = port;
+	map->target_port = htons(port);
 }
 
 /* 

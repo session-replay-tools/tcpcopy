@@ -12,20 +12,6 @@
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 
-typedef struct pack_detail_s{
-	/* current ip header to be processed*/
-	struct iphdr  *ip_header;
-	/* current tcp header to be processed*/
-	struct tcphdr *tcp_header;
-#if (TCPCOPY_MYSQL_BASIC)
-	unsigned char *payload;
-#endif
-	uint16_t      size_ip;
-	uint16_t      tot_len;
-	uint16_t      size_tcp;
-	uint16_t      cont_size;
-}pack_detail_t;
-
 typedef struct session_s{
     /*src or client ip address*/
 	uint32_t src_addr;
