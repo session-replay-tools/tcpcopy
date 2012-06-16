@@ -177,10 +177,12 @@ static void settings_init(void)
 }
 
 int main(int argc ,char **argv){
+	/* Init settings */ 
+	settings_init();
 	/* Read args */
 	read_args(argc, argv);
 	/* Init log */
-	log_init();
+	log_init(srv_settings.log_path);
 	/* Set details */
 	set_details(); 
 	/* Init interception */
