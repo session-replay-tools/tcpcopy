@@ -381,6 +381,7 @@ static void clear_timeout_sessions()
 				result = check_session_obsolete(s, current, timeout);
 				if(OBSOLETE == result){
 					/* Delete session */
+					hash_del(sessions_table, hn->key);
 					session_del(s);
 					free(s);
 				}
@@ -389,6 +390,8 @@ static void clear_timeout_sessions()
 			ln = link_list_get_next(list, ln);
 			if(OBSOLETE == result){
 				link_list_remove(list, tmp_ln);
+				free(hn);
+				free(tmp_ln);
 			}
 		}
 	}
@@ -585,6 +588,7 @@ static void send_reserved_lost_packets(session_t *s)
 				ln = link_list_get_next(list, ln);
 				link_list_remove(list, tmp_ln);
 				free(data);
+				free(tmp_ln);
 			}
 		}
 		if(!need_more_check){
@@ -638,6 +642,7 @@ static int retransmit_packets(session_t *s)
 				ln = link_list_get_next(list, ln);
 				link_list_remove(list, tmp_ln);
 				free(data);
+				free(tmp_ln);
 			}else{
 				log_info(LOG_NOTICE, "no retrans packs:%u", s->src_port);
 				need_pause = true;
@@ -695,6 +700,7 @@ static void update_retransmission_packets(session_t *s)
 			ln = link_list_get_next(list, ln);
 			link_list_remove(list, tmp_ln);
 			free(data);
+			free(tmp_ln);
 		}else{
 			break;
 		}
@@ -845,7 +851,8 @@ static int send_reserved_packets(session_t *s)
 	int need_pause = 0, cand_pause = 0, count = 0, omit_transfer = 0; 
 
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_DEBUG,"send reserved packs, port:%u",s->src_port);
+	log_info(LOG_DEBUG,"send reserved packs,size:%u, port:%u",
+			s->unsend_packets->size, s->src_port);
 #endif
 
 	list = s->unsend_packets;
@@ -916,6 +923,7 @@ static int send_reserved_packets(session_t *s)
 		ln = link_list_get_next(list, ln);
 		link_list_remove(list, tmp_ln);
 		free(data);
+		free(tmp_ln);
 
 		omit_transfer = 0;
 	}
@@ -1724,7 +1732,11 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		}
 		resp_cont_cnt++;
 		s->resp_last_recv_cont_time = current;
-		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len + 1);
+		if(tcp_header->fin){
+			s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len +1 );
+		}else{
+			s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
+		}
 	}else{
 		s->vir_ack_seq = tcp_header->ack_seq;
 	}
@@ -1785,13 +1797,19 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 						tcp_header, cont_len, &is_greet)){
 				return;
 			}
+#endif
+			/* TODO Why mysql does not need this packet ? */
+			send_faked_ack(s, ip_header, tcp_header, 1);
+#if (TCPCOPY_MYSQL_BASIC)
 			if(s->candidate_response_waiting || is_greet){
 #else
+
 			if(s->candidate_response_waiting){
 #endif
 #if (DEBUG_TCPCOPY)
 				log_info(LOG_DEBUG,"receive back server's resp");
 #endif
+
 				s->candidate_response_waiting = 0;
 				s->status = RECV_RESP;
 				send_reserved_packets(s);
@@ -1878,6 +1896,7 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 			ln = link_list_get_next(list, ln);
 			link_list_remove(list, tmp_ln);
 			free(tmp_ln->data);
+			free(tmp_ln);
 		}
 	}
 	hash_del(mysql_table, s->src_port);
@@ -2222,7 +2241,7 @@ static void process_client_after_main_body(session_t *s,
 		ln->key = ntohl(tcp_header->seq);
 		link_list_order_append(s->unsend_packets, ln);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_DEBUG, "strange here,wait backend's response");
+		log_info(LOG_DEBUG, "strange,wait back's resp:%u", s->src_port);
 #endif
 		if(check_dead_reqs(s)){
 			send_reserved_packets(s);
@@ -2440,6 +2459,7 @@ void restore_buffered_next_session(session_t *s)
 	process_recv(s, ip_header,tcp_header);
 
 	free(data);
+	free(ln);
 }
 
 /*
@@ -2589,6 +2609,7 @@ void process(char *packet)
 				}else{
 					hash_del(sessions_table, key);
 					session_del(s);
+					free(s);
 				}
 			}
 		}
@@ -2675,6 +2696,7 @@ void process(char *packet)
 					}else{
 						hash_del(sessions_table, key);
 						session_del(s);
+						free(s);
 					}
 				}
 			}else
