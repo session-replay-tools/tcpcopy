@@ -306,10 +306,12 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 	if(NOT_YET_OBSOLETE != result){
 		return result;
 	}
-	result = check_overwhelming(s, "next session", threshold, 
-			s->next_session_packets->size);
-	if(NOT_YET_OBSOLETE != result){
-		return result;
+	if(s->next_session_packets){
+		result = check_overwhelming(s, "next session", threshold, 
+				s->next_session_packets->size);
+		if(NOT_YET_OBSOLETE != result){
+			return result;
+		}
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	result = check_overwhelming(s, "mysql special", threshold, 
