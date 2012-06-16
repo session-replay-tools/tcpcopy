@@ -30,7 +30,7 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key)
 	p_link_node ln  = link_list_first(l);
 	hash_node   *hn;
 	while(ln){
-		hn= (hash_node *)ln->data;
+		hn = (hash_node *)ln->data;
 		if(hn->key == key){
 			hn->access_time = time(NULL);
 			/* put the lastest item to the head of the linked list */
@@ -80,7 +80,7 @@ link_list *get_link_list(hash_table *table, uint64_t key)
 void *hash_find(hash_table *table, uint64_t key)
 {
 	hash_node   *hn;
-	p_link_node ln = hash_find_node(table,key);
+	p_link_node ln = hash_find_node(table, key);
 	if(ln != NULL){
 		hn = (hash_node *) ln->data;
 		return hn->data;

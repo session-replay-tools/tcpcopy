@@ -73,6 +73,8 @@ static void session_init(session_t *s, int keepalive)
 #endif 
 	int       handshake_pack_num;
 
+	memset(s, 0 , sizeof(session_t));
+
 	if(s->unsend_packets){
 		if(s->unsend_packets->size > 0){
 			link_list_destory(s->unsend_packets);
@@ -121,7 +123,6 @@ static void session_init(session_t *s, int keepalive)
 #endif		
 		handshake_pack_num = s->expected_handshake_pack_num;
 	}
-	memset(s, 0 , sizeof(session_t));
 
 	s->expected_handshake_pack_num = 2;
 	
@@ -180,12 +181,9 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 	link_list           *list;
 	p_link_node         ln;
 	session_t           *s;
-	s = hash_find(sessions_table, key);
-	if(NULL == s){
-		s = session_create(ip_header, tcp_header);
-		if(NULL != s){
-			hash_add(sessions_table, key, s);
-		}
+	s = session_create(ip_header, tcp_header);
+	if(NULL != s){
+		hash_add(sessions_table, key, s);
 	}
 	return s;
 }
@@ -440,7 +438,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 	ssize_t       send_len;
 	uint32_t      tmp_req_last_cont_sent_seq;
 
-	if(NULL != data){
+	if(NULL == data){
 		log_info(LOG_ERR, "error ip data is null");
 		return;
 	}
@@ -613,7 +611,7 @@ static int retransmit_packets(session_t *s)
 	uint16_t      size_ip, cont_len;
 	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
-	link_list     *list, *buffered;
+	link_list     *list, *buffered = NULL;
 	bool need_pause = false, is_success = false;
 
 	list = s->unack_packets;
@@ -658,7 +656,7 @@ static int retransmit_packets(session_t *s)
 		}
 	}
 	
-	if(!link_list_is_empty(buffered)){
+	if(NULL != buffered && !link_list_is_empty(buffered)){
 		/* Append all buffered packets to unack link list */
 		ln = link_list_first(buffered);	
 		while(ln){
@@ -2576,9 +2574,9 @@ void process(char *packet)
 	if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
-		ln  = hash_find(sessions_table, key);
-		if(ln){
-			s = (session_t *)ln->data;
+		s = hash_find(sessions_table, key);
+		printf("come from backend:%llu\n",key);
+		if(s){
 			s->last_update_time = now;
 			update_virtual_status(s, ip_header, tcp_header);
 			if(check_session_over(s)){
@@ -2604,6 +2602,7 @@ void process(char *packet)
 					clt_settings.rand_port_shifted, clt_settings.factor);
 		}
 		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
+		printf("come from client:%llu\n",key);
 		if(tcp_header->syn){
 			s  = hash_find(sessions_table, key);
 			if(s){
