@@ -54,8 +54,10 @@ typedef struct session_s{
 	uint32_t req_last_syn_seq;
 	/*last ack sequence of client packet which is sent to bakend*/
 	uint32_t req_last_ack_sent_seq;
-	/*last client content packet's ack sequence which is captured */
+	/* last client content packet's ack sequence which is captured */
 	uint32_t req_cont_last_ack_seq;
+	/* current client content packet's ack seq which is captured */
+	uint32_t req_cont_cur_ack_seq;
 	/***********************end***************************/
 
 	/*the hash key for this session*/

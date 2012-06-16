@@ -250,7 +250,7 @@ static uint16_t  get_pack_cont_len(struct iphdr *ip_header,
 }
 
 static int check_overwhelming(session_t *s, const char *message, 
-		int size, int max_hold_packs)
+		int max_hold_packs, int size)
 {
 	if(size > max_hold_packs){
 		if(!s->sess_candidate_erased){
@@ -2120,12 +2120,10 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, int *is_new_req)
 {
 	bool        is_save = false;
-	uint32_t    tmp_last_ack, cur_seq;
+	uint32_t    cur_seq;
 	p_link_node ln;
 
 	*is_new_req  = 0;
-	tmp_last_ack = s->req_cont_last_ack_seq;
-	s->req_cont_last_ack_seq = ntohl(tcp_header->ack_seq);
 	/*
 	 * If the ack seq of the last cont packet is not equal to 
 	 * it of the current content packet, then the current packet is 
@@ -2133,8 +2131,11 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	 * Attension:
 	 *   the last content packet may not be sent to backend
 	 */
-	if(s->req_cont_last_ack_seq != tmp_last_ack){
+	if(s->req_cont_last_ack_seq != s->req_cont_cur_ack_seq){
 		*is_new_req = 1;
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_INFO, "it is a new req,p:%u", s->src_port);
+#endif
 	}
 
 	if(*is_new_req){
@@ -2373,6 +2374,12 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	}
 #endif
 	if(cont_len > 0){
+		/* Update ack seq values for checking a new request */
+		s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
+		s->req_cont_cur_ack_seq = ntohl(tcp_header->ack_seq);
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_INFO, "cont len:%d,p:", cont_len, s->src_port);
+#endif
 #if (TCPCOPY_MYSQL_BASIC)
 		/* process mysql client auth packet */
 		if(DISP_STOP == process_mysql_clt_auth_pack(s, ip_header, 
@@ -2399,6 +2406,9 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 		/* Check if the packet is to be saved for later use */
 		if(s->candidate_response_waiting){
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_INFO, "check_pack_save_or_not,p:%u", s->src_port);
+#endif
 			if(DISP_STOP == check_pack_save_or_not(s, 
 						ip_header, tcp_header, &is_new_req)){
 				return;
