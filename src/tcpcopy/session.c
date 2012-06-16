@@ -2550,6 +2550,7 @@ void process(char *packet)
 	}else{
 		run_time = now -start_p_time;
 	}
+	printf("table total:%d\n",sessions_table->total);
 	diff = now - last_stat_time;
 	if(diff > 10){
 		/* Output statistics */
@@ -2575,7 +2576,6 @@ void process(char *packet)
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
 		s = hash_find(sessions_table, key);
-		printf("come from backend:%llu\n",key);
 		if(s){
 			s->last_update_time = now;
 			update_virtual_status(s, ip_header, tcp_header);
@@ -2602,7 +2602,6 @@ void process(char *packet)
 					clt_settings.rand_port_shifted, clt_settings.factor);
 		}
 		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		printf("come from client:%llu\n",key);
 		if(tcp_header->syn){
 			s  = hash_find(sessions_table, key);
 			if(s){

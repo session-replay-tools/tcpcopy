@@ -46,10 +46,10 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key)
 hash_table *hash_create(size_t size)
 {
 	size_t i;
-	hash_table *ht = (hash_table *)malloc(sizeof(hash_table));
+	hash_table *ht = (hash_table *)calloc(1, sizeof(hash_table));
 	if(NULL == ht){
-		perror("can't malloc memory!");
-		log_info(LOG_ERR, "can't malloc memory for hash table:%s",
+		perror("can't calloc memory!");
+		log_info(LOG_ERR, "can't calloc memory for hash table:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
