@@ -164,7 +164,7 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 			*ip = inetAddr;
 		}
 	}else{
-		log_info(LOG_NOTICE,"ip does not exist:%s", p);
+		log_info(LOG_NOTICE, "set global port for tcpcopy");
 	}
 
 	*port = atoi(p);
@@ -186,6 +186,7 @@ static void parse_one_target(int index, const char *target)
 	uint16_t   port;
 	ip_port_pair_mapping_t *map;
 	map = clt_settings.transfer.mappings[index];
+	memset(buffer, 0, 128);
 
 	/* Parse online ip and port */
 	split = strchr(p, '-');
