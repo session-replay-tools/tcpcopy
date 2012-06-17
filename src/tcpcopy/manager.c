@@ -1,8 +1,9 @@
 #include "../core/xcopy.h"
 #include "../communication/msg.h"
 
-static char      pool[RECV_POOL_SIZE], item[MAX_MTU + MAX_MTU];
+static char      *pool, item[MAX_MTU + MAX_MTU];
 static int       raw_sock, read_over_flag = 1;
+size_t           pool_max_addr, pool_size, pool_fact;
 static uint64_t  read_cnt = 0, write_cnt = 0, event_cnt = 0;
 static uint64_t  packs_put_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint64_t  recv_pack_cnt_from_pool = 0;
@@ -25,14 +26,14 @@ static void put_packet_to_pool(const char *packet, int len)
 	pthread_mutex_lock(&mutex);
 
 	next_w_cnt     = write_cnt + len + sizeof(int);	
-	next_w_pointer = next_w_cnt%RECV_POOL_SIZE;
-	if(next_w_pointer > MAX_ADDR){
-		next_w_cnt = (next_w_cnt/RECV_POOL_SIZE + 1) << RECV_POOL_SIZE_SHF;
-		len += RECV_POOL_SIZE - next_w_pointer;
+	next_w_pointer = next_w_cnt%pool_size;
+	if(next_w_pointer > pool_max_addr){
+		next_w_cnt = (next_w_cnt/pool_size + 1) << pool_fact;
+		len += pool_size - next_w_pointer;
 	}
 	diff = next_w_cnt - read_cnt;
 	while(1){
-		if(diff > RECV_POOL_SIZE){
+		if(diff > pool_size){
 			log_info(LOG_ERR, "pool is full");
 			log_info(LOG_ERR, "read:%llu, write:%llu, next_w_cnt:%llu",
 					read_cnt, write_cnt, next_w_cnt);
@@ -43,7 +44,7 @@ static void put_packet_to_pool(const char *packet, int len)
 		}
 		diff = next_w_cnt - read_cnt;
 	}
-	w_pointer = write_cnt % RECV_POOL_SIZE;
+	w_pointer = write_cnt % pool_size;
 	size_p    = (int*)(pool + w_pointer);
 	p         = pool + w_pointer + sizeof(int);
 	write_cnt = next_w_cnt;
@@ -70,7 +71,7 @@ static char *get_pack_from_pool()
 		read_over_flag = 1;
 		pthread_cond_wait(&full, &mutex);
 	}
-	read_pos = read_cnt%RECV_POOL_SIZE;
+	read_pos = read_cnt%pool_size;
 	p        = pool + read_pos + sizeof(int);
 	len      = *(int*)(pool + read_pos);
 	memcpy(item, p, len);
@@ -367,11 +368,20 @@ int tcp_copy_init()
 	ip_port_pair_mapping_t **mappings;
 	uint16_t               online_port, target_port;
 	uint32_t               target_ip;
+	size_t                 pool_size;
 
 #if (MULTI_THREADS)  
 	pthread_t              thread;
 #endif
+
 	select_sever_set_callback(dispose_event);
+
+	/* Init pool */
+	pool_fact = clt_settings.pool_fact;
+	pool_size = 1 << pool_fact;
+	pool_max_addr = pool_size - RECV_BUF_SIZE;
+	pool = (char*)calloc(1, pool_size);
+
 	/* Init input raw socket info */
 	raw_sock = init_raw_socket();
 	if(raw_sock != -1){

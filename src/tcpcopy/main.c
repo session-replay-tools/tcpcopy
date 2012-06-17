@@ -38,9 +38,16 @@ static void usage(void) {
 		   "               user1@psw1:user2@psw2:...\n"
 #endif
 		   "-n <num>       the number of replication for multi-copying\n"
+		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
+		   "               max value allowed is 1023:\n"
 		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
+		   "               default value is 512:\n"
 		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
+		   "-b <num>       buffer factor for raw socket input(range 20~30)\n"
+		   "               buffer size is equal to 2^(value) or 1 << value\n"
+		   "               default value is 24, which means 16M bytes\n"
+		   "               max value allowed is 30, which means 1G bytes\n"
 		   "-l <file>      log file path\n"
 		   "-p <num>       remote server listening port\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
@@ -54,6 +61,7 @@ static void usage(void) {
 
 static int read_args(int argc, char **argv){
 	int  c;
+	int value;
 	
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where do we copy request from and to */
@@ -65,6 +73,7 @@ static int read_args(int argc, char **argv){
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
 		 "p:" /* remote server listening port */
 		 "M:" /* MTU sent to backend */
+		 "b:" /* buffer factor for raw socket input*/
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
 		 "h" /* help, licence info */   
@@ -94,6 +103,15 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'M':
 				clt_settings.mtu = atoi(optarg);
+				break;
+			case 'b':
+				value = atoi(optarg);
+				if(value >RECV_POOL_MAX_SIZE_SHF){
+					value = RECV_POOL_MAX_SIZE_SHF;
+				}else if(value < RECV_POOL_MIN_SIZE_SHF){
+					value = RECV_POOL_MIN_SIZE_SHF;
+				}
+				clt_settings.pool_fact= value;
 				break;
 			case 'h':
 				usage();
@@ -323,6 +341,7 @@ static int settings_init()
 	clt_settings.mtu = DEFAULT_MTU;
 	clt_settings.max_rss = MAX_MEMORY_SIZE;
 	clt_settings.srv_port = SERVER_PORT;
+	clt_settings.pool_fact = RECV_POOL_SIZE_SHF;
 }
 
 /*
