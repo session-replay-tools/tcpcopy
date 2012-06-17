@@ -332,9 +332,16 @@ static void dispose_event(int fd)
 
 void tcp_copy_exit()
 {
-	close(raw_sock);
-	raw_sock = -1;
+	if(-1 != raw_sock){
+		close(raw_sock);
+		raw_sock = -1;
+	}
 	send_close();
+	log_end();
+	if(NULL != pool){
+		free(pool);
+		pool = NULL;
+	}
 	exit(0);
 }
 
@@ -351,11 +358,6 @@ void tcp_copy_over(const int sig)
 			break;
 		}
 	}
-	if(-1 != raw_sock){
-		close(raw_sock);
-	}
-	send_close();
-	log_end();
 	exit(0);
 }
 
