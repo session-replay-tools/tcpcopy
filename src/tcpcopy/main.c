@@ -234,7 +234,7 @@ static void parse_one_target(int index, const char *target)
 /* 
  * Retrieve target addresses
  * Format(by -x argument): 
- * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:3306-192.168.0.3:3306
+ * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
 static void retrieve_target_addresses(){
 	size_t     len, size;

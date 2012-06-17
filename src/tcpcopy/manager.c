@@ -368,7 +368,6 @@ int tcp_copy_init()
 	ip_port_pair_mapping_t **mappings;
 	uint16_t               online_port, target_port;
 	uint32_t               target_ip;
-	size_t                 pool_size;
 
 #if (MULTI_THREADS)  
 	pthread_t              thread;
