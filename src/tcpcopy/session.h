@@ -15,19 +15,19 @@ void process(char *packet);
 bool is_packet_needed(const char *packet);
 
 typedef struct session_s{
-    /*src or client ip address*/
+    /*src or client ip address(network byte order) */
 	uint32_t src_addr;
-	/*dst or backend ip address*/
+	/*dst or backend ip address(network byte order) */
 	uint32_t dst_addr;
-	/*online ip address*/
+	/*online ip address(network byte order) */
 	uint32_t online_addr;
-	/*src or client port*/
-	uint16_t src_port;
-	/*dst or backend port*/
+	/*src or client port(host byte order) */
+	uint16_t src_h_port;
+	/*dst or backend port(network byte order)*/
 	uint16_t dst_port;
-	/*online port*/
+	/*online port(network byte order)*/
 	uint16_t online_port;
-	/*faked src or client port*/
+	/*faked src or client port(network byte order)*/
 	uint16_t faked_src_port;
 
 	/*virtual variables*/

@@ -338,6 +338,7 @@ static void dispose_event(int fd)
 
 void tcp_copy_exit()
 {
+	session_table_destroy();
 	if(-1 != raw_sock){
 		close(raw_sock);
 		raw_sock = -1;
