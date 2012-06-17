@@ -3,12 +3,12 @@
 #include "../log/log.h"
 #include "session.h"
 
-static void send_faked_passive_rst(session_t *s);
 static void session_del(session_t *s);
 static bool check_session_over(session_t *s);
-static int  send_reserved_packets(session_t *s);
-static int  retransmit_packets(session_t *s);
 static bool check_dead_reqs(session_t *s);
+static int  send_reserved_packets(session_t *s);
+static void send_faked_passive_rst(session_t *s);
+static int  retransmit_packets(session_t *s);
 
 static hash_table *sessions_table;
 
@@ -96,13 +96,24 @@ int session_table_destroy()
 
 static void session_init(session_t *s, int keepalive)
 {
+	unsigned char *begin, *end;
+	size_t        zeroed_length;
 	link_list *hl;
 #if (TCPCOPY_MYSQL_BASIC)
 	link_list *ml;
 #endif 
 	int       handshake_pack_num;
 
-	memset(s, 0 , sizeof(session_t));
+	if(!keepalive){
+		memset(s, 0 , sizeof(session_t));
+	}else{
+		/* Only init part */
+		/* TODO to be tested */
+		begin = &(s->vir_ack_seq);
+		end   = &(s->unsend_packets);
+		zeroed_length =sizeof(unsigned char*)*(end - begin);
+		memset(begin, 0, zeroed_length);
+	}
 
 	if(s->unsend_packets){
 		if(s->unsend_packets->size > 0){
@@ -201,6 +212,7 @@ static session_t *session_create(struct iphdr *ip_header,
 			s->online_addr, s->online_port);
 	s->dst_addr    = test->target_ip;
 	s->dst_port    = test->target_port;
+	s->hash_key = get_ip_port_value(s->src_addr, tcp_header->source);
 	return s;
 }
 
@@ -800,7 +812,6 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 	void          *value;
 	char          encryption[16];
 	int           ch_auth_success;
-	uint64_t      key;
 	unsigned char *payload;
 	uint16_t      size_tcp, cont_len;
 
@@ -823,17 +834,15 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 			return FAILURE;
 		}
 		s->mysql_first_auth_sent = 1;
-		key = get_ip_port_value(ip_header->saddr, 
-				tcp_header->source);
-		value = hash_find(fir_auth_pack_table, key);
+		value = hash_find(fir_auth_pack_table, s->hash_key);
 		if(value != NULL)
 		{
 			free(value);
-			log_info(LOG_NOTICE, "free for fir auth:%llu", key);
+			log_info(LOG_NOTICE, "free for fir auth:%llu", s->hash_key);
 		}
 		value = (void *)copy_ip_packet(ip_header);
-		hash_add(fir_auth_pack_table, key, value);
-		log_info(LOG_NOTICE, "set value for fir auth:%llu",key);
+		hash_add(fir_auth_pack_table, s->hash_key, value);
+		log_info(LOG_NOTICE, "set value for fir auth:%llu", s->hash_key);
 
 	}else if(s->mysql_first_auth_sent && s->mysql_sec_auth){
 
@@ -848,16 +857,15 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 		change_client_second_auth_content(payload, cont_len, encryption);
 		s->mysql_sec_auth = 0;
 		strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		value = hash_find(sec_auth_pack_table, key);
+		value = hash_find(sec_auth_pack_table, s->hash_key);
 		if(value != NULL)
 		{
 			free(value);
-			log_info(LOG_NOTICE, "free for sec auth:%llu", key);
+			log_info(LOG_NOTICE, "free for sec auth:%llu", s->hash_key);
 		}
 		value = (void *)copy_ip_packet(ip_header);
-		hash_add(sec_auth_pack_table, key, value);
-		log_info(LOG_WARN,"set sec auth packet:%llu", key);
+		hash_add(sec_auth_pack_table, s->hash_key, value);
+		log_info(LOG_WARN,"set sec auth packet:%llu", s->hash_key);
 
 	}
 

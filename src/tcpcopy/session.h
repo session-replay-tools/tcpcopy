@@ -8,164 +8,161 @@
 #define FAKE_ACK_BUF_SIZE  40
 #define FAKE_IP_HEADER_LEN 20
 
-/*global functions*/
+/* Global functions */
 int session_table_init();
 int session_table_destroy();
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 
 typedef struct session_s{
-    /*src or client ip address(network byte order) */
+	/* The hash key for this session */
+	uint64_t hash_key;
+
+    /* Src or client ip address(network byte order) */
 	uint32_t src_addr;
-	/*dst or backend ip address(network byte order) */
+	/* Dst or backend ip address(network byte order) */
 	uint32_t dst_addr;
-	/*online ip address(network byte order) */
+	/* Online ip address(network byte order) */
 	uint32_t online_addr;
-	/*src or client port(host byte order) */
+	/* Src or client port(host byte order) */
 	uint16_t src_h_port;
-	/*dst or backend port(network byte order)*/
+	/* Dst or backend port(network byte order) */
 	uint16_t dst_port;
-	/*online port(network byte order)*/
+	/* Online port(network byte order) */
 	uint16_t online_port;
-	/*faked src or client port(network byte order)*/
+	/* Faked src or client port(network byte order) */
 	uint16_t faked_src_port;
 
-	/*virtual variables*/
-	/*virtual acknowledgement sequence that sends to backend*/
-	uint32_t vir_ack_seq;
-	/*virtual next expected sequence*/
-	uint32_t vir_next_seq;
-
 #if (TCPCOPY_MYSQL_BASIC)
-	/*the seq diff between virtual sequence and client sequence*/
+	/* The seq diff between virtual sequence and client sequence */
 	uint32_t mysql_vir_req_seq_diff;
 #endif
 
-	/*response variables*/
-	/*last sequence from backend response*/
+	/********* will be zeroed for next session begin ********************/
+	/* These values will be sent to backend just for cheating */
+	/* Virtual acknowledgement sequence that sends to backend */
+	uint32_t vir_ack_seq;
+	/* Virtual next expected sequence*/
+	uint32_t vir_next_seq;
+
+	/* Response variables */
+	/* Last sequence from backend response */
 	uint32_t resp_last_seq;
-	/*last acknowledgement sequence from backend response*/
+	/* Last acknowledgement sequence from backend response */
 	uint32_t resp_last_ack_seq;
 
-	/*captured variables*/
-	/* this variables only refer to online values*/
+	/* Captured variables */
+	/* These variables only refer to online values*/
 	/***********************begin************************/
-	/*last sequence of client content packet which has been sent*/
-	uint32_t req_last_cont_sent_seq;
-	/*last syn sequence of client packet*/
+	/*TODO Some variables may be unioned*/
+	/* Last syn sequence of client packet */
 	uint32_t req_last_syn_seq;
-	/*last ack sequence of client packet which is sent to bakend*/
+	/* Last sequence of client content packet which has been sent */
+	uint32_t req_last_cont_sent_seq;
+	/* Last ack sequence of client packet which is sent to bakend */
 	uint32_t req_last_ack_sent_seq;
-	/* last client content packet's ack sequence which is captured */
+	/* Last client content packet's ack sequence which is captured */
 	uint32_t req_cont_last_ack_seq;
-	/* current client content packet's ack seq which is captured */
+	/* Current client content packet's ack seq which is captured */
 	uint32_t req_cont_cur_ack_seq;
 	/***********************end***************************/
 
-	/*the hash key for this session*/
-	uint64_t hash_key;
-
-	/*record time*/
-	/*last update time*/
+	/* Record time */
+	/* Last update time */
 	time_t   last_update_time;
-	/*session create time*/
+	/* Session create time */
 	time_t   create_time;
-	/*the time of last receiving backend content*/
+	/* The time of last receiving backend content */
 	time_t   resp_last_recv_cont_time;
-	/*the time of sending the last content packet*/
+	/* The time of sending the last content packet */
 	time_t   req_last_send_cont_time;
 
-	/*shared variables*/
-	/*use this varible to check if the session is keepalived.
-	 *it will be added until reaching the threshold */
+	/* Use this varible to check if the session is keepalived.
+	 * It will be added until reaching the threshold */
 	uint32_t req_proccessed_num:6;
-	/*the size of ip header*/
-	uint32_t ip_header_size:6;
-	/*the size of tcp header*/
-	uint32_t tcp_header_size:6;
-	/*the size of packet which is equal to tot_len*/
-	uint32_t packet_size:16;
-	/*the payload of the tcp packet*/
-	uint32_t tcp_payload_size:16;
-	/*the session status*/
+	/* The session status */
 	uint32_t status:4;
-	/*the number of expected handshake packets*/
+	/* The number of expected handshake packets */
 	uint32_t expected_handshake_pack_num:8;
 	/*
-	 * the number of the response packets last received 
+	 * The number of the response packets last received 
 	 * which have the same acknowledgement sequence.
-	 * this is for checking retransmission Required from backend
+	 * This is for checking retransmission Required from backend
 	 */
 	uint32_t resp_last_same_ack_num:8;
-	/*the id from client ip header*/
+	/* The id from client ip header */
 	uint32_t req_ip_id:16;
-	/*the flag indicates if the session has retransmitted or not*/
+	/* The flag indicates if the session has retransmitted or not */
 	uint32_t vir_already_retransmit:1;
-	/*this is for successful retransmission statistics*/
+	/* This is for successful retransmission statistics */
 	uint32_t vir_new_retransmit:1;
-	/*this is the simultaneous closing flag*/
+	/* This is the simultaneous closing flag */
 	uint32_t simul_closing:1;
-	/*reset flag either from client or from backend*/
+	/* Reset flag either from client or from backend */
 	uint32_t reset:1;
-	/* seq added because of fin */
+	/* Seq added because of fin */
 	uint32_t fin_add_seq:1;
-	/*session over flag*/
+	/* Session over flag */
 	uint32_t sess_over:1;
-	/*src or client closed flag*/
+	/* Src or client closed flag */
 	uint32_t src_closed:1;
-	/*dst or backend closed flag*/
+	/* Dst or backend closed flag */
 	uint32_t dst_closed:1;
-	/*candidate response waiting flag*/
+	/* Candidate response waiting flag */
 	uint32_t candidate_response_waiting:1;
-	/*this indicates if the session needs to wait previous packets or not*/
+	/* This indicates if the session needs to wait previous packets or not */
 	uint32_t previous_packet_waiting:1;
-	/*connection keepalive flag*/
+	/* Connection keepalive flag */
 	uint32_t conn_keepalive:1;
-	/*this indicates if faked rst sent to backend*/
+	/* This indicates if faked rst sent to backend */
 	uint32_t faked_rst_sent:1;
-	/*this indicates if the session intercepted the syn packets from client
-	 * or it has faked the syn packets*/
+	/* This indicates if the session intercepted the syn packets from client
+	 * or it has faked the syn packets */
 	uint32_t req_syn_ok:1;
-	/*this indicates if we intercepted the packets halfway*/
+	/* This indicates if we intercepted the packets halfway */
 	uint32_t req_halfway_intercepted:1;
-	/*this indicates if the syn packets from backend is received*/
+	/* This indicates if the syn packets from backend is received */
 	uint32_t resp_syn_received:1;
-	/*session candidate erased flag*/
+	/* Session candidate erased flag */
 	uint32_t sess_candidate_erased:1;
-	/*session reused flag*/
+	/* Session reused flag */
 	uint32_t sess_more:1;
-	/*the times of syn retransmission to backend*/
+	/* The times of syn retransmission to backend */
 	uint32_t vir_syn_retrans_times:4;
-	/*if set, it will not save the packet to unack list*/
+	/* If set, it will not save the packet to unack list */
 	uint32_t unack_pack_omit_save_flag:1;
 #if (TCPCOPY_MYSQL_BASIC)
-	/*mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation)*/
+	/* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
 	uint32_t mysql_excute_times:8;
-	/*the number of greet content packets receiving from backend*/
+	/* The number of greet content packets receiving from backend */
 	uint32_t mysql_cont_num_aft_greet:4;
-	/*request begin flag for mysql*/
+	/* Request begin flag for mysql */
 	uint32_t mysql_req_begin:1;
-	/*this indicates if greeting from bakend is received*/
+	/* This indicates if greeting from bakend is received */
 	uint32_t mysql_resp_greet_received:1;
-	/*this indicates if it needs second auth*/
+	/* This indicates if it needs second auth */
 	uint32_t mysql_sec_auth:1;
-	/*this indicates if it has sent the first auth*/
+	/* This indicates if it has sent the first auth */
 	uint32_t mysql_first_auth_sent:1;
-	/*this indicates if the session has received login packet from client*/
+	/* This indicates if the session has received login packet from client */
 	uint32_t mysql_req_login_received:1;
-	/*this indicates if the session has prepare statment*/
+	/* This indicates if the session has prepare statment */
 	uint32_t mysql_prepare_stat:1;
-	/*this indicates if the first excution is met*/
+	/* This indicates if the first excution is met */
 	uint32_t mysql_first_excution:1;
-	/*mysql special packets for reconnection*/
-	link_list *mysql_special_packets;
 #endif
+
+	/********* will be zeroed for next session end ********************/
 
 	link_list *unsend_packets;
 	link_list *next_session_packets;
 	link_list *unack_packets;
 	link_list *lost_packets;
 	link_list *handshake_packets;
+#if (TCPCOPY_MYSQL_BASIC)
+	/* Mysql special packets for reconnection*/
+	link_list *mysql_special_packets;
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
 	char mysql_scramble[SCRAMBLE_LENGTH+1];
 	char mysql_seed323[SEED_323_LENGTH+1];
