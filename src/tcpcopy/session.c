@@ -74,6 +74,7 @@ int session_table_destroy()
 	link_list   *list;
 	p_link_node ln;
 	hash_node   *hn;
+	session_t   *s;
 
 	for(i = 0; i < sessions_table->size; i++){
 		list = sessions_table->lists[i];
@@ -84,7 +85,7 @@ int session_table_destroy()
 		while(ln){
 			hn = (hash_node *)ln->data;
 			if(hn->data != NULL){
-				session_t *s = hn->data;
+				s = hn->data;
 			    /* Delete session */
 				session_del(s);
 			}
@@ -108,6 +109,11 @@ static void session_init(session_t *s, int flag)
 	if(s->unsend_packets){
 		if(s->unsend_packets->size > 0){
 			link_list_destory(s->unsend_packets);
+		}
+		if(SESS_REUSE == flag){
+			if(s->next_session_packets!=NULL){
+				free(s->unsend_packets);
+			}
 		}
 	}else{
 		s->unsend_packets = link_list_create();
@@ -229,7 +235,6 @@ static session_t *session_create(struct iphdr *ip_header,
 			s->online_addr, s->online_port);
 	s->dst_addr    = test->target_ip;
 	s->dst_port    = test->target_port;
-	s->hash_key = get_ip_port_value(s->src_addr, tcp_header->source);
 	return s;
 }
 
@@ -335,9 +340,12 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 	int      threshold = 256, result, packs_unsend;	
 	double   diff = cur - s->req_last_send_cont_time;
 	
+	/* Check if the session is idle for more than 30 seconds */
 	if(diff < 30){
+		/* If it is ,enlarge it by 8 times */
 		threshold = threshold << 3;
 		if(diff < 3){
+			/* If it is idle for less than 3 seconds ,enlarge 2 times */
 			threshold = threshold << 1;
 		}
 		packs_unsend = s->unsend_packets->size;
@@ -416,8 +424,8 @@ static void clear_timeout_sessions()
 	hash_node   *hn;
 
 	current           = time(0);
-	norm_timeout      = current -60;
-	keepalive_timeout = current -120;
+	norm_timeout      = current - 60;
+	keepalive_timeout = current - 120;
 	active_s = sessions_table->total;
 
 	ratio = 100.0*active_s/(active_s + 1);
@@ -461,6 +469,7 @@ static void activate_dead_sessions()
 	link_list    *list;
 	p_link_node  ln;
 	hash_node    *hn;
+	session_t    *s;
 
 	log_info(LOG_NOTICE, "activate_dead_sessions");
 	for(i = 0; i < sessions_table->size; i++)
@@ -470,7 +479,7 @@ static void activate_dead_sessions()
 		while(ln){
 			hn = (hash_node *)ln->data;
 			if(hn->data != NULL){
-				session_t *s = hn->data;
+				s = hn->data;
 				if(check_dead_reqs(s)){
 					log_info(LOG_NOTICE,"send dead reqs from global");
 					send_reserved_packets(s);
@@ -517,8 +526,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 	/* Set the destination ip and port*/
 	ip_header->daddr = s->dst_addr;
 	tcp_header->dest = s->dst_port;
-
-	s->vir_next_seq = ntohl(tcp_header->seq);
+	s->vir_next_seq  = ntohl(tcp_header->seq);
 	/* Add seq when meeting syn or fin packet */
 	if(tcp_header->syn || tcp_header->fin){
 		if(tcp_header->syn){
