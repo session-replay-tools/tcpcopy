@@ -94,25 +94,15 @@ int session_table_destroy()
 	return 0;
 }
 
-static void session_init(session_t *s, int keepalive)
+static void session_init(session_t *s, int flag)
 {
-	unsigned char *begin, *end;
-	size_t        zeroed_length;
 	link_list *hl;
 #if (TCPCOPY_MYSQL_BASIC)
 	link_list *ml;
 #endif 
-	int       handshake_pack_num;
 
-	if(!keepalive){
+	if(SESS_CREATE == flag){
 		memset(s, 0 , sizeof(session_t));
-	}else{
-		/* Only init part */
-		/* TODO to be tested */
-		begin = &(s->vir_ack_seq);
-		end   = &(s->unsend_packets);
-		zeroed_length =sizeof(unsigned char*)*(end - begin);
-		memset(begin, 0, zeroed_length);
 	}
 
 	if(s->unsend_packets){
@@ -139,45 +129,72 @@ static void session_init(session_t *s, int keepalive)
 		s->unack_packets = link_list_create();
 	}
 
-	if(!keepalive){
+	if(SESS_CREATE == flag){
+		s->handshake_packets = link_list_create();
+#if (TCPCOPY_MYSQL_BASIC)
+		s->mysql_special_packets = link_list_create();
+#endif
+	}else if(SESS_REUSE == flag){
 		if(s->handshake_packets){
-			if(s->handshake_packets->size > 0){
+			if(s->handshake_packets->size >0){
 				link_list_destory(s->handshake_packets);
 			}
 		}else{
-			s->handshake_packets = link_list_create();
+			s->handshake_packets= link_list_create();
 		}
 #if (TCPCOPY_MYSQL_BASIC)
 		if(s->mysql_special_packets){
-			if(s->mysql_special_packets->size > 0){
+			if(s->mysql_special_packets->size >0){
 				link_list_destory(s->mysql_special_packets);
 			}
 		}else{
 			s->mysql_special_packets = link_list_create();
 		}
 #endif
-	}else{
-		hl = s->handshake_packets;
-#if (TCPCOPY_MYSQL_BASIC)
-		ml = s->mysql_special_packets;
-#endif		
-		handshake_pack_num = s->expected_handshake_pack_num;
 	}
 
-	s->expected_handshake_pack_num = 2;
-	
 	s->status      = CLOSED;
 	s->create_time      = time(0);
 	s->last_update_time = s->create_time;
 	s->resp_last_recv_cont_time = s->create_time;
 	s->req_last_send_cont_time  = s->create_time;
 
-	if(keepalive){
-		s->handshake_packets = hl;
+	if(SESS_CREATE != flag){
+		s->req_proccessed_num = 0;
+		s->resp_last_same_ack_num = 0;
+		s->vir_already_retransmit = 0;
+		s->vir_new_retransmit = 0;
+		s->simul_closing = 0;
+		s->reset = 0;
+		s->fin_add_seq = 0;
+		s->sess_over   = 0;
+		s->src_closed  = 0;
+		s->dst_closed  = 0;
+		s->candidate_response_waiting = 0;
+		s->previous_packet_waiting = 0;
+		s->conn_keepalive = 0;
+		s->faked_rst_sent = 0;
+		s->req_syn_ok = 0;
+		s->req_halfway_intercepted = 0;
+		s->resp_syn_received = 0;
+		s->sess_candidate_erased = 0;
+		s->sess_more = 0;
+		s->vir_syn_retrans_times = 0;
+		s->unack_pack_omit_save_flag = 0;
 #if (TCPCOPY_MYSQL_BASIC)
-		s->mysql_special_packets = ml;
+		s->mysql_excute_times = 0;
+		s->mysql_cont_num_aft_greet = 0;
+		s->mysql_req_begin = 0;
+		s->mysql_resp_greet_received = 0;
+		s->mysql_sec_auth = 0;
+		s->mysql_first_auth_sent = 0;
+		s->mysql_req_login_received = 0;
+		s->mysql_prepare_stat = 0;
 #endif
-		s->expected_handshake_pack_num = handshake_pack_num;
+	}
+
+	if(SESS_KEEPALIVE != flag){
+		s->expected_handshake_pack_num = 2;
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	s->mysql_first_excution = 1;
@@ -188,7 +205,7 @@ static void session_init(session_t *s, int keepalive)
 static void session_init_for_next(session_t *s)
 {
 	link_list   *list = s->next_session_packets;
-	session_init(s, 1);
+	session_init(s, SESS_REUSE);
 
 	if(NULL != list){
 		s->unsend_packets = list;
@@ -203,7 +220,7 @@ static session_t *session_create(struct iphdr *ip_header,
 	if(NULL == s){
 		return NULL;
 	}
-	session_init(s, 0);
+	session_init(s, SESS_CREATE);
 	s->src_addr    = ip_header->saddr;
 	s->online_addr = ip_header->daddr;
 	s->src_h_port  = ntohs(tcp_header->source);
@@ -2142,13 +2159,13 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 	 */
 #if (TCPCOPY_MYSQL_BASIC)
 	if(check_mysql_padding(ip_header, tcp_header)){
-		session_init(s, 1);
+		session_init(s, SESS_KEEPALIVE);
 		fake_syn(s, ip_header, tcp_header);
 	}else{
 		return;
 	}
 #else
-	session_init(s, 1);
+	session_init(s, SESS_KEEPALIVE);
 	fake_syn_hardly(s);
 #endif
 	ln = link_node_malloc(copy_ip_packet(ip_header));

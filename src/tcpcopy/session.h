@@ -18,6 +18,11 @@ typedef struct session_s{
 	/* The hash key for this session */
 	uint64_t hash_key;
 
+#if (TCPCOPY_MYSQL_BASIC)
+	/* The seq diff between virtual sequence and client sequence */
+	uint32_t mysql_vir_req_seq_diff;
+#endif
+
     /* Src or client ip address(network byte order) */
 	uint32_t src_addr;
 	/* Dst or backend ip address(network byte order) */
@@ -33,12 +38,7 @@ typedef struct session_s{
 	/* Faked src or client port(network byte order) */
 	uint16_t faked_src_port;
 
-#if (TCPCOPY_MYSQL_BASIC)
-	/* The seq diff between virtual sequence and client sequence */
-	uint32_t mysql_vir_req_seq_diff;
-#endif
 
-	/********* will be zeroed for next session,begin ********************/
 	/* These values will be sent to backend just for cheating */
 	/* Virtual acknowledgement sequence that sends to backend */
 	uint32_t vir_ack_seq;
@@ -151,8 +151,6 @@ typedef struct session_s{
 	/* This indicates if the first excution is met */
 	uint32_t mysql_first_excution:1;
 #endif
-
-	/********* will be zeroed for next session,end ********************/
 
 	link_list *unsend_packets;
 	link_list *next_session_packets;

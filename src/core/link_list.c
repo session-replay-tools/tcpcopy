@@ -51,7 +51,7 @@ static int link_list_clear(link_list *l)
 		link_node_free(p);
 		p = next;
 	}
-
+	l->size = 0;
 	return count;
 
 }
