@@ -38,7 +38,7 @@ typedef struct session_s{
 	uint32_t mysql_vir_req_seq_diff;
 #endif
 
-	/********* will be zeroed for next session begin ********************/
+	/********* will be zeroed for next session,begin ********************/
 	/* These values will be sent to backend just for cheating */
 	/* Virtual acknowledgement sequence that sends to backend */
 	uint32_t vir_ack_seq;
@@ -152,7 +152,7 @@ typedef struct session_s{
 	uint32_t mysql_first_excution:1;
 #endif
 
-	/********* will be zeroed for next session end ********************/
+	/********* will be zeroed for next session,end ********************/
 
 	link_list *unsend_packets;
 	link_list *next_session_packets;
@@ -160,7 +160,7 @@ typedef struct session_s{
 	link_list *lost_packets;
 	link_list *handshake_packets;
 #if (TCPCOPY_MYSQL_BASIC)
-	/* Mysql special packets for reconnection*/
+	/* Mysql special packets for reconnection */
 	link_list *mysql_special_packets;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
