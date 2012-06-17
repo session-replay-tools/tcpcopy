@@ -1,5 +1,6 @@
 #include "../core/xcopy.h"
 #include "../communication/msg.h"
+#include "session.h"
 
 static char      *pool, item[MAX_MTU + MAX_MTU];
 static int       raw_sock, read_over_flag = 1;
@@ -94,12 +95,17 @@ static void *dispose(void *thread_id)
 {
 	char *packet;
 
+	/* Init session table*/
+	session_table_init();
+	
+	/* Give a hint to terminal */
 	printf("I am booted\n");
 	if(NULL != thread_id){
 		log_info(LOG_NOTICE, "booted,tid:%d", *((int*)thread_id));
 	}else{
 		log_info(LOG_NOTICE, "I am booted with no thread id");
 	}
+	/* Loop */
 	while(1){
 		packet = get_pack_from_pool();
 		process(packet);

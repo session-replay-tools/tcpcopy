@@ -9,6 +9,8 @@
 #define FAKE_IP_HEADER_LEN 20
 
 /*global functions*/
+int session_table_init();
+int session_table_destroy();
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 

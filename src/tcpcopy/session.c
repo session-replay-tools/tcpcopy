@@ -3,6 +3,9 @@
 #include "../log/log.h"
 #include "session.h"
 
+static void send_faked_passive_rst(session_t *s);
+static void session_del(session_t *s);
+static bool check_session_over(session_t *s);
 static int  send_reserved_packets(session_t *s);
 static int  retransmit_packets(session_t *s);
 static bool check_dead_reqs(session_t *s);
@@ -57,11 +60,37 @@ static uint32_t g_seq_omit        = 0;
 static struct iphdr *fir_auth_u_p = NULL;
 #endif
 
-int create_session_table()
+int session_table_init()
 {
 	/* Create 65536 slots for session table */
 	sessions_table = hash_create(65536);
 	strcpy(sessions_table->name, "session-table");
+	return 0;
+}
+
+int session_table_destroy()
+{
+	size_t      i;           
+	link_list   *list;
+	p_link_node ln;
+	hash_node   *hn;
+
+	for(i = 0; i < sessions_table->size; i++){
+		list = sessions_table->lists[i];
+		if(!list){
+			continue;
+		}
+	    ln   = link_list_first(list);	
+		while(ln){
+			hn = (hash_node *)ln->data;
+			if(hn->data != NULL){
+				session_t *s = hn->data;
+			    /* Delete session */
+				session_del(s);
+			}
+			ln = link_list_get_next(list, ln);
+		}
+	}
 	return 0;
 }
 
@@ -191,7 +220,11 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 
 static void session_del(session_t *s)
 {
+	/* Send the last rst packet to backend*/
 	leave_cnt++;
+	if(!check_session_over(s)){
+		send_faked_passive_rst(s);
+	}
 	if(NULL != s->unsend_packets){
 		link_list_destory(s->unsend_packets);
 		free(s->unsend_packets);
@@ -1231,10 +1264,9 @@ static void send_faked_rst(session_t *s,
 }
 
 /*
- * Send faked rst packet to backend from the client packet
+ * Send faked rst packet to backend passively
  */
-static void send_faked_rst_by_client(session_t *s,
-		struct iphdr *ip_header, struct tcphdr *tcp_header)
+static void send_faked_passive_rst(session_t *s)
 {
 	unsigned char faked_rst_buf[FAKE_ACK_BUF_SIZE];
 	struct iphdr  *f_ip_header;
@@ -1253,9 +1285,9 @@ static void send_faked_rst_by_client(session_t *s,
 	f_ip_header->ttl      = 64; 
 	f_ip_header->protocol = 6;
 	f_ip_header->id       = htons(s->req_ip_id + 2);
-	f_ip_header->saddr    = ip_header->saddr;
+	f_ip_header->saddr    = s->src_addr;
 	f_tcp_header->doff    = 5;
-	f_tcp_header->source  = tcp_header->source;
+	f_tcp_header->source  = s->src_port;
 	f_tcp_header->fin     = 1;
 	f_tcp_header->rst     = 1;
 	f_tcp_header->ack     = 1;
@@ -2336,7 +2368,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		if(!s->src_closed){
 			s->src_closed = 1;
 		}
-		send_faked_rst_by_client(s, ip_header, tcp_header);
+		send_faked_passive_rst(s);
 		return;
 	}
 
@@ -2569,7 +2601,6 @@ void process(char *packet)
 
 	if(0 == start_p_time){
 		start_p_time = now;
-		create_session_table();
 	}else{
 		run_time = now -start_p_time;
 	}
