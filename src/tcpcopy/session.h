@@ -127,8 +127,6 @@ typedef struct session_s{
 	uint32_t sess_candidate_erased:1;
 	/* Session reused flag */
 	uint32_t sess_more:1;
-	/* The times of syn retransmission to backend */
-	uint32_t vir_syn_retrans_times:4;
 	/* If set, it will not save the packet to unack list */
 	uint32_t unack_pack_omit_save_flag:1;
 #if (TCPCOPY_MYSQL_BASIC)
