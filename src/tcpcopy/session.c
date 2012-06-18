@@ -764,8 +764,8 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 	if(!s->mysql_first_auth_sent){
 
 		log_info(LOG_NOTICE,"mysql login req from reserved");
-		payload=(unsigned char*)((char*)tcp_header + size_tcp);
-		ch_auth_success=change_client_auth_content(payload, 
+		payload = (unsigned char*)((char*)tcp_header + size_tcp);
+		ch_auth_success = change_client_auth_content(payload, 
 				(int)cont_len, s->mysql_password, s->mysql_scramble);
 		strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
 		if(!ch_auth_success)
