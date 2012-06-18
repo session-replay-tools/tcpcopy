@@ -681,7 +681,7 @@ static int retransmit_packets(session_t *s)
 	uint16_t      size_ip, cont_len;
 	uint32_t      cur_seq;
 	p_link_node   ln, tmp_ln;
-	link_list     *list, *buffered = NULL;
+	link_list     *list;
 	bool need_pause = false, is_success = false;
 
 	list = s->unack_packets;
@@ -718,24 +718,13 @@ static int retransmit_packets(session_t *s)
 			if(cur_seq < s->vir_next_seq){
 				s->unack_pack_omit_save_flag = 1;
 				wrap_send_ip_packet(s, data);
-				tmp_ln = link_node_malloc(data);
-				link_list_append(buffered, tmp_ln); 
-				link_list_remove(list, ln);
+				ln = link_list_get_next(list, ln);
 			}else{
 				need_pause = true;	
 			}
 		}
 	}
 	
-	if(NULL != buffered && !link_list_is_empty(buffered)){
-		/* Append all buffered packets to unack link list */
-		ln = link_list_first(buffered);	
-		while(ln){
-			link_list_append(list, ln);
-			ln = link_list_get_next(buffered, ln);
-		}
-	}
-
 	return is_success;
 }
 
@@ -1795,7 +1784,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		s->resp_last_recv_cont_time = current;
 		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
 	}else{
-		s->vir_ack_seq = tcp_header->ack_seq;
+		s->vir_ack_seq = tcp_header->seq;
 	}
 	/* Needs to check ack */
 	if(check_backend_ack(s, ip_header, tcp_header, ack,  cont_len) 
@@ -1832,7 +1821,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	{
 		log_info(LOG_NOTICE,"unbelievable");
 		/* Try to solve backend's obstacle */
-		s->vir_ack_seq = tcp_header->seq;
 		send_faked_rst(s, ip_header, tcp_header);
 		s->faked_rst_sent = 1;
 		s->src_closed     = 1;
@@ -2445,7 +2433,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
 		s->req_cont_cur_ack_seq = ntohl(tcp_header->ack_seq);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO, "cont len:%d,p:", cont_len, s->src_h_port);
+		log_info(LOG_INFO, "cont len:%d,p:%u", cont_len, s->src_h_port);
 #endif
 #if (TCPCOPY_MYSQL_BASIC)
 		/* process mysql client auth packet */
