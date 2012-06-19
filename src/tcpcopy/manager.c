@@ -22,6 +22,7 @@ static void put_packet_to_pool(const char *packet, int len)
 	uint64_t  next_w_cnt = 0, diff = 0;
 	char      *p = NULL;
 
+
 	packs_put_cnt++;
 
 	pthread_mutex_lock(&mutex);
@@ -31,6 +32,9 @@ static void put_packet_to_pool(const char *packet, int len)
 	if(next_w_pointer > pool_max_addr){
 		next_w_cnt = (next_w_cnt/pool_size + 1) << pool_fact;
 		len += pool_size - next_w_pointer;
+	}
+	if(len > 65535){
+		log_info(LOG_NOTICE, "len is %d", len);
 	}
 	diff = next_w_cnt - read_cnt;
 	while(1){
@@ -75,6 +79,9 @@ static char *get_pack_from_pool()
 	read_pos = read_cnt%pool_size;
 	p        = pool + read_pos + sizeof(int);
 	len      = *(int*)(pool + read_pos);
+	if(len >65535){
+		log_info(LOG_ERR, "len is too long:%d", len);
+	}
 	memcpy(item, p, len);
 	read_cnt = read_cnt + len + sizeof(int);
 	pthread_cond_signal(&empty);
@@ -387,7 +394,7 @@ int tcp_copy_init()
 	/* Init pool */
 	pool_fact = clt_settings.pool_fact;
 	pool_size = 1 << pool_fact;
-	pool_max_addr = pool_size - RECV_BUF_SIZE;
+	pool_max_addr = pool_size - MAX_MTU;
 	pool = (char*)calloc(1, pool_size);
 
 	/* Init input raw socket info */

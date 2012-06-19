@@ -92,7 +92,7 @@ static void interception_process(int fd)
 		ip_header = nl_firewall_recv(firewall_sock, &packet_id);
 		if(ip_header != NULL){
 			/*check if it is the valid user to pass through firewall*/
-			for(i=0; i<srv_settings.passed_ips.num; i++){
+			for(i = 0; i < srv_settings.passed_ips.num; i++){
 				if(srv_settings.passed_ips.ips[i] == ip_header->daddr){
 					pass_through_flag = 1;
 					break;
