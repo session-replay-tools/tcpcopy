@@ -131,7 +131,7 @@ unsigned char *copy_ip_packet(struct iphdr *ip_header)
 	return data;
 }
 
-unsigned short csum (unsigned short *packet, int pack_len) 
+unsigned short csum (unsigned short *packet, uint16_t pack_len) 
 { 
 	register unsigned long sum = 0; 
 	while (pack_len > 1) {
@@ -149,15 +149,11 @@ unsigned short csum (unsigned short *packet, int pack_len)
 
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len, int mtu)
+		uint16_t pack_len)
 {       
 	static unsigned short buf[2048]; 
 	unsigned short        res;
 
-	if(pack_len > mtu){
-		log_info(LOG_ERR, "packet is too long:%d", pack_len);
-		return 0;
-	}
 	memcpy(buf, iphdr + 12, 8); 
 	*(buf + 4) = htons((unsigned short)(*(iphdr + 9)));
 	*(buf + 5) = htons((unsigned short)pack_len);

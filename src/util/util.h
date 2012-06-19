@@ -29,10 +29,10 @@ bool check_retransmission(struct tcphdr *tcp_header,
 
 unsigned char *copy_ip_packet(struct iphdr *ip_header);
 
-unsigned short csum (unsigned short *packet, int pack_len);
+unsigned short csum (unsigned short *packet, uint16_t pack_len);
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		int pack_len, int mtu);
+		uint16_t pack_len);
 
 
 #endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */
