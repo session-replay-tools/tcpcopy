@@ -327,6 +327,53 @@ static int check_overwhelming(session_t *s, const char *message,
 	return NOT_YET_OBSOLETE;
 }
 
+/*
+ * This happens in uploading large file situations
+ */
+static bool is_session_dead(session_t *s)
+{
+	int    packs_unsend = 0, diff, result = 0;
+
+	packs_unsend = s->unsend_packets->size;
+	diff = time(0) - s->req_last_send_cont_time;
+
+	/* More than 2 seconds */
+	if(diff > 2){
+		/* If there are more than 5 packets unsend */
+		if(packs_unsend > 5){
+			return true;
+		}
+	}
+	return false;
+}
+
+static void activate_dead_sessions()
+{
+	int          i;
+	link_list    *list;
+	p_link_node  ln;
+	hash_node    *hn;
+	session_t    *s;
+
+	log_info(LOG_NOTICE, "activate_dead_sessions");
+	for(i = 0; i < sessions_table->size; i++)
+	{
+		list = sessions_table->lists[i];
+		ln   = link_list_first(list);	
+		while(ln){
+			hn = (hash_node *)ln->data;
+			if(hn->data != NULL){
+				s = hn->data;
+				if(is_session_dead(s)){
+					log_info(LOG_NOTICE,"activate:%u", s->src_h_port);
+					send_reserved_packets(s);
+				}
+			}
+			ln = link_list_get_next(list, ln);
+		}
+	}
+}
+
 /* Check if session is obsolete */
 static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 {
@@ -334,7 +381,7 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 	double   diff = cur - s->req_last_send_cont_time;
 	
 	/* Check if the session is idle for more than 30 seconds */
-	if(diff < 30){
+	if(diff < clt_settings.session_timeout){
 		/* If it is ,enlarge it by 8 times */
 		threshold = threshold << 3;
 		if(diff < 3){
@@ -865,7 +912,7 @@ static int send_reserved_packets(session_t *s)
 					break;
 				}
 			}
-			cand_pause   = 1;
+			cand_pause = 1;
 			s->candidate_response_waiting = 1;
 		}else if(tcp_header->rst){
 			if(s->candidate_response_waiting){
@@ -2543,9 +2590,11 @@ void process(char *packet)
 	}
 	printf("table total:%d\n",sessions_table->total);
 	diff = now - last_stat_time;
-	if(diff > 10){
+	if(diff > 5){
 		/* Output statistics */
 		output_stat(now, run_time);
+		/* We also activate dead session */
+		activate_dead_sessions();
 	}
 
 	ip_header  = (struct iphdr*)packet;

@@ -44,6 +44,8 @@ static void usage(void) {
 		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
 		   "               default value is 512:\n"
 		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
+		   "-t <num>       session timeout\n"
+		   "               if the target system is slow, set this larger\n"
 		   "-b <num>       buffer factor for raw socket input(range 20~30)\n"
 		   "               buffer size is equal to 2^(value) or 1 << value\n"
 		   "               default value is 24, which means 16M bytes\n"
@@ -73,10 +75,11 @@ static int read_args(int argc, char **argv){
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
 		 "p:" /* remote server listening port */
 		 "M:" /* MTU sent to backend */
+		 "t:" /* session timeout value */
 		 "b:" /* buffer factor for raw socket input*/
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
-		 "h" /* help, licence info */   
+		 "h"  /* help, licence info */   
 		 "v"  /* verbose */
 		 "d"  /* daemon mode */
 	    ))) {
@@ -103,6 +106,9 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'M':
 				clt_settings.mtu = atoi(optarg);
+				break;
+			case 't':
+				clt_settings.session_timeout = atoi(optarg);
 				break;
 			case 'b':
 				value = atoi(optarg);
@@ -342,6 +348,7 @@ static int settings_init()
 	clt_settings.max_rss = MAX_MEMORY_SIZE;
 	clt_settings.srv_port = SERVER_PORT;
 	clt_settings.pool_fact = RECV_POOL_SIZE_SHF;
+	clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 }
 
 /*
