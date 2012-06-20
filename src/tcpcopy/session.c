@@ -114,14 +114,6 @@ static void session_init(session_t *s, int flag)
 		s->unsend_packets = link_list_create();
 	}
 
-	if(s->lost_packets){
-		if(s->lost_packets->size > 0){
-			link_list_destory(s->lost_packets);
-		}
-	}else{
-		s->lost_packets = link_list_create();
-	}
-
 	if(s->unack_packets){
 		if(s->unack_packets->size >0){
 			link_list_destory(s->unack_packets);
@@ -153,7 +145,6 @@ static void session_init(session_t *s, int flag)
 	s->req_last_send_cont_time  = s->create_time;
 
 	if(SESS_CREATE != flag){
-		s->req_proccessed_num = 0;
 		s->resp_last_same_ack_num = 0;
 		s->vir_already_retransmit = 0;
 		s->vir_new_retransmit = 0;
@@ -164,7 +155,7 @@ static void session_init(session_t *s, int flag)
 		s->src_closed  = 0;
 		s->dst_closed  = 0;
 		s->candidate_response_waiting = 0;
-		s->previous_packet_waiting = 0;
+		s->is_waiting_previous_packet = 0;
 		s->conn_keepalive = 0;
 		s->req_syn_ok = 0;
 		s->req_halfway_intercepted = 0;
@@ -224,7 +215,6 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	link_list           *list;
-	p_link_node         ln;
 	session_t           *s;
 	s = session_create(ip_header, tcp_header);
 	if(NULL != s){
@@ -252,10 +242,6 @@ static void session_rel_dynamic_mem(session_t *s)
 	if(NULL != s->unack_packets){
 		link_list_destory(s->unack_packets);
 		free(s->unack_packets);
-	}
-	if(NULL != s->lost_packets){
-		link_list_destory(s->lost_packets);
-		free(s->lost_packets);
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	if(NULL != s->mysql_special_packets){
@@ -391,11 +377,6 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 	}
 	result = check_overwhelming(s, "unsend", threshold, 
 			s->unsend_packets->size);
-	if(NOT_YET_OBSOLETE != result){
-		return result;
-	}
-	result = check_overwhelming(s, "lost", threshold, 
-			s->lost_packets->size);
 	if(NOT_YET_OBSOLETE != result){
 		return result;
 	}
@@ -564,86 +545,6 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 	if(-1 == send_len){
 		log_info(LOG_ERR,"send to back error,tot_len is:%d,cont_len:%d",
 				tot_len,cont_len);
-	}
-}
-
-/*
- * Check if the session has lost previous packets
- */
-static bool check_packet_lost(session_t *s, struct iphdr *ip_header, 
-		struct tcphdr *tcp_header) 
-{
-	uint32_t     cur_seq = ntohl(tcp_header->seq);
-	if(cur_seq > s->vir_next_seq){
-		if(send_reserved_packets(s) > 0){
-			save_packet(s->unsend_packets, ip_header, tcp_header);
-		}else{
-			return true;
-		}
-	}
-	return false;
-}
-
-/*
- * Send reserved lost packets.
- * This is to solve the problem when packets arrive out of order
- */
-static void send_reserved_lost_packets(session_t *s)
-{
-	bool          need_free;
-	uint16_t      size_ip, cont_len;
-	uint32_t      cur_seq;
-	unsigned char *data;
-	struct iphdr  *ip_header;
-	struct tcphdr *tcp_header;
-	p_link_node   ln, tmp_ln;
-	link_list     *list;
-
-	if(NULL == s->lost_packets){
-		log_info(LOG_WARN, "no lost packets");
-		return;
-	}
-	log_info(LOG_NOTICE, "lost packets size:%d", list->size);
-
-	list = s->lost_packets;
-	ln = link_list_first(list);	
-	while(ln){
-		data       = (unsigned char*)ln->data;
-		ip_header  =(struct iphdr*)((char*)data);
-		size_ip    = ip_header->ihl << 2;
-		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-		cont_len   = get_pack_cont_len(ip_header, tcp_header);
-		cur_seq    = ntohl(tcp_header->seq);
-		need_free  = false;
-
-		if(s->vir_next_seq == cur_seq){
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG, "send packets for lost:%u", s->src_h_port);
-#endif
-			if(cont_len > 0)
-			{
-				s->candidate_response_waiting = 1;
-			}
-			wrap_send_ip_packet(s, data);
-			need_free = true;
-		}else if(s->vir_next_seq > cur_seq){
-			need_free = true;
-			log_info(LOG_NOTICE, "abnormal packets in lost");
-		}else{
-			break;
-		}
-		if(need_free){
-			tmp_ln = ln;
-			ln = link_list_get_next(list, ln);
-			link_list_remove(list, tmp_ln);
-			free(data);
-			free(tmp_ln);
-		}
-	}
-
-	if(!link_list_is_empty(list)){
-		/* Still need previous packet */
-		s->previous_packet_waiting = 0;
 	}
 }
 
@@ -876,6 +777,8 @@ static int send_reserved_packets(session_t *s)
 		if(cur_seq > s->vir_next_seq){
 			/* We need to wait for previous packet */
 			log_info(LOG_NOTICE, "we need to wait previous pack");
+			s->is_waiting_previous_packet = 1;
+			s->candidate_response_waiting = 0;
 			break;
 		}
 		cont_len   = get_pack_cont_len(ip_header, tcp_header);
@@ -978,6 +881,7 @@ static void mysql_prepare_for_new_session(session_t *s,
 	uint32_t      total_cont_len, base_seq;
 	uint16_t      size_ip, fir_cont_len, tmp_cont_len;
 	link_list     *list;
+	p_link_node   ln;
 #if (TCPCOPY_MYSQL_ADVANCED)
 	struct iphdr  *sec_auth_packet, *sec_ip_header;
 	struct tcphdr *sec_tcp_header;
@@ -1039,8 +943,7 @@ static void mysql_prepare_for_new_session(session_t *s,
 		/* Calculate the total content length */
 		ln = link_list_first(list);	
 		while(ln){
-			data = ln->data;
-			tmp_ip_header = (struct iphdr *)data;
+			tmp_ip_header = (struct iphdr *)(ln->data);
 			tmp_cont_len = get_pack_cont_len(tmp_ip_header, NULL);
 			total_cont_len += tmp_cont_len;
 			ln = link_list_get_next(list, ln);
@@ -1068,8 +971,7 @@ static void mysql_prepare_for_new_session(session_t *s,
 		/* Insert prepare statements */
 		ln = link_list_first(list);	
 		while(ln){
-			data = ln->data;
-			tmp_ip_header  = (struct iphdr *)data;
+			tmp_ip_header  = (struct iphdr *)(ln->data);
 			tmp_ip_header  = (struct iphdr*)copy_ip_packet(tmp_ip_header);
 			tmp_tcp_header = (struct tcphdr*)((char *)tmp_ip_header 
 					+ size_ip); 
@@ -1093,7 +995,6 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 	unsigned char f_s_buf[FAKE_IP_DATAGRAM_LEN], *data;
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
-	p_link_node   ln, tmp_ln;
 
 	memset(f_s_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)f_s_buf;
@@ -1134,7 +1035,6 @@ static void send_faked_third_handshake(session_t *s,
 	unsigned char fake_ack_buf[FAKE_IP_DATAGRAM_LEN];
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
-	p_link_node   ln;
 
 	memset(fake_ack_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)fake_ack_buf;
@@ -1313,7 +1213,6 @@ static bool mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 {
 	unsigned char *payload, command;
 	uint16_t      size_ip, size_tcp, tot_len, cont_len;
-	p_link_node   ln;
 	link_list     *list;
 
 	size_ip  = ip_header->ihl << 2;
@@ -1722,7 +1621,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 static int check_syn_retransmisson(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
-	p_link_node ln;
 	time_t      now = time(0);
 	int         diff = now - s->create_time;
 	if(diff > 3){
@@ -1738,7 +1636,6 @@ static int check_syn_retransmisson(session_t *s,
 static void process_client_rst(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)	
 {
-	p_link_node ln;
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_INFO, "reset from client");
 #endif
@@ -1785,7 +1682,6 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, uint16_t cont_len)	
 {
 	link_list     *list;
-	p_link_node   ln, tmp_ln;
 
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG, "recv fin packet from clt");
@@ -1817,8 +1713,6 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 static int process_mysql_clt_half_bf_greet(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)	
 {
-	p_link_node   ln;
-
 	if(s->req_syn_ok){
 		if(!s->mysql_resp_greet_received && s->req_halfway_intercepted){
 			save_packet(s->unsend_packets, ip_header, tcp_header);
@@ -1928,7 +1822,6 @@ static int process_client_timeout(session_t *s)
 static void proc_clt_cont_when_bak_closed(session_t *s,
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {		
-	p_link_node ln;
 	/* 
 	 * When the connection to the backend is closed, we 
 	 * reestablish the connection and 
@@ -1952,7 +1845,6 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 {
 	bool        is_save = false;
 	uint32_t    cur_seq;
-	p_link_node ln;
 
 	*is_new_req  = 0;
 	/*
@@ -1990,29 +1882,28 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 static int check_wait_prev_packet(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
-	p_link_node ln;
+	uint32_t     cur_seq = ntohl(tcp_header->seq);
 
-	if(check_packet_lost(s, ip_header, tcp_header)){
-		if(check_reserved_content_left(s)){
-			/* If it still has content unsent,then save it */
-			save_packet(s->unsend_packets, ip_header, tcp_header);
-			return DISP_STOP;
-		}
-		/* Put the packet in lost packets */
-		save_packet(s->lost_packets, ip_header, tcp_header);
+	if(cur_seq > s->vir_next_seq){
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE,"lost and need previous packet");
 #endif
-		s->previous_packet_waiting = 1;
+		save_packet(s->unsend_packets, ip_header, tcp_header);
+		send_reserved_packets(s);
+		return DISP_STOP;
+	}else if(cur_seq == s->vir_next_seq){
+		if(s->is_waiting_previous_packet){
+			/* Send the packet and reserved packets */
+			wrap_send_ip_packet(s, (unsigned char *)ip_header);
+			send_reserved_packets(s);
+			return DISP_STOP;
+		}else{
+			return DISP_CONTINUE;
+		}
+	}else{
+		/* the retransmission packet from client */
 		return DISP_STOP;
 	}
-	if(s->previous_packet_waiting){
-		wrap_send_ip_packet(s,(unsigned char *)ip_header);
-		send_reserved_lost_packets(s);
-		s->candidate_response_waiting = 1;
-		return DISP_STOP;
-	}
-	return DISP_CONTINUE;
 }
 
 static int is_continuous_packet(session_t *s, struct iphdr *ip_header,
@@ -2033,45 +1924,33 @@ static int is_continuous_packet(session_t *s, struct iphdr *ip_header,
 	return DISP_CONTINUE;
 }
 
-static int check_conn_keepalive(session_t *s)
+static inline void check_conn_keepalive(session_t *s)
 {
-	s->req_proccessed_num++;
-	if(s->req_proccessed_num > 30)
-	{
-		s->conn_keepalive  = 1;
-		s->req_proccessed_num = 0;
+	int diff;
+	if(!s->conn_keepalive){
+		diff = s->last_update_time - s->create_time;
+		if(diff >= clt_settings.session_timeout){
+			s->conn_keepalive  = 1;
+		}
 	}
-	return s->conn_keepalive;
 }
 
 /* Process client packet info after the main processing */
 static void process_client_after_main_body(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
-	p_link_node ln;
-
-	if(s->candidate_response_waiting)
-	{
+	if(s->candidate_response_waiting){
+		/* TODO to be verified */
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_DEBUG, "strange,wait back's resp:%u", s->src_h_port);
 #endif
 	}else{
-		if(s->src_closed){
-			save_packet(s->unsend_packets, ip_header, tcp_header);
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG, "save client ack for server fin");
-#endif
-		}else{
-			if(SEND_REQUEST == s->status){
-				s->candidate_response_waiting = 1;
-			}
-			if(0 == s->unsend_packets->size){
-				wrap_send_ip_packet(s, (unsigned char *)ip_header);
-			}else{
-				log_info(LOG_NOTICE, "strange,it comes here");
-				save_packet(s->unsend_packets, ip_header, tcp_header);
-			}
+		if(SEND_REQUEST == s->status){
+			s->candidate_response_waiting = 1;
+			wrap_send_ip_packet(s, (unsigned char *)ip_header);
+		}else if(SYN_CONFIRM == s->status){
+			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 		}
 	}
 }
@@ -2088,9 +1967,8 @@ static void process_client_after_main_body(session_t *s,
 void process_recv(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	int           diff, is_save = 0, is_new_req;
+	int           is_new_req;
 	uint16_t      cont_len;
-	p_link_node   ln ;
 
 	clt_cnt++;
 	s->src_h_port = ntohs(tcp_header->source);
@@ -2202,19 +2080,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 			proc_clt_cont_when_bak_closed(s, ip_header, tcp_header);
 			return;
 		}
-		/* Check if it is a retransmission packet */
-		if(check_retransmission(tcp_header, s->req_last_cont_sent_seq)){
-#if (DEBUG_TCPCOPY)
-			log_info(LOG_DEBUG," a retransmission packet from client");
-#endif
-			return;
-		}
-
 		/* Check if the packet is to be saved for later use */
 		if(s->candidate_response_waiting){
-#if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO, "check_pack_save_or_not,p:%u", s->src_h_port);
-#endif
 			if(DISP_STOP == check_pack_save_or_not(s, 
 						ip_header, tcp_header, &is_new_req)){
 				return;
@@ -2360,7 +2227,6 @@ void process(char *packet)
 	uint64_t       key;
 	time_t         now  = time(0);
 	int            diff, run_time = 0, sock, ret;
-	p_link_node    ln, tmp_ln;
 	session_t      *s;
 	ip_port_pair_mappings_t *tf;
 

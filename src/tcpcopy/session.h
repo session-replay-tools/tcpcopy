@@ -76,9 +76,6 @@ typedef struct session_s{
 	/* The time of sending the last content packet */
 	time_t   req_last_send_cont_time;
 
-	/* Use this varible to check if the session is keepalived.
-	 * It will be added until reaching the threshold */
-	uint32_t req_proccessed_num:6;
 	/* The session status */
 	uint32_t status:4;
 	/*
@@ -107,8 +104,8 @@ typedef struct session_s{
 	uint32_t dst_closed:1;
 	/* Candidate response waiting flag */
 	uint32_t candidate_response_waiting:1;
-	/* This indicates if the session needs to wait previous packets or not */
-	uint32_t previous_packet_waiting:1;
+	/* Waiting previous packet flag */
+	uint32_t is_waiting_previous_packet:1;
 	/* Connection keepalive flag */
 	uint32_t conn_keepalive:1;
 	/* This indicates if the session intercepted the syn packets from client
@@ -151,7 +148,6 @@ typedef struct session_s{
 	link_list *unsend_packets;
 	link_list *next_sess_packs;
 	link_list *unack_packets;
-	link_list *lost_packets;
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Mysql special packets for reconnection */
 	link_list *mysql_special_packets;
