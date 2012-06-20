@@ -4,8 +4,7 @@
 #include "../core/xcopy.h"
 #include "../core/hash.h"
 
-#define FAKE_SYN_BUF_SIZE  52
-#define FAKE_ACK_BUF_SIZE  40
+#define FAKE_IP_DATAGRAM_LEN 40
 #define FAKE_IP_HEADER_LEN 20
 
 /* Global functions */
@@ -82,8 +81,6 @@ typedef struct session_s{
 	uint32_t req_proccessed_num:6;
 	/* The session status */
 	uint32_t status:4;
-	/* The number of expected handshake packets */
-	uint32_t expected_handshake_pack_num:8;
 	/*
 	 * The number of the response packets last received 
 	 * which have the same acknowledgement sequence.
@@ -114,8 +111,6 @@ typedef struct session_s{
 	uint32_t previous_packet_waiting:1;
 	/* Connection keepalive flag */
 	uint32_t conn_keepalive:1;
-	/* This indicates if faked rst sent to backend */
-	uint32_t faked_rst_sent:1;
 	/* This indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets */
 	uint32_t req_syn_ok:1;
@@ -151,10 +146,9 @@ typedef struct session_s{
 #endif
 
 	link_list *unsend_packets;
-	link_list *next_session_packets;
+	link_list *next_sess_packs;
 	link_list *unack_packets;
 	link_list *lost_packets;
-	link_list *handshake_packets;
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Mysql special packets for reconnection */
 	link_list *mysql_special_packets;
