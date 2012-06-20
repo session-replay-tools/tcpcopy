@@ -851,7 +851,7 @@ static int send_reserved_packets(session_t *s)
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
 	uint16_t      size_ip, cont_len;
-	uint32_t      cur_ack;
+	uint32_t      cur_ack, cur_seq;
 	int           count = 0; 
 	bool need_pause = false, cand_pause = false, omit_transfer = false; 
 
@@ -872,6 +872,12 @@ static int send_reserved_packets(session_t *s)
 		ip_header  =(struct iphdr*)((char*)data);
 		size_ip    = ip_header->ihl << 2;
 		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+		cur_seq    = ntohl(tcp_header->seq);
+		if(cur_seq > s->vir_next_seq){
+			/* We need to wait for previous packet */
+			log_info(LOG_NOTICE, "we need to wait previous pack");
+			break;
+		}
 		cont_len   = get_pack_cont_len(ip_header, tcp_header);
 		if(cont_len > 0){
 #if (TCPCOPY_MYSQL_BASIC)
@@ -912,8 +918,7 @@ static int send_reserved_packets(session_t *s)
 				/* Server active close */
 				omit_transfer = true;
 			}
-		}else if(0 == cont_len)
-		{
+		}else if(0 == cont_len){
 			/* Waiting the response pack or the sec handshake pack */
 			if(s->candidate_response_waiting || SYN_CONFIRM != s->status){
 				omit_transfer = true;
@@ -1935,7 +1940,7 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 	}
 #endif
 	session_init(s, SESS_KEEPALIVE);
-	/* It wil change src port */
+	/* It wil change src port when setting true */
 	fake_syn(s, ip_header, tcp_header, true);
 	save_packet(s->unsend_packets, ip_header, tcp_header);
 
@@ -1951,11 +1956,11 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 
 	*is_new_req  = 0;
 	/*
-	 * If the ack seq of the last cont packet is not equal to 
-	 * it of the current content packet, then the current packet is 
-	 * the packet of the new request.
-	 * Attension:
-	 *   the last content packet may not be sent to backend
+	 * If the ack seq of the last content packet is not equal to 
+	 * it of the current content packet, then we consider 
+	 * the current packet to be the packet of the new request.
+	 * Although it is not always rigtht, it works well with the help of 
+	 * activate_dead_sessions function
 	 */
 	if(s->req_cont_last_ack_seq != s->req_cont_cur_ack_seq){
 		*is_new_req = 1;
@@ -1989,9 +1994,11 @@ static int check_wait_prev_packet(session_t *s,
 
 	if(check_packet_lost(s, ip_header, tcp_header)){
 		if(check_reserved_content_left(s)){
+			/* If it still has content unsent,then save it */
 			save_packet(s->unsend_packets, ip_header, tcp_header);
 			return DISP_STOP;
 		}
+		/* Put the packet in lost packets */
 		save_packet(s->lost_packets, ip_header, tcp_header);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE,"lost and need previous packet");
@@ -1999,8 +2006,7 @@ static int check_wait_prev_packet(session_t *s,
 		s->previous_packet_waiting = 1;
 		return DISP_STOP;
 	}
-	if(s->previous_packet_waiting)
-	{
+	if(s->previous_packet_waiting){
 		wrap_send_ip_packet(s,(unsigned char *)ip_header);
 		send_reserved_lost_packets(s);
 		s->candidate_response_waiting = 1;

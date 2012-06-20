@@ -114,7 +114,10 @@ typedef struct session_s{
 	/* This indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets */
 	uint32_t req_syn_ok:1;
-	/* This indicates if we intercepted the packets halfway */
+	/*
+	 * This indicates if we intercepted the packets halfway 
+	 * including backend already closed
+	 */
 	uint32_t req_halfway_intercepted:1;
 	/* This indicates if the syn packets from backend is received */
 	uint32_t resp_syn_received:1;
