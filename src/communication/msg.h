@@ -20,7 +20,7 @@
 #pragma pack(pop)
 
 	int msg_client_init(uint32_t server_ip, uint16_t port);
-	int msg_server_init(uint16_t port);
+	int msg_server_init(const char *binded_ip, uint16_t port);
 
 	int msg_client_send(int, uint32_t, uint16_t, uint16_t);
 	struct msg_server_s *msg_client_recv(int sock);

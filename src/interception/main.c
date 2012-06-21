@@ -100,6 +100,7 @@ static void usage(void) {
 		   "               ip1,ip2,...\n"
 		   "-l <file>      log file path\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
+		   "-b <ip>        server binded ip address for listening\n"
 		   "-v             intercept version\n"
 		   "-h             help\n"
 		   "-d             run as a daemon\n");
@@ -111,6 +112,7 @@ static int read_args(int argc, char **argv){
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* ip list passed through ip firewall */
 		 "p:" /* TCP port number to listen on */
+		 "b:" /* binded ip address */
 		 "h"  /* print this help and exit */   
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
@@ -123,6 +125,9 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'p':
 				srv_settings.port = strdup(optarg);
+				break;
+			case 'b':
+				srv_settings.binded_ip = strdup(optarg);
 				break;
 			case 'h':
 				usage();
@@ -174,6 +179,7 @@ static int set_details()
 static void settings_init(void)
 {
 	srv_settings.port = SERVER_PORT;
+	srv_settings.binded_ip = NULL;
 }
 
 int main(int argc ,char **argv){
