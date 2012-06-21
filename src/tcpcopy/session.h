@@ -40,8 +40,9 @@ typedef struct session_s{
 
 	/* These values will be sent to backend just for cheating */
 	/* Virtual acknowledgement sequence that sends to backend */
+	/* (host by order)*/
 	uint32_t vir_ack_seq;
-	/* Virtual next expected sequence*/
+	/* Virtual next expected sequence (host byte order) */
 	uint32_t vir_next_seq;
 
 	/* Response variables */
@@ -111,6 +112,8 @@ typedef struct session_s{
 	/* This indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets */
 	uint32_t req_syn_ok:1;
+	/* This is to avoid using the first handshake ack seq */
+	uint32_t req_valid_last_ack_sent:1;
 	/*
 	 * This indicates if we intercepted the packets halfway 
 	 * including backend already closed
@@ -124,6 +127,10 @@ typedef struct session_s{
 	uint32_t sess_more:1;
 	/* If set, it will not save the packet to unack list */
 	uint32_t unack_pack_omit_save_flag:1;
+	/* This indicates if server sends response first */
+	uint32_t resp_greet_received:1;
+	/* This indicates if it needs to wait server response first */
+	uint32_t need_resp_greet:1;
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
 	uint32_t mysql_excute_times:8;
@@ -131,8 +138,6 @@ typedef struct session_s{
 	uint32_t mysql_cont_num_aft_greet:4;
 	/* Request begin flag for mysql */
 	uint32_t mysql_req_begin:1;
-	/* This indicates if greeting from bakend is received */
-	uint32_t mysql_resp_greet_received:1;
 	/* This indicates if it needs second auth */
 	uint32_t mysql_sec_auth:1;
 	/* This indicates if it has sent the first auth */
