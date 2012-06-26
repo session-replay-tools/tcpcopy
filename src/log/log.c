@@ -24,13 +24,18 @@ void log_init(const char* path)
 #else 
 	g_log_level = LOG_NOTICE;
 #endif
+
+#if (MULTI_THREADS)  
 	pthread_mutex_lock(&mutex);
+#endif
 	if(NULL == path){
 		file = fopen("error.log", "a+");
 	}else{
 		file = fopen(path, "a+");
 	}
+#if (MULTI_THREADS)  
 	pthread_mutex_unlock(&mutex);
+#endif
 }
 
 static struct timeval get_time()
@@ -51,7 +56,9 @@ void log_info(int level, const char *fmt, ...)
 
 	if(g_log_level >= level){
 
+#if (MULTI_THREADS)  
 		pthread_mutex_lock(&mutex);
+#endif
 
 		if (file) {
 			t = time(0);
@@ -72,17 +79,24 @@ void log_info(int level, const char *fmt, ...)
 			fprintf( file, "\n" );
 			va_end(args);
 		}
+#if (MULTI_THREADS)  
 		pthread_mutex_unlock(&mutex);
+#endif
 	}
 }
 
 void log_end()
 {
+#if (MULTI_THREADS)  
 	pthread_mutex_lock(&mutex);
+#endif
 	if(file){
 		(void)fclose(file);
 		file = NULL;
 	}	
+#if (MULTI_THREADS)  
 	pthread_mutex_unlock(&mutex);
+#endif
+
 }
 

@@ -9,8 +9,11 @@ static uint64_t  read_cnt = 0, write_cnt = 0, event_cnt = 0;
 static uint64_t  packs_put_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint64_t  recv_pack_cnt_from_pool = 0;
 
+#if (MULTI_THREADS)  
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;
+static pthread_t       work_tid; 
+#endif
 
 /*
  * Put the packet to the buffered pool
@@ -25,8 +28,9 @@ static void put_packet_to_pool(const char *packet, int len)
 
 	packs_put_cnt++;
 
+#if (MULTI_THREADS)  
 	pthread_mutex_lock(&mutex);
-
+#endif
 	next_w_cnt     = write_cnt + len + sizeof(int);	
 	next_w_pointer = next_w_cnt%pool_size;
 	if(next_w_pointer > pool_max_addr){
@@ -42,7 +46,10 @@ static void put_packet_to_pool(const char *packet, int len)
 			log_info(LOG_ERR, "pool is full");
 			log_info(LOG_ERR, "read:%llu, write:%llu, next_w_cnt:%llu",
 					read_cnt, write_cnt, next_w_cnt);
+
+#if (MULTI_THREADS)  
 			pthread_cond_wait(&empty, &mutex);
+#endif
 		}else
 		{
 			break;
@@ -56,8 +63,10 @@ static void put_packet_to_pool(const char *packet, int len)
 	/* Put packet to pool */
 	memcpy(p, packet, act_len);
 	*size_p   = len;
+#if (MULTI_THREADS)  
 	pthread_cond_signal(&full);
 	pthread_mutex_unlock(&mutex);
+#endif
 }
 
 /*
@@ -71,10 +80,15 @@ static char *get_pack_from_pool()
 	recv_pack_cnt_from_pool++;
 	read_over_flag = 0;
 
+#if (MULTI_THREADS)  
 	pthread_mutex_lock (&mutex);
+#endif
 	if(read_cnt >= write_cnt){
 		read_over_flag = 1;
+
+#if (MULTI_THREADS)  
 		pthread_cond_wait(&full, &mutex);
+#endif
 	}
 	read_pos = read_cnt%pool_size;
 	p        = pool + read_pos + sizeof(int);
@@ -84,8 +98,11 @@ static char *get_pack_from_pool()
 	}
 	memcpy(item, p, len);
 	read_cnt = read_cnt + len + sizeof(int);
+
+#if (MULTI_THREADS)  
 	pthread_cond_signal(&empty);
 	pthread_mutex_unlock (&mutex);
+#endif
 
 	/* The packet minimum length is 40 bytes */
 	if(len < 40){
@@ -346,6 +363,11 @@ static void dispose_event(int fd)
 void tcp_copy_exit()
 {
 	int i;
+#if (MULTI_THREADS)  
+	if(0 != pthread_join(work_tid, NULL)){
+		perror("join error");
+	}
+#endif
 	session_table_destroy();
 	if(-1 != raw_sock){
 		close(raw_sock);
@@ -409,7 +431,6 @@ int tcp_copy_init()
 	uint32_t               target_ip;
 
 #if (MULTI_THREADS)  
-	pthread_t              thread;
 	pthread_attr_t         attr;
 #endif
 
@@ -433,7 +454,7 @@ int tcp_copy_init()
 		pthread_cond_init(&full, NULL);
 		pthread_cond_init(&empty, NULL);
 		pthread_attr_init(&attr);
-		if((ret = pthread_create(&thread, &attr, dispose, NULL)) != 0){
+		if((ret = pthread_create(&work_tid, &attr, dispose, NULL)) != 0){
 			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
 			exit(1);
 		}

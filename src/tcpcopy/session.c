@@ -2011,7 +2011,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	clt_cnt++;
 	s->src_h_port = ntohs(tcp_header->source);
 #if (DEBUG_TCPCOPY)
-	//strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
+	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
 	/* Change source port for multiple copying,etc */
 	if(s->faked_src_port != 0){
