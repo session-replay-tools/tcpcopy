@@ -345,6 +345,7 @@ static void dispose_event(int fd)
 
 void tcp_copy_exit()
 {
+	int i;
 	session_table_destroy();
 	if(-1 != raw_sock){
 		close(raw_sock);
@@ -356,7 +357,29 @@ void tcp_copy_exit()
 		free(pool);
 		pool = NULL;
 	}
+	if(clt_settings.raw_transfer != NULL){
+		free(clt_settings.raw_transfer);
+		clt_settings.raw_transfer = NULL;
+	}
+	if(clt_settings.log_path != NULL){
+		free(clt_settings.log_path);
+		clt_settings.log_path = NULL;
+	}
+#ifdef TCPCOPY_MYSQL_ADVANCED
+	if(clt_settings.user_pwd != NULL){
+		free(clt_settings.user_pwd);
+		clt_settings.user_pwd = NULL;
+	}
+#endif
+	if(clt_settings.transfer.mappings != NULL){
+		for(i = 0; i < clt_settings.transfer.num; i++){
+			free(clt_settings.transfer.mappings[i]);
+		}
+		free(clt_settings.transfer.mappings);
+		clt_settings.transfer.mappings = NULL;
+	}
 	exit(0);
+
 }
 
 void tcp_copy_over(const int sig)
@@ -379,7 +402,7 @@ void tcp_copy_over(const int sig)
 /* Initiate tcpcopy client */
 int tcp_copy_init()
 {
-	int                    i;
+	int                    i, ret;
 	ip_port_pair_mapping_t *pair;
 	ip_port_pair_mapping_t **mappings;
 	uint16_t               online_port, target_port;
@@ -387,6 +410,7 @@ int tcp_copy_init()
 
 #if (MULTI_THREADS)  
 	pthread_t              thread;
+	pthread_attr_t         attr;
 #endif
 
 	select_sever_set_callback(dispose_event);
@@ -408,7 +432,11 @@ int tcp_copy_init()
 		pthread_mutex_init(&mutex, NULL);
 		pthread_cond_init(&full, NULL);
 		pthread_cond_init(&empty, NULL);
-		pthread_create(&thread, NULL, dispose, NULL);
+		pthread_attr_init(&attr);
+		if((ret = pthread_create(&thread, &attr, dispose, NULL)) != 0){
+			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
+			exit(1);
+		}
 #endif
 		/* Add connections to the tested server for exchanging info */
 		mappings = clt_settings.transfer.mappings;

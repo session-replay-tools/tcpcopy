@@ -114,12 +114,8 @@ void hash_del(hash_table *table, uint64_t key)
 	if(ln != NULL){
 		table->total--;
 		link_list_remove(l, ln);
-		if(ln->data != NULL)
-		{
-			free(ln->data);
-		}
-		ln->data = NULL;
 		link_node_free(ln);
+		free(ln);
 	}
 	return;
 }

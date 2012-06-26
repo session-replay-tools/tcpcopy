@@ -115,12 +115,9 @@ void delay_table_send(uint64_t key,int fd)
 		first = link_list_pop_first(msg_list);
 		msg = (first->data);
 		(void)msg_server_send(fd, msg);
-		if(msg != NULL)
-		{
-			free(msg);
-		}
 		msg_item_free_cnt++;
 		link_node_free(first);
+		free(first);
 	}
 }
 
@@ -138,13 +135,9 @@ void delay_table_del(uint64_t key)
 	}
 	while(! link_list_is_empty(msg_list)){
 		first = link_list_pop_first(msg_list);
-		msg = (first->data);
-		if(msg != NULL)
-		{
-			free(msg);
-		}
 		msg_item_free_cnt++;
 		link_node_free(first);
+		free(first);
 	}
 	hash_del(table, key);
 	free(msg_list);

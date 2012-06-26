@@ -19,7 +19,10 @@ p_link_node link_node_malloc(void *data)
 
 void link_node_free(p_link_node p)
 {
-	free(p);
+	if(p->data != NULL){
+		free(p->data);
+		p->data = NULL;
+	}
 }
 
 link_list *link_list_create()
@@ -44,11 +47,9 @@ static int link_list_clear(link_list *l)
 	count = 0;
 	while(p != &(l->head)){
 		next = p->next;
-		if(p->data != NULL){
-			free(p->data);
-		}
 		count++;
 		link_node_free(p);
+		free(p);
 		p = next;
 	}
 	l->size = 0;

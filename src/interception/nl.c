@@ -25,26 +25,29 @@ int nl_init(int protocol, int groups)
 /* set mode for netlink socket*/
 void nl_set_mode(int sock, uint8_t mode, size_t range)
 {
-	struct sockaddr_nl addr;
-	struct {
-		struct nlmsghdr head;
-		ipq_peer_msg_t  body;
-	}req;
-	memset(&req, 0, sizeof(req));
-	req.head.nlmsg_len   = NLMSG_LENGTH(sizeof(req));
-	req.head.nlmsg_flags = NLM_F_REQUEST;
-	req.head.nlmsg_type  = IPQM_MODE;
-	req.head.nlmsg_pid   = getpid();
-	/* here we drop the packet by default because of verdict 
-	   in ipq_peer_msg_t set zero */
-	req.body.msg.mode.value = mode;
-	req.body.msg.mode.range = range;
+	struct sockaddr_nl  addr;
+	struct nlmsghdr     *nl_header;
+	struct ipq_mode_msg *mode_data;
+	unsigned char       buf1[128];
+
+	memset(buf1, 0, 128);
 	memset(&addr, 0, sizeof(addr));
+
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid    = 0;
 	addr.nl_groups = 0;
-	if(sendto(sock, &req, req.head.nlmsg_len,0,
-				(struct sockaddr *)&addr, sizeof(addr)) < 0){
+
+	nl_header = (struct nlsmghdr *)buf1;
+	/* It must be ipq_peer_msg, not ipq_mode_msg */
+	nl_header->nlmsg_len   = NLMSG_LENGTH(sizeof(struct ipq_peer_msg));
+	nl_header->nlmsg_flags = NLM_F_REQUEST;
+	nl_header->nlmsg_type  = IPQM_MODE;
+	nl_header->nlmsg_pid   = getpid();
+	mode_data = NLMSG_DATA(nl_header);
+	mode_data->value = mode;
+	mode_data->range = range;
+	if(sendto(sock, (void *)nl_header, nl_header->nlmsg_len,0,
+				(struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0){
 		perror("cannot set mode:");
 		log_info(LOG_ERR,
 				"can not set mode for netlink,check if ip queue is up:%s",

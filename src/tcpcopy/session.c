@@ -90,10 +90,17 @@ int session_table_destroy()
 			    /* Delete session */
 				session_rel_dynamic_mem(s);
 				hash_del(sessions_table, s->hash_key);
+				free(s);
 			}
 			ln = tmp_ln;
 		}
+		free(list);
+		sessions_table->lists[i] = NULL;
 	}
+	free(sessions_table->lists);
+	free(sessions_table);
+	sessions_table = NULL;
+
 	return 0;
 }
 
@@ -417,6 +424,7 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 				s->unsend_packets->size, s->src_h_port);
 		return OBSOLETE;
 	}
+	return NOT_YET_OBSOLETE;
 }
 
 /*
@@ -467,7 +475,7 @@ static void clear_timeout_sessions()
 					session_rel_dynamic_mem(s);
 					/* Remove session from table */
 					hash_del(sessions_table, s->hash_key);
-
+					free(s);
 				}
 			}
 			ln = tmp_ln;
@@ -2003,7 +2011,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	clt_cnt++;
 	s->src_h_port = ntohs(tcp_header->source);
 #if (DEBUG_TCPCOPY)
-	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
+	//strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
 	/* Change source port for multiple copying,etc */
 	if(s->faked_src_port != 0){
@@ -2293,6 +2301,7 @@ void process(char *packet)
 				}else{
 					session_rel_dynamic_mem(s);
 					hash_del(sessions_table, s->hash_key);
+					free(s);
 				}
 			}
 		}
@@ -2376,6 +2385,7 @@ void process(char *packet)
 					}else{
 						session_rel_dynamic_mem(s);
 						hash_del(sessions_table, s->hash_key);
+						free(s);
 					}
 				}
 			}else
