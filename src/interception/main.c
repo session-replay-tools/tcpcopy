@@ -13,8 +13,9 @@
 #ifdef HAVE_CONFIG_H
 #  include <config.h>
 #endif
-
 #include "../core/xcopy.h"
+#include "../log/log.h"
+#include "interception.h"
 
 xcopy_srv_settings srv_settings;
 
@@ -136,7 +137,7 @@ static int read_args(int argc, char **argv){
 				srv_settings.raw_ip_list = strdup(optarg);
 				break;
 			case 'p':
-				srv_settings.port = strdup(optarg);
+				srv_settings.port = (uint16_t)atoi(optarg);
 				break;
 			case 'b':
 				srv_settings.binded_ip = strdup(optarg);
@@ -176,6 +177,7 @@ static int set_details()
 	}
 	/* Daemonize */
 	if (srv_settings.do_daemonize) {
+		/* TODO why warning*/
 		if (sigignore(SIGHUP) == -1) {
 			perror("Failed to ignore SIGHUP");
 			log_info(LOG_ERR, "Failed to ignore SIGHUP");

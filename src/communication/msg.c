@@ -63,8 +63,8 @@ static void sock_bind(int sock, const char *binded_ip, uint16_t port)
 	memset(&local_addr, 0, sizeof(local_addr));
 	local_addr.sin_port   = ntohs(port);
 	local_addr.sin_family = AF_INET;
-	if(binded_ip!= NULL){
-		inet_aton(binded_ip, &local_addr.sin_addr.s_addr);
+	if(binded_ip != NULL){
+		inet_aton(binded_ip, &local_addr.sin_addr);
 	}
 	length = (socklen_t)(sizeof(local_addr));
 	if(bind(sock,(struct sockaddr *)&local_addr,length) == -1){

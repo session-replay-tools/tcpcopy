@@ -28,16 +28,16 @@ void nl_set_mode(int sock, uint8_t mode, size_t range)
 	struct sockaddr_nl  addr;
 	struct nlmsghdr     *nl_header;
 	struct ipq_mode_msg *mode_data;
-	unsigned char       buf1[128];
+	unsigned char       buf[128];
 
-	memset(buf1, 0, 128);
+	memset(buf, 0, 128);
 	memset(&addr, 0, sizeof(addr));
 
 	addr.nl_family = AF_NETLINK;
 	addr.nl_pid    = 0;
 	addr.nl_groups = 0;
 
-	nl_header = (struct nlsmghdr *)buf1;
+	nl_header = (struct nlsmghdr *)(buf);
 	/* It must be ipq_peer_msg, not ipq_mode_msg */
 	nl_header->nlmsg_len   = NLMSG_LENGTH(sizeof(struct ipq_peer_msg));
 	nl_header->nlmsg_flags = NLM_F_REQUEST;

@@ -1,4 +1,6 @@
 #include "../core/xcopy.h"
+#include "nl.h"
+#include "nl_firewall.h"
 
 /* initiate for netlink firewall*/
 int nl_firewall_init()

@@ -1,4 +1,5 @@
 #include "address.h"
+#include "../event/select_server.h"
 #include "../communication/msg.h"
 
 static address_node_t addr[65536];

@@ -1,20 +1,12 @@
 #include "../core/xcopy.h"
+#include "pairs.h"
 #include "protocol.h"
+#include "password.h"
 
 static inline unsigned char char_val(unsigned char X)
 {
 	return (unsigned char) (X >= '0' && X <= '9' ? X-'0' :
 			X >= 'A' && X <= 'Z' ? X-'A'+10 : X-'a'+10);
-}
-
-static void hex_to_octet(unsigned char *to, const char *str, 
-		unsigned int len)
-{
-	const char *str_end= str + len;
-	while (str < str_end){
-		register char tmp = char_val(*str++);
-		*to++= (tmp << 4) | char_val(*str++);
-	}
 }
 
 static void new_hash(uint64_t *result, const char *password)
@@ -76,18 +68,9 @@ void new_crypt(char *result, const char *password, char *message)
 	}
 }
 
-/* Convert scrambled password from asciiz hex string to binary form. */
-static void get_salt_from_password(unsigned char *hash_stage2, 
-		const char *password)
-{
-	  hex_to_octet(hash_stage2, password+1 /* skip '*' */, 
-			  SHA1_HASH_SIZE * 2);
-}
-
 int is_last_data_packet(unsigned char *payload)
 {
 	unsigned char *p;
-	char          *str;
 	size_t        len;
 
 	p   = payload;
@@ -199,8 +182,7 @@ int change_client_auth_content(unsigned char *payload,
 	char   *str;
 	size_t len, i;
 	char   user[256], *pwd;
-	unsigned char *p,*q;
-	unsigned char scramble_buff[SCRAMBLE_LENGTH+1];
+	unsigned char *p, scramble_buff[SCRAMBLE_LENGTH+1];
 
 	memset(scramble_buff,0,SCRAMBLE_LENGTH+1);
 	p = payload;

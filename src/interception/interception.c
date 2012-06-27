@@ -1,5 +1,9 @@
 #include "../core/xcopy.h"
 #include "../communication/msg.h"
+#include "../event/select_server.h"
+#include "router.h"
+#include "delay.h"
+#include "nl_firewall.h"
 #include "interception.h"
 
 static  int firewall_sock;

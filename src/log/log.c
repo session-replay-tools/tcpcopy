@@ -2,8 +2,11 @@
 #include "log.h"
 
 static FILE           *file = NULL;
-static pthread_mutex_t mutex;
 int                    g_log_level;
+
+#if (MULTI_THREADS)  
+static pthread_mutex_t mutex;
+#endif
 
 static char *err_levels[] = { 
 	"unknown",

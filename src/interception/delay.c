@@ -100,7 +100,7 @@ void delay_table_add(uint64_t key,struct msg_server_s *msg)
 
 
 /* send delayed message according to the key*/
-void delay_table_send(uint64_t key,int fd)
+void delay_table_send(uint64_t key, int fd)
 {
 	link_list           *msg_list;
 	p_link_node         first;
@@ -126,7 +126,6 @@ void delay_table_del(uint64_t key)
 {
 	link_list           *msg_list;
 	p_link_node         first;
-	struct msg_server_s *msg;
 
 	delay_table_delete_obsolete(key);	
 	msg_list =(link_list *)hash_find(table, key);

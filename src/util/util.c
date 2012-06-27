@@ -24,7 +24,7 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 {
 	static unsigned int seed = 0;
 	struct timeval  tp;
-	uint16_t        port_add, dest_port;
+	uint16_t        port_add;
 
 	if(0 == seed){    
 		gettimeofday(&tp, NULL);
@@ -40,7 +40,7 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,
 		int shift_factor)
 {
-	uint16_t        port_add, dest_port;
+	uint16_t        port_add;
 	port_add = (2048 << shift_factor) + rand_port;
 
 	return get_appropriate_port(ntohs(orig_port), port_add);

@@ -12,6 +12,8 @@
  */
 
 #include "../core/xcopy.h"
+#include "../log/log.h"
+#include "../event/select_server.h"
 #include "manager.h"
 
 /* Global variables */
@@ -197,6 +199,7 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 
 	*port = atoi(p);
 
+	return 0;
 }
 
 /*
@@ -306,7 +309,7 @@ static void retrieve_target_addresses(){
 
 static int set_details()
 {
-	int            rand_port, ret;
+	int            rand_port;
 	struct timeval tp;
 	unsigned int   seed;
 
@@ -341,10 +344,11 @@ static int set_details()
 			exit(EXIT_FAILURE);
 		}    
 	}    
+	return 0;
 }
 
 /* Set defaults */
-static int settings_init()
+static void settings_init()
 {
 	/* Init values */
 	clt_settings.mtu = DEFAULT_MTU;

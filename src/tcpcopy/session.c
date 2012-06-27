@@ -1,6 +1,8 @@
 #include "../communication/msg.h"
 #include "../util/util.h"
 #include "../log/log.h"
+#include "send.h"
+#include "address.h"
 #include "session.h"
 
 static void session_rel_dynamic_mem(session_t *s);
@@ -74,7 +76,7 @@ int session_table_destroy()
 	session_t   *s;
 
 	if(NULL == sessions_table){
-		return;
+		return EXIT_FAILURE;
 	}
 	for(i = 0; i < sessions_table->size; i++){
 		list = sessions_table->lists[i];
@@ -106,7 +108,6 @@ int session_table_destroy()
 
 static void session_init(session_t *s, int flag)
 {
-	link_list *hl;
 #if (TCPCOPY_MYSQL_BASIC)
 	link_list *ml;
 #endif 
@@ -229,7 +230,6 @@ static session_t *session_create(struct iphdr *ip_header,
 static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	link_list           *list;
 	session_t           *s;
 	s = session_create(ip_header, tcp_header);
 	if(NULL != s){
@@ -326,7 +326,7 @@ static int check_overwhelming(session_t *s, const char *message,
  */
 static bool is_session_dead(session_t *s)
 {
-	int    packs_unsend = 0, diff, result = 0;
+	int    packs_unsend, diff;
 
 	packs_unsend = s->unsend_packets->size;
 	diff = time(0) - s->req_last_send_cont_time;
@@ -666,8 +666,7 @@ static bool check_reserved_content_left(session_t *s)
 {
 	unsigned char *data;
 	struct iphdr  *ip_header;
-	struct tcphdr *tcp_header;
-	p_link_node   ln, tmp_ln;
+	p_link_node   ln;
 	link_list     *list;
 	uint16_t      cont_len;
 
@@ -1010,7 +1009,7 @@ static void mysql_prepare_for_new_session(session_t *s,
 static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	unsigned char f_s_buf[FAKE_IP_DATAGRAM_LEN], *data;
+	unsigned char f_s_buf[FAKE_IP_DATAGRAM_LEN];
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
 
@@ -1676,8 +1675,10 @@ static void process_client_rst(session_t *s, struct iphdr *ip_header,
 static void process_client_syn(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)	
 {
+#if (TCPCOPY_MYSQL_BASIC)
 	link_list     *list;
 	p_link_node   ln, tmp_ln;
+#endif
 
 	s->req_syn_ok = 1;
 
@@ -1700,15 +1701,13 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 	}
 	hash_del(mysql_table, s->src_h_port);
 #endif
-	wrap_send_ip_packet(s,(unsigned char *)ip_header);
+	wrap_send_ip_packet(s, (unsigned char *)ip_header);
 
 }
 
 static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, uint16_t cont_len)	
 {
-	link_list     *list;
-
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG, "recv fin packet from clt");
 #endif
@@ -2258,7 +2257,7 @@ void process(char *packet)
 {
 	struct tcphdr  *tcp_header;
 	struct iphdr   *ip_header;
-	uint16_t       size_ip, size_tcp, tot_len;
+	uint16_t       size_ip;
 	uint64_t       key;
 	time_t         now  = time(0);
 	int            diff, run_time = 0, sock, ret;

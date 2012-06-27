@@ -1,20 +1,25 @@
-#include "../core/xcopy.h"
 #include "../communication/msg.h"
+#include "../util/util.h"
+#include "../log/log.h"
+#include "../event/select_server.h"
+#include "address.h"
+#include "send.h"
+#include "manager.h"
 #include "session.h"
 
-static char      *pool, item[MAX_MTU + MAX_MTU];
 static int       raw_sock, read_over_flag = 1;
-size_t           pool_max_addr, pool_size, pool_fact;
-static uint64_t  read_cnt = 0, write_cnt = 0, event_cnt = 0;
-static uint64_t  packs_put_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
-static uint64_t  recv_pack_cnt_from_pool = 0;
+static uint64_t  event_cnt = 0;
+static uint64_t  raw_packs = 0, valid_raw_packs = 0;
 
 #if (MULTI_THREADS)  
+static char      *pool, item[MAX_MTU + MAX_MTU];
+size_t           pool_max_addr, pool_size, pool_fact;
+static uint64_t  read_cnt = 0, write_cnt = 0, packs_put_cnt = 0;
+static uint64_t  recv_pack_cnt_from_pool = 0;
 static long int        main_pid, worker_pid;
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;
 static pthread_t       work_tid; 
-#endif
 
 /*
  * Put the packet to the buffered pool
@@ -29,9 +34,7 @@ static void put_packet_to_pool(const char *packet, int len)
 
 	packs_put_cnt++;
 
-#if (MULTI_THREADS)  
 	pthread_mutex_lock(&mutex);
-#endif
 	next_w_cnt     = write_cnt + len + sizeof(int);	
 	next_w_pointer = next_w_cnt%pool_size;
 	if(next_w_pointer > pool_max_addr){
@@ -48,12 +51,7 @@ static void put_packet_to_pool(const char *packet, int len)
 			log_info(LOG_ERR, "read:%llu, write:%llu, next_w_cnt:%llu",
 					read_cnt, write_cnt, next_w_cnt);
 
-#if (MULTI_THREADS)  
 			pthread_cond_wait(&empty, &mutex);
-#else
-			fprintf(stderr, "pool is pull,set -b larger:\n");
-			exit(EXIT_FAILURE);
-#endif
 		}else
 		{
 			break;
@@ -67,10 +65,8 @@ static void put_packet_to_pool(const char *packet, int len)
 	/* Put packet to pool */
 	memcpy(p, packet, act_len);
 	*size_p   = len;
-#if (MULTI_THREADS)  
 	pthread_cond_signal(&full);
 	pthread_mutex_unlock(&mutex);
-#endif
 }
 
 /*
@@ -84,15 +80,10 @@ static char *get_pack_from_pool()
 	recv_pack_cnt_from_pool++;
 	read_over_flag = 0;
 
-#if (MULTI_THREADS)  
 	pthread_mutex_lock (&mutex);
-#endif
 	if(read_cnt >= write_cnt){
 		read_over_flag = 1;
-
-#if (MULTI_THREADS)  
 		pthread_cond_wait(&full, &mutex);
-#endif
 	}
 	read_pos = read_cnt%pool_size;
 	p        = pool + read_pos + sizeof(int);
@@ -103,10 +94,8 @@ static char *get_pack_from_pool()
 	memcpy(item, p, len);
 	read_cnt = read_cnt + len + sizeof(int);
 
-#if (MULTI_THREADS)  
 	pthread_cond_signal(&empty);
 	pthread_mutex_unlock (&mutex);
-#endif
 
 	/* The packet minimum length is 40 bytes */
 	if(len < 40){
@@ -123,10 +112,8 @@ static void *dispose(void *thread_id)
 {
 	char *packet;
 
-#if (MULTI_THREADS)  
 	worker_pid = (long int)syscall(224) ;
 	log_info(LOG_WARN, "worker thread, pid=%ld", worker_pid);
-#endif
 
 	/* Give a hint to terminal */
 	printf("I am booted\n");
@@ -143,6 +130,7 @@ static void *dispose(void *thread_id)
 
 	return NULL;
 }
+#endif
 
 static void set_nonblock(int socket)
 {
@@ -187,6 +175,7 @@ static int init_input_raw_socket()
 	return sock;
 }
 
+#if (MULTI_THREADS)  
 /* Replicate packets for multiple-copying */
 static int replicate_packs(const char *packet, int length, int replica_num)
 {
@@ -218,20 +207,25 @@ static int replicate_packs(const char *packet, int length, int replica_num)
 	return 0;
 
 }
+#endif
 
 /*
  * Retrieve raw packets
  */
 static int retrieve_raw_sockets(int sock)
 {
-
+#if (MULTI_THREADS)  
 	char     recv_buf[RECV_BUF_SIZE], tmp_packet[MAX_MTU];
-	char     *packet;
 	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
 	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
 	uint32_t seq;
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
+#else
+	char     recv_buf[RECV_BUF_SIZE];
+	int      replica_num, err, recv_len;
+#endif
+	char     *packet;
 
 	while(1){
 		recv_len = recvfrom(sock, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
@@ -306,9 +300,15 @@ static int retrieve_raw_sockets(int sock)
 		}
 
 		if(raw_packs%100000 == 0){
+
+#if (MULTI_THREADS)  
 			log_info(LOG_NOTICE,
 					"raw packets:%llu, valid :%llu, total in pool:%llu",
 					raw_packs, valid_raw_packs, packs_put_cnt);
+#else
+			log_info(LOG_NOTICE, "raw packets:%llu, valid :%llu",
+					raw_packs, valid_raw_packs);
+#endif
 		}
 	}
 
@@ -374,10 +374,12 @@ void tcp_copy_exit()
 	}
 	send_close();
 	log_end();
+#if (MULTI_THREADS)  
 	if(NULL != pool){
 		free(pool);
 		pool = NULL;
 	}
+#endif
 	if(clt_settings.raw_transfer != NULL){
 		free(clt_settings.raw_transfer);
 		clt_settings.raw_transfer = NULL;
@@ -405,8 +407,9 @@ void tcp_copy_exit()
 
 void tcp_copy_over(const int sig)
 {
+#if (MULTI_THREADS)  
 	int total = 0;
-
+#endif
 	long int pid   = (long int)syscall(224);
 	log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
 #if (MULTI_THREADS)  
@@ -426,7 +429,11 @@ void tcp_copy_over(const int sig)
 /* Initiate tcpcopy client */
 int tcp_copy_init()
 {
+#if (MULTI_THREADS)  
 	int                    i, ret;
+#else
+	int                    i;
+#endif
 	ip_port_pair_mapping_t *pair;
 	ip_port_pair_mapping_t **mappings;
 	uint16_t               online_port, target_port;
@@ -441,11 +448,13 @@ int tcp_copy_init()
 	/* Init session table*/
 	session_table_init();
 	
+#if (MULTI_THREADS)  
 	/* Init pool */
 	pool_fact = clt_settings.pool_fact;
 	pool_size = 1 << pool_fact;
 	pool_max_addr = pool_size - MAX_MTU;
 	pool = (char*)calloc(1, pool_size);
+#endif
 
 	/* Init input raw socket info */
 	raw_sock = init_input_raw_socket();
