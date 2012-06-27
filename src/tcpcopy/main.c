@@ -1,6 +1,6 @@
 /*
  *  TCPCopy
- *  An online replication replication tool for TCP based applications
+ *  An online replication tool for TCP based applications
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.
@@ -36,6 +36,9 @@ static void usage(void) {
 		   "-u <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
 		   "               user1@psw1:user2@psw2:...\n"
+		   "               attension:\n"
+		   "               users of the target test should be the same as\n"
+		   "               that of online\n"
 #endif
 		   "-n <num>       the number of replication for multi-copying\n"
 		   "               max value allowed is 1023:\n"
@@ -66,7 +69,7 @@ static int read_args(int argc, char **argv){
 	int value;
 	
 	while (-1 != (c = getopt(argc, argv,
-		 "x:" /* where do we copy request from and to */
+		 "x:" /* where we copy request from and to */
 #if (TCPCOPY_MYSQL_ADVANCED)  
 		 "u:" /* user password pair for mysql*/
 #endif
@@ -340,7 +343,7 @@ static int set_details()
 	}    
 }
 
-/* defaults */
+/* Set defaults */
 static int settings_init()
 {
 	/* Init values */

@@ -55,7 +55,7 @@ hash_table *hash_create(size_t size)
 		exit(errno);
 	}
 	ht->size  = size;
-	ht->lists = (link_list **) malloc(sizeof(link_list *)*size);
+	ht->lists = (link_list **) calloc(size, sizeof(link_list *));
 	if(NULL == ht->lists){
 		perror("can't malloc memory!");
 		log_info(LOG_ERR, "can't malloc memory for hash lists:%s",

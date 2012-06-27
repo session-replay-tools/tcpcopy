@@ -22,9 +22,9 @@ static pthread_t       work_tid;
 static void put_packet_to_pool(const char *packet, int len)
 {
 	int       act_len = len, next_w_pointer = 0, w_pointer = 0;
-	int       *size_p = NULL;
+	int       *size_p;
 	uint64_t  next_w_cnt = 0, diff = 0;
-	char      *p = NULL;
+	char      *p;
 
 
 	packs_put_cnt++;
@@ -50,6 +50,9 @@ static void put_packet_to_pool(const char *packet, int len)
 
 #if (MULTI_THREADS)  
 			pthread_cond_wait(&empty, &mutex);
+#else
+			fprintf(stderr, "pool is pull,set -b larger:\n");
+			exit(EXIT_FAILURE);
 #endif
 		}else
 		{
@@ -149,7 +152,7 @@ static void set_nonblock(int socket)
 }
 
 /* Initiate input raw socket */
-static int init_raw_socket()
+static int init_input_raw_socket()
 {
 	int       sock, recv_buf_opt, ret;
 	socklen_t opt_len;
@@ -185,7 +188,7 @@ static int init_raw_socket()
 }
 
 /* Replicate packets for multiple-copying */
-static int replicate_packs(const char *packet,int length, int replica_num)
+static int replicate_packs(const char *packet, int length, int replica_num)
 {
 	int           i;
 	struct tcphdr *tcp_header;
@@ -339,7 +342,6 @@ static void check_resource_usage()
 static void dispose_event(int fd)
 {
 	struct msg_server_s *msg;
-	char                path[512];
 
 	event_cnt++;
 	if(fd == raw_sock){
@@ -349,7 +351,7 @@ static void dispose_event(int fd)
 		if(NULL == msg ){
 			fprintf(stderr, "NULL msg :\n");
 			log_info(LOG_ERR, "NULL msg from msg_client_recv");
-			exit(1);
+			exit(EXIT_FAILURE);
 		}   
 #if (MULTI_THREADS)  
 		put_packet_to_pool((const char*)msg, sizeof(struct msg_server_s));
@@ -397,7 +399,7 @@ void tcp_copy_exit()
 		free(clt_settings.transfer.mappings);
 		clt_settings.transfer.mappings = NULL;
 	}
-	exit(0);
+	exit(EXIT_SUCCESS);
 
 }
 
@@ -417,7 +419,7 @@ void tcp_copy_over(const int sig)
 		}
 	}
 #endif
-	exit(0);
+	exit(EXIT_SUCCESS);
 }
 
 
@@ -446,7 +448,7 @@ int tcp_copy_init()
 	pool = (char*)calloc(1, pool_size);
 
 	/* Init input raw socket info */
-	raw_sock = init_raw_socket();
+	raw_sock = init_input_raw_socket();
 	if(raw_sock != -1){
 		/* Add the input raw socket to select */
 		select_sever_add(raw_sock);
@@ -458,7 +460,7 @@ int tcp_copy_init()
 		pthread_cond_init(&empty, NULL);
 		if((ret = pthread_create(&work_tid, NULL, dispose, &work_tid)) != 0){
 			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
-			exit(1);
+			exit(EXIT_FAILURE);
 		}
 		/*TODO To solve memory leak of pthread_create reported by valgrind */
 #endif
@@ -475,10 +477,8 @@ int tcp_copy_init()
 					ntohs(target_port));
 		}
 		return SUCCESS;
-	}else
-	{
+	}else{
 		return FAILURE;
 	}
-
 }
 
