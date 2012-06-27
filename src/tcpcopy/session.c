@@ -2217,7 +2217,7 @@ static void output_stat(time_t now, int run_time)
 	uint64_t       active_s;
 
 	last_stat_time = now;
-	active_s       =sessions_table->total;
+	active_s       = sessions_table->total;
 	log_info(LOG_WARN, "active:%llu,rel reqs:%llu,obs del:%llu",
 			active_s, leave_cnt, obs_cnt);
 	log_info(LOG_WARN,
@@ -2270,7 +2270,6 @@ void process(char *packet)
 	}else{
 		run_time = now -start_p_time;
 	}
-	printf("table total:%d\n",sessions_table->total);
 	diff = now - last_stat_time;
 	if(diff > 5){
 		/* Output statistics */

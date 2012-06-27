@@ -10,6 +10,7 @@ static uint64_t  packs_put_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint64_t  recv_pack_cnt_from_pool = 0;
 
 #if (MULTI_THREADS)  
+static long int        main_pid, worker_pid;
 static pthread_mutex_t mutex;
 static pthread_cond_t  empty, full;
 static pthread_t       work_tid; 
@@ -119,9 +120,11 @@ static void *dispose(void *thread_id)
 {
 	char *packet;
 
-	/* Init session table*/
-	session_table_init();
-	
+#if (MULTI_THREADS)  
+	worker_pid = (long int)syscall(224) ;
+	log_info(LOG_WARN, "worker thread, pid=%ld", worker_pid);
+#endif
+
 	/* Give a hint to terminal */
 	printf("I am booted\n");
 	if(NULL != thread_id){
@@ -336,7 +339,6 @@ static void check_resource_usage()
 static void dispose_event(int fd)
 {
 	struct msg_server_s *msg;
-	int                 pid;
 	char                path[512];
 
 	event_cnt++;
@@ -363,11 +365,6 @@ static void dispose_event(int fd)
 void tcp_copy_exit()
 {
 	int i;
-#if (MULTI_THREADS)  
-	if(0 != pthread_join(work_tid, NULL)){
-		perror("join error");
-	}
-#endif
 	session_table_destroy();
 	if(-1 != raw_sock){
 		close(raw_sock);
@@ -408,7 +405,9 @@ void tcp_copy_over(const int sig)
 {
 	int total = 0;
 
-	log_info(LOG_WARN, "sig %d received", sig);
+	long int pid   = (long int)syscall(224);
+	log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
+#if (MULTI_THREADS)  
 	while(!read_over_flag){
 		sleep(1);
 		total++;
@@ -417,6 +416,7 @@ void tcp_copy_over(const int sig)
 			break;
 		}
 	}
+#endif
 	exit(0);
 }
 
@@ -431,11 +431,14 @@ int tcp_copy_init()
 	uint32_t               target_ip;
 
 #if (MULTI_THREADS)  
-	pthread_attr_t         attr;
+	main_pid = getpid();
+	log_info(LOG_WARN, "main , pid=%d", main_pid);
 #endif
-
 	select_sever_set_callback(dispose_event);
 
+	/* Init session table*/
+	session_table_init();
+	
 	/* Init pool */
 	pool_fact = clt_settings.pool_fact;
 	pool_size = 1 << pool_fact;
@@ -453,11 +456,11 @@ int tcp_copy_init()
 		pthread_mutex_init(&mutex, NULL);
 		pthread_cond_init(&full, NULL);
 		pthread_cond_init(&empty, NULL);
-		pthread_attr_init(&attr);
-		if((ret = pthread_create(&work_tid, &attr, dispose, NULL)) != 0){
+		if((ret = pthread_create(&work_tid, NULL, dispose, &work_tid)) != 0){
 			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
 			exit(1);
 		}
+		/*TODO To solve memory leak of pthread_create reported by valgrind */
 #endif
 		/* Add connections to the tested server for exchanging info */
 		mappings = clt_settings.transfer.mappings;
