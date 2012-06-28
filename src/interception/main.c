@@ -1,5 +1,5 @@
 /*
- *  TCPCopy - an online replication replication tool
+ *  TCPCopy - an online replication tool
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.  See
