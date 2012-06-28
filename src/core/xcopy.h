@@ -41,7 +41,7 @@
 #define SERVER_PORT   36524
 
 
-#define DEFAULT_SESSION_TIMEOUT 30
+#define DEFAULT_SESSION_TIMEOUT 60
 
 /* The commnunication message flags */
 #define  CLIENT_ADD   1

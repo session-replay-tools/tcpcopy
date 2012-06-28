@@ -272,6 +272,9 @@ static void save_packet(link_list *list, struct iphdr *ip_header,
 	ln = link_node_malloc(copy_ip_packet(ip_header));
 	ln->key = ntohl(tcp_header->seq);
 	link_list_order_append(list, ln);
+#if (DEBUG_TCPCOPY)
+	log_info(LOG_NOTICE, "save packet");
+#endif
 }
 
 static bool check_session_over(session_t *s)
@@ -842,6 +845,9 @@ static int send_reserved_packets(session_t *s)
 		}
 		if(!omit_transfer){
 			count++;
+			if(s->sess_candidate_erased){
+				s->sess_candidate_erased = 0;
+			}
 			wrap_send_ip_packet(s, data);
 		}
 		tmp_ln = ln;
@@ -1366,7 +1372,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		}
 		/* When the slide window in test server is full*/
 		if(0 == ntohs(tcp_header->window)){
-			log_info(LOG_NOTICE, "slide window is zero now");
+			log_info(LOG_NOTICE, "slide window is zero:%u", s->src_h_port);
 			s->resp_last_ack_seq = ack;
 			update_retransmission_packets(s);
 			return DISP_STOP;
@@ -1532,6 +1538,8 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 			retrans_succ_cnt++;
 			s->vir_new_retransmit = 0;
 		}
+		s->resp_last_same_ack_num = 0;
+		s->vir_already_retransmit = 0;
 		resp_cont_cnt++;
 		s->resp_last_recv_cont_time = current;
 		s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
@@ -1574,7 +1582,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		send_faked_rst(s, ip_header, tcp_header);
 		return;
 	}
-	
+
 	/* 
 	 * It is nontrivial to check if the packet is the last packet 
 	 * of the response
@@ -1585,55 +1593,44 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 			send_faked_rst(s, ip_header, tcp_header);
 			return;
 		}
-		if(!s->sess_candidate_erased){
-			if(s->status < SEND_REQUEST){
-				if(!s->resp_greet_received){
-					s->resp_greet_received = 1;
-					s->need_resp_greet = 0;
-					is_greet = 1;
-				}
+		if(s->status < SEND_REQUEST){
+			if(!s->resp_greet_received){
+				s->resp_greet_received = 1;
+				s->need_resp_greet = 0;
+				is_greet = 1;
 			}
+		}
 #if (TCPCOPY_MYSQL_BASIC)
-			if(is_greet && DISP_STOP == mysql_process_greet(s, ip_header, 
-						tcp_header, cont_len)){
-				return;
-			}
-			if(!is_greet){
-				mysql_process_just_after_greet(s, ip_header, tcp_header);
-			}
+		if(is_greet && DISP_STOP == mysql_process_greet(s, ip_header, 
+					tcp_header, cont_len)){
+			return;
+		}
+		if(!is_greet){
+			mysql_process_just_after_greet(s, ip_header, tcp_header);
+		}
 
 #endif
-			/* TODO Why mysql does not need this packet ? */
-			send_faked_ack(s, ip_header, tcp_header, 1);
+		/* TODO Why mysql does not need this packet ? */
+		send_faked_ack(s, ip_header, tcp_header, 1);
 #if (TCPCOPY_MYSQL_BASIC)
-			if(s->candidate_response_waiting || is_greet){
+		if(s->candidate_response_waiting || is_greet)
 #else
-
-			if(s->candidate_response_waiting){
+			if(s->candidate_response_waiting)
 #endif
+			{
 #if (DEBUG_TCPCOPY)
 				log_info(LOG_DEBUG,"receive back server's resp");
 #endif
-
 				s->candidate_response_waiting = 0;
 				s->status = RECV_RESP;
 				send_reserved_packets(s);
 				return;
 			}
-		}
 	}else{
 		/* There are no content in packet */
 		if(s->src_closed && !s->dst_closed){
 			send_faked_rst(s, ip_header, tcp_header);
 			return;
-		}
-	}
-
-	if(s->sess_candidate_erased){
-		/* Do a violent close to backend */
-		if(!s->src_closed){
-			/* Send the faked reset packet to backend */
-			send_faked_rst(s, ip_header, tcp_header);
 		}
 	}
 }
@@ -1891,7 +1888,7 @@ static int check_wait_prev_packet(session_t *s,
 
 	if(cur_seq > s->vir_next_seq){
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_NOTICE,"lost and need previous packet");
+		log_info(LOG_NOTICE,"lost and need prev packet:%u", s->src_h_port);
 #endif
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 		send_reserved_packets(s);
@@ -2046,15 +2043,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		return;
 	}
 
-	/* Check if it needs sending rst pack to backend */
-	if(s->sess_candidate_erased){
-		if(!s->src_closed){
-			s->src_closed = 1;
-		}
-		send_faked_passive_rst(s);
-		return;
-	}
-
 	/* Process the reset packet */
 	if(tcp_header->rst){
 		process_client_rst(s, ip_header, tcp_header);
@@ -2133,7 +2121,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 #endif
 	}
 	/* Post disposure*/
-	process_client_after_main_body(s, ip_header, tcp_header);
+	process_client_after_main_body(s, ip_header, tcp_header, cont_len);
 }
 
 void restore_buffered_next_session(session_t *s)
