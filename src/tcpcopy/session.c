@@ -559,6 +559,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 	packs_sent_cnt++;
 
 	s->req_ip_id = ntohs(ip_header->id);
+	s->unack_pack_omit_save_flag = 0;
 
 	send_len = send_ip_packet(ip_header, tot_len);
 	if(-1 == send_len){
@@ -586,9 +587,9 @@ static int retransmit_packets(session_t *s)
 
 	while(ln && (!need_pause)){
 		data = ln->data;
-		ip_header  = (struct iphdr*)((char*)data);
+		ip_header  = (struct iphdr *)((char *)data);
 		size_ip    = ip_header->ihl << 2;
-		tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+		tcp_header = (struct tcphdr *)((char *)ip_header + size_ip);
 		if(SYN_SENT == s->status){
 			/* Retransmit the first handshake packet */
 			s->unack_pack_omit_save_flag = 1;
@@ -1101,6 +1102,7 @@ static void send_faked_ack(session_t *s , struct iphdr *ip_header,
 		/* seq is determined by backend ack seq */
 		f_tcp_header->seq = tcp_header->ack_seq;
 	}
+	s->unack_pack_omit_save_flag = 1;
 	wrap_send_ip_packet(s, fake_ack_buf);
 }
 

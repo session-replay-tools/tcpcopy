@@ -5,14 +5,14 @@ p_link_node link_node_malloc(void *data)
 {
 	p_link_node p;
 
-	p = (p_link_node)malloc(sizeof(link_node));
+	p = (p_link_node)calloc(1, sizeof(link_node));
 	if(NULL == p){
 		return NULL;
 	}
-	p->key  = 0;
+	if(NULL == data){
+		fprintf(stderr, "data is null\n");
+	}
 	p->data = data;
-	p->next = NULL;
-	p->prev = NULL;
 
 	return p;
 }
@@ -27,9 +27,9 @@ void link_node_free(p_link_node p)
 
 link_list *link_list_create()
 {
-	link_list *l = (link_list *)malloc(sizeof(link_list));
+	link_list *l = (link_list *)calloc(1, sizeof(link_list));
 	if(NULL == l){
-		perror("malloc");
+		perror("calloc");
 		return NULL;
 	}
 	l->size      = 0;
@@ -51,7 +51,9 @@ static int link_list_clear(link_list *l)
 		link_node_free(p);
 		free(p);
 		p = next;
-	}
+	}	
+	l->head.next = &(l->head);
+	l->head.prev = &(l->head);
 	l->size = 0;
 	return count;
 
@@ -98,11 +100,11 @@ void link_list_order_append(link_list *l, p_link_node p)
 void link_list_push(link_list *l, p_link_node p)
 {
 	p_link_node node;
-	node = l->head.next;
-	node->prev       = p;
-	p->next          = node;
-	l->head.next     = p;
-	p->prev          = &(l->head);
+	node         = l->head.next;
+	node->prev   = p;
+	p->next      = node;
+	l->head.next = p;
+	p->prev      = &(l->head);
 	l->size++;
 	return;
 }
