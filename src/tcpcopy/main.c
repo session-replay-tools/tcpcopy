@@ -73,7 +73,9 @@ static void usage(void) {
 
 static int read_args(int argc, char **argv){
 	int  c;
+#if (MULTI_THREADS)  
 	int value;
+#endif
 	
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where we copy request from and to */

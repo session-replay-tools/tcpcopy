@@ -67,7 +67,7 @@
 #define MAX_MEMORY_SIZE 524288
 
 /* If set 1,then tcpcopy client works at multiple threading mode */
-#define MULTI_THREADS 1 
+#define MULTI_THREADS 0
 
 /* Session constants from the client perspective */
 #define SESS_CREATE    0

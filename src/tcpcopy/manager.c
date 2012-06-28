@@ -7,11 +7,12 @@
 #include "manager.h"
 #include "session.h"
 
-static int       raw_sock, read_over_flag = 1;
+static int       raw_sock;
 static uint64_t  event_cnt = 0;
 static uint64_t  raw_packs = 0, valid_raw_packs = 0;
 
 #if (MULTI_THREADS)  
+static int       read_over_flag = 1;
 static char      *pool, item[MAX_MTU + MAX_MTU];
 size_t           pool_max_addr, pool_size, pool_fact;
 static uint64_t  read_cnt = 0, write_cnt = 0, packs_put_cnt = 0;
