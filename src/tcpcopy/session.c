@@ -577,11 +577,12 @@ static int retransmit_packets(session_t *s)
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
 	uint16_t      size_ip, cont_len;
-	uint32_t      cur_seq;
+	uint32_t      cur_seq, expected_seq;
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
 	bool need_pause = false, is_success = false;
 
+	expected_seq = s->vir_next_seq;
 	list = s->unack_packets;
 	ln = link_list_first(list);	
 
@@ -613,7 +614,7 @@ static int retransmit_packets(session_t *s)
 			}
 		}
 		if(is_success){
-			if(cur_seq < s->vir_next_seq){
+			if(cur_seq < expected_seq){
 				/* Retransmit until vir_next_seq*/
 				s->unack_pack_omit_save_flag = 1;
 				wrap_send_ip_packet(s, data);
@@ -1548,12 +1549,13 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	}else{
 		s->vir_ack_seq = tcp_header->seq;
 	}
-	s->resp_last_ack_seq = ack;
 	/* Needs to check ack */
 	if(check_backend_ack(s, ip_header, tcp_header, ack,  cont_len) 
 			== DISP_STOP){
+		s->resp_last_ack_seq = ack;
 		return;
 	}
+	s->resp_last_ack_seq = ack;
 	/* Update session's retransmisson packets */
 	update_retransmission_packets(s);
 
