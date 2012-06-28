@@ -4,6 +4,9 @@
 #include "send.h"
 #include "address.h"
 #include "session.h"
+#if (TCPCOPY_MYSQL_ADVANCED)
+#include "../mysql/protocol.h"
+#endif
 
 static void session_rel_dynamic_mem(session_t *s);
 static bool check_session_over(session_t *s);
@@ -108,10 +111,6 @@ int session_table_destroy()
 
 static void session_init(session_t *s, int flag)
 {
-#if (TCPCOPY_MYSQL_BASIC)
-	link_list *ml;
-#endif 
-
 	if(s->unsend_packets){
 		if(s->unsend_packets->size > 0){
 			link_list_destory(s->unsend_packets);
@@ -1289,7 +1288,7 @@ static bool mysql_check_reconnection(session_t *s, struct iphdr *ip_header,
 static bool check_mysql_padding(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
-	unsigned char *payload, *data, command, pack_number;
+	unsigned char *payload, command, pack_number;
 	uint16_t      size_ip, size_tcp, tot_len, cont_len;
 
 	size_ip  = ip_header->ihl << 2;
@@ -1739,9 +1738,6 @@ static int process_mysql_clt_auth_pack(session_t *s,
 		struct iphdr *ip_header, struct tcphdr *tcp_header, 
 		uint16_t cont_len)	
 {	
-	unsigned char *payload;
-	link_list     *list;
-	p_link_node   ln;
 	int           is_need_omit = 0;
 	if(!s->req_halfway_intercepted)
 	{

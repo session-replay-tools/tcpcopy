@@ -11,7 +11,7 @@
  */
 
 #ifdef HAVE_CONFIG_H
-#  include <config.h>
+#include <config.h>
 #endif
 #include "../core/xcopy.h"
 #include "../log/log.h"
@@ -167,7 +167,17 @@ static int read_args(int argc, char **argv){
 	return 0;
 }
 
-static int set_details()
+static int sigignore(int sig) 
+{    
+	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+
+	if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
+		return -1;
+	}       
+	return 0;
+}
+
+static void set_details()
 {
 	/* Set signal handler */	
 	set_signal_handler();

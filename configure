@@ -2844,9 +2844,9 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -pg -Wall "
+    CFLAGS="-g -pedantic -pg -Wall "
   else
-    CFLAGS="-g -pg -Wall"
+    CFLAGS="-g -pedantic -pg -Wall"
   fi
 else
   if test "$GCC" = yes; then
@@ -4767,9 +4767,9 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -pg -Wall "
+    CXXFLAGS="-g -pedantic -pg -Wall "
   else
-    CXXFLAGS="-g -pg -Wall"
+    CXXFLAGS="-g -pedantic -pg -Wall"
   fi
 else
   if test "$GXX" = yes; then
@@ -5454,9 +5454,9 @@ if test "$ac_test_FFLAGS" = set; then
   FFLAGS=$ac_save_FFLAGS
 elif test $ac_cv_prog_f77_g = yes; then
   if test "x$ac_cv_f77_compiler_gnu" = xyes; then
-    FFLAGS="-g -pg -Wall "
+    FFLAGS="-g -pedantic -pg -Wall "
   else
-    FFLAGS="-g -pg -Wall"
+    FFLAGS="-g -pedantic -pg -Wall"
   fi
 else
   if test "x$ac_cv_f77_compiler_gnu" = xyes; then

@@ -5,6 +5,8 @@
 
 inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port);
 
+inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
+
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
 
 uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,

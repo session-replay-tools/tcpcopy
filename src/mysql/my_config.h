@@ -486,7 +486,6 @@
 /* #undef IPV6_V6ONLY */
 #define sigset_t int
 #define mode_t int
-#define isnan _isnan
 #define finite _finite
 #define popen _popen
 #define pclose _pclose

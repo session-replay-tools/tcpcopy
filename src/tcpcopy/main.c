@@ -14,6 +14,10 @@
 #include "../core/xcopy.h"
 #include "../log/log.h"
 #include "../event/select_server.h"
+#if (TCPCOPY_MYSQL_ADVANCED)
+#include "../mysql/pairs.h"
+#include "../mysql/protocol.h"
+#endif
 #include "manager.h"
 
 /* Global variables */
@@ -33,16 +37,16 @@ static void usage(void) {
 		   "               transfer format:\n"
 		   "               online_ip:online_port-target_ip:target_port,...\n"
 		   "               or :\n"
-		   "               online_port-target_ip:target_port,...\n"
+		   "               online_port-target_ip:target_port,...\n");
 #if (TCPCOPY_MYSQL_ADVANCED)  
-		   "-u <pair>      user password pair for mysql\n"
+	printf("-u <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
 		   "               user1@psw1:user2@psw2:...\n"
 		   "               attension:\n"
 		   "               users of the target test should be the same as\n"
-		   "               that of online\n"
+		   "               that of online\n");
 #endif
-		   "-n <num>       the number of replication for multi-copying\n"
+	printf("-n <num>       the number of replication for multi-copying\n"
 		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "               max value allowed is 1023:\n"
@@ -50,8 +54,8 @@ static void usage(void) {
 		   "               default value is 512:\n"
 		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
 		   "-t <num>       session timeout\n"
-		   "               if the target system is slow, set this larger\n"
-		   "-b <num>       buffer factor for raw socket input(range 20~30)\n"
+		   "               if the target system is slow, set this larger\n");
+	printf("-b <num>       buffer factor for raw socket input(range 20~30)\n"
 		   "               buffer size is equal to 2^(value) or 1 << value\n"
 		   "               default value is 24, which means 16M bytes\n"
 		   "               max value allowed is 30, which means 1G bytes\n"
@@ -305,6 +309,16 @@ static void retrieve_target_addresses(){
 		memset(buffer, 0, 128);
 		i++;
 	}
+}
+
+static int sigignore(int sig) 
+{    
+	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+
+	if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
+		return -1;
+	}       
+	return 0;
 }
 
 static int set_details()
