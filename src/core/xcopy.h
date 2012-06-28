@@ -5,7 +5,7 @@
 
 /* Set nonzero for debug */
 #define DEBUG_TCPCOPY      1
-#define TCPCOPY_MYSQL_NO_SKIP 1
+/*#define TCPCOPY_MYSQL_NO_SKIP 1*/
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
@@ -213,7 +213,7 @@ typedef struct xcopy_clt_settings {
 	unsigned int max_rss:21;
 	/* 
 	 * Max session timeout
-	 * if it reaches this value, the session will be removed 
+	 * If it reaches this value, the session will be removed 
 	 */
 	unsigned int session_timeout:16;
 	/* Online_ip online_port target_ip target_port string */
@@ -239,7 +239,7 @@ typedef struct xcopy_srv_settings {
 	char *raw_ip_list;
 	/* Pid file */
 	char *pid_file;
-	/* binded ip for security */
+	/* Binded ip for security */
 	char *binded_ip;
 	/* Error log path */
 	char *log_path;

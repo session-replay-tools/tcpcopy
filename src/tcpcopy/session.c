@@ -840,10 +840,6 @@ static int send_reserved_packets(session_t *s)
 				omit_transfer = true;
 			}
 		}
-
-#if (DEBUG_TCPCOPY)
-		strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
-#endif
 		if(!omit_transfer){
 			count++;
 			wrap_send_ip_packet(s, data);
@@ -1946,14 +1942,16 @@ static inline void check_conn_keepalive(session_t *s)
 
 /* Process client packet info after the main processing */
 static void process_client_after_main_body(session_t *s, 
-		struct iphdr *ip_header, struct tcphdr *tcp_header)
+		struct iphdr *ip_header, struct tcphdr *tcp_header, uint16_t len)
 {
 	if(s->candidate_response_waiting){
-		/* TODO to be verified */
-		save_packet(s->unsend_packets, ip_header, tcp_header);
+		if(len > 0){
+			/* TODO to be verified */
+			save_packet(s->unsend_packets, ip_header, tcp_header);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_DEBUG, "strange,wait back's resp:%u", s->src_h_port);
+			log_info(LOG_DEBUG, "strange,wait back's resp:%u", s->src_h_port);
 #endif
+		}
 	}else{
 		if(SEND_REQUEST == s->status){
 			s->candidate_response_waiting = 1;
