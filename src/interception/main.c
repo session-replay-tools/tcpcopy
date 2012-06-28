@@ -167,6 +167,7 @@ static int read_args(int argc, char **argv){
 	return 0;
 }
 
+/* TODO It has to solve the sigignore warning problem */
 static int sigignore(int sig) 
 {    
 	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };

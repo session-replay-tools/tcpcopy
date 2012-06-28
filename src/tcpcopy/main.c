@@ -46,26 +46,27 @@ static void usage(void) {
 		   "               users of the target test should be the same as\n"
 		   "               that of online\n");
 #endif
+#if (MULTI_THREADS)  
 	printf("-n <num>       the number of replication for multi-copying\n"
 		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
-		   "               max value allowed is 1023:\n"
-		   "-m <num>       max memory to use for tcpcopy in megabytes\n"
+		   "               max value allowed is 1023:\n");
+	printf("-b <num>       buffer factor for raw socket input(range 20~30)\n"
+		   "               buffer size is equal to 2^(value) or 1 << value\n"
+		   "               default value is 24, which means 16M bytes\n"
+		   "               max value allowed is 30, which means 1G bytes\n");
+#endif
+	printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
 		   "               default value is 512:\n"
 		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
 		   "-t <num>       session timeout\n"
 		   "               if the target system is slow, set this larger\n");
-	printf("-b <num>       buffer factor for raw socket input(range 20~30)\n"
-		   "               buffer size is equal to 2^(value) or 1 << value\n"
-		   "               default value is 24, which means 16M bytes\n"
-		   "               max value allowed is 30, which means 1G bytes\n"
-		   "-l <file>      log file path\n"
+	printf("-l <file>      log file path\n"
 		   "-p <num>       remote server listening port\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
 		   "-v             version\n"
 		   "-d             run as a daemon\n");
-	return;
 }
 
 
@@ -79,13 +80,15 @@ static int read_args(int argc, char **argv){
 #if (TCPCOPY_MYSQL_ADVANCED)  
 		 "u:" /* user password pair for mysql*/
 #endif
+#if (MULTI_THREADS)  
 		 "n:" /* the replicated number of each request for multi-copying */
 		 "f:" /* port shift factor for mutiple tcpcopy instances */
+		 "b:" /* buffer factor for raw socket input*/
+#endif
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
 		 "p:" /* remote server listening port */
 		 "M:" /* MTU sent to backend */
 		 "t:" /* session timeout value */
-		 "b:" /* buffer factor for raw socket input*/
 		 "l:" /* error log file path */
 		 "P:" /* save PID in file */
 		 "h"  /* help, licence info */   
@@ -101,12 +104,23 @@ static int read_args(int argc, char **argv){
 				clt_settings.user_pwd = strdup(optarg);
 				break;
 #endif
+#if (MULTI_THREADS)  
 			case 'n':
 				clt_settings.replica_num = atoi(optarg);
 				break;
 			case 'f':
 				clt_settings.factor = atoi(optarg);
 				break;
+			case 'b':
+				value = atoi(optarg);
+				if(value >RECV_POOL_MAX_SIZE_SHF){
+					value = RECV_POOL_MAX_SIZE_SHF;
+				}else if(value < RECV_POOL_MIN_SIZE_SHF){
+					value = RECV_POOL_MIN_SIZE_SHF;
+				}
+				clt_settings.pool_fact= value;
+				break;
+#endif
 			case 'm':
 				clt_settings.max_rss = 1024*atoi(optarg);
 				break;
@@ -118,15 +132,6 @@ static int read_args(int argc, char **argv){
 				break;
 			case 't':
 				clt_settings.session_timeout = atoi(optarg);
-				break;
-			case 'b':
-				value = atoi(optarg);
-				if(value >RECV_POOL_MAX_SIZE_SHF){
-					value = RECV_POOL_MAX_SIZE_SHF;
-				}else if(value < RECV_POOL_MIN_SIZE_SHF){
-					value = RECV_POOL_MIN_SIZE_SHF;
-				}
-				clt_settings.pool_fact= value;
 				break;
 			case 'h':
 				usage();
@@ -311,6 +316,7 @@ static void retrieve_target_addresses(){
 	}
 }
 
+/* TODO It has to solve the sigignore warning problem */
 static int sigignore(int sig) 
 {    
 	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
