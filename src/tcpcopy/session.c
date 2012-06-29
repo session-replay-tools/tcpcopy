@@ -1188,6 +1188,7 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 {
 	int      sock, result;
 	uint16_t dest_port;
+	uint64_t new_key;
 #if (TCPCOPY_MYSQL_BASIC)
 	log_info(LOG_WARN, "fake syn:%u", s->src_h_port);
 #else
@@ -1206,7 +1207,10 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 				ntohs(tcp_header->source), dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
-		s->faked_src_port   = tcp_header->source;
+		s->faked_src_port  = tcp_header->source;
+		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
+		s = hash_change(sessions_table, s->hash_key, new_key);
+		s->hash_key = new_key;
 	}
 
 	/* Send route info to backend */
@@ -1342,6 +1346,7 @@ static bool check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
 static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		 struct tcphdr *tcp_header, uint32_t ack, uint16_t cont_len)
 {
+	bool slide_window_empty = false;
 	/* If ack from test server is more than what we expect */
 	if(ack > s->vir_next_seq){
 		log_info(LOG_NOTICE, " ack more than vir next seq");
@@ -1377,8 +1382,15 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		if(0 == ntohs(tcp_header->window)){
 			log_info(LOG_NOTICE, "slide window is zero:%u", s->src_h_port);
 			s->resp_last_ack_seq = ack;
+			s->slide_window_full = 1;
 			update_retransmission_packets(s);
 			return DISP_STOP;
+		}else{
+			if(s->slide_window_full){
+				s->slide_window_full = 0;
+				s->vir_already_retransmit = 0;
+				slide_window_empty = true;
+			}
 		}
 
 		if(ack != s->resp_last_ack_seq){
@@ -1400,6 +1412,10 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 					s->vir_already_retransmit = 1;
 				}else{
 					log_info(LOG_WARN, "omit retransmit:%u", s->src_h_port);
+				}
+				if(slide_window_empty){
+					/* Send reserved packets when slide win available */
+					send_reserved_packets(s);
 				}
 				return DISP_STOP;
 			}
@@ -1439,6 +1455,8 @@ static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
 	s->status  |= SERVER_FIN;
 	send_faked_ack(s, ip_header, tcp_header, s->simul_closing);
 	if(!s->src_closed){
+		/* Add seq here in order to keep the rst packet's ack right */
+		tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
 		/* Send the constructed reset packet to backend */
 		send_faked_rst(s, ip_header, tcp_header);
 		s->status |= CLIENT_FIN;
@@ -1985,6 +2003,7 @@ static bool is_wait_resp(session_t *s, struct iphdr *ip_header,
 	if(s->need_resp_greet && !s->resp_greet_received){
 		return true;
 	}
+
 	return false;
 }
 
@@ -2028,6 +2047,12 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		log_info(LOG_INFO,"buffer for next session:%u", s->src_h_port);
 #endif
 		return;
+	}
+
+	/* If slide window is full, we wait*/
+	if(s->slide_window_full){
+		save_packet(s->unsend_packets, ip_header, tcp_header);
+		return true;
 	}
 
 	/* Retrieve the content length of tcp payload */
@@ -2288,6 +2313,8 @@ void process(char *packet)
 					free(s);
 				}
 			}
+		}else{
+			log_info(LOG_NOTICE, "no active session for me");
 		}
 	}
 	else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){
