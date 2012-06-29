@@ -88,19 +88,19 @@ void *hash_find(hash_table *table, uint64_t key)
 	return NULL;
 }
 
-void *hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
+void hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
 {
 	hash_node   *hn;
 	link_list   *old_l  = get_link_list(table, old_key);
 	link_list   *new_l  = get_link_list(table, new_key);
-	p_link_node ln= link_list_first(old_l);
+	p_link_node ln = link_list_first(old_l);
 
 	while(ln){
 		hn = (hash_node *)ln->data;
 		if(hn->key == old_key){
 			(void)link_list_remove(old_l, ln);
 			link_list_push(new_l, ln);
-			return ln;
+			return;
 		}
 		ln = link_list_get_next(old_l,ln);
 	}

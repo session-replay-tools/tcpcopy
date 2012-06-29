@@ -116,8 +116,9 @@ static void session_init(session_t *s, int flag)
 			link_list_destory(s->unsend_packets);
 		}
 		if(SESS_REUSE == flag){
-			if(s->next_sess_packs!=NULL){
+			if(s->next_sess_packs != NULL){
 				free(s->unsend_packets);
+				s->unsend_packets = NULL;
 			}
 		}
 	}else{
@@ -136,7 +137,7 @@ static void session_init(session_t *s, int flag)
 #if (TCPCOPY_MYSQL_BASIC)
 		s->mysql_special_packets = link_list_create();
 #endif
-	}else if(SESS_REUSE == flag){
+	}else{
 #if (TCPCOPY_MYSQL_BASIC)
 		if(s->mysql_special_packets){
 			if(s->mysql_special_packets->size >0){
@@ -1209,7 +1210,7 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		tcp_header->source = htons(dest_port);
 		s->faked_src_port  = tcp_header->source;
 		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		s = hash_change(sessions_table, s->hash_key, new_key);
+		hash_change(sessions_table, s->hash_key, new_key);
 		s->hash_key = new_key;
 	}
 

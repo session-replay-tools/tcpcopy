@@ -59,6 +59,7 @@ static int link_list_clear(link_list *l)
 
 }
 
+/* TODO change fun name */
 int link_list_destory(link_list *l)
 {
 	int count = link_list_clear(l);

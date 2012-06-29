@@ -25,7 +25,7 @@
 	void hash_set_timeout(hash_table*,int);
 	void hash_destory(hash_table*);
 	void hash_add(hash_table*,uint64_t ,void *);
-	void *hash_change(hash_table *table, uint64_t old_key, uint64_t new_key);
+	void hash_change(hash_table *table, uint64_t old_key, uint64_t new_key);
 	void *hash_find(hash_table*,uint64_t);
 	void hash_del(hash_table*,uint64_t);
 
