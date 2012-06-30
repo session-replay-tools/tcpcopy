@@ -78,9 +78,9 @@ int is_last_data_packet(unsigned char *payload)
 
 	if(len < 9){
 		/*Skip Packet Length*/
-		p=p+3;
+		p = p + 3;
 		/*Skip Packet Number*/
-		p=p+1;
+		p = p + 1;
 		if(254 == p[0]){
 			return 1;
 		}

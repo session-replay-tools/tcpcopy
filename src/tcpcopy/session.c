@@ -763,6 +763,30 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 }
 #endif
 
+static bool trim_packet(session_t *s, struct iphdr *ip_header, 
+		struct tcphdr *tcp_header, int diff)
+{
+	uint16_t      size_ip, size_tcp, tot_len, cont_len;
+	unsigned char *payload;
+
+	size_ip   = ip_header->ihl << 2;
+	tot_len   = ntohs(ip_header->tot_len);
+	size_ip   = ip_header->ihl << 2;
+	size_tcp  = tcp_header->doff << 2;
+	cont_len  = tot_len - size_tcp - size_ip;
+	if(cont_len <= diff){
+		return false;
+	}
+
+	ip_header->tot_len = htons(tot_len- diff);
+	tcp_header->seq    = htonl(s->vir_next_seq);
+	payload = (unsigned char*)((char*)tcp_header + size_tcp);
+	memmove(payload, payload + diff, cont_len - diff);
+	log_info(LOG_NOTICE, "trim packet:%u", s->src_h_port);
+
+	return true;
+}
+
 /*
  * Send reserved packets to backend
  */
@@ -775,7 +799,7 @@ static int send_reserved_packets(session_t *s)
 	link_list     *list;
 	uint16_t      size_ip, cont_len;
 	uint32_t      cur_ack, cur_seq;
-	int           count = 0; 
+	int           count = 0, diff; 
 	bool need_pause = false, cand_pause = false, omit_transfer = false; 
 
 #if (DEBUG_TCPCOPY)
@@ -808,12 +832,15 @@ static int send_reserved_packets(session_t *s)
 			s->candidate_response_waiting = 0;
 			break;
 		}else if(cur_seq < s->vir_next_seq){
-			/* TODO Strange here*/
-			log_info(LOG_NOTICE, "send reserved meets strange thing");
-			s->vir_next_seq = cur_seq;
+			/* Special disposure here */
+			log_info(LOG_NOTICE, "reserved strange:%u", s->src_h_port);
+			diff = s->vir_next_seq - cur_seq;
+			if(!trim_packet(s, ip_header, tcp_header, diff)){
+				omit_transfer = true;
+			}
 		}
 		cont_len   = get_pack_cont_len(ip_header, tcp_header);
-		if(cont_len > 0){
+		if(!omit_transfer && cont_len > 0){
 			if(s->need_resp_greet&&!s->resp_greet_received){
 				break;
 			}
@@ -1915,11 +1942,13 @@ static int check_pack_save_or_not(session_t *s, struct iphdr *ip_header,
 	}
 }
 
-static int check_wait_prev_packet(session_t *s, 
-		struct iphdr *ip_header, struct tcphdr *tcp_header)
+static int check_wait_prev_packet(session_t *s, struct iphdr *ip_header, 
+		struct tcphdr *tcp_header, uint16_t cont_len)
 {
-	uint32_t     cur_seq = ntohl(tcp_header->seq);
+	uint32_t cur_seq, retransmit_seq;
+	int      diff;
 
+	cur_seq = ntohl(tcp_header->seq);
 	if(cur_seq > s->vir_next_seq){
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE,"lost and need prev packet:%u", s->src_h_port);
@@ -1937,7 +1966,16 @@ static int check_wait_prev_packet(session_t *s,
 			return DISP_CONTINUE;
 		}
 	}else{
-		/* the retransmission packet from client */
+		retransmit_seq = s->vir_next_seq - cont_len;
+		if(cur_seq <= retransmit_seq){
+			/* Retransmission packet from client */
+			log_info(LOG_NOTICE, "retransmit from clt:%u", s->src_h_port);
+		}else{
+			diff = s->vir_next_seq - cur_seq;
+			if(trim_packet(s, ip_header, tcp_header, diff)){
+				return DISP_CONTINUE;
+			}
+		}
 		return DISP_STOP;
 	}
 }
@@ -2146,7 +2184,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		}
 		/* Check if current session need to wait prevous packet */
 		if(DISP_STOP == check_wait_prev_packet(s, 
-					ip_header, tcp_header)){
+					ip_header, tcp_header, cont_len)){
 			return;
 		}
 		/* Check if it is a continuous packet */
