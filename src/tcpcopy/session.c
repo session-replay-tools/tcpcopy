@@ -1256,7 +1256,8 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		s->src_h_port = dest_port;
 		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
 		if(!hash_change(sessions_table, s->hash_key, new_key)){
-			log_info(LOG_WARN, "hash change error", s->src_h_port);
+			/* If change error, then it may have wild pointer problems */
+			log_info(LOG_ERR, "hash change error", s->src_h_port);
 			return;
 		}
 		s->hash_key = new_key;
