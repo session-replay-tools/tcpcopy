@@ -133,6 +133,8 @@ typedef struct session_s{
 	uint32_t resp_greet_received:1;
 	/* This indicates if it needs to wait server response first */
 	uint32_t need_resp_greet:1;
+	/* Faked reset packet sent flag */
+	uint32_t faked_rst_sent:1;
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
 	uint32_t mysql_excute_times:8;

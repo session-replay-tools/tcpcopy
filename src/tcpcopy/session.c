@@ -158,6 +158,7 @@ static void session_init(session_t *s, int flag)
 	if(SESS_CREATE != flag){
 		s->resp_last_same_ack_num = 0;
 		s->vir_already_retransmit = 0;
+		s->faked_rst_sent = 0;
 		s->vir_new_retransmit = 0;
 		s->simul_closing = 0;
 		s->reset = 0;
@@ -317,7 +318,7 @@ static int check_overwhelming(session_t *s, const char *message,
 			return CANDIDATE_OBSOLETE;
 		}
 		obs_cnt++;
-		log_info(LOG_WARN,":%s:too many packets:%u,p:%u",
+		log_info(LOG_WARN,"%s:too many packets:%u,p:%u",
 				message, size, s->src_h_port);
 		return OBSOLETE;
 	}
@@ -782,6 +783,11 @@ static int send_reserved_packets(session_t *s)
 			s->unsend_packets->size, s->src_h_port);
 #endif
 
+	if(SYN_CONFIRM > s->status){
+		log_info(LOG_WARN, "syn been sent but not syn acked");
+		retransmit_packets(s);
+		return count;
+	}
 	list = s->unsend_packets;
 	if(NULL == list){
 		log_info(LOG_WARN, "list is null");
@@ -801,6 +807,10 @@ static int send_reserved_packets(session_t *s)
 			s->is_waiting_previous_packet = 1;
 			s->candidate_response_waiting = 0;
 			break;
+		}else if(cur_seq < s->vir_next_seq){
+			/* TODO Strange here*/
+			log_info(LOG_NOTICE, "send reserved meets strange thing");
+			s->vir_next_seq = cur_seq;
 		}
 		cont_len   = get_pack_cont_len(ip_header, tcp_header);
 		if(cont_len > 0){
@@ -1409,6 +1419,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 					if(!retransmit_packets(s)){
 						/* Retransmit failure, send reset */
 						send_faked_rst(s, ip_header, tcp_header);
+						s->faked_rst_sent = 1;
 					}
 					s->vir_already_retransmit = 1;
 				}else{
@@ -1973,7 +1984,7 @@ static void process_client_after_main_body(session_t *s,
 #endif
 		}
 	}else{
-		if(SEND_REQUEST == s->status){
+		if(SEND_REQUEST == s->status && len > 0){
 			s->candidate_response_waiting = 1;
 			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 		}else if(SYN_CONFIRM == s->status){
@@ -2121,8 +2132,8 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		if(DISP_STOP == process_client_timeout(s)){
 			return;
 		}
-		if(s->dst_closed){
-			/* When backend is closed */
+		if(s->dst_closed || s->faked_rst_sent){
+			/* When backend is closed or we have sent rst packet */
 			proc_clt_cont_when_bak_closed(s, ip_header, tcp_header);
 			return;
 		}
