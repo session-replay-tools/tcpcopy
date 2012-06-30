@@ -1255,8 +1255,6 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		s->faked_src_port  = tcp_header->source;
 		s->src_h_port = dest_port;
 		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		log_info(LOG_NOTICE, "old key:%llu to new:%llu,p:%u", 
-				s->hash_key, new_key, s->src_h_port);
 		if(!hash_change(sessions_table, s->hash_key, new_key)){
 			log_info(LOG_WARN, "hash change error", s->src_h_port);
 			return;
@@ -2361,7 +2359,6 @@ void process(char *packet)
 	if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
-		log_info(LOG_DEBUG, "key from test:%llu", key);
 		s = hash_find(sessions_table, key);
 		if(s){
 			s->last_update_time = now;
