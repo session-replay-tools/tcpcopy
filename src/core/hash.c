@@ -88,7 +88,7 @@ void *hash_find(hash_table *table, uint64_t key)
 	return NULL;
 }
 
-void hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
+bool hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
 {
 	hash_node   *hn;
 	link_list   *old_l  = get_link_list(table, old_key);
@@ -99,12 +99,13 @@ void hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
 		hn = (hash_node *)ln->data;
 		if(hn->key == old_key){
 			(void)link_list_remove(old_l, ln);
+			hn->key = new_key;
 			link_list_push(new_l, ln);
-			return;
+			return true;
 		}
 		ln = link_list_get_next(old_l,ln);
 	}
-	return NULL;
+	return false;
 }
 
 void hash_add(hash_table *table, uint64_t key, void *data)

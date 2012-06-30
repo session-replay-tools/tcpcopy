@@ -158,7 +158,7 @@ static void session_init(session_t *s, int flag)
 	if(SESS_CREATE != flag){
 		s->resp_last_same_ack_num = 0;
 		s->vir_already_retransmit = 0;
-		s->faked_rst_sent = 0;
+		s->reset_sent = 0;
 		s->vir_new_retransmit = 0;
 		s->simul_closing = 0;
 		s->reset = 0;
@@ -250,19 +250,23 @@ static void session_rel_dynamic_mem(session_t *s)
 	if(NULL != s->unsend_packets){
 		link_list_destory(s->unsend_packets);
 		free(s->unsend_packets);
+		s->unsend_packets = NULL;
 	}
 	if(NULL != s->next_sess_packs){
 		link_list_destory(s->next_sess_packs);
 		free(s->next_sess_packs);
+		s->next_sess_packs = NULL;
 	}
 	if(NULL != s->unack_packets){
 		link_list_destory(s->unack_packets);
 		free(s->unack_packets);
+		s->unack_packets = NULL;
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	if(NULL != s->mysql_special_packets){
 		link_list_destory(s->mysql_special_packets);
 		free(s->mysql_special_packets);
+		s->mysql_special_packets = NULL;
 	}
 #endif
 }
@@ -383,8 +387,12 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 		/* If it is, enlarge it by 8 times */
 		threshold = threshold << 3;
 		if(diff < 3){
-			/* If it is idle for less than 3 seconds, enlarge 2 times */
-			threshold = threshold << 1;
+			/* If it is idle for less than 3 seconds, enlarge 4 times */
+			threshold = threshold << 2;
+		}
+		if(s->slide_window_full){
+			/* If slide window is full, enlarge 4 times */
+			threshold = threshold << 2;
 		}
 		packs_unsend = s->unsend_packets->size;
 		if(packs_unsend < threshold){
@@ -1179,8 +1187,9 @@ static void send_faked_rst(session_t *s,
 	}
 	f_tcp_header->ack_seq = s->vir_ack_seq;
 	f_tcp_header->seq = tcp_header->ack_seq;
+	s->unack_pack_omit_save_flag = 1;
 	wrap_send_ip_packet(s, faked_rst_buf);
-	s->src_closed = 1;
+	s->reset_sent = 1;
 }
 
 /*
@@ -1192,8 +1201,7 @@ static void send_faked_passive_rst(session_t *s)
 	struct iphdr  *f_ip_header;
 	struct tcphdr *f_tcp_header;
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_DEBUG, "send faked rst To back from clt pack:%u",
-			s->src_h_port);
+	log_info(LOG_DEBUG, "send_faked_passive_rst:%u", s->src_h_port);
 #endif
 	memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)faked_rst_buf;
@@ -1202,8 +1210,6 @@ static void send_faked_passive_rst(session_t *s)
 	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = s->src_addr;
 	f_tcp_header->source  = htons(s->src_h_port);
-	/* Do we need this? */
-	f_tcp_header->fin     = 1;
 	f_tcp_header->rst     = 1;
 	f_tcp_header->ack     = 1;
 	
@@ -1214,6 +1220,7 @@ static void send_faked_passive_rst(session_t *s)
 	}else{
 		f_tcp_header->seq = htonl(s->vir_next_seq); 
 	}
+	s->unack_pack_omit_save_flag = 1;
 	wrap_send_ip_packet(s, faked_rst_buf);
 }
 
@@ -1241,13 +1248,19 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 	if(is_hard){
 		dest_port = get_port_by_rand_addition(tcp_header->source);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_NOTICE, "change port from %u to %u",
+		log_info(LOG_NOTICE, "change port from :%u to :%u",
 				ntohs(tcp_header->source), dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
 		s->faked_src_port  = tcp_header->source;
+		s->src_h_port = dest_port;
 		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		hash_change(sessions_table, s->hash_key, new_key);
+		log_info(LOG_NOTICE, "old key:%llu to new:%llu,p:%u", 
+				s->hash_key, new_key, s->src_h_port);
+		if(!hash_change(sessions_table, s->hash_key, new_key)){
+			log_info(LOG_WARN, "hash change error", s->src_h_port);
+			return;
+		}
 		s->hash_key = new_key;
 	}
 
@@ -1418,11 +1431,14 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		}
 		/* When the slide window in test server is full*/
 		if(0 == ntohs(tcp_header->window)){
-			log_info(LOG_NOTICE, "slide window is zero:%u", s->src_h_port);
-			s->resp_last_ack_seq = ack;
-			s->slide_window_full = 1;
-			update_retransmission_packets(s);
-			return DISP_STOP;
+			log_info(LOG_NOTICE, "slide window zero:%u", s->src_h_port);
+			/* Although slide window is full, it may require retransmission */
+			if(!s->slide_window_full){
+				s->resp_last_ack_seq = ack;
+				s->slide_window_full = 1;
+				update_retransmission_packets(s);
+				return DISP_STOP;
+			}
 		}else{
 			if(s->slide_window_full){
 				s->slide_window_full = 0;
@@ -1446,7 +1462,6 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 					if(!retransmit_packets(s)){
 						/* Retransmit failure, send reset */
 						send_faked_rst(s, ip_header, tcp_header);
-						s->faked_rst_sent = 1;
 					}
 					s->vir_already_retransmit = 1;
 				}else{
@@ -1498,7 +1513,6 @@ static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
 		tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
 		/* Send the constructed reset packet to backend */
 		send_faked_rst(s, ip_header, tcp_header);
-		s->status |= CLIENT_FIN;
 	}else{
 		s->sess_over = 1;
 	}
@@ -1574,9 +1588,8 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 #endif
 
-	/* When meeting reset, it means the session is over */
 	if( tcp_header->rst){
-		s->reset = 1;
+		s->reset_sent = 1;
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_INFO, "reset from backend:%u", s->src_h_port);
 #endif
@@ -1691,6 +1704,7 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 		/* There are no content in packet */
 		if(s->src_closed && !s->dst_closed){
 			send_faked_rst(s, ip_header, tcp_header);
+			s->sess_over = 1;
 			return;
 		}
 	}
@@ -1720,6 +1734,7 @@ static void process_client_rst(session_t *s, struct iphdr *ip_header,
 	if(s->candidate_response_waiting){
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 	}else{
+		s->unack_pack_omit_save_flag = 1;
 		wrap_send_ip_packet(s,(unsigned char *) ip_header);
 		s->reset = 1;
 	}
@@ -1779,7 +1794,7 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		}else{
 			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 			s->status |= CLIENT_FIN;
-			s->src_closed=1;
+			s->src_closed = 1;
 		}
 	}else{
 		save_packet(s->unsend_packets, ip_header, tcp_header);
@@ -2072,7 +2087,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	uint16_t      cont_len;
 
 	clt_cnt++;
-	s->src_h_port = ntohs(tcp_header->source);
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
@@ -2080,6 +2094,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	if(s->faked_src_port != 0){
 		tcp_header->source = s->faked_src_port;
 	}
+	s->src_h_port = ntohs(tcp_header->source);
 
 #if (TCPCOPY_MYSQL_BASIC)
 	/* subtract client packet's seq for mysql */
@@ -2170,7 +2185,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		if(DISP_STOP == process_client_timeout(s)){
 			return;
 		}
-		if(s->dst_closed || s->faked_rst_sent){
+		if(s->dst_closed || s->reset_sent){
 			/* When backend is closed or we have sent rst packet */
 			proc_clt_cont_when_bak_closed(s, ip_header, tcp_header);
 			return;
@@ -2346,6 +2361,7 @@ void process(char *packet)
 	if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
+		log_info(LOG_DEBUG, "key from test:%llu", key);
 		s = hash_find(sessions_table, key);
 		if(s){
 			s->last_update_time = now;
