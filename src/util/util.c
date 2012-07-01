@@ -131,7 +131,7 @@ unsigned char *copy_ip_packet(struct iphdr *ip_header)
 	return data;
 }
 
-unsigned short csum (unsigned short *packet, uint16_t pack_len) 
+unsigned short csum (unsigned short *packet, int pack_len) 
 { 
 	register unsigned long sum = 0; 
 	while (pack_len > 1) {
@@ -148,10 +148,11 @@ unsigned short csum (unsigned short *packet, uint16_t pack_len)
 } 
 
 
+static unsigned short buf[2048]; 
+
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
-		uint16_t pack_len)
+		int pack_len)
 {       
-	static unsigned short buf[2048]; 
 	unsigned short        res;
 
 	memcpy(buf, iphdr + 12, 8); 

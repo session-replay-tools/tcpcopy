@@ -554,14 +554,16 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 		}
 	}
 
+	tcp_header->check = 0;
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
-			(unsigned short *)tcp_header, tot_len - size_ip);
+			(unsigned short *)tcp_header, (int)(tot_len - size_ip));
 	/*
 	 * for linux 
 	 * The two fields that are always filled in are: the IP checksum 
 	 * (hopefully for us - it saves us the trouble) and the total length, 
 	 * iph->tot_len, of the datagram 
 	 */
+	ip_header->check = 0;
 	ip_header->check = csum((unsigned short *)ip_header, size_ip); 
 #if (DEBUG_TCPCOPY)
 	strace_pack(LOG_DEBUG, TO_BAKEND_FLAG, ip_header, tcp_header);
@@ -1109,7 +1111,7 @@ static void send_faked_third_handshake(session_t *s,
 	f_ip_header  = (struct iphdr *)fake_ack_buf;
 	f_tcp_header = (struct tcphdr *)(fake_ack_buf + FAKE_IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
-	f_ip_header->id       = htons(s->req_ip_id - 1);
+	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = s->src_addr;
 	/* Here we must recored online ip address */
 	f_ip_header->daddr    = s->online_addr; 
@@ -2119,7 +2121,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	/* If slide window is full, we wait*/
 	if(s->slide_window_full){
 		save_packet(s->unsend_packets, ip_header, tcp_header);
-		return true;
+		return;
 	}
 
 	/* Retrieve the content length of tcp payload */
