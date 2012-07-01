@@ -627,6 +627,9 @@ static int retransmit_packets(session_t *s)
 			if(cur_seq < expected_seq){
 				/* Retransmit until vir_next_seq*/
 				s->unack_pack_omit_save_flag = 1;
+#if (DEBUG_TCPCOPY)
+				log_info(LOG_NOTICE, "retransmit packs:%u", s->src_h_port);
+#endif
 				wrap_send_ip_packet(s, data);
 				ln = link_list_get_next(list, ln);
 			}else{
