@@ -134,9 +134,9 @@ static void *dispose(void *thread_id)
 #endif
 
 
-static void process_packet(const char *packet, int length){
+static void process_packet(char *packet, int length){
 #if (MULTI_THREADS)  
-	put_packet_to_pool(packet, length);
+	put_packet_to_pool((const char *)packet, length);
 #else
 	process(packet);
 #endif
@@ -186,7 +186,7 @@ static int init_input_raw_socket()
 }
 
 /* Replicate packets for multiple-copying */
-static int replicate_packs(const char *packet, int length, int replica_num)
+static int replicate_packs(char *packet, int length, int replica_num)
 {
 	int           i;
 	struct tcphdr *tcp_header;
@@ -210,7 +210,7 @@ static int replicate_packs(const char *packet, int length, int replica_num)
 		log_info(LOG_DEBUG, "new port:%u", dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
-		process_packet((const char*)packet, length);
+		process_packet(packet, length);
 	}
 
 	return 0;
@@ -283,14 +283,14 @@ static int retrieve_raw_sockets(int sock)
 						pack_len += (cont_len - packet_num * max_payload);
 					}
 					ip_header->tot_len = htons(pack_len);
-					process_packet((const char*)packet, pack_len);
+					process_packet(packet, pack_len);
 					if(replica_num > 1){
 						memcpy(tmp_packet, packet, pack_len);
 						replicate_packs(tmp_packet, pack_len, replica_num);
 					}
 				}
 			}else{
-				process_packet((const char*)packet, recv_len);
+				process_packet(packet, recv_len);
 				/* Multi-copying is only supported in multithreading mode */
 				if(replica_num > 1){
 					replicate_packs(packet, recv_len, replica_num);

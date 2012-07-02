@@ -78,7 +78,7 @@ typedef struct session_s{
 	time_t   req_last_send_cont_time;
 
 	/* The session status */
-	uint32_t status:4;
+	uint32_t status:8;
 	/*
 	 * The number of the response packets last received 
 	 * which have the same acknowledgement sequence.

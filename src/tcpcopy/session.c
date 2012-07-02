@@ -607,7 +607,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 
 	send_len = send_ip_packet(ip_header, tot_len);
 	if(-1 == send_len){
-		strace_pack(LOG_DEBUG, TO_BAKEND_FLAG, ip_header, tcp_header);
+		strace_pack(LOG_WARN, TO_BAKEND_FLAG, ip_header, tcp_header);
 		log_info(LOG_ERR,"send to back error,tot_len is:%d,cont_len:%d",
 				tot_len,cont_len);
 	}
@@ -1300,7 +1300,8 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		s->src_h_port = target_port;
 		target_port = htons(target_port);
 		new_key = get_ip_port_value(ip_header->saddr, target_port);
-		hash_add(transfer_port_table, new_key, (void *)tcp_header->source);
+		hash_add(transfer_port_table, new_key, 
+				(void *)(long)tcp_header->source);
 		tcp_header->source = target_port;
 		s->faked_src_port  = tcp_header->source;
 	}
@@ -1824,6 +1825,7 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, uint16_t cont_len)	
 {
+	s->status |= CLIENT_FIN;
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_DEBUG, "recv fin packet from clt:%u", s->src_h_port);
 #endif
@@ -2091,12 +2093,14 @@ static void process_client_after_main_body(session_t *s,
 			s->candidate_response_waiting = 1;
 			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 		}else if(SYN_CONFIRM == s->status){
-			wrap_send_ip_packet(s, (unsigned char *)ip_header);
+			if(s->vir_next_seq == ntohl(tcp_header->seq)){
+				wrap_send_ip_packet(s, (unsigned char *)ip_header);
+			}
 		}
 	}
 }
 
-static bool is_wait_resp(session_t *s, struct iphdr *ip_header,
+static bool is_wait_greet(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	uint32_t seq, ack;
@@ -2213,11 +2217,12 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 		return;
 	}
-	if(is_wait_resp(s, ip_header, tcp_header)){
-		save_packet(s->unsend_packets, ip_header, tcp_header);
-		return;
-	}
+
 	if(cont_len > 0){
+		if(is_wait_greet(s, ip_header, tcp_header)){
+			save_packet(s->unsend_packets, ip_header, tcp_header);
+			return;
+		}
 		/* Update ack seq values for checking a new request */
 		s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
 		s->req_cont_cur_ack_seq = ntohl(tcp_header->ack_seq);
@@ -2417,7 +2422,8 @@ void process(char *packet)
 			/* Give another chance for port changed*/
 			ori_port = hash_find(transfer_port_table, key);
 			if(ori_port != NULL){
-				key = get_ip_port_value(ip_header->daddr, (uint16_t)ori_port);
+				key = get_ip_port_value(ip_header->daddr,
+						(uint16_t)(long)ori_port);
 				s = hash_find(sessions_table, key);
 			}
 		}
