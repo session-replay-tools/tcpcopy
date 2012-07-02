@@ -368,7 +368,7 @@ static void dispose_event(int fd)
 void tcp_copy_exit()
 {
 	int i;
-	session_table_destroy();
+	destroy_for_sessions();
 	if(-1 != raw_sock){
 		close(raw_sock);
 		raw_sock = -1;
@@ -447,7 +447,7 @@ int tcp_copy_init()
 	select_sever_set_callback(dispose_event);
 
 	/* Init session table*/
-	session_table_init();
+	init_for_sessions();
 	
 #if (MULTI_THREADS)  
 	/* Init pool */

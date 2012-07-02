@@ -15,6 +15,7 @@ static void send_faked_passive_rst(session_t *s);
 static int  retransmit_packets(session_t *s);
 
 static hash_table *sessions_table;
+static hash_table *transfer_port_table;
 
 #if (TCPCOPY_MYSQL_BASIC)
 static hash_table *mysql_table;
@@ -62,15 +63,17 @@ static uint32_t g_seq_omit        = 0;
 static struct iphdr *fir_auth_u_p = NULL;
 #endif
 
-int session_table_init()
+int init_for_sessions()
 {
 	/* Create 65536 slots for session table */
 	sessions_table = hash_create(65536);
 	strcpy(sessions_table->name, "session-table");
+	transfer_port_table = hash_create(65536);
+	strcpy(transfer_port_table->name, "transfer port table");
 	return 0;
 }
 
-int session_table_destroy()
+int destroy_for_sessions()
 {
 	size_t      i;           
 	link_list   *list;
@@ -81,11 +84,9 @@ int session_table_destroy()
 	if(NULL == sessions_table){
 		return EXIT_FAILURE;
 	}
+	/* Free sessions tables */
 	for(i = 0; i < sessions_table->size; i++){
 		list = sessions_table->lists[i];
-		if(!list){
-			continue;
-		}
 	    ln   = link_list_first(list);	
 		while(ln){
 			tmp_ln = link_list_get_next(list, ln);
@@ -94,7 +95,9 @@ int session_table_destroy()
 				s = hn->data;
 			    /* Delete session */
 				session_rel_dynamic_mem(s);
-				hash_del(sessions_table, s->hash_key);
+				if(!hash_del(sessions_table, s->hash_key)){
+					log_info(LOG_ERR, "hash not deleted");
+				}
 				free(s);
 			}
 			ln = tmp_ln;
@@ -105,6 +108,16 @@ int session_table_destroy()
 	free(sessions_table->lists);
 	free(sessions_table);
 	sessions_table = NULL;
+	/* Free transfer port table */
+	for(i = 0; i < transfer_port_table->size; i++){
+		list = transfer_port_table->lists[i];
+		link_list_destory(list);
+		free(list);
+		transfer_port_table->lists[i] = NULL;
+	}
+	free(transfer_port_table->lists);
+	free(transfer_port_table);
+	transfer_port_table = NULL;
 
 	return 0;
 }
@@ -205,6 +218,8 @@ static void session_init_for_next(session_t *s)
 
 	if(NULL != list){
 		s->unsend_packets = list;
+	}else{
+		s->unsend_packets = link_list_create();
 	}
 }
 
@@ -235,7 +250,9 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 	s = session_create(ip_header, tcp_header);
 	if(NULL != s){
 		s->hash_key = key;
-		hash_add(sessions_table, key, s);
+		if(!hash_add(sessions_table, key, s)){
+			log_info(LOG_ERR, "session item already exist");
+		}
 	}
 	return s;
 }
@@ -246,6 +263,7 @@ static void session_rel_dynamic_mem(session_t *s)
 	if(!check_session_over(s)){
 	    /* Send the last rst packet to backend */
 		send_faked_passive_rst(s);
+		s->sess_over = 1;
 	}
 	if(NULL != s->unsend_packets){
 		link_list_destory(s->unsend_packets);
@@ -366,8 +384,11 @@ static void activate_dead_sessions()
 			hn = (hash_node *)ln->data;
 			if(hn->data != NULL){
 				s = hn->data;
+				if(s->sess_over){
+					log_info(LOG_NOTICE, "already del:%u", s->src_h_port);
+				}
 				if(is_session_dead(s)){
-					log_info(LOG_NOTICE,"activate:%u", s->src_h_port);
+					log_info(LOG_NOTICE, "activate:%u", s->src_h_port);
 					send_reserved_packets(s);
 				}
 			}
@@ -476,6 +497,9 @@ static void clear_timeout_sessions()
 			hn = (hash_node *)ln->data;
 			if(hn->data != NULL){
 				s = hn->data;
+				if(s->sess_over){
+					log_info(LOG_NOTICE, "wrong,del:%u", s->src_h_port);
+				}
 				if(s->conn_keepalive){
 					timeout = keepalive_timeout;
 				}else{
@@ -486,7 +510,9 @@ static void clear_timeout_sessions()
 					/* Release memory for session internals */
 					session_rel_dynamic_mem(s);
 					/* Remove session from table */
-					hash_del(sessions_table, s->hash_key);
+					if(!hash_del(sessions_table, s->hash_key)){
+						log_info(LOG_ERR, "hn not delete:%u", s->src_h_port);
+					}
 					free(s);
 				}
 			}
@@ -578,6 +604,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 
 	send_len = send_ip_packet(ip_header, tot_len);
 	if(-1 == send_len){
+		strace_pack(LOG_DEBUG, TO_BAKEND_FLAG, ip_header, tcp_header);
 		log_info(LOG_ERR,"send to back error,tot_len is:%d,cont_len:%d",
 				tot_len,cont_len);
 	}
@@ -780,7 +807,7 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 #endif
 
 static bool trim_packet(session_t *s, struct iphdr *ip_header, 
-		struct tcphdr *tcp_header, int diff)
+		struct tcphdr *tcp_header, uint32_t diff)
 {
 	uint16_t      size_ip, size_tcp, tot_len, cont_len;
 	unsigned char *payload;
@@ -814,8 +841,8 @@ static int send_reserved_packets(session_t *s)
 	p_link_node   ln, tmp_ln;
 	link_list     *list;
 	uint16_t      size_ip, cont_len;
-	uint32_t      cur_ack, cur_seq;
-	int           count = 0, diff; 
+	uint32_t      cur_ack, cur_seq, diff;
+	int           count = 0; 
 	bool need_pause = false, cand_pause = false, omit_transfer = false; 
 
 #if (DEBUG_TCPCOPY)
@@ -848,11 +875,16 @@ static int send_reserved_packets(session_t *s)
 			s->candidate_response_waiting = 0;
 			break;
 		}else if(cur_seq < s->vir_next_seq){
-			/* Special disposure here */
-			log_info(LOG_NOTICE, "reserved strange:%u", s->src_h_port);
-			diff = s->vir_next_seq - cur_seq;
-			if(!trim_packet(s, ip_header, tcp_header, diff)){
-				omit_transfer = true;
+			cont_len   = get_pack_cont_len(ip_header, tcp_header);
+			if(cont_len > 0){
+				/* Special disposure here */
+				log_info(LOG_NOTICE, "reserved strange:%u", s->src_h_port);
+				diff = s->vir_next_seq - cur_seq;
+				if(!trim_packet(s, ip_header, tcp_header, diff)){
+					omit_transfer = true;
+				}
+			}else{
+				tcp_header->seq = htonl(s->vir_next_seq);
 			}
 		}
 		cont_len   = get_pack_cont_len(ip_header, tcp_header);
@@ -872,6 +904,7 @@ static int send_reserved_packets(session_t *s)
 				}
 			}
 			cand_pause = true;
+			s->status = SEND_REQUEST;
 			s->candidate_response_waiting = 1;
 		}else if(tcp_header->rst){
 			if(s->candidate_response_waiting){
@@ -1240,7 +1273,7 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, bool is_hard)
 {
 	int      sock, result;
-	uint16_t dest_port;
+	uint16_t target_port;
 	uint64_t new_key;
 #if (TCPCOPY_MYSQL_BASIC)
 	log_info(LOG_WARN, "fake syn:%u", s->src_h_port);
@@ -1254,21 +1287,17 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 		return;
 	}
 	if(is_hard){
-		dest_port = get_port_by_rand_addition(tcp_header->source);
+		target_port = get_port_by_rand_addition(tcp_header->source);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE, "change port from :%u to :%u",
-				ntohs(tcp_header->source), dest_port);
+				ntohs(tcp_header->source), target_port);
 #endif
-		tcp_header->source = htons(dest_port);
+		s->src_h_port = target_port;
+		target_port = htons(target_port);
+		new_key = get_ip_port_value(ip_header->saddr, target_port);
+		hash_add(transfer_port_table, new_key, (void *)tcp_header->source);
+		tcp_header->source = target_port;
 		s->faked_src_port  = tcp_header->source;
-		s->src_h_port = dest_port;
-		new_key = get_ip_port_value(ip_header->saddr, tcp_header->source);
-		if(!hash_change(sessions_table, s->hash_key, new_key)){
-			/* If change error, then it may have wild pointer problems */
-			log_info(LOG_ERR, "hash change error", s->src_h_port);
-			return;
-		}
-		s->hash_key = new_key;
 	}
 
 	/* Send route info to backend */
@@ -1735,12 +1764,17 @@ static int check_syn_retransmisson(session_t *s,
 static void process_client_rst(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)	
 {
+	uint32_t seq;
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_INFO, "reset from client");
+	log_info(LOG_INFO, "reset from client:%u", s->src_h_port);
 #endif
 	if(s->candidate_response_waiting){
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 	}else{
+	    seq = ntohl(tcp_header->seq);	
+		if(seq < s->vir_next_seq){
+			tcp_header->seq = htonl(s->vir_next_seq);
+		}
 		s->unack_pack_omit_save_flag = 1;
 		wrap_send_ip_packet(s,(unsigned char *) ip_header);
 		s->reset = 1;
@@ -1774,7 +1808,9 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 			free(tmp_ln);
 		}
 	}
-	hash_del(mysql_table, s->src_h_port);
+	if(!hash_del(mysql_table, s->src_h_port)){
+		log_info(LOG_ERR, "mysql table hash not deleted");
+	}
 #endif
 	wrap_send_ip_packet(s, (unsigned char *)ip_header);
 
@@ -1784,12 +1820,12 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header, uint16_t cont_len)	
 {
 #if (DEBUG_TCPCOPY)
-	log_info(LOG_DEBUG, "recv fin packet from clt");
+	log_info(LOG_DEBUG, "recv fin packet from clt:%u", s->src_h_port);
 #endif
 
 	if(cont_len>0){
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO, "fin has content");
+		log_info(LOG_INFO, "fin has content:%u", s->src_h_port);
 #endif
 		return DISP_CONTINUE;
 	}
@@ -2346,6 +2382,7 @@ void process(char *packet)
 	int            diff, run_time = 0, sock, ret;
 	session_t      *s;
 	ip_port_pair_mappings_t *tf;
+	void           *ori_port;
 
 	if(0 == start_p_time){
 		start_p_time = now;
@@ -2369,6 +2406,14 @@ void process(char *packet)
 		/* When the packet comes from the targeted test machine */
 		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
 		s = hash_find(sessions_table, key);
+		if(NULL == s){
+			/* Give another chance for port changed*/
+			ori_port = hash_find(transfer_port_table, key);
+			if(ori_port != NULL){
+				key = get_ip_port_value(ip_header->daddr, (uint16_t)ori_port);
+				s = hash_find(sessions_table, key);
+			}
+		}
 		if(s){
 			s->last_update_time = now;
 			update_virtual_status(s, ip_header, tcp_header);
@@ -2381,12 +2426,16 @@ void process(char *packet)
 					return;
 				}else{
 					session_rel_dynamic_mem(s);
-					hash_del(sessions_table, s->hash_key);
+					if(!hash_del(sessions_table, s->hash_key)){
+						log_info(LOG_ERR, "hn not delete:%u", s->src_h_port);
+					}
 					free(s);
 				}
 			}
 		}else{
+			strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 			log_info(LOG_NOTICE, "no active session for me");
+			/* TODO it should ack */
 		}
 	}
 	else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){
@@ -2467,7 +2516,10 @@ void process(char *packet)
 						return;
 					}else{
 						session_rel_dynamic_mem(s);
-						hash_del(sessions_table, s->hash_key);
+						if(!hash_del(sessions_table, s->hash_key)){
+							log_info(LOG_ERR, "hn not delete:%u", 
+									s->src_h_port);
+						}
 						free(s);
 					}
 				}

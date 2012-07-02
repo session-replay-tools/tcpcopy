@@ -8,8 +8,8 @@
 #define IP_HEADER_LEN 20
 
 /* Global functions */
-int session_table_init();
-int session_table_destroy();
+int init_for_sessions();
+int destroy_for_sessions();
 void process(char *packet);
 bool is_packet_needed(const char *packet);
 

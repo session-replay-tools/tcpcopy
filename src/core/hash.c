@@ -88,27 +88,7 @@ void *hash_find(hash_table *table, uint64_t key)
 	return NULL;
 }
 
-bool hash_change(hash_table *table, uint64_t old_key, uint64_t new_key)
-{
-	hash_node   *hn;
-	link_list   *old_l  = get_link_list(table, old_key);
-	link_list   *new_l  = get_link_list(table, new_key);
-	p_link_node ln = link_list_first(old_l);
-
-	while(ln){
-		hn = (hash_node *)ln->data;
-		if(hn->key == old_key){
-			(void)link_list_remove(old_l, ln);
-			hn->key = new_key;
-			link_list_push(new_l, ln);
-			return true;
-		}
-		ln = link_list_get_next(old_l,ln);
-	}
-	return false;
-}
-
-void hash_add(hash_table *table, uint64_t key, void *data)
+bool hash_add(hash_table *table, uint64_t key, void *data)
 {
 	hash_node   *hn, *tmp;
 	p_link_node ln;
@@ -118,16 +98,18 @@ void hash_add(hash_table *table, uint64_t key, void *data)
 	if(ln != NULL){
 		hn = (hash_node *) ln->data;
 		hn->data = data;
+		return false;
 	}else{
 		tmp = hash_node_malloc(key, data);
 		ln  = link_node_malloc(tmp);
 		l   = get_link_list(table, key);
 		link_list_push(l , ln);
 		table->total++;
+		return true;
 	}
 }
 
-void hash_del(hash_table *table, uint64_t key)
+bool hash_del(hash_table *table, uint64_t key)
 {
 	link_list   *l = get_link_list(table, key); 
 	p_link_node ln = hash_find_node(table, key);
@@ -136,8 +118,10 @@ void hash_del(hash_table *table, uint64_t key)
 		link_list_remove(l, ln);
 		link_node_free(ln);
 		free(ln);
+		return true;
+	}else{
+		return false;
 	}
-	return;
 }
 
 void hash_set_timeout(hash_table *table, int t)
