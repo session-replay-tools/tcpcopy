@@ -575,6 +575,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 	tot_len   = ntohs(ip_header->tot_len);
 	cont_len = get_pack_cont_len(ip_header, tcp_header);
 	if(cont_len > 0){
+		s->status = SEND_REQUEST;
 		s->req_last_send_cont_time = time(0);
 		s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
 		s->vir_next_seq = s->vir_next_seq + cont_len;
@@ -909,7 +910,6 @@ static int send_reserved_packets(session_t *s)
 				}
 			}
 			cand_pause = true;
-			s->status = SEND_REQUEST;
 			s->candidate_response_waiting = 1;
 		}else if(tcp_header->rst){
 			if(s->candidate_response_waiting){
@@ -2089,7 +2089,7 @@ static void process_client_after_main_body(session_t *s,
 #endif
 		}
 	}else{
-		if(SEND_REQUEST == s->status && len > 0){
+		if(len > 0){
 			s->candidate_response_waiting = 1;
 			wrap_send_ip_packet(s, (unsigned char *)ip_header);
 		}else if(SYN_CONFIRM == s->status){
@@ -2262,7 +2262,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 					tcp_header, is_new_req)){
 			return;
 		}
-		s->status = SEND_REQUEST;
 		/* Check if the current session is keepalive */
 		check_conn_keepalive(s);
 #if (DEBUG_TCPCOPY)
