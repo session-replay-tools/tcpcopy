@@ -5,7 +5,7 @@
 #include "../core/hash.h"
 
 #define FAKE_IP_DATAGRAM_LEN 40
-#define FAKE_IP_HEADER_LEN 20
+#define IP_HEADER_LEN 20
 
 /* Global functions */
 int session_table_init();

@@ -513,6 +513,9 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data)
 
 	ip_header  = (struct iphdr *)data;
 	size_ip    = ip_header->ihl << 2;
+	if(size_ip != IP_HEADER_LEN){
+		log_info(LOG_WARN, "size ip is not expected:%u", size_ip);
+	}
 	tcp_header = (struct tcphdr *)(data + size_ip);
 	s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
 
@@ -922,7 +925,7 @@ static void fill_protocol_common_header(struct iphdr *ip_header,
 
 	ip_header->version  = 4;
 	/* The header length is the number of 32-bit words in the header */
-	ip_header->ihl      = FAKE_IP_HEADER_LEN/4;
+	ip_header->ihl      = IP_HEADER_LEN/4;
 	/*
 	 * The total length field is the total length of 
 	 * the IP datagram in bytes 
@@ -1069,7 +1072,7 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 
 	memset(f_s_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)f_s_buf;
-	f_tcp_header = (struct tcphdr *)(f_s_buf + FAKE_IP_HEADER_LEN);
+	f_tcp_header = (struct tcphdr *)(f_s_buf + IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
 
 	s->req_ip_id = ntohs(ip_header->id);
@@ -1109,7 +1112,7 @@ static void send_faked_third_handshake(session_t *s,
 
 	memset(fake_ack_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)fake_ack_buf;
-	f_tcp_header = (struct tcphdr *)(fake_ack_buf + FAKE_IP_HEADER_LEN);
+	f_tcp_header = (struct tcphdr *)(fake_ack_buf + IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
 	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = s->src_addr;
@@ -1140,7 +1143,7 @@ static void send_faked_ack(session_t *s , struct iphdr *ip_header,
 
 	memset(fake_ack_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)fake_ack_buf;
-	f_tcp_header = (struct tcphdr *)(fake_ack_buf + FAKE_IP_HEADER_LEN);
+	f_tcp_header = (struct tcphdr *)(fake_ack_buf + IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
 	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = ip_header->daddr;
@@ -1175,7 +1178,7 @@ static void send_faked_rst(session_t *s,
 
 	memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)faked_rst_buf;
-	f_tcp_header = (struct tcphdr *)(faked_rst_buf + FAKE_IP_HEADER_LEN);
+	f_tcp_header = (struct tcphdr *)(faked_rst_buf + IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
 	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = ip_header->daddr;
@@ -1210,7 +1213,7 @@ static void send_faked_passive_rst(session_t *s)
 #endif
 	memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
 	f_ip_header  = (struct iphdr *)faked_rst_buf;
-	f_tcp_header = (struct tcphdr *)(faked_rst_buf + FAKE_IP_HEADER_LEN);
+	f_tcp_header = (struct tcphdr *)(faked_rst_buf + IP_HEADER_LEN);
 	fill_protocol_common_header(f_ip_header, f_tcp_header);
 	f_ip_header->id       = htons(++s->req_ip_id);
 	f_ip_header->saddr    = s->src_addr;
