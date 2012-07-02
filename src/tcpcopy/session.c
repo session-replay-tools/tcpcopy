@@ -111,7 +111,7 @@ int destroy_for_sessions()
 	/* Free transfer port table */
 	for(i = 0; i < transfer_port_table->size; i++){
 		list = transfer_port_table->lists[i];
-		link_list_destory(list);
+		link_list_clear(list);
 		free(list);
 		transfer_port_table->lists[i] = NULL;
 	}
@@ -126,7 +126,7 @@ static void session_init(session_t *s, int flag)
 {
 	if(s->unsend_packets){
 		if(s->unsend_packets->size > 0){
-			link_list_destory(s->unsend_packets);
+			link_list_clear(s->unsend_packets);
 		}
 		if(SESS_REUSE == flag){
 			if(s->next_sess_packs != NULL){
@@ -140,7 +140,7 @@ static void session_init(session_t *s, int flag)
 
 	if(s->unack_packets){
 		if(s->unack_packets->size >0){
-			link_list_destory(s->unack_packets);
+			link_list_clear(s->unack_packets);
 		}
 	}else{
 		s->unack_packets = link_list_create();
@@ -154,7 +154,7 @@ static void session_init(session_t *s, int flag)
 #if (TCPCOPY_MYSQL_BASIC)
 		if(s->mysql_special_packets){
 			if(s->mysql_special_packets->size >0){
-				link_list_destory(s->mysql_special_packets);
+				link_list_clear(s->mysql_special_packets);
 			}
 		}else{
 			s->mysql_special_packets = link_list_create();
@@ -217,7 +217,8 @@ static void session_init_for_next(session_t *s)
 	session_init(s, SESS_REUSE);
 
 	if(NULL != list){
-		s->unsend_packets = list;
+		s->unsend_packets  = list;
+		s->next_sess_packs = NULL;
 	}else{
 		s->unsend_packets = link_list_create();
 	}
@@ -266,23 +267,23 @@ static void session_rel_dynamic_mem(session_t *s)
 		s->sess_over = 1;
 	}
 	if(NULL != s->unsend_packets){
-		link_list_destory(s->unsend_packets);
+		link_list_clear(s->unsend_packets);
 		free(s->unsend_packets);
 		s->unsend_packets = NULL;
 	}
 	if(NULL != s->next_sess_packs){
-		link_list_destory(s->next_sess_packs);
+		link_list_clear(s->next_sess_packs);
 		free(s->next_sess_packs);
 		s->next_sess_packs = NULL;
 	}
 	if(NULL != s->unack_packets){
-		link_list_destory(s->unack_packets);
+		link_list_clear(s->unack_packets);
 		free(s->unack_packets);
 		s->unack_packets = NULL;
 	}
 #if (TCPCOPY_MYSQL_BASIC)
 	if(NULL != s->mysql_special_packets){
-		link_list_destory(s->mysql_special_packets);
+		link_list_clear(s->mysql_special_packets);
 		free(s->mysql_special_packets);
 		s->mysql_special_packets = NULL;
 	}
@@ -453,8 +454,10 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 			return CANDIDATE_OBSOLETE;
 		}
 		obs_cnt++;
-		log_info(LOG_WARN,"timeout,unsend number:%u,p:%u",
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_NOTICE, "timeout,unsend number:%u,p:%u",
 				s->unsend_packets->size, s->src_h_port);
+#endif
 		return OBSOLETE;
 	}
 	return NOT_YET_OBSOLETE;
@@ -870,7 +873,9 @@ static int send_reserved_packets(session_t *s)
 		cur_seq    = ntohl(tcp_header->seq);
 		if(cur_seq > s->vir_next_seq){
 			/* We need to wait for previous packet */
+#if (DEBUG_TCPCOPY)
 			log_info(LOG_NOTICE, "we need to wait previous pack");
+#endif
 			s->is_waiting_previous_packet = 1;
 			s->candidate_response_waiting = 0;
 			break;
@@ -2027,7 +2032,9 @@ static int check_wait_prev_packet(session_t *s, struct iphdr *ip_header,
 		retransmit_seq = s->vir_next_seq - cont_len;
 		if(cur_seq <= retransmit_seq){
 			/* Retransmission packet from client */
-			log_info(LOG_NOTICE, "retransmit from clt:%u", s->src_h_port);
+#if (DEBUG_TCPCOPY)
+			log_info(LOG_INFO, "retransmit from clt:%u", s->src_h_port);
+#endif
 		}else{
 			diff = s->vir_next_seq - cur_seq;
 			if(trim_packet(s, ip_header, tcp_header, diff)){
@@ -2433,8 +2440,10 @@ void process(char *packet)
 				}
 			}
 		}else{
+#if (DEBUG_TCPCOPY)
 			strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
-			log_info(LOG_NOTICE, "no active session for me");
+			log_info(LOG_DEBUG, "no active session for me");
+#endif
 			/* TODO it should ack */
 		}
 	}
@@ -2467,7 +2476,7 @@ void process(char *packet)
 					s->sess_more = 1;
 					if(s->next_sess_packs){
 						if(s->next_sess_packs->size > 0){
-							link_list_destory(s->next_sess_packs);
+							link_list_clear(s->next_sess_packs);
 						}
 					}else{
 						s->next_sess_packs = link_list_create();

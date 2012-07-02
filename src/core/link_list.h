@@ -19,7 +19,7 @@
 	void link_node_free(p_link_node p);
 
 	link_list *link_list_create();
-	int link_list_destory(link_list *l);
+	int link_list_clear(link_list *l);
 	void link_list_append(link_list *l, p_link_node);
 	void link_list_order_append(link_list *l, p_link_node);
 	void link_list_push(link_list *l, p_link_node p);

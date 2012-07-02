@@ -45,7 +45,7 @@ static void delay_table_delete_obsolete(uint64_t key)
 			if(NULL != hn2){   
 				if(hn2->data != NULL){
 					msg_list = (link_list *)hn2->data;
-					msg_item_destr_cnt += link_list_destory(msg_list);
+					msg_item_destr_cnt += link_list_clear(msg_list);
 					free(msg_list);  	
 					hn2->data = NULL;
 					msg_list_destr_cnt++;
@@ -161,7 +161,7 @@ void delay_table_destroy()
 				hn = (hash_node *)ln->data;
 				if(hn->data != NULL){
 					msg_list=(link_list *)hn->data;
-					msg_item_destr_cnt+=link_list_destory(msg_list);
+					msg_item_destr_cnt += link_list_clear(msg_list);
 					free(msg_list);
 					msg_list_destr_cnt++;
 				}	

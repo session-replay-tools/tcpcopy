@@ -38,7 +38,7 @@ link_list *link_list_create()
 	return l;
 }
 
-static int link_list_clear(link_list *l)
+int link_list_clear(link_list *l)
 {
 	p_link_node p ,next;
 	int count;
@@ -57,13 +57,6 @@ static int link_list_clear(link_list *l)
 	l->size = 0;
 	return count;
 
-}
-
-/* TODO change fun name */
-int link_list_destory(link_list *l)
-{
-	int count = link_list_clear(l);
-	return count;
 }
 
 void link_list_append(link_list *l, p_link_node p)

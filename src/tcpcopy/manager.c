@@ -133,6 +133,15 @@ static void *dispose(void *thread_id)
 }
 #endif
 
+
+static void process_packet(const char *packet, int length){
+#if (MULTI_THREADS)  
+	put_packet_to_pool(packet, length);
+#else
+	process(packet);
+#endif
+}
+
 static void set_nonblock(int socket)
 {
 	int flags;
@@ -176,7 +185,6 @@ static int init_input_raw_socket()
 	return sock;
 }
 
-#if (MULTI_THREADS)  
 /* Replicate packets for multiple-copying */
 static int replicate_packs(const char *packet, int length, int replica_num)
 {
@@ -202,31 +210,25 @@ static int replicate_packs(const char *packet, int length, int replica_num)
 		log_info(LOG_DEBUG, "new port:%u", dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
-		put_packet_to_pool((const char*)packet, length);
+		process_packet((const char*)packet, length);
 	}
 
 	return 0;
 
 }
-#endif
 
 /*
  * Retrieve raw packets
  */
 static int retrieve_raw_sockets(int sock)
 {
-#if (MULTI_THREADS)  
-	char     recv_buf[RECV_BUF_SIZE], tmp_packet[MAX_MTU];
+	char     *packet, recv_buf[RECV_BUF_SIZE], tmp_packet[MAX_MTU];
 	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
 	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
 	uint32_t seq;
+
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
-#else
-	char     recv_buf[RECV_BUF_SIZE];
-	int      replica_num, err, recv_len;
-#endif
-	char     *packet;
 
 	while(1){
 		recv_len = recvfrom(sock, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
@@ -251,7 +253,6 @@ static int retrieve_raw_sockets(int sock)
 		if(is_packet_needed((const char *)packet)){
 			valid_raw_packs++;
 			replica_num = clt_settings.replica_num;
-#if (MULTI_THREADS)  
 			packet_num = 1;
 			/* 
 			 * If packet length larger than 1500, then we split it. 
@@ -282,26 +283,22 @@ static int retrieve_raw_sockets(int sock)
 						pack_len += (cont_len - packet_num * max_payload);
 					}
 					ip_header->tot_len = htons(pack_len);
-					put_packet_to_pool((const char*)packet, pack_len);
+					process_packet((const char*)packet, pack_len);
 					if(replica_num > 1){
 						memcpy(tmp_packet, packet, pack_len);
 						replicate_packs(tmp_packet, pack_len, replica_num);
 					}
 				}
 			}else{
-				put_packet_to_pool((const char*)packet, recv_len);
+				process_packet((const char*)packet, recv_len);
 				/* Multi-copying is only supported in multithreading mode */
 				if(replica_num > 1){
 					replicate_packs(packet, recv_len, replica_num);
 				}
 			}
-#else
-			process(packet);
-#endif
 		}
 
 		if(raw_packs%100000 == 0){
-
 #if (MULTI_THREADS)  
 			log_info(LOG_NOTICE,
 					"raw packets:%llu, valid :%llu, total in pool:%llu",
@@ -312,7 +309,6 @@ static int retrieve_raw_sockets(int sock)
 #endif
 		}
 	}
-
 	return 0;
 }
 
@@ -332,6 +328,7 @@ static void check_resource_usage()
 	/* Total amount of system time used */
 	log_info(LOG_NOTICE, "sys  time used:%ld",usage.ru_stime.tv_sec);
 	/* Maximum resident set size (in kilobytes) */
+	/* This is only valid since Linux 2.6.32 */
 	log_info(LOG_NOTICE, "max memory size:%ld",usage.ru_maxrss);
 	if(usage.ru_maxrss > clt_settings.max_rss){
 		log_info(LOG_WARN, "occupies too much memory,limit:%ld",

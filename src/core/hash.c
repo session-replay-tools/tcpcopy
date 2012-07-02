@@ -137,7 +137,7 @@ void hash_destory(hash_table *table)
 	for(; index < table->size; index++){
 		l = table->lists[index];
 		if(l != NULL){
-			count += link_list_destory(l);
+			count += link_list_clear(l);
 			free(l);
 		}
 	}
