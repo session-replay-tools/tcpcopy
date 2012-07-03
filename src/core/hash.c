@@ -1,6 +1,9 @@
 #include "xcopy.h"
 #include "hash.h"
 
+static uint64_t visit_hash_find_node = 0;
+static uint64_t total_compared = 0;
+
 static hash_node *hash_node_malloc(uint64_t key, void *data)
 {
 	hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
@@ -23,8 +26,7 @@ static inline size_t get_slot(uint64_t key,size_t size)
 {
 	return key%size;
 }
-static uint64_t visit_hash_find_node;
-static uint64_t total_compared;
+
 static p_link_node hash_find_node(hash_table *table, uint64_t key)
 {
 	link_list   *l  = get_link_list(table, key);
@@ -145,7 +147,7 @@ void hash_destory(hash_table *table)
 		}
 	}
 	free(table->lists);
-	log_info(LOG_NOTICE, "total visit hash_find_node:%llu,compared:%llu:",
+	log_info(LOG_NOTICE, "total visit hash_find_node:%llu,compared:%llu",
 			visit_hash_find_node, total_compared);
 	log_info(LOG_NOTICE, "destroy items %d in table name:%s",
 			count, table->name);
