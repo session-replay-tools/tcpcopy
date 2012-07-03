@@ -267,6 +267,21 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 	return s;
 }
 
+static bool send_router_info(uint32_t listening_port, 
+		uint32_t client_ip, uint16_t client_port, uint16_t type)
+{
+	int sock = address_find_sock(listening_port);
+	if(-1 == sock){
+		log_info(LOG_WARN, "sock invalid:%u",ntohs(listening_port));
+		return false;
+	}
+	if(-1 == msg_client_send(sock, client_ip, client_port, type)){
+		log_info(LOG_ERR, "msg client send error:%u",ntohs(client_port));
+		return false;
+	}
+	return true;
+}
+
 static void session_rel_dynamic_mem(session_t *s)
 {
 	uint64_t key;
@@ -274,6 +289,8 @@ static void session_rel_dynamic_mem(session_t *s)
 	if(!check_session_over(s)){
 	    /* Send the last rst packet to backend */
 		send_faked_passive_rst(s);
+		send_router_info(s->online_port, s->src_addr,
+				htons(s->src_h_port), CLIENT_DEL);
 		s->sess_over = 1;
 	}
 	if(s->port_transfered){
@@ -329,6 +346,7 @@ static bool check_session_over(session_t *s)
 	}   
 	return false;
 }
+
 
 static uint16_t  get_pack_cont_len(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
@@ -1297,7 +1315,7 @@ static void send_faked_passive_rst(session_t *s)
 static void fake_syn(session_t *s, struct iphdr *ip_header, 
 		struct tcphdr *tcp_header, bool is_hard)
 {
-	int      sock, result;
+	bool     result;
 	uint16_t target_port;
 	uint64_t new_key;
 #if (TCPCOPY_MYSQL_BASIC)
@@ -1305,12 +1323,6 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 #else
 	log_info(LOG_DEBUG, "fake syn:%u", s->src_h_port);
 #endif
-	sock = address_find_sock(tcp_header->dest);
-	if(-1 == sock){
-		log_info(LOG_WARN, "sock invalid in fake_syn");
-		strace_pack(LOG_ERR, CLIENT_FLAG, ip_header, tcp_header);
-		return;
-	}
 	if(is_hard){
 		target_port = get_port_by_rand_addition(tcp_header->source);
 #if (DEBUG_TCPCOPY)
@@ -1328,10 +1340,9 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* Send route info to backend */
-	result = msg_client_send(sock,ip_header->saddr,
+	result = send_router_info(tcp_header->dest, ip_header->saddr,
 			tcp_header->source, CLIENT_ADD);
-	if(-1 == result){
-		log_info(LOG_ERR, "msg client send error");
+	if(!result){
 		return;
 	}
 	send_faked_syn(s, ip_header, tcp_header);
@@ -2420,7 +2431,8 @@ void process(char *packet)
 	uint16_t       size_ip;
 	uint64_t       key;
 	time_t         now  = time(0);
-	int            diff, run_time = 0, sock, ret;
+	int            diff, run_time = 0;
+	bool           result;
 	session_t      *s;
 	ip_port_pair_mappings_t *tf;
 	void           *ori_port;
@@ -2467,6 +2479,8 @@ void process(char *packet)
 					restore_buffered_next_session(s);
 					return;
 				}else{
+					send_router_info(s->online_port, ip_header->daddr,
+							tcp_header->dest, CLIENT_DEL);
 					session_rel_dynamic_mem(s);
 					if(!hash_del(sessions_table, s->hash_key)){
 						log_info(LOG_ERR, "hn not delete:%u", s->src_h_port);
@@ -2531,18 +2545,9 @@ void process(char *packet)
 					return;
 				}
 			}
-			/* Find the right sock to send router info */
-			sock = address_find_sock(tcp_header->dest);
-			if(-1 == sock){
-				log_info(LOG_ERR, "sock is invalid in process");
-				strace_pack(LOG_WARN, CLIENT_FLAG, 
-						ip_header, tcp_header);
-				return;
-			}
-			ret = msg_client_send(sock, ip_header->saddr,
-					tcp_header->source, CLIENT_ADD);
-			if(-1 == ret){
-				log_info(LOG_ERR, "msg client send error");
+			result = send_router_info(tcp_header->dest, 
+					ip_header->saddr, tcp_header->source, CLIENT_ADD);
+			if(!result){
 				return;
 			}else{
 				process_recv(s, ip_header, tcp_header);
@@ -2559,6 +2564,8 @@ void process(char *packet)
 						restore_buffered_next_session(s);
 						return;
 					}else{
+						send_router_info(s->online_port, ip_header->saddr,
+							htons(s->src_h_port), CLIENT_DEL);
 						session_rel_dynamic_mem(s);
 						if(!hash_del(sessions_table, s->hash_key)){
 							log_info(LOG_ERR, "hn not delete:%u", 

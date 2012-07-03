@@ -13,7 +13,7 @@ void route_delete_obsolete(time_t cur_time)
 	link_list   *l;
 	int         i, count = 0;
 
-	log_info(LOG_NOTICE, "router size:%u", table->size);
+	log_info(LOG_NOTICE, "router size:%u", table->total);
 	for(i = 0; i < table->size; i++){
 		l  = table->lists[i];
 		while(true){

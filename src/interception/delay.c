@@ -28,7 +28,7 @@ void delay_table_delete_obsolete(time_t cur_time)
 {
 	int         i, count;
 	hash_node   *hn1, *hn2;
-	p_link_node ln;
+	p_link_node ln, tail;
 	link_list   *msg_list, *l;
 
 	log_info(LOG_NOTICE,"delay total:%u", table->total);
@@ -44,7 +44,7 @@ void delay_table_delete_obsolete(time_t cur_time)
 			if( (hn1->access_time + table->timeout) < cur_time){
 				count++;
 				table->total--;
-				p_link_node tail = link_list_pop_tail(l);
+				tail = link_list_pop_tail(l);
 				hn2 = (hash_node *)tail->data;
 				if(NULL != hn2){   
 					if(hn2->data != NULL){

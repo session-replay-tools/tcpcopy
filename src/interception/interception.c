@@ -25,6 +25,7 @@ static void set_sock_no_delay(int sock)
 	return;
 }
 
+#if (DEBUG_TCPCOPY)
 static void output_debug(int level, struct iphdr *ip_header)
 {
 	size_t        size_ip;
@@ -33,6 +34,7 @@ static void output_debug(int level, struct iphdr *ip_header)
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 	strace_pack(level, BACKEND_FLAG, ip_header, tcp_header);
 }
+#endif
 
 static uint32_t seq = 1;
 static unsigned char buffer[128];
