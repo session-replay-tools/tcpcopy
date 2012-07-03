@@ -111,6 +111,8 @@ static void usage(void) {
 	printf("-x <passlist,> passed ip list through firewall\n"
 		   "               format:\n"
 		   "               ip1,ip2,...\n"
+		   "-p             tcp port number to listen on\n"
+		   "-s             hash table size for intercept\n"
 		   "-l <file>      log file path\n"
 		   "-P <file>      save PID in <file>, only used with -d option\n"
 		   "-b <ip>        server binded ip address for listening\n"
@@ -125,6 +127,7 @@ static int read_args(int argc, char **argv){
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* ip list passed through ip firewall */
 		 "p:" /* TCP port number to listen on */
+		 "s:" /* Hash table size for intercept */
 		 "b:" /* binded ip address */
 		 "h"  /* print this help and exit */   
 		 "l:" /* error log file path */
@@ -138,6 +141,9 @@ static int read_args(int argc, char **argv){
 				break;
 			case 'p':
 				srv_settings.port = (uint16_t)atoi(optarg);
+				break;
+			case 's':
+				srv_settings.hash_size = (size_t)atoi(optarg);
 				break;
 			case 'b':
 				srv_settings.binded_ip = strdup(optarg);

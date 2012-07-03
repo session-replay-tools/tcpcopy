@@ -6,8 +6,9 @@
 #include "nl_firewall.h"
 #include "interception.h"
 
-static  int firewall_sock;
-static  int msg_listen_sock;
+static int    firewall_sock;
+static int    msg_listen_sock;
+static time_t last_clean_time;
 
 static void set_sock_no_delay(int sock)
 {
@@ -80,7 +81,8 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 
 static void interception_process(int fd)
 {
-	int                    new_fd, i, pass_through_flag = 0;
+	int                    diff, new_fd, i, pass_through_flag = 0;
+	time_t                 now;
 	unsigned long          packet_id;
 	struct iphdr           *ip_header;
 	struct msg_client_s    *c_msg;
@@ -95,7 +97,7 @@ static void interception_process(int fd)
 		packet_id = 0;
 		ip_header = nl_firewall_recv(firewall_sock, &packet_id);
 		if(ip_header != NULL){
-			/*check if it is the valid user to pass through firewall*/
+			/* Check if it is the valid user to pass through firewall */
 			for(i = 0; i < srv_settings.passed_ips.num; i++){
 				if(srv_settings.passed_ips.ips[i] == ip_header->daddr){
 					pass_through_flag = 1;
@@ -103,14 +105,21 @@ static void interception_process(int fd)
 				}
 			}
 			if(pass_through_flag){
-				/* pass through the firewall */
+				/* Pass through the firewall */
 				dispose_netlink_packet(NF_ACCEPT, packet_id);  	
 			}else{
 				router_update(ip_header);
+				now  = time(0);
+				diff = now - last_clean_time;
+				if(diff > DEFAULT_TIMEOUT){
+					route_delete_obsolete(now);
+					delay_table_delete_obsolete(now);
+					last_clean_time = now;
+				}
 #if (DEBUG_TCPCOPY)
 				output_debug(LOG_DEBUG, ip_header);
 #endif
-				 /* drop the packet */
+				 /* Drop the packet */
 				dispose_netlink_packet(NF_DROP, packet_id);  	
 			}
 		}
@@ -132,8 +141,8 @@ static void interception_process(int fd)
 /* initiate for tcpcopy server*/
 void interception_init(uint16_t port)
 {
-	delay_table_init();
-	router_init();
+	delay_table_init(srv_settings.hash_size);
+	router_init(srv_settings.hash_size);
 	select_sever_set_callback(interception_process);
 	msg_listen_sock = msg_server_init(srv_settings.binded_ip, port);
 	log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);
@@ -144,13 +153,13 @@ void interception_init(uint16_t port)
 }
 
 
-/* main procedure for interception*/
+/* Main procedure for interception*/
 void interception_run()
 {
 	select_server_run();
 }
 
-/* clear resources for interception */
+/* Clear resources for interception */
 void interception_over()
 {
 	if(firewall_sock != -1){

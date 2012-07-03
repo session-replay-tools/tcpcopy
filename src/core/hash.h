@@ -4,8 +4,6 @@
 #include "xcopy.h"
 #include "link_list.h"
 
-#define DEFAULT_TIMEOUT   1200
-
 	typedef struct hash_node_s{
 		uint64_t key;
 		time_t   access_time;

@@ -23,14 +23,17 @@ static inline size_t get_slot(uint64_t key,size_t size)
 {
 	return key%size;
 }
-
+static uint64_t visit_hash_find_node;
+static uint64_t total_compared;
 static p_link_node hash_find_node(hash_table *table, uint64_t key)
 {
 	link_list   *l  = get_link_list(table, key);
 	p_link_node ln  = link_list_first(l);
 	hash_node   *hn;
+	visit_hash_find_node++;
 	while(ln){
 		hn = (hash_node *)ln->data;
+		total_compared++;
 		if(hn->key == key){
 			hn->access_time = time(NULL);
 			/* Put the lastest item to the head of the linked list */
@@ -142,6 +145,8 @@ void hash_destory(hash_table *table)
 		}
 	}
 	free(table->lists);
+	log_info(LOG_NOTICE, "total visit hash_find_node:%llu,compared:%llu:",
+			visit_hash_find_node, total_compared);
 	log_info(LOG_NOTICE, "destroy items %d in table name:%s",
 			count, table->name);
 }

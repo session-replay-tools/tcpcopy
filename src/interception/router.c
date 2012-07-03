@@ -6,36 +6,42 @@
 
 static hash_table *table;
 
-static void route_table_delete_obsolete(uint64_t key)
-{       
-	time_t      cur_time = time(NULL);
+void route_delete_obsolete(time_t cur_time)
+{   
 	hash_node   *hn;
-	p_link_node ln ;
-	link_list   *l = get_link_list(table, key);
+	p_link_node ln;
+	link_list   *l;
+	int         i, count = 0;
 
-	while(1){
-		ln = link_list_tail(l); 
-		if(NULL == ln){
-			break;
-		}       
-		hn = (hash_node *)ln->data;
-		if((hn->access_time + table->timeout) < cur_time){
-			link_list_pop_tail(l);
-			free(hn);
-			ln->data=NULL;
-			free(ln);
-		}else{
-			break;
-		}   
+	log_info(LOG_NOTICE, "router size:%u", table->size);
+	for(i = 0; i < table->size; i++){
+		l  = table->lists[i];
+		while(true){
+			ln = link_list_tail(l); 
+			if(NULL == ln){
+				break;
+			}       
+			hn = (hash_node *)ln->data;
+			if((hn->access_time + table->timeout) < cur_time){
+				link_list_pop_tail(l);
+				free(hn);
+				ln->data = NULL;
+				free(ln);
+				table->total--;
+				count++;
+			}else{
+				break;
+			}   
+		}
 	} 
+	log_info(LOG_NOTICE, "router delete obsolete:%d", count);
 }
 
 
 /* initiate router table */
-void router_init()
+void router_init(size_t size)
 {
-	/* we support 256k slots here */
-	table = hash_create(262144);
+	table = hash_create(size);
 	strcpy(table->name,"router-table");
 	log_info(LOG_NOTICE,"create table %s, size:%u",
 			table->name, table->size);
@@ -97,7 +103,6 @@ void router_update(struct iphdr *ip_header)
 	}
 #endif
 	key = get_key(ip_header->daddr, tcp_header->dest);
-	route_table_delete_obsolete(key);
 	fd  = hash_find(table, key);
 	if( NULL == fd ){
 		log_info(LOG_INFO,"fd is null");
@@ -105,7 +110,6 @@ void router_update(struct iphdr *ip_header)
 		return ;
 	}
 	msg_server_send((int)(long)fd, &msg);
-
 }
 
 /* destroy router table */

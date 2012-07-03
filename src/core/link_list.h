@@ -28,7 +28,7 @@
 	p_link_node link_list_tail(link_list *l);
 	p_link_node link_list_pop_first(link_list *l);
 	p_link_node link_list_pop_tail(link_list *l);
-	p_link_node link_list_get_next(link_list *l, p_link_node p);
+	inline p_link_node link_list_get_next(link_list *l, p_link_node p);
 	int link_list_is_empty(link_list *l);
 
 #endif   /* ----- #ifndef _LINK_LIST_H_INC  ----- */

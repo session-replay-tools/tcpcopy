@@ -150,7 +150,7 @@ p_link_node link_list_pop_tail(link_list *l)
 	return link_list_remove(l, tail);
 }
 
-p_link_node link_list_get_next(link_list *l, p_link_node p)
+inline p_link_node link_list_get_next(link_list *l, p_link_node p)
 {
 	if(p->next == &(l->head)){
 		return NULL;

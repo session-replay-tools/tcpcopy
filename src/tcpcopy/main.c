@@ -371,8 +371,10 @@ static void settings_init()
 	clt_settings.mtu = DEFAULT_MTU;
 	clt_settings.max_rss = MAX_MEMORY_SIZE;
 	clt_settings.srv_port = SERVER_PORT;
-	clt_settings.pool_fact = RECV_POOL_SIZE_SHF;
 	clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+#if (MULTI_THREADS)  
+	clt_settings.pool_fact = RECV_POOL_SIZE_SHF;
+#endif
 }
 
 /*

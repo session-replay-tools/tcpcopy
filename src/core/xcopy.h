@@ -5,7 +5,11 @@
 
 /* Set nonzero for debug */
 #define DEBUG_TCPCOPY      1
-/*#define TCPCOPY_MYSQL_NO_SKIP 1*/
+
+/* Set nonzero for mysql skip-grant-table mode */
+#define TCPCOPY_MYSQL_SKIP 0
+/* Set nonzero for mysql normal mode */
+#define TCPCOPY_MYSQL_NO_SKIP 0
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
@@ -39,6 +43,7 @@
 #define SERVER_PORT   36524
 
 
+#define DEFAULT_TIMEOUT 120
 #define DEFAULT_SESSION_TIMEOUT 60
 
 /* The commnunication message flags */
@@ -54,18 +59,21 @@
 /* Constants for netlink protocol */
 #define FIREWALL_GROUP  0
 
-/*
- * TCPCopy client pool constants
- */
-#define RECV_POOL_SIZE_SHF 24     /* Default 16M size */
-#define RECV_POOL_MAX_SIZE_SHF 30 /* Max 1G size */
-#define RECV_POOL_MIN_SIZE_SHF 20 /* Max 1G size */
 
 /* In defence of occuping too much memory */
 #define MAX_MEMORY_SIZE 524288
 
 /* If set 1,then tcpcopy client works at multiple threading mode */
 #define MULTI_THREADS 0
+
+#if(MULTI_THREADS)
+/*
+ * TCPCopy client pool constants, only valid for multiple threading
+ */
+#define RECV_POOL_SIZE_SHF 24     /* Default 16M size */
+#define RECV_POOL_MAX_SIZE_SHF 30 /* Max 1G size */
+#define RECV_POOL_MIN_SIZE_SHF 20 /* Max 1G size */
+#endif
 
 /* Session constants from the client perspective */
 #define SESS_CREATE    0
@@ -84,10 +92,6 @@
 #define CANDIDATE_OBSOLETE -1
 #define NOT_YET_OBSOLETE 0
 
-#define SEED_323_LENGTH  8
-#define SCRAMBLE_LENGTH  20
-#define SHA1_HASH_SIZE   20
-
 /* Mysql constants */
 #if (TCPCOPY_MYSQL_BASIC)
 #define COM_STMT_PREPARE 22
@@ -95,6 +99,9 @@
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
+#define SEED_323_LENGTH  8
+#define SCRAMBLE_LENGTH  20
+#define SHA1_HASH_SIZE   20
 #define MAX_PASSWORD_LEN 256
 #define MAX_PAYLOAD_LEN  128
 #endif
@@ -199,14 +206,16 @@ typedef struct xcopy_clt_settings {
 	unsigned int  factor:8;
 	/* MTU sent to backend */
 	unsigned int  mtu:16;
+#if(MULTI_THREADS)
 	/* 
 	 * Pool memory factor
 	 * Pool size is equal to 2^(pool_fact) or (1 << pool_fact)
 	 * Max value allowed is 30
 	 */
-	unsigned int  pool_fact:5;
+	unsigned int pool_fact:5;
+#endif
 	/* Daemon flag */
-	unsigned int  do_daemonize:1;
+	unsigned int do_daemonize:1;
 	/* Max memory size allowed for tcpcopy client(max size 2G) */
 	unsigned int max_rss:21;
 	/* 
@@ -241,6 +250,8 @@ typedef struct xcopy_srv_settings {
 	char *binded_ip;
 	/* Error log path */
 	char *log_path;
+	/* Hash size for kinds of table */
+	size_t hash_size;
 	/* TCP port number to listen on */
 	uint16_t port;
 	/* Daemon flag */

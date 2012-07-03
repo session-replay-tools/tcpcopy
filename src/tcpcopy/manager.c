@@ -377,6 +377,10 @@ void tcp_copy_exit()
 		free(pool);
 		pool = NULL;
 	}
+	if(NULL != item){
+		free(item);
+		item = NULL;
+	}
 #endif
 	if(clt_settings.raw_transfer != NULL){
 		free(clt_settings.raw_transfer);

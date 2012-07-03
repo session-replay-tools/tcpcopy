@@ -24,48 +24,53 @@ static struct msg_server_s *copy_message(struct msg_server_s *msg)
 	return cmsg;
 }
 
-static void delay_table_delete_obsolete(uint64_t key)
+void delay_table_delete_obsolete(time_t cur_time)
 {
-	hash_node   *hn1;
-	hash_node   *hn2;
+	int         i, count;
+	hash_node   *hn1, *hn2;
 	p_link_node ln;
-	link_list   *msg_list;
-	time_t      nowtime = time(0);
-	link_list   *l      = get_link_list(table,key);
+	link_list   *msg_list, *l;
 
-	while(1){
-		ln = link_list_tail(l);
-		if(NULL == ln){
-			break;
-		}   
-		hn1 = (hash_node *)ln->data;
-		if( (hn1->access_time + table->timeout) < nowtime){
-			p_link_node tail = link_list_pop_tail(l);
-			hn2 = (hash_node *)tail->data;
-			if(NULL != hn2){   
-				if(hn2->data != NULL){
-					msg_list = (link_list *)hn2->data;
-					msg_item_destr_cnt += link_list_clear(msg_list);
-					free(msg_list);  	
-					hn2->data = NULL;
-					msg_list_destr_cnt++;
-				}
-				free(hn2);
+	log_info(LOG_NOTICE,"delay total:%u", table->total);
+
+	for(i = 0; i < table->size; i++){
+		l  = table->lists[i];
+		while(true){
+			ln = link_list_tail(l);
+			if(NULL == ln){
+				break;
 			}   
-			tail->data = NULL;
-			free(tail);
-		}else{
-			break;
-		}   
-	} 
+			hn1 = (hash_node *)ln->data;
+			if( (hn1->access_time + table->timeout) < cur_time){
+				count++;
+				table->total--;
+				p_link_node tail = link_list_pop_tail(l);
+				hn2 = (hash_node *)tail->data;
+				if(NULL != hn2){   
+					if(hn2->data != NULL){
+						msg_list = (link_list *)hn2->data;
+						msg_item_destr_cnt += link_list_clear(msg_list);
+						free(msg_list);  	
+						hn2->data = NULL;
+						msg_list_destr_cnt++;
+					}
+					free(hn2);
+				}   
+				tail->data = NULL;
+				free(tail);
+			}else{
+				break;
+			}   
+		} 
+	}
+	log_info(LOG_NOTICE,"delay delete obsolete :%d", count);
 }
 
 
-/* init delay table */
-void delay_table_init()
+/* Init delay table */
+void delay_table_init(size_t size)
 {
-	/* we support 64k slots here */
-	table = hash_create(65536);
+	table = hash_create(size);
 	hash_set_timeout(table, 30);
 	strcpy(table->name,"delay-table");
 	log_info(LOG_NOTICE,"create table %s,size:%u",
@@ -77,14 +82,13 @@ void delay_table_init()
 	msg_list_destr_cnt = 0;
 }
 
-/* add message to delay table*/
+/* Add message to delay table*/
 void delay_table_add(uint64_t key,struct msg_server_s *msg)
 {
 	link_list           *msg_list;
 	struct msg_server_s *cmsg;
 	p_link_node         ln;
 
-	delay_table_delete_obsolete(key);	
 	msg_list =(link_list *)hash_find(table, key);
 	cmsg = copy_message(msg);
 	ln = link_node_malloc((void *)cmsg);
@@ -95,18 +99,18 @@ void delay_table_add(uint64_t key,struct msg_server_s *msg)
 	}
 	msg_item_cnt++;
 	link_list_append(msg_list, ln);
+
 	return;
 }
 
 
-/* send delayed message according to the key*/
+/* Send delayed message according to the key*/
 void delay_table_send(uint64_t key, int fd)
 {
 	link_list           *msg_list;
 	p_link_node         first;
 	struct msg_server_s *msg ;
 
-	delay_table_delete_obsolete(key);	
 	msg_list =(link_list *)hash_find(table, key);
 	if(NULL == msg_list){
 		return;	
@@ -121,13 +125,12 @@ void delay_table_send(uint64_t key, int fd)
 	}
 }
 
-/* delete delay table item according to the key */
+/* Delete delay table item according to the key */
 void delay_table_del(uint64_t key)
 {
 	link_list           *msg_list;
 	p_link_node         first;
 
-	delay_table_delete_obsolete(key);	
 	msg_list =(link_list *)hash_find(table, key);
 	if(NULL == msg_list){
 		return;	
@@ -143,7 +146,7 @@ void delay_table_del(uint64_t key)
 	msg_ll_free_cnt++;
 }
 
-/* destroy delay table */
+/* Destroy delay table */
 void delay_table_destroy()
 {
 	uint32_t    i;
@@ -153,7 +156,7 @@ void delay_table_destroy()
 	link_list   *list;
 
 	if(table != NULL){
-		log_info(LOG_NOTICE,"destroy delayed table");
+		log_info(LOG_NOTICE,"destroy delayed table,total:%u", table->total);
 		for(i = 0; i < table->size; i++){
 			list = table->lists[i];
 			ln   = link_list_first(list);

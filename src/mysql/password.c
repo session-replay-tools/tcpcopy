@@ -3,6 +3,7 @@
 #include "password.h"
 #include "sha1.h"
 
+#if (TCPCOPY_MYSQL_ADVANCED) 
 static void 
 my_crypt(char *to, const uchar *s1, const uchar *s2, uint len)
 {
@@ -41,5 +42,5 @@ scramble(char *to, const char *message, const char *password)
 	mysql_sha1_result(&sha1_context, (uint8 *) to);
 	my_crypt(to, (const uchar *) to, hash_stage1, SCRAMBLE_LENGTH);
 }
-
+#endif
 
