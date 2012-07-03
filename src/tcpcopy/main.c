@@ -157,11 +157,6 @@ static int read_args(int argc, char **argv){
 
 	}
 
-	/* Check if mtu value is more than max mtu supported */
-	if(clt_settings.mtu >MAX_MTU){
-		clt_settings.mtu = MAX_MTU;
-	}
-
 	return 0;
 }
 

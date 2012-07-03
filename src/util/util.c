@@ -1,10 +1,10 @@
 #include "../core/hash.h"
 #include "util.h"
 
-inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port)
+inline uint64_t get_key(uint32_t ip, uint16_t port)
 {
-	uint64_t value =((uint64_t)s_ip) << 16;
-	value += s_port;
+	uint64_t value =((uint64_t)ip) << 16;
+	value += port;
 	return value;
 }
 

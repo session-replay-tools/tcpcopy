@@ -9,5 +9,6 @@ intercept_SOURCES=\
 intercept_LDADD=\
 				   ../core/libcore.a\
 				   ../log/liblog.a\
+				   ../util/libutil.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a

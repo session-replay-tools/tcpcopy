@@ -2,15 +2,9 @@
 #include "delay.h"
 #include "../communication/msg.h"
 #include "../core/hash.h"
+#include "../util/util.h"
 
 static hash_table *table;
-
-static inline uint64_t get_key(uint32_t ip, uint16_t port)
-{
-	uint64_t value =(uint64_t)ip<<16;
-	value += port;
-	return value;
-}
 
 static void route_table_delete_obsolete(uint64_t key)
 {       

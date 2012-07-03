@@ -3,7 +3,7 @@
 
 #include "../core/xcopy.h"
 
-inline uint64_t get_ip_port_value(uint32_t s_ip,uint16_t s_port);
+inline uint64_t get_key(uint32_t s_ip, uint16_t s_port);
 
 inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
 

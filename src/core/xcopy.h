@@ -35,8 +35,6 @@
 #define RECV_BUF_SIZE 65536
 /* Default mtu for output raw socket */
 #define DEFAULT_MTU   1500
-/* Max mtu supported */
-#define MAX_MTU       4096 
 /* Default listening port for intercept program */
 #define SERVER_PORT   36524
 

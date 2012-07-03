@@ -13,7 +13,7 @@ static uint64_t  raw_packs = 0, valid_raw_packs = 0;
 
 #if (MULTI_THREADS)  
 static int       read_over_flag = 1;
-static char      *pool, item[MAX_MTU + MAX_MTU];
+static char      *pool, *item;
 size_t           pool_max_addr, pool_size, pool_fact;
 static uint64_t  read_cnt = 0, write_cnt = 0, packs_put_cnt = 0;
 static uint64_t  recv_pack_cnt_from_pool = 0;
@@ -222,7 +222,7 @@ static int replicate_packs(char *packet, int length, int replica_num)
  */
 static int retrieve_raw_sockets(int sock)
 {
-	char     *packet, recv_buf[RECV_BUF_SIZE], tmp_packet[MAX_MTU];
+	char     *packet, recv_buf[RECV_BUF_SIZE], tmp_packet[RECV_BUF_SIZE];
 	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
 	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
 	uint32_t seq;
@@ -450,8 +450,9 @@ int tcp_copy_init()
 	/* Init pool */
 	pool_fact = clt_settings.pool_fact;
 	pool_size = 1 << pool_fact;
-	pool_max_addr = pool_size - MAX_MTU;
+	pool_max_addr = pool_size - clt_settings.mtu;
 	pool = (char*)calloc(1, pool_size);
+	item = (char*)calloc(1, clt_settings.mtu+clt_settings.mtu);
 #endif
 
 	/* Init input raw socket info */

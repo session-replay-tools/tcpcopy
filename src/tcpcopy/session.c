@@ -188,6 +188,7 @@ static void session_init(session_t *s, int flag)
 		s->resp_syn_received = 0;
 		s->sess_candidate_erased = 0;
 		s->sess_more = 0;
+		s->port_transfered = 0;
 		s->unack_pack_omit_save_flag = 0;
 		s->resp_greet_received = 0;
 		s->need_resp_greet = 0;
@@ -213,7 +214,15 @@ static void session_init(session_t *s, int flag)
  */
 static void session_init_for_next(session_t *s)
 {
+	uint64_t    key;
 	link_list   *list = s->next_sess_packs;
+	if(s->port_transfered){
+		key = get_key(s->src_addr, s->faked_src_port);
+		if(!hash_del(transfer_port_table, key)){
+			log_info(LOG_WARN, "no hash item for port transfer");
+		}
+	}
+
 	session_init(s, SESS_REUSE);
 
 	if(NULL != list){
@@ -260,11 +269,19 @@ static session_t *session_add(uint64_t key, struct iphdr *ip_header,
 
 static void session_rel_dynamic_mem(session_t *s)
 {
+	uint64_t key;
 	leave_cnt++;
 	if(!check_session_over(s)){
 	    /* Send the last rst packet to backend */
 		send_faked_passive_rst(s);
 		s->sess_over = 1;
+	}
+	if(s->port_transfered){
+		key = get_key(s->src_addr, s->faked_src_port);
+		if(!hash_del(transfer_port_table, key)){
+			log_info(LOG_WARN, "no hash item for port transfer");
+		}
+		s->port_transfered = 0;
 	}
 	if(NULL != s->unsend_packets){
 		link_list_clear(s->unsend_packets);
@@ -1005,7 +1022,7 @@ static void mysql_prepare_for_new_session(session_t *s,
 	/* Use the global first auth user packet for mysql skip-grant-tables */
 	fir_auth_pack = fir_auth_u_p;
 #if (TCPCOPY_MYSQL_ADVANCED)
-	key = get_ip_port_value(ip_header->saddr, tcp_header->source);
+	key = get_key(ip_header->saddr, tcp_header->source);
 	value = hash_find(fir_auth_pack_table, key);
 	if(NULL != value){
 		/* Use the private first auth user packet */
@@ -1299,11 +1316,12 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 #endif
 		s->src_h_port = target_port;
 		target_port = htons(target_port);
-		new_key = get_ip_port_value(ip_header->saddr, target_port);
+		new_key = get_key(ip_header->saddr, target_port);
 		hash_add(transfer_port_table, new_key, 
 				(void *)(long)tcp_header->source);
 		tcp_header->source = target_port;
 		s->faked_src_port  = tcp_header->source;
+		s->port_transfered = 1;
 	}
 
 	/* Send route info to backend */
@@ -1949,7 +1967,8 @@ static int process_client_timeout(session_t *s)
 
 static void proc_clt_cont_when_bak_closed(session_t *s,
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
-{		
+{
+	uint64_t key;
 	/* 
 	 * When the connection to the backend is closed, we 
 	 * reestablish the connection and 
@@ -1960,6 +1979,12 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 		return;
 	}
 #endif
+	if(s->port_transfered){
+		key = get_key(ip_header->saddr, s->faked_src_port);
+		if(!hash_del(transfer_port_table, key)){
+			log_info(LOG_WARN, "no hash item for port transfer");
+		}
+	}
 	session_init(s, SESS_KEEPALIVE);
 	/* It wil change src port when setting true */
 	fake_syn(s, ip_header, tcp_header, true);
@@ -2145,7 +2170,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif	
 	/* Change source port for multiple copying,etc */
-	if(s->faked_src_port != 0){
+	if(s->port_transfered != 0){
 		tcp_header->source = s->faked_src_port;
 	}
 	s->src_h_port = ntohs(tcp_header->source);
@@ -2415,13 +2440,13 @@ void process(char *packet)
 
 	if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
 		/* When the packet comes from the targeted test machine */
-		key = get_ip_port_value(ip_header->daddr, tcp_header->dest);
+		key = get_key(ip_header->daddr, tcp_header->dest);
 		s = hash_find(sessions_table, key);
 		if(NULL == s){
 			/* Give another chance for port changed*/
 			ori_port = hash_find(transfer_port_table, key);
 			if(ori_port != NULL){
-				key = get_ip_port_value(ip_header->daddr,
+				key = get_key(ip_header->daddr,
 						(uint16_t)(long)ori_port);
 				s = hash_find(sessions_table, key);
 			}
@@ -2459,7 +2484,7 @@ void process(char *packet)
 			tcp_header->source = get_port_from_shift(tcp_header->source,
 					clt_settings.rand_port_shifted, clt_settings.factor);
 		}
-		key = get_ip_port_value(ip_header->saddr, tcp_header->source);
+		key = get_key(ip_header->saddr, tcp_header->source);
 		if(tcp_header->syn){
 			s  = hash_find(sessions_table, key);
 			if(s){

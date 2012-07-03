@@ -127,6 +127,8 @@ typedef struct session_s{
 	uint32_t sess_candidate_erased:1;
 	/* Session reused flag */
 	uint32_t sess_more:1;
+	/* Port transfered flag */
+	uint32_t port_transfered:1;
 	/* If set, it will not save the packet to unack list */
 	uint32_t unack_pack_omit_save_flag:1;
 	/* This indicates if server sends response first */
