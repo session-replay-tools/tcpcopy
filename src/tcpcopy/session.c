@@ -1779,21 +1779,6 @@ void update_virtual_status(session_t *s, struct iphdr *ip_header,
 	}
 }
 
-static int check_syn_retransmisson(session_t *s, 
-		struct iphdr *ip_header, struct tcphdr *tcp_header)
-{
-	time_t      now = time(0);
-	int         diff = now - s->create_time;
-	if(diff > 3){
-		/* Retransmit the first syn packet */
-		retransmit_packets(s);
-		s->create_time = now;
-		save_packet(s->unsend_packets, ip_header, tcp_header);
-		return DISP_STOP;
-	}
-	return DISP_CONTINUE;
-}
-
 static void process_client_rst(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)	
 {
@@ -2218,11 +2203,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 
 	/* Syn packet has been sent to back,but not recv back's syn */
 	if(SYN_SENT == s->status){
-		/* Check if it needs to retransmit the syn packet */
-		if(DISP_STOP == check_syn_retransmisson(s, 
-					ip_header, tcp_header)){
-			return;
-		}
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 		return;
 	}
