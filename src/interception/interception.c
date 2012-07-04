@@ -113,7 +113,7 @@ static void interception_process(int fd)
 				router_update(ip_header);
 				now  = time(0);
 				diff = now - last_clean_time;
-				if(diff > DEFAULT_TIMEOUT){
+				if(diff > CHECK_INTERVAL){
 					route_delete_obsolete(now);
 					delay_table_delete_obsolete(now);
 					last_clean_time = now;

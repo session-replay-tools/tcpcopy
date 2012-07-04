@@ -44,6 +44,7 @@
 
 
 #define DEFAULT_TIMEOUT 120
+#define CHECK_INTERVAL  10
 #define DEFAULT_SESSION_TIMEOUT 60
 
 /* The commnunication message flags */
