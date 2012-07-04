@@ -371,6 +371,7 @@ void tcp_copy_exit()
 		raw_sock = -1;
 	}
 	send_close();
+	address_close_sock();
 	log_end();
 #if (MULTI_THREADS)  
 	if(NULL != pool){

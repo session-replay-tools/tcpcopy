@@ -136,6 +136,7 @@ static void interception_process(int fd)
 		}else{
 			close(fd);
 			select_sever_del(fd);
+			log_info(LOG_NOTICE, "close sock:%d",fd);
 		}
 	}
 }

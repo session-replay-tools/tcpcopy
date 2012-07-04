@@ -39,6 +39,16 @@ static void release_resources()
 	}
 }
 
+/* TODO It has to solve the sigignore warning problem */
+static int sigignore(int sig) 
+{    
+	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+
+	if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
+		return -1;
+	}       
+	return 0;
+}
 static void signal_handler(int sig)
 {
 	log_info(LOG_ERR,"set signal handler:%d", sig);
@@ -58,10 +68,12 @@ static void set_signal_handler(){
 	int i=1;
 	atexit(release_resources);
 	/* Just to try */
-	for(; i<SIGTTOU; i++)	
-	{
-		signal(i, signal_handler);
+	for(; i<SIGTTOU; i++){
+		if(i != SIGPIPE){
+			signal(i, signal_handler);
+		}
 	}
+
 }
 
 /* retrieve ip addresses */
@@ -173,21 +185,15 @@ static int read_args(int argc, char **argv){
 	return 0;
 }
 
-/* TODO It has to solve the sigignore warning problem */
-static int sigignore(int sig) 
-{    
-	struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
-
-	if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
-		return -1;
-	}       
-	return 0;
-}
-
 static void set_details()
 {
 	/* Set signal handler */	
 	set_signal_handler();
+	/* Ignore SIGPIPE signals */
+	if (sigignore(SIGPIPE) == -1) {
+		perror("failed to ignore SIGPIPE; sigaction");
+		exit(EXIT_FAILURE);
+	}
 	/* Retrieve ip address */
 	if(srv_settings.raw_ip_list != NULL){
 		retrieve_ip_addr();
@@ -209,6 +215,7 @@ static void set_details()
 /* defaults */
 static void settings_init(void)
 {
+	int i;
 	srv_settings.port = SERVER_PORT;
 	srv_settings.hash_size = 65536;
 	srv_settings.binded_ip = NULL;
