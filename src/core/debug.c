@@ -1,6 +1,6 @@
 #include "xcopy.h"
 
-/* strace packet info for debug */
+/* Strace packet info for debug */
 void strace_pack(int level, int flag,
 		struct iphdr *ip_header, struct tcphdr *tcp_header)
 {

@@ -330,7 +330,7 @@ static void save_packet(link_list *list, struct iphdr *ip_header,
 	p_link_node ln;
 	ln = link_node_malloc(copy_ip_packet(ip_header));
 	ln->key = ntohl(tcp_header->seq);
-	link_list_order_append(list, ln);
+	link_list_append_by_order(list, ln);
 #if (DEBUG_TCPCOPY)
 	log_info(LOG_NOTICE, "save packet");
 #endif

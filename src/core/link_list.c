@@ -9,15 +9,12 @@ p_link_node link_node_malloc(void *data)
 	if(NULL == p){
 		return NULL;
 	}
-	if(NULL == data){
-		fprintf(stderr, "data is null\n");
-	}
 	p->data = data;
 
 	return p;
 }
 
-void link_node_free(p_link_node p)
+inline void link_node_free(p_link_node p)
 {
 	if(p->data != NULL){
 		free(p->data);
@@ -59,24 +56,25 @@ int link_list_clear(link_list *l)
 
 }
 
-void link_list_append(link_list *l, p_link_node p)
+inline void link_list_append(link_list *l, p_link_node p)
 {
 	p_link_node node;
-	node = l->head.prev;
-	node->next       = p;
-	p->prev          = node;
-	l->head.prev     = p;
-	p->next          = &(l->head);
+	node         = l->head.prev;
+	node->next   = p;
+	p->prev      = node;
+	l->head.prev = p;
+	p->next      = &(l->head);
 	l->size++;
 }
 
-void link_list_order_append(link_list *l, p_link_node p)
+/* Append by order*/
+void link_list_append_by_order(link_list *l, p_link_node p)
 {
 	p_link_node node, next;
 	if(l->size > 0){
 		node = l->head.prev;
 		next = node->next;
-		/* find the node which key is less than the key of p */
+		/* Find the node which key is less than the key of p */
 		while(node->key > p->key){
 			next = node;
 			node = node ->prev;
@@ -91,7 +89,7 @@ void link_list_order_append(link_list *l, p_link_node p)
 	}
 }
 
-void link_list_push(link_list *l, p_link_node p)
+inline void link_list_push(link_list *l, p_link_node p)
 {
 	p_link_node node;
 	node         = l->head.next;
@@ -103,7 +101,7 @@ void link_list_push(link_list *l, p_link_node p)
 	return;
 }
 
-p_link_node link_list_remove(link_list *l, p_link_node node)
+inline p_link_node link_list_remove(link_list *l, p_link_node node)
 {
 	p_link_node next, prev;
 	next = node->next;
@@ -114,7 +112,7 @@ p_link_node link_list_remove(link_list *l, p_link_node node)
 	return node;
 }
 
-p_link_node link_list_first(link_list *l)
+inline p_link_node link_list_first(link_list *l)
 {
 	if(l->head.next == &(l->head)){
 		return NULL;
@@ -122,7 +120,7 @@ p_link_node link_list_first(link_list *l)
 	return l->head.next;
 }
 
-p_link_node link_list_tail(link_list *l)
+inline p_link_node link_list_tail(link_list *l)
 {
 	if(l->head.next == &(l->head)){
 		return NULL;
@@ -130,7 +128,7 @@ p_link_node link_list_tail(link_list *l)
 	return l->head.prev;
 }
 
-p_link_node link_list_pop_first(link_list *l)
+inline p_link_node link_list_pop_first(link_list *l)
 {
 	p_link_node first;
 	first = link_list_first(l);
@@ -140,7 +138,7 @@ p_link_node link_list_pop_first(link_list *l)
 	return link_list_remove(l, first);
 }
 
-p_link_node link_list_pop_tail(link_list *l)
+inline p_link_node link_list_pop_tail(link_list *l)
 {
 	p_link_node tail = link_list_tail(l);
 	if(! tail){
@@ -158,7 +156,7 @@ inline p_link_node link_list_get_next(link_list *l, p_link_node p)
 	return p->next;
 } 
 
-int link_list_is_empty(link_list *l)
+inline int link_list_is_empty(link_list *l)
 {
 	if(l->head.next == &(l->head)){
 		return 1;

@@ -1,9 +1,6 @@
 #include "xcopy.h"
 #include "hash.h"
 
-static uint64_t visit_hash_find_node = 0;
-static uint64_t total_compared = 0;
-
 static hash_node *hash_node_malloc(uint64_t key, void *data)
 {
 	hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
@@ -33,10 +30,10 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key)
 	link_list   *l  = get_link_list(table, key);
 	p_link_node ln  = link_list_first(l);
 	hash_node   *hn;
-	visit_hash_find_node++;
+	table->total_visit++;
 	while(ln){
 		hn = (hash_node *)ln->data;
-		total_compared++;
+		table->total_key_compared++;
 		if(hn->key == key){
 			hn->access_time = time(0);
 			hn->visit_cnt++;
@@ -78,7 +75,7 @@ hash_table *hash_create(size_t size)
 	return ht;
 }
 
-link_list *get_link_list(hash_table *table, uint64_t key)
+inline link_list *get_link_list(hash_table *table, uint64_t key)
 {
 	size_t slot = get_slot(key, table->size);
 	return table->lists[slot];
@@ -150,7 +147,7 @@ void hash_destory(hash_table *table)
 	}
 	free(table->lists);
 	log_info(LOG_NOTICE, "total visit hash_find_node:%llu,compared:%llu",
-			visit_hash_find_node, total_compared);
+			table->total_visit, table->total_key_compared);
 	log_info(LOG_NOTICE, "destroy items %d in table name:%s",
 			count, table->name);
 }
