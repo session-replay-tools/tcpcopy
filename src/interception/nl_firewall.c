@@ -2,7 +2,7 @@
 #include "nl.h"
 #include "nl_firewall.h"
 
-/* initiate for netlink firewall*/
+/* Initiate for netlink firewall*/
 int nl_firewall_init()
 {
 	int sock = nl_init(NETLINK_FIREWALL, FIREWALL_GROUP);
@@ -12,7 +12,7 @@ int nl_firewall_init()
 
 static char buffer[65536];
 
-/* receive message from netlink firewall */
+/* Receive message from netlink firewall */
 struct iphdr *nl_firewall_recv(int sock, unsigned long *packet_id)
 {
 	ssize_t len = nl_recv(sock, buffer, sizeof(buffer));

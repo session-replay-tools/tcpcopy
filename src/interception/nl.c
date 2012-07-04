@@ -13,7 +13,7 @@ static int sock_init(int protocol)
 	return sock;
 }
 
-/* initiate for netlink socket */
+/* Initiate for netlink socket */
 int nl_init(int protocol, int groups)
 {
 	int rcvbuf = 1048576;
@@ -22,7 +22,7 @@ int nl_init(int protocol, int groups)
 	return sock;
 }
 
-/* set mode for netlink socket */
+/* Set mode for netlink socket */
 void nl_set_mode(int sock, uint8_t mode, size_t range)
 {
 	struct sockaddr_nl  addr;
@@ -59,7 +59,7 @@ void nl_set_mode(int sock, uint8_t mode, size_t range)
 	}
 }
 
-/* receive message from netlink socket*/
+/* Receive message from netlink socket*/
 ssize_t nl_recv(int sock, void *buffer, size_t length)
 {
 	ssize_t recv_len = recv(sock, buffer, length, 0);
@@ -74,7 +74,7 @@ ssize_t nl_recv(int sock, void *buffer, size_t length)
 	return recv_len;
 }
 
-/* get payload of netlink message */
+/* Get payload of netlink message */
 void *nl_get_payload(void *buf){
 	return NLMSG_DATA((struct nlmsghdr *)(buf));
 }

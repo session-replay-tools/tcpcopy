@@ -105,7 +105,7 @@ void router_update(struct iphdr *ip_header)
 		payload =(unsigned char*)((char*)tcp_header + size_tcp);
 		if(cont_len <= MAX_PAYLOAD_LEN){
 			/*
-			 * only transfer payload if content length is less
+			 * Only transfer payload if content length is less
 			 * than MAX_PAYLOAD_LEN
 			 */
 			memcpy((void *)&(msg.payload), payload, cont_len);

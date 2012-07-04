@@ -123,7 +123,7 @@ static void *dispose(void *thread_id)
 	}else{
 		log_info(LOG_NOTICE, "I am booted with no thread id");
 	}
-	/* Loop */
+	/* Loop for processing packets */
 	while(1){
 		packet = get_pack_from_pool();
 		process(packet);
@@ -166,7 +166,7 @@ static int init_input_raw_socket()
 	 */
 	sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
 #else 
-	/* copy ip datagram from IP layer*/
+	/* Copy ip datagram from IP layer*/
 	sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 #endif
 	if(-1 == sock){

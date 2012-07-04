@@ -141,7 +141,7 @@ static void interception_process(int fd)
 	}
 }
 
-/* initiate for tcpcopy server*/
+/* Initiate for tcpcopy server*/
 void interception_init(uint16_t port)
 {
 	delay_table_init(srv_settings.hash_size);

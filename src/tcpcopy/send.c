@@ -18,8 +18,8 @@ int send_init(){
 		log_info(LOG_ERR, "it can't create raw output socket");
 	} 
 	/*
-	 * Tell the IP layer not to prepend its own header
-	 * it does not need setting for linux,but *BSD needs
+	 * Tell the IP layer not to prepend its own header.
+	 * It does not need setting for linux,but *BSD needs
 	 */
 	if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
 		perror("IP_HDRINCL");  
@@ -41,7 +41,7 @@ int send_close(){
 
 /*
  * Send the ip packet to the remote test server
- * (it will not go through ip fragmentation))
+ * (It will not go through ip fragmentation)
  */
 ssize_t send_ip_packet(struct iphdr *ip_header,
 		uint16_t tot_len)

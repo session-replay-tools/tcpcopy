@@ -628,7 +628,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
 	tcp_header->check = tcpcsum((unsigned char *)ip_header,
 			(unsigned short *)tcp_header, (int)(tot_len - size_ip));
 	/*
-	 * for linux 
+	 * For linux 
 	 * The two fields that are always filled in are: the IP checksum 
 	 * (hopefully for us - it saves us the trouble) and the total length, 
 	 * iph->tot_len, of the datagram 
@@ -993,7 +993,6 @@ static void fill_protocol_common_header(struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
 {
 	/* IPv4 */
-
 	ip_header->version  = 4;
 	/* The header length is the number of 32-bit words in the header */
 	ip_header->ihl      = IP_HEADER_LEN/4;
@@ -1222,10 +1221,10 @@ static void send_faked_ack(session_t *s , struct iphdr *ip_header,
 	f_tcp_header->ack     = 1;
 	f_tcp_header->ack_seq = s->vir_ack_seq;
 	if(active){
-		/* seq is determined by session virtual next seq */
+		/* Seq is determined by session virtual next seq */
 		f_tcp_header->seq = htonl(s->vir_next_seq);
 	}else{
-		/* seq is determined by backend ack seq */
+		/* Seq is determined by backend ack seq */
 		f_tcp_header->seq = tcp_header->ack_seq;
 	}
 	s->unack_pack_omit_save_flag = 1;
@@ -2188,7 +2187,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	s->src_h_port = ntohs(tcp_header->source);
 
 #if (TCPCOPY_MYSQL_BASIC)
-	/* subtract client packet's seq for mysql */
+	/* Subtract client packet's seq for mysql */
 	if(s->mysql_req_begin){
 		tcp_header->seq = htonl(ntohl(tcp_header->seq) - 
 				s->mysql_vir_req_seq_diff);

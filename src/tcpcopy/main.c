@@ -383,7 +383,7 @@ static void settings_init()
 int main(int argc ,char **argv)
 {
 	int ret;
-	/* set defaults*/
+	/* set defaults */
 	settings_init();
 	/* Read args */
 	read_args(argc, argv);
