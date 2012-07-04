@@ -677,8 +677,8 @@ static int retransmit_packets(session_t *s)
 		tcp_header = (struct tcphdr *)((char *)ip_header + size_ip);
 		if(SYN_SENT == s->status){
 			/* Retransmit the first handshake packet */
-			s->unack_pack_omit_save_flag = 1;
-			wrap_send_ip_packet(s, data, true);
+			/*s->unack_pack_omit_save_flag = 1;
+			wrap_send_ip_packet(s, data, true);*/
 			break;
 		}
 		cont_len = get_pack_cont_len(ip_header, tcp_header);
@@ -894,7 +894,7 @@ static int send_reserved_packets(session_t *s)
 
 	if(SYN_CONFIRM > s->status){
 		log_info(LOG_WARN, "syn been sent but not syn acked");
-		retransmit_packets(s);
+		/*retransmit_packets(s);*/
 		return count;
 	}
 	list = s->unsend_packets;
@@ -1587,9 +1587,8 @@ static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
 		tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
 		/* Send the constructed reset packet to backend */
 		send_faked_rst(s, ip_header, tcp_header);
-	}else{
-		s->sess_over = 1;
 	}
+	s->sess_over = 1;
 }
 
 #if (TCPCOPY_MYSQL_BASIC)

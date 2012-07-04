@@ -6,6 +6,7 @@
 
 	typedef struct hash_node_s{
 		uint64_t key;
+		uint32_t visit_cnt;
 		time_t   access_time;
 		void     *data;
 	}hash_node_t, hash_node;

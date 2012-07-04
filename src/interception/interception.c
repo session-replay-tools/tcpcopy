@@ -144,7 +144,7 @@ static void interception_process(int fd)
 void interception_init(uint16_t port)
 {
 	delay_table_init(srv_settings.hash_size);
-	router_init(srv_settings.hash_size);
+	router_init(srv_settings.hash_size << 1);
 	select_sever_set_callback(interception_process);
 	msg_listen_sock = msg_server_init(srv_settings.binded_ip, port);
 	log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);

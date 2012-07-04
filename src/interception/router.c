@@ -11,34 +11,40 @@ void route_delete_obsolete(time_t cur_time)
 	hash_node   *hn;
 	p_link_node ln;
 	link_list   *l;
-	int         i, count = 0;
+	int         i, count = 0, timeout;
 
 	log_info(LOG_NOTICE, "router size:%u", table->total);
 	for(i = 0; i < table->size; i++){
 		l  = table->lists[i];
-		while(true){
-			ln = link_list_tail(l); 
-			if(NULL == ln){
-				break;
-			}       
-			hn = (hash_node *)ln->data;
-			if((hn->access_time + table->timeout) < cur_time){
-				link_list_pop_tail(l);
-				free(hn);
-				ln->data = NULL;
-				free(ln);
-				table->total--;
-				count++;
-			}else{
-				break;
-			}   
+		if(l->size > 0){
+			while(true){
+				ln = link_list_tail(l); 
+				if(NULL == ln){
+					break;
+				}       
+				hn = (hash_node *)ln->data;
+				timeout = table->timeout;
+				if(0 == hn->visit_cnt){
+					timeout = 3;
+				}
+				if((hn->access_time + timeout) < cur_time){
+					link_list_pop_tail(l);
+					free(hn);
+					ln->data = NULL;
+					free(ln);
+					table->total--;
+					count++;
+				}else{
+					break;
+				}   
+			}
 		}
 	} 
 	log_info(LOG_NOTICE, "router delete obsolete:%d", count);
 }
 
 
-/* initiate router table */
+/* Initiate router table */
 void router_init(size_t size)
 {
 	table = hash_create(size);
@@ -47,7 +53,7 @@ void router_init(size_t size)
 			table->name, table->size);
 }
 
-/* delete item in router table */
+/* Delete item in router table */
 void router_del(uint32_t ip,uint16_t port)
 {
 	uint64_t key = get_key(ip, port);
@@ -55,7 +61,7 @@ void router_del(uint32_t ip,uint16_t port)
 	delay_table_del(key);
 }
 
-/* add item to the router table */
+/* Add item to the router table */
 void router_add(uint32_t ip, uint16_t port, int fd)
 {
 	uint64_t key=get_key(ip, port);
@@ -63,7 +69,7 @@ void router_add(uint32_t ip, uint16_t port, int fd)
 	delay_table_send(key, fd);
 }
 
-/* update router table */
+/* Update router table */
 void router_update(struct iphdr *ip_header)
 {
 	uint32_t               size_ip;
@@ -112,7 +118,7 @@ void router_update(struct iphdr *ip_header)
 	msg_server_send((int)(long)fd, &msg);
 }
 
-/* destroy router table */
+/* Destroy router table */
 void router_destroy()
 {
 	if(table != NULL)
