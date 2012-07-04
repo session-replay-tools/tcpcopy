@@ -15,7 +15,7 @@ inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
 	if(dest_port < (65536 - add)){
 		dest_port += add;
 	}else{
-		dest_port  = 32768 + add;
+		dest_port  = 1024 + add;
 	}
 	return dest_port;
 }

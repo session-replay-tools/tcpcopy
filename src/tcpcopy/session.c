@@ -424,7 +424,6 @@ static void activate_dead_sessions()
 					log_info(LOG_NOTICE, "already del:%u", s->src_h_port);
 				}
 				if(is_session_dead(s)){
-					log_info(LOG_NOTICE, "activate:%u", s->src_h_port);
 					send_reserved_packets(s);
 				}
 			}
@@ -1584,6 +1583,8 @@ static void process_back_fin_pack(session_t *s, struct iphdr *ip_header,
 		/* Send the constructed reset packet to backend */
 		send_faked_rst(s, ip_header, tcp_header);
 	}
+	/* Why session over so quickily,this is for releasing router info */
+	/* Too many router info will slow the intercep program */
 	s->sess_over = 1;
 }
 
@@ -2488,7 +2489,6 @@ void process(char *packet)
 			strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 			log_info(LOG_DEBUG, "no active session for me");
 #endif
-			/* TODO it should ack */
 		}
 	}
 	else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){

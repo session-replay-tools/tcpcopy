@@ -2,8 +2,8 @@
 #define  _PROTOCOL_INC
 
 /*
- * we support only mysql 4.1 and later
- * ssl is not supported here
+ * We support only mysql 4.1 and later.
+ * SSL is not supported here
  */
 
 int is_last_data_packet(unsigned char *payload);

@@ -3,7 +3,6 @@
 
 static hash_table *user_pwd_table;
 
-
 static uint64_t get_key_from_user(char *user)
 {
 	size_t len, i;

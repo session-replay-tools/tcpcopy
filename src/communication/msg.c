@@ -64,6 +64,7 @@ static void sock_bind(int sock, const char *binded_ip, uint16_t port)
 	local_addr.sin_port   = ntohs(port);
 	local_addr.sin_family = AF_INET;
 	if(binded_ip != NULL){
+		/* Set binded ip for security reasons */
 		inet_aton(binded_ip, &local_addr.sin_addr);
 	}
 	length = (socklen_t)(sizeof(local_addr));

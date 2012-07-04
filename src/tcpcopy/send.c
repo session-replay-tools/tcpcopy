@@ -49,23 +49,20 @@ ssize_t send_ip_packet(struct iphdr *ip_header,
 	/*
 	 * The IP layer isn't involved at all. This has one negative effect 
 	 * in result(although in performance it's better): 
-	 * no IP fragmentation will take place if needed. 
+	 * No IP fragmentation will take place if needed. 
 	 * This means that a raw packet larger than the MTU of the 
 	 * interface will probably be discarded. Instead ip_local_error(), 
 	 * which does general sk_buff cleaning,is called and an error EMSGSIZE 
 	 * is returned. On the other hand, normal raw socket frag.
-	 * if tot_len is more than 1500,it will fail
 	 */
 	ssize_t send_len = 0;
-	if(sock > 0)
-	{
+	if(sock > 0){
 		dst_addr.sin_addr.s_addr = ip_header->daddr;
 		send_len = sendto(sock, (char *)ip_header, tot_len, 0,
 				(struct sockaddr *)&dst_addr, sizeof(dst_addr));
-		if(-1 == send_len)
-		{
+		if(-1 == send_len){
 			perror("send to");
-			log_info(LOG_ERR,"send to:%s", strerror(errno));
+			log_info(LOG_ERR, "send to:%s", strerror(errno));
 		}
 	}
 

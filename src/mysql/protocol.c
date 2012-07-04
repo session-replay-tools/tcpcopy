@@ -11,8 +11,8 @@ static inline unsigned char char_val(unsigned char X)
 
 static void new_hash(uint64_t *result, const char *password)
 {
-	uint64_t nr  = 1345345333L, add = 7;
-	uint64_t nr2 = 0x12345671L, tmp;
+	uint64_t   nr  = 1345345333L, add = 7;
+	uint64_t   nr2 = 0x12345671L, tmp;
 	int        i = 0, length;
 
 	length = strlen(password);
@@ -39,17 +39,17 @@ static void new_hash(uint64_t *result, const char *password)
  */
 void new_crypt(char *result, const char *password, char *message)
 {
-	char   b;
-	double d;
+	char     b;
+	double   d;
 	uint64_t pw[2], msg[2], max, seed1, seed2;
-	int length, i;
+	int      length, i;
 
-	new_hash(pw,message);
-	new_hash(msg,password);
+	new_hash(pw, message);
+	new_hash(msg, password);
 	max = 0x3fffffffL;
 	seed1 = (pw[0] ^ msg[0]) % max;
 	seed2 = (pw[1] ^ msg[1]) % max;
-	length=strlen(message);
+	length = strlen(message);
 
 	for (i =0; i < length; i++) {
 		seed1 = ((seed1 * 3) + seed2) % max;
@@ -74,7 +74,7 @@ int is_last_data_packet(unsigned char *payload)
 	size_t        len;
 
 	p   = payload;
-	len = p[0]+(p[1]<<8)+(p[2]<<16);
+	len = p[0] + (p[1] << 8) + (p[2] << 16);
 
 	if(len < 9){
 		/*Skip Packet Length*/
@@ -93,7 +93,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 		                size_t length, char *scramble_buff)
 {
 	/*
-	 * the following is the protocol format of mysql handshake
+	 * The following is the protocol format of mysql handshake
 	 *
 	 * 1                            protocol_version
 	 * n (Null-Terminated String)   server_version
@@ -116,17 +116,17 @@ int parse_handshake_init_cont(unsigned char *payload,
 	size_t        len, count, str_len;
 
 	p = payload;
-	/*Skip Packet Length*/
-	p = p+3;
-	/*Skip Packet Number*/
-	p = p+1;
-	/*Skip protocol_version*/
+	/* Skip Packet Length */
+	p = p + 3;
+	/* Skip Packet Number */
+	p = p + 1;
+	/* Skip protocol_version */
 	p++;
 	str = (char *)p;
 	len = strlen(str);
-	/*Skip server_version*/
+	/* Skip server_version */
 	p   = p + len + 1;
-	/*Skip thread_id*/
+	/* Skip thread_id */
 	p   += 4;
 	str = (char *)p;
 	count = p - payload + 8;
@@ -136,19 +136,19 @@ int parse_handshake_init_cont(unsigned char *payload,
 		return 0;
 	}
 	strncpy(scramble_buff, (char *)p, 8);	
-	/*Skip scramble_buff*/
+	/* Skip scramble_buff */
 	p = p + 8 + 1;
-	/*Skip server_capabilities*/
+	/* Skip server_capabilities */
 	p = p + 2;
-	/*Skip server_language*/
+	/* Skip server_language */
 	p = p + 1;
-	/*Skip server_status*/
+	/* Skip server_status */
 	p = p + 2;
-	/*Skip server capabilities (two upper bytes)*/
+	/* Skip server capabilities (two upper bytes) */
 	p = p + 2;
-	/*Skip length of the scramble*/
+	/* Skip length of the scramble */
 	p = p + 1;
-	/*Skip (filler)  always 0*/
+	/* Skip (filler)  always 0 */
 	p = p + 10;
 	str = (char *)p;
 	str_len = strlen(str) + 8;
@@ -162,7 +162,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 		}
 		return 0;
 	}
-	/*Copy the rest of scramble_buff*/
+	/* Copy the rest of scramble_buff */
 	strncpy(scramble_buff + 8, str, strlen(str));
 
 	return 1;
@@ -183,22 +183,22 @@ int change_client_auth_content(unsigned char *payload,
 	char   *str;
 	size_t len, i;
 	char   user[256], *pwd;
-	unsigned char *p, scramble_buff[SCRAMBLE_LENGTH+1];
+	unsigned char *p, scramble_buff[SCRAMBLE_LENGTH + 1];
 
-	memset(scramble_buff,0,SCRAMBLE_LENGTH+1);
+	memset(scramble_buff, 0, SCRAMBLE_LENGTH + 1);
 	p = payload;
-	/*Skip mysql packet header */
-	/*Skip Packet Length*/
+	/* Skip mysql packet header */
+	/* Skip Packet Length */
 	p = p + 3;
-	/*Skip Packet Number*/
+	/* Skip Packet Number */
 	p = p + 1;
-	/*Skip client_flags*/
+	/* Skip client_flags */
 	p = p + 4;
-	/*Skip max_packet_size*/
+	/* Skip max_packet_size */
 	p = p + 4;
-	/*Skip charset_number*/
+	/* Skip charset_number */
 	p = p + 1;
-	/*Skip (filler) always 0x00...*/
+	/* Skip (filler) always 0x00... */
 	p = p + 23;
 	len = p - payload;
 	if(len > length){
@@ -216,9 +216,9 @@ int change_client_auth_content(unsigned char *payload,
 		log_info(LOG_WARN, "user:%s,pwd is null", user);
 		return 0;
 	}
-	/*Skip user*/
+	/* Skip user */
 	p = p + strlen(str) + 1;
-	/*Skip scramble_buff length*/
+	/* Skip scramble_buff length */
 	p = p + 1;
 	len = p - payload + SCRAMBLE_LENGTH;
 	if(len > length){
@@ -253,10 +253,10 @@ int change_client_second_auth_content(unsigned char *payload,size_t length,
 	size_t        i, len;
 
 	p = payload;
-	/*Skip mysql packet header */
-	/*Skip Packet Length*/
+	/* Skip mysql packet header */
+	/* Skip Packet Length */
 	p = p + 3;
-	/*Skip Packet Number*/
+	/* Skip Packet Number */
 	p = p + 1;
 	len = p - payload + 8;
 	if(len > length){
@@ -264,7 +264,7 @@ int change_client_second_auth_content(unsigned char *payload,size_t length,
 				length, len);
 		return 0;
 	}
-	/*change scramble_buff according to the target server scramble*/
+	/* Change scramble_buff according to the target server scramble */
 	for(i = 0; i < 8; i++){
 		p[i] = new_content[i];
 	}
