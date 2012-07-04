@@ -26,7 +26,7 @@ static struct msg_server_s *copy_message(struct msg_server_s *msg)
 
 void delay_table_delete_obsolete(time_t cur_time)
 {
-	int         i, count;
+	int         i, count = 0;
 	hash_node   *hn1, *hn2;
 	p_link_node ln, tail;
 	link_list   *msg_list, *l;
@@ -63,7 +63,7 @@ void delay_table_delete_obsolete(time_t cur_time)
 			}   
 		} 
 	}
-	log_info(LOG_NOTICE,"delay delete obsolete :%d", count);
+	log_info(LOG_NOTICE, "delay delete obsolete :%d", count);
 }
 
 
