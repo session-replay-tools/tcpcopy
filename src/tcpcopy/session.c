@@ -528,7 +528,7 @@ static void clear_timeout_sessions()
 		if(!list){
 			continue;
 		}
-	    ln   = link_list_first(list);	
+		ln   = link_list_first(list);	
 		while(ln){
 			tmp_ln = link_list_get_next(list, ln);
 			hn = (hash_node *)ln->data;
@@ -1850,7 +1850,7 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* Practical experience */
-	if(s->resp_last_ack_seq == tcp_header->seq){
+	if(s->resp_last_ack_seq == ntohl(tcp_header->seq)){
 		if(s->candidate_response_waiting){
 			save_packet(s->unsend_packets, ip_header, tcp_header);
 		}else{
@@ -2314,7 +2314,7 @@ void restore_buffered_next_session(session_t *s)
  */
 bool is_packet_needed(const char *packet)
 {
-	bool          isNeeded = false;
+	bool          is_needed = false;
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
 	uint16_t      size_ip, size_tcp, tot_len;
@@ -2323,14 +2323,14 @@ bool is_packet_needed(const char *packet)
 
 	/* Check if it is a tcp packet */
 	if(ip_header->protocol != IPPROTO_TCP){
-		return isNeeded;
+		return is_needed;
 	}
 
 	size_ip   = ip_header->ihl << 2;
 	tot_len =ntohs(ip_header->tot_len);
 	if (size_ip < 20) {
 		log_info(LOG_WARN, "Invalid IP header length: %d", size_ip);
-		return isNeeded;
+		return is_needed;
 	}
 
 	tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
@@ -2338,20 +2338,20 @@ bool is_packet_needed(const char *packet)
 	if (size_tcp < 20) {
 		log_info(LOG_WARN,"Invalid TCP header len: %d bytes,pack len:%d",
 				size_tcp, tot_len);
-		return isNeeded;
+		return is_needed;
 	}
 
 	/* Here we filter the packets we do care about */
 	if(LOCAL == check_pack_src(&(clt_settings.transfer), 
 				ip_header->daddr, tcp_header->dest)){
-		isNeeded = true;
+		is_needed = true;
 		if(tcp_header->syn){
 			clt_syn_cnt++;
 		}
 		clt_packs_cnt++;
 	}
 
-	return isNeeded;
+	return is_needed;
 
 }
 

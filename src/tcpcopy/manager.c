@@ -365,6 +365,7 @@ static void dispose_event(int fd)
 void tcp_copy_exit()
 {
 	int i;
+	fprintf(stderr, "tcp copy exit\n");
 	destroy_for_sessions();
 	if(-1 != raw_sock){
 		close(raw_sock);
@@ -425,6 +426,7 @@ void tcp_copy_over(const int sig)
 		}
 	}
 #endif
+	sync();
 	exit(EXIT_SUCCESS);
 }
 

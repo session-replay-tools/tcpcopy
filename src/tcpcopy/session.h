@@ -46,9 +46,7 @@ typedef struct session_s{
 	uint32_t vir_next_seq;
 
 	/* Response variables */
-	/* Last sequence from backend response */
-	uint32_t resp_last_seq;
-	/* Last acknowledgement sequence from backend response */
+	/* Last acknowledgement seq from backend response (host byte order) */
 	uint32_t resp_last_ack_seq;
 
 	/* Captured variables */

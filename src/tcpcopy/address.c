@@ -36,5 +36,6 @@ int address_close_sock()
 			addr[i].sock = 0;
 		}
 	}
+	return 0;
 }
 
