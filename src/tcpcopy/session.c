@@ -27,6 +27,8 @@ static hash_table *sec_auth_pack_table;
 
 /* Total client syn packets */
 static uint64_t clt_syn_cnt         = 0;
+/* Total client content packets */
+static uint64_t clt_cont_cnt        = 0;
 /* Total client packets */
 static uint64_t clt_packs_cnt       = 0;
 /* Total sessions deleted */
@@ -2317,7 +2319,7 @@ bool is_packet_needed(const char *packet)
 	bool          is_needed = false;
 	struct tcphdr *tcp_header;
 	struct iphdr  *ip_header;
-	uint16_t      size_ip, size_tcp, tot_len;
+	uint16_t      size_ip, size_tcp, tot_len, cont_len;
 
 	ip_header = (struct iphdr*)packet;
 
@@ -2345,8 +2347,11 @@ bool is_packet_needed(const char *packet)
 	if(LOCAL == check_pack_src(&(clt_settings.transfer), 
 				ip_header->daddr, tcp_header->dest)){
 		is_needed = true;
+		cont_len  = tot_len - size_tcp - size_ip;
 		if(tcp_header->syn){
 			clt_syn_cnt++;
+		}else if(cont_len > 0){
+			clt_cont_cnt++;
 		}
 		clt_packs_cnt++;
 	}
@@ -2375,8 +2380,8 @@ static void output_stat(time_t now, int run_time)
 			recon_for_closed_cnt, recon_for_no_syn_cnt);
 	log_info(LOG_NOTICE, "total successful retransmit:%llu",
 			retrans_succ_cnt);
-	log_info(LOG_NOTICE, "syn total:%llu,all client packets:%llu",
-			clt_syn_cnt, clt_packs_cnt);
+	log_info(LOG_NOTICE, "syn cnt:%llu,all clt packs:%llu, clt cont:%llu",
+			clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
 
 	/* This is for checking memory leak */
 	clear_timeout_sessions();
