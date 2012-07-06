@@ -1014,8 +1014,8 @@ static void fill_protocol_common_header(struct iphdr *ip_header,
 	ip_header->protocol = IPPROTO_TCP;
 	/* The TCP header length(the number of 32-bit words in the header) */
 	tcp_header->doff    = 5;
-	/* Window size */
-	tcp_header->window  = htons(65535);
+	/* Window size(you may feel strange here) */
+	tcp_header->window  = 65535;
 }
 
 #if (TCPCOPY_MYSQL_BASIC)
@@ -1314,17 +1314,11 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 	bool     result;
 	uint16_t target_port;
 	uint64_t new_key;
-#if (TCPCOPY_MYSQL_BASIC)
-	log_info(LOG_WARN, "fake syn:%u", s->src_h_port);
-#else
-	log_info(LOG_DEBUG, "fake syn:%u", s->src_h_port);
-#endif
+	log_info(LOG_NOTICE, "fake syn:%u", s->src_h_port);
 	if(is_hard){
 		target_port = get_port_by_rand_addition(tcp_header->source);
-#if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE, "change port from :%u to :%u",
 				ntohs(tcp_header->source), target_port);
-#endif
 		s->src_h_port = target_port;
 		target_port = htons(target_port);
 		new_key = get_key(ip_header->saddr, target_port);
@@ -1500,7 +1494,7 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 			}
 		}
 		/* When the slide window in test server is full*/
-		if(0 == ntohs(tcp_header->window)){
+		if(0 == tcp_header->window){
 			log_info(LOG_NOTICE, "slide window zero:%u", s->src_h_port);
 			/* Although slide window is full, it may require retransmission */
 			if(!s->slide_window_full){
@@ -2172,6 +2166,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 		tcp_header->source = s->faked_src_port;
 	}
 	s->src_h_port = ntohs(tcp_header->source);
+	tcp_header->window  = 65535;
 
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Subtract client packet's seq for mysql */
