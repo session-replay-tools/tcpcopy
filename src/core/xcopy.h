@@ -47,10 +47,6 @@
 #define CHECK_INTERVAL  10
 #define DEFAULT_SESSION_TIMEOUT 60
 
-/* The commnunication message flags */
-#define  CLIENT_ADD   1
-#define  CLIENT_DEL   2
-
 /* Max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
@@ -73,8 +69,28 @@
  */
 #define RECV_POOL_SIZE_SHF 24     /* Default 16M size */
 #define RECV_POOL_MAX_SIZE_SHF 30 /* Max 1G size */
-#define RECV_POOL_MIN_SIZE_SHF 20 /* Max 1G size */
+#define RECV_POOL_MIN_SIZE_SHF 20 /* Min 1M size */
 #endif
+
+/* Log constants */
+#define LOG_STDERR            0
+#define LOG_EMERG             1
+#define LOG_ALERT             2
+#define LOG_CRIT              3
+#define LOG_ERR               4
+#define LOG_WARN              5
+#define LOG_NOTICE            6
+#define LOG_INFO              7
+#define LOG_DEBUG             8
+
+/* The route flags */
+#define  CLIENT_ADD   1
+#define  CLIENT_DEL   2
+
+/* Where is the packet from (source flag) */
+#define UNKNOWN 0
+#define REMOTE  1
+#define LOCAL   2
 
 /* Session constants from the client perspective */
 #define SESS_CREATE    0
@@ -107,22 +123,6 @@
 #define MAX_PAYLOAD_LEN  128
 #endif
 
-/* Log constants */
-#define LOG_STDERR            0
-#define LOG_EMERG             1
-#define LOG_ALERT             2
-#define LOG_CRIT              3
-#define LOG_ERR               4
-#define LOG_WARN              5
-#define LOG_NOTICE            6
-#define LOG_INFO              7
-#define LOG_DEBUG             8
-
-/* Where is the packet from (source flag) */
-#define REMOTE  1
-#define LOCAL   2
-#define UNKNOWN 0
-
 /* Bool constants*/
 #if HAVE_STDBOOL_H
 #include <stdbool.h>
@@ -131,8 +131,6 @@
 #define false 0
 #define true 1
 #endif 
-
-
 
 enum session_status{
 	CLOSED       = 0,
@@ -170,7 +168,6 @@ enum packet_classification{
 #include <limits.h>
 #include <signal.h>
 #include <unistd.h>
-#include <pthread.h>
 #include <time.h>
 #include <errno.h>
 #include <math.h>
@@ -179,9 +176,13 @@ enum packet_classification{
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
+#if(MULTI_THREADS)
+#include <pthread.h>
+#endif
 
 typedef struct ip_port_pair_mapping_s
 {
+	/* Online ip from the client perspective */
 	uint32_t online_ip;
 	uint32_t target_ip;
 	uint16_t online_port;
@@ -200,6 +201,7 @@ typedef struct passed_ip_addr_s{
 	int num;
 }passed_ip_addr_t;
 
+/* For tcpcopy client */
 typedef struct xcopy_clt_settings {
 	/* Replicated number of each request */
 	unsigned int  replica_num:10;
@@ -220,7 +222,7 @@ typedef struct xcopy_clt_settings {
 	/* Max memory size allowed for tcpcopy client(max size 2G) */
 	unsigned int max_rss:21;
 	/* 
-	 * Max session timeout
+	 * Max value for session timeout
 	 * If it reaches this value, the session will be removed 
 	 */
 	unsigned int session_timeout:16;
@@ -242,6 +244,7 @@ typedef struct xcopy_clt_settings {
 	ip_port_pair_mappings_t transfer;
 }xcopy_clt_settings;
 
+/* For intercept */
 typedef struct xcopy_srv_settings {
 	/* Raw ip list */
 	char *raw_ip_list;

@@ -5,7 +5,7 @@
 	{
 		struct link_node_s *prev;
 		struct link_node_s *next;
-		void   *data;
+		void     *data;
 		uint32_t key;
 	}link_node_t, link_node, *p_link_node;
 
@@ -16,7 +16,7 @@
 
 
 	p_link_node link_node_malloc(void *data);
-	inline void link_node_free(p_link_node p);
+	inline void link_node_internal_free(p_link_node p);
 
 	link_list *link_list_create();
 	int link_list_clear(link_list *l);
@@ -29,7 +29,7 @@
 	inline p_link_node link_list_pop_first(link_list *l);
 	inline p_link_node link_list_pop_tail(link_list *l);
 	inline p_link_node link_list_get_next(link_list *l, p_link_node p);
-	inline int link_list_is_empty(link_list *l);
+	inline bool link_list_is_empty(link_list *l);
 
 #endif   /* ----- #ifndef _LINK_LIST_H_INC  ----- */
 

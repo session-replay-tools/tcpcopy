@@ -16,15 +16,16 @@ void strace_pack(int level, int flag,
 	}
 
 	src_addr.s_addr = ip_header->saddr;
-	tmp_buf = inet_ntoa(src_addr);
+	tmp_buf         = inet_ntoa(src_addr);
 	strcpy(src_ip, tmp_buf);
 	dst_addr.s_addr = ip_header->daddr;
-	tmp_buf = inet_ntoa(dst_addr);
+	tmp_buf         = inet_ntoa(dst_addr);
 	strcpy(dst_ip, tmp_buf);
-	pack_size = ntohs(ip_header->tot_len);
-	seq       = ntohl(tcp_header->seq);
-	ack_seq   = ntohl(tcp_header->ack_seq);
-	window    = tcp_header->window;
+	pack_size       = ntohs(ip_header->tot_len);
+	seq             = ntohl(tcp_header->seq);
+	ack_seq         = ntohl(tcp_header->ack_seq);
+	/* Strange here, not using ntohs */
+	window          = tcp_header->window;
 
 	if(BACKEND_FLAG == flag){
 		log_info(level, "from bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",

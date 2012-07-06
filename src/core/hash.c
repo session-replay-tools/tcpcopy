@@ -15,12 +15,12 @@ static hash_node *hash_node_malloc(uint64_t key, void *data)
 	hn->key  = key;
 	hn->data = data;
 	hn->access_time = time(0);
-	hn->visit_cnt = 0;
+	hn->visit_cnt   = 0;
 
 	return hn;
 }
 
-static inline size_t get_slot(uint64_t key,size_t size)
+static inline size_t get_slot(uint64_t key, size_t size)
 {
 	return key%size;
 }
@@ -42,7 +42,7 @@ static p_link_node hash_find_node(hash_table *table, uint64_t key)
 			link_list_push(l, ln);
 			return ln;
 		}
-		ln = link_list_get_next(l,ln);
+		ln = link_list_get_next(l, ln);
 	}
 	return NULL;
 }
@@ -61,8 +61,8 @@ hash_table *hash_create(size_t size)
 	ht->size  = size;
 	ht->lists = (link_list **) calloc(size, sizeof(link_list *));
 	if(NULL == ht->lists){
-		perror("can't malloc memory!");
-		log_info(LOG_ERR, "can't malloc memory for hash lists:%s",
+		perror("can't calloc memory!");
+		log_info(LOG_ERR, "can't calloc memory for hash lists:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
@@ -120,7 +120,7 @@ bool hash_del(hash_table *table, uint64_t key)
 	if(ln != NULL){
 		table->total--;
 		link_list_remove(l, ln);
-		link_node_free(ln);
+		link_node_internal_free(ln);
 		free(ln);
 		return true;
 	}else{

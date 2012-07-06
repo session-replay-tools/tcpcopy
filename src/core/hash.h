@@ -18,7 +18,7 @@
 		uint64_t    total_key_compared;
 		int         timeout;
 		char        name[64];
-		link_list **lists;
+		link_list   **lists;
 	}hash_table_t, hash_table;
 
 	hash_table *hash_create(size_t size);
