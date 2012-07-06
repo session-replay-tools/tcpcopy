@@ -107,8 +107,6 @@ typedef struct session_s{
 	uint32_t candidate_response_waiting:1;
 	/* Waiting previous packet flag */
 	uint32_t is_waiting_previous_packet:1;
-	/* Connection keepalive flag */
-	uint32_t conn_keepalive:1;
 	/* This indicates if the session intercepted the syn packets from client
 	 * or it has faked the syn packets */
 	uint32_t req_syn_ok:1;

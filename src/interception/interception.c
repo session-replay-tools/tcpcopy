@@ -129,8 +129,16 @@ static void interception_process(int fd)
 		c_msg = msg_server_recv(fd);
 		if(c_msg){
 			if(c_msg->type == CLIENT_ADD){
+#if (DEBUG_TCPCOPY)
+				log_info(LOG_NOTICE, "add client router:%u", 
+						ntohs(c_msg->client_port));
+#endif
 				router_add(c_msg->client_ip, c_msg->client_port, fd);
 			}else if(c_msg->type == CLIENT_DEL){
+#if (DEBUG_TCPCOPY)
+				log_info(LOG_NOTICE, "del client router:%u", 
+						ntohs(c_msg->client_port));
+#endif
 				router_del(c_msg->client_ip, c_msg->client_port);
 			}
 		}else{

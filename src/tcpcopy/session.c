@@ -184,7 +184,6 @@ static void session_init(session_t *s, int flag)
 		s->req_valid_last_ack_sent = 0;
 		s->candidate_response_waiting = 0;
 		s->is_waiting_previous_packet = 0;
-		s->conn_keepalive = 0;
 		s->req_syn_ok = 0;
 		s->req_halfway_intercepted = 0;
 		s->resp_syn_received = 0;
@@ -437,29 +436,31 @@ static void activate_dead_sessions()
 /* Check if session is obsolete */
 static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 {
-	int      threshold = 256, result, packs_unsend;	
-	double   diff = cur - s->req_last_send_cont_time;
+	int      threshold = 256, result, diff;	
 	
-	/* Check if the session is idle for more than xx seconds */
-	if(diff < clt_settings.session_timeout){
-		/* If it is, enlarge it by 8 times */
-		threshold = threshold << 3;
+	/* If not receiving response for a long time */
+	if(s->resp_last_recv_cont_time < timeout){
+		obs_cnt++;
+#if (DEBUG_TCPCOPY)
+		log_info(LOG_NOTICE, "timeout,unsend number:%u,p:%u",
+				s->unsend_packets->size, s->src_h_port);
+#endif
+		return OBSOLETE;
+	}
+	diff = cur - s->req_last_send_cont_time;
+	/* Check if the session is idle for a long time */
+	if(diff < 30){
+		threshold = threshold << 2;
 		if(diff < 3){
-			/* If it is idle for less than 3 seconds, enlarge 4 times */
+			/* If it is idle for less than 3 seconds */
 			threshold = threshold << 2;
 		}
 		if(s->slide_window_full){
-			/* If slide window is full, enlarge 4 times */
+			/* If slide window is full */
 			threshold = threshold << 2;
 		}
-		packs_unsend = s->unsend_packets->size;
-		if(packs_unsend < threshold){
-			return NOT_YET_OBSOLETE;
-		}else{
-			log_info(LOG_WARN,"still live,but too many:%u,threshold:%u",
-					s->src_h_port, threshold);
-		}
 	}
+
 	result = check_overwhelming(s, "unsend", threshold, 
 			s->unsend_packets->size);
 	if(NOT_YET_OBSOLETE != result){
@@ -484,18 +485,6 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
 		return result;
 	}
 #endif
-	if(s->resp_last_recv_cont_time < timeout){
-		if(!s->sess_candidate_erased){
-			s->sess_candidate_erased = 1;
-			return CANDIDATE_OBSOLETE;
-		}
-		obs_cnt++;
-#if (DEBUG_TCPCOPY)
-		log_info(LOG_NOTICE, "timeout,unsend number:%u,p:%u",
-				s->unsend_packets->size, s->src_h_port);
-#endif
-		return OBSOLETE;
-	}
 	return NOT_YET_OBSOLETE;
 }
 
@@ -504,14 +493,7 @@ static int check_session_obsolete(session_t *s, time_t cur, time_t timeout)
  */
 static void clear_timeout_sessions()
 {
-	/*
-	 * We clear old sessions that receive no content response for 
-	 * more than one minute. This may be a problem 
-	 * for keepalive connections.
-	 * So we adopt a naive method to distinguish between short-lived 
-	 * and long-lived sessions(one connection represents one session)
-	 */
-	time_t      current, norm_timeout, keepalive_timeout, timeout;
+	time_t      current, timeout;
 	size_t      i;           
 	int         result;
 	link_list   *list;
@@ -519,9 +501,8 @@ static void clear_timeout_sessions()
 	hash_node   *hn;
 	session_t   *s;
 
-	current           = time(0);
-	norm_timeout      = current - 60;
-	keepalive_timeout = current - 120;
+	current = time(0);
+	timeout = current - clt_settings.session_timeout;
 
 	log_info(LOG_NOTICE, "session size:%u", sessions_table->total);
 
@@ -538,11 +519,6 @@ static void clear_timeout_sessions()
 				s = hn->data;
 				if(s->sess_over){
 					log_info(LOG_NOTICE, "wrong,del:%u", s->src_h_port);
-				}
-				if(s->conn_keepalive){
-					timeout = keepalive_timeout;
-				}else{
-					timeout = norm_timeout;
 				}
 				result = check_session_obsolete(s, current, timeout);
 				if(OBSOLETE == result){
@@ -2082,17 +2058,6 @@ static int is_continuous_packet(session_t *s, struct iphdr *ip_header,
 	return DISP_CONTINUE;
 }
 
-static inline void check_conn_keepalive(session_t *s)
-{
-	int diff;
-	if(!s->conn_keepalive){
-		diff = s->last_update_time - s->create_time;
-		if(diff >= clt_settings.session_timeout){
-			s->conn_keepalive  = 1;
-		}
-	}
-}
-
 /* Process client packet info after the main processing */
 static void process_client_after_main_body(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header, uint16_t len)
@@ -2275,8 +2240,6 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 					tcp_header, is_new_req)){
 			return;
 		}
-		/* Check if the current session is keepalive */
-		check_conn_keepalive(s);
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_DEBUG,"a new request from client");
 #endif

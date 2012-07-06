@@ -74,11 +74,11 @@ int check_pack_src(ip_port_pair_mappings_t *transfer,
 		if(ip == pair->online_ip && port == pair->online_port){
 			ret = LOCAL;
 			break;
-		}else if(0 == pair->online_ip && port == pair->online_port){
-			ret = LOCAL;
-			break;
 		}else if(ip == pair->target_ip && port == pair->target_port){
 			ret = REMOTE;
+			break;
+		}else if(0 == pair->online_ip && port == pair->online_port){
+			ret = LOCAL;
 			break;
 		}
 	}

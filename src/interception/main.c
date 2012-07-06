@@ -215,7 +215,6 @@ static void set_details()
 /* defaults */
 static void settings_init(void)
 {
-	int i;
 	srv_settings.port = SERVER_PORT;
 	srv_settings.hash_size = 65536;
 	srv_settings.binded_ip = NULL;
