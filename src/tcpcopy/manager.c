@@ -8,8 +8,8 @@
 #include "session.h"
 
 static int       raw_sock;
-static uint64_t  event_cnt = 0;
-static uint64_t  raw_packs = 0, valid_raw_packs = 0;
+static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
+static uint32_t  localhost;
 
 #if (MULTI_THREADS)  
 static int       read_over_flag = 1;
@@ -254,13 +254,18 @@ static int retrieve_raw_sockets(int sock)
 			valid_raw_packs++;
 			replica_num = clt_settings.replica_num;
 			packet_num = 1;
+			ip_header   = (struct iphdr*)packet;
+			if(localhost == ip_header->saddr){
+				if(0 != clt_settings.lo_tf_ip){
+					ip_header->saddr = clt_settings.lo_tf_ip;
+				}
+			}
 			/* 
-			 * If packet length larger than 1500, then we split it. 
+			 * If packet length larger than MTU, then we split it. 
 			 * This is to solve the ip fragmentation problem
 			 */
 			if(recv_len > clt_settings.mtu){
 				/* Calculate number of packets */
-				ip_header   = (struct iphdr*)packet;
 				size_ip     = ip_header->ihl << 2;
 				tot_len     = ntohs(ip_header -> tot_len);
 				if(tot_len != recv_len){
@@ -452,7 +457,7 @@ int tcp_copy_init()
 
 	/* Init session table*/
 	init_for_sessions();
-	
+	localhost = inet_addr("127.0.0.1");	
 #if (MULTI_THREADS)  
 	/* Init pool */
 	pool_fact = clt_settings.pool_fact;

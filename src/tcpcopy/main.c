@@ -38,6 +38,8 @@ static void usage(void) {
 		   "               online_ip:online_port-target_ip:target_port,...\n"
 		   "               or :\n"
 		   "               online_port-target_ip:target_port,...\n");
+	printf("-c <ip>        localhost will be changed to this ip address\n"
+		   "               default value is online ip\n");
 #if (TCPCOPY_MYSQL_ADVANCED)  
 	printf("-u <pair>      user password pair for mysql\n"
 		   "               pair format:\n"
@@ -79,6 +81,7 @@ static int read_args(int argc, char **argv){
 	
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where we copy request from and to */
+		 "c:" /* localhost will be changed to this ip address */
 #if (TCPCOPY_MYSQL_ADVANCED)  
 		 "u:" /* user password pair for mysql*/
 #endif
@@ -100,6 +103,9 @@ static int read_args(int argc, char **argv){
 		switch (c) {
 			case 'x':
 				clt_settings.raw_transfer= strdup(optarg);
+				break;
+			case 'c':
+				clt_settings.lo_tf_ip = inet_addr(optarg);
 				break;
 #if (TCPCOPY_MYSQL_ADVANCED)  
 			case 'u':
@@ -180,7 +186,6 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 		uint16_t *port)
 {
 	size_t     len;
-	uint32_t   localhost  = inet_addr("127.0.0.1");	
 	char       buffer[128];
 	const char *split, *p = pair;
 	uint32_t   inetAddr;
@@ -191,13 +196,7 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 		memset(buffer, 0 , 128);
 		strncpy(buffer, p, len);
 		inetAddr = inet_addr(buffer);	
-		if(inetAddr == localhost){
-			log_info(LOG_WARN, "ip address can not be loalhost");
-			fprintf(stderr, "ip address can not be loalhost\n");
-			exit(EXIT_FAILURE);
-		}else{
-			*ip = inetAddr;
-		}
+		*ip = inetAddr;
 		p = split + 1;
 	}else{
 		log_info(LOG_NOTICE, "set global port for tcpcopy");
@@ -239,6 +238,10 @@ static void parse_one_target(int index, const char *target)
 	parse_ip_port_pair(buffer, &ip, &port);
 	map->online_ip   = ip;
 	map->online_port = htons(port);
+
+	if(0 == clt_settings.lo_tf_ip){
+		clt_settings.lo_tf_ip = ip;
+	}
 	p = split + 1;
 
 	/* Parse target ip and port */
