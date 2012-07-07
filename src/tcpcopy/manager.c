@@ -190,7 +190,7 @@ static int init_input_raw_socket()
 
 	return sock;
 }
-
+static bool output = true;
 /* Replicate packets for multiple-copying */
 static int replicate_packs(char *packet, int length, int replica_num)
 {
@@ -210,15 +210,17 @@ static int replicate_packs(char *packet, int length, int replica_num)
 #endif
 	rand_port = clt_settings.rand_port_shifted;
 	for(i = 1; i < replica_num; i++){
-		addition   = (1024 << ((i << 1)-1)) + rand_port;
+		addition   = (((i << 1)-1) << 5) + rand_port;
 		dest_port  = get_appropriate_port(orig_port, addition);
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_DEBUG, "new port:%u", dest_port);
+		if(output)
+		log_info(LOG_DEBUG, "new port:%u,add:%u", dest_port, addition);
+		
 #endif
 		tcp_header->source = htons(dest_port);
 		process_packet(true, packet, length);
 	}
-
+   output= false;
 	return 0;
 
 }

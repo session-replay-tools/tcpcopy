@@ -48,11 +48,11 @@ static void usage(void) {
 		   "               users of the target test should be the same as\n"
 		   "               that of online\n");
 #endif
-#if (MULTI_THREADS)  
 	printf("-n <num>       the number of replication for multi-copying\n"
 		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "               max value allowed is 1023:\n");
+#if (MULTI_THREADS)  
 	printf("-b <num>       buffer factor for raw socket input(range 20~30)\n"
 		   "               buffer size is equal to 2^(value) or 1 << value\n"
 		   "               default value is 24, which means 16M bytes\n"
@@ -85,9 +85,9 @@ static int read_args(int argc, char **argv){
 #if (TCPCOPY_MYSQL_ADVANCED)  
 		 "u:" /* user password pair for mysql*/
 #endif
-#if (MULTI_THREADS)  
 		 "n:" /* the replicated number of each request for multi-copying */
 		 "f:" /* port shift factor for mutiple tcpcopy instances */
+#if (MULTI_THREADS)  
 		 "b:" /* buffer factor for raw socket input*/
 #endif
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
@@ -112,13 +112,13 @@ static int read_args(int argc, char **argv){
 				clt_settings.user_pwd = strdup(optarg);
 				break;
 #endif
-#if (MULTI_THREADS)  
 			case 'n':
 				clt_settings.replica_num = atoi(optarg);
 				break;
 			case 'f':
 				clt_settings.factor = atoi(optarg);
 				break;
+#if (MULTI_THREADS)  
 			case 'b':
 				value = atoi(optarg);
 				if(value >RECV_POOL_MAX_SIZE_SHF){
