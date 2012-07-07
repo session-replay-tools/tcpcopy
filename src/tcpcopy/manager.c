@@ -134,11 +134,17 @@ static void *dispose(void *thread_id)
 #endif
 
 
-static void process_packet(char *packet, int length){
+static void process_packet(bool backup, char *packet, int length){
 #if (MULTI_THREADS)  
 	put_packet_to_pool((const char *)packet, length);
 #else
-	process(packet);
+	char tmp_packet[RECV_BUF_SIZE];
+	if(!backup){
+		process(packet);
+	}else{
+		memcpy(tmp_packet, packet, length);
+		process(tmp_packet);
+	}
 #endif
 }
 
@@ -210,7 +216,7 @@ static int replicate_packs(char *packet, int length, int replica_num)
 		log_info(LOG_DEBUG, "new port:%u", dest_port);
 #endif
 		tcp_header->source = htons(dest_port);
-		process_packet(packet, length);
+		process_packet(true, packet, length);
 	}
 
 	return 0;
@@ -222,9 +228,10 @@ static int replicate_packs(char *packet, int length, int replica_num)
  */
 static int retrieve_raw_sockets(int sock)
 {
-	char     *packet, recv_buf[RECV_BUF_SIZE], tmp_packet[RECV_BUF_SIZE];
+	char     *packet, recv_buf[RECV_BUF_SIZE], tmp_buf[RECV_BUF_SIZE];
 	int      replica_num, i, last, err, recv_len, packet_num, max_payload;
-	uint16_t size_ip, size_tcp, tot_len, cont_len, pack_len;
+	int      index, payload_len;
+	uint16_t id, size_ip, size_tcp, tot_len, cont_len, pack_len, head_len;
 	uint32_t seq;
 
 	struct tcphdr *tcp_header;
@@ -276,10 +283,17 @@ static int retrieve_raw_sockets(int sock)
 				tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
 				size_tcp    = tcp_header->doff << 2;
 				cont_len    = tot_len - size_tcp - size_ip;
-				max_payload = clt_settings.mtu - size_tcp - size_ip;
+				head_len    = size_ip + size_tcp;
+				max_payload = clt_settings.mtu - head_len;
 				packet_num  = (cont_len + max_payload - 1)/max_payload;
 				seq         = ntohl(tcp_header->seq);
 				last        = packet_num - 1;
+				id          = ip_header->id;
+#if (DEBUG_TCPCOPY)
+				strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+				log_info(LOG_INFO, "recv len:%d, more than MTU", recv_len);
+#endif
+				index = head_len;
 				for(i = 0 ; i < packet_num; i++){
 					tcp_header->seq = htonl(seq + i * max_payload);
 					if(i != last){
@@ -287,18 +301,26 @@ static int retrieve_raw_sockets(int sock)
 					}else{
 						pack_len += (cont_len - packet_num * max_payload);
 					}
+					payload_len = pack_len - head_len;
 					ip_header->tot_len = htons(pack_len);
-					process_packet(packet, pack_len);
+					ip_header->id = id++;
+					/* Copy header here */
+					memcpy(tmp_buf, recv_buf, head_len);
+					memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
+					index = index + payload_len;
 					if(replica_num > 1){
-						memcpy(tmp_packet, packet, pack_len);
-						replicate_packs(tmp_packet, pack_len, replica_num);
+						process_packet(true, tmp_buf, pack_len);
+						replicate_packs(tmp_buf, pack_len, replica_num);
+					}else{
+						process_packet(false, tmp_buf, pack_len);
 					}
 				}
 			}else{
-				process_packet(packet, recv_len);
-				/* Multi-copying is only supported in multithreading mode */
 				if(replica_num > 1){
+					process_packet(true, packet, recv_len);
 					replicate_packs(packet, recv_len, replica_num);
+				}else{
+					process_packet(false, packet, recv_len);
 				}
 			}
 		}
