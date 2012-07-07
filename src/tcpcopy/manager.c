@@ -306,6 +306,7 @@ static int retrieve_raw_sockets(int sock)
 					ip_header->id = id++;
 					/* Copy header here */
 					memcpy(tmp_buf, recv_buf, head_len);
+					/* Copy payload here */
 					memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
 					index = index + payload_len;
 					if(replica_num > 1){
