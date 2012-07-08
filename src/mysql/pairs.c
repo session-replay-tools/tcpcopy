@@ -5,8 +5,9 @@ static hash_table *user_pwd_table;
 
 static uint64_t get_key_from_user(char *user)
 {
-	size_t len, i;
+	size_t   len, i;
 	uint64_t key = 0;
+
 	if(NULL == user){
 		return key;
 	}
@@ -36,10 +37,9 @@ char *retrieve_user_pwd(char *user)
 	return NULL;
 }
 
-void retrieve_mysql_user_pwd_info( char *pairs)
+void retrieve_mysql_user_pwd_info(char *pairs)
 {
-	char       *p, *end, *q, *next, *pair_end;
-	char       user[256];
+	char       *p, *end, *q, *next, *pair_end, user[256];
 	mysql_user *p_user_info, *p_tmp_user_info;
 	uint64_t   key;
 	size_t     len;  
@@ -47,8 +47,7 @@ void retrieve_mysql_user_pwd_info( char *pairs)
 	user_pwd_table = hash_create(256);
 	strcpy(user_pwd_table->name, "user password table");
 
-	p = pairs;
-
+	p   = pairs;
 	len = strlen(p);
 	end = p + len;
 

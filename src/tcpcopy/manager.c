@@ -475,7 +475,7 @@ int tcp_copy_init()
 	main_pid = getpid();
 	log_info(LOG_WARN, "main , pid=%d", main_pid);
 #endif
-	select_sever_set_callback(dispose_event);
+	select_server_set_callback(dispose_event);
 
 	/* Init session table*/
 	init_for_sessions();
@@ -493,7 +493,7 @@ int tcp_copy_init()
 	raw_sock = init_input_raw_socket();
 	if(raw_sock != -1){
 		/* Add the input raw socket to select */
-		select_sever_add(raw_sock);
+		select_server_add(raw_sock);
 		/* Init output raw socket info */
 		send_init();
 #if (MULTI_THREADS)  

@@ -4,8 +4,7 @@
 #include "sha1.h"
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
-static void 
-my_crypt(char *to, const uchar *s1, const uchar *s2, uint len)
+static void my_crypt(char *to, const uchar *s1, const uchar *s2, uint len)
 {
 	const uint8 *s1_end = s1 + len; 
 	while (s1 < s1_end){
@@ -13,8 +12,7 @@ my_crypt(char *to, const uchar *s1, const uchar *s2, uint len)
 	}    
 }
 
-void
-scramble(char *to, const char *message, const char *password)
+void scramble(char *to, const char *message, const char *password)
 {
 	SHA1_CONTEXT sha1_context;
 	uint8 hash_stage1[SHA1_HASH_SIZE];
@@ -22,8 +20,8 @@ scramble(char *to, const char *message, const char *password)
 
 	mysql_sha1_reset(&sha1_context);
 	/* Stage 1: hash password */
-	mysql_sha1_input(&sha1_context, (uint8 *) password,
-			(uint) strlen(password));
+	mysql_sha1_input(&sha1_context, (uint8 *)password,
+			(uint)strlen(password));
 	mysql_sha1_result(&sha1_context, hash_stage1);
 	/* 
 	 * Stage 2: 

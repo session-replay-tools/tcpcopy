@@ -16,7 +16,7 @@ static void set_sock_no_delay(int sock)
 	if(setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
 				sizeof(flag)) == -1){
 		perror("setsockopt:");
-		log_info(LOG_ERR,"setsockopt error:%s",strerror(errno));
+		log_info(LOG_ERR, "setsockopt error:%s", strerror(errno));
 		sync(); 
 		exit(errno);
 	}else{
@@ -41,13 +41,13 @@ static unsigned char buffer[128];
 
 static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 {
-	struct nlmsghdr *nl_header = (struct nlmsghdr*)buffer;
+	struct nlmsghdr        *nl_header = (struct nlmsghdr*)buffer;
 	struct ipq_verdict_msg *ver_data;
-	struct sockaddr_nl addr;
+	struct sockaddr_nl      addr;
 
 	/*
-	 * The IPQM_VERDICT message is used to release packets 
-	 * from the kernel ip queue module.
+	 * The IPQM_VERDICT message is used to communicate with
+	 * the kernel ip queue module.
 	 */
 	nl_header->nlmsg_type  = IPQM_VERDICT;
 	nl_header->nlmsg_len   = NLMSG_LENGTH(sizeof(struct ipq_verdict_msg));
@@ -72,8 +72,7 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
 	if(sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
 				(struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0){
 		perror("unable to send mode message");
-		log_info(LOG_ERR,"unable to send mode message:%s",
-				strerror(errno));
+		log_info(LOG_ERR, "unable to send mode message:%s", strerror(errno));
 		sync(); 
 		exit(0);
 	}
@@ -93,7 +92,7 @@ static void interception_process(int fd)
 		new_fd = accept(msg_listen_sock, NULL, NULL);	
 		set_sock_no_delay(new_fd);
 		if(new_fd != -1){
-			select_sever_add(new_fd);
+			select_server_add(new_fd);
 		}
 	}else if(fd == firewall_sock){
 		packet_id = 0;
@@ -143,28 +142,28 @@ static void interception_process(int fd)
 			}
 		}else{
 			close(fd);
-			select_sever_del(fd);
-			log_info(LOG_NOTICE, "close sock:%d",fd);
+			select_server_del(fd);
+			log_info(LOG_NOTICE, "close sock:%d", fd);
 		}
 	}
 }
 
-/* Initiate for tcpcopy server*/
+/* Initiate for tcpcopy server */
 void interception_init(uint16_t port)
 {
 	delay_table_init(srv_settings.hash_size);
 	router_init(srv_settings.hash_size << 1);
-	select_sever_set_callback(interception_process);
+	select_server_set_callback(interception_process);
 	msg_listen_sock = msg_server_init(srv_settings.binded_ip, port);
 	log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);
-	select_sever_add(msg_listen_sock);
+	select_server_add(msg_listen_sock);
 	firewall_sock = nl_firewall_init();
 	log_info(LOG_NOTICE, "firewall socket:%d", firewall_sock);
-	select_sever_add(firewall_sock);
+	select_server_add(firewall_sock);
 }
 
 
-/* Main procedure for interception*/
+/* Main procedure for interception */
 void interception_run()
 {
 	select_server_run();

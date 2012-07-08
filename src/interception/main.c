@@ -49,6 +49,7 @@ static int sigignore(int sig)
 	}       
 	return 0;
 }
+
 static void signal_handler(int sig)
 {
 	log_info(LOG_ERR,"set signal handler:%d", sig);
@@ -76,7 +77,7 @@ static void set_signal_handler(){
 
 }
 
-/* retrieve ip addresses */
+/* Retrieve ip addresses */
 static int retrieve_ip_addr()
 {
 	size_t      len;
@@ -91,7 +92,7 @@ static int retrieve_ip_addr()
 	while(1){
 		split = strchr(p, ',');
 		if(split != NULL){   
-			len = (size_t)(split-p);
+			len = (size_t)(split - p);
 		}else{   
 			len = strlen(p);
 		}   
@@ -212,7 +213,7 @@ static void set_details()
 	}    
 }
 
-/* defaults */
+/* Set defaults */
 static void settings_init(void)
 {
 	srv_settings.port = SERVER_PORT;

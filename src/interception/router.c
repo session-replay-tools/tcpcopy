@@ -53,12 +53,11 @@ void router_init(size_t size)
 {
 	table = hash_create(size);
 	strcpy(table->name,"router-table");
-	log_info(LOG_NOTICE,"create table %s, size:%u",
-			table->name, table->size);
+	log_info(LOG_NOTICE,"create %s, size:%u", table->name, table->size);
 }
 
 /* Delete item in router table */
-void router_del(uint32_t ip,uint16_t port)
+void router_del(uint32_t ip, uint16_t port)
 {
 	uint64_t key = get_key(ip, port);
 	hash_del(table, key);
@@ -68,7 +67,7 @@ void router_del(uint32_t ip,uint16_t port)
 /* Add item to the router table */
 void router_add(uint32_t ip, uint16_t port, int fd)
 {
-	uint64_t key=get_key(ip, port);
+	uint64_t key = get_key(ip, port);
 	hash_add(table, key, (void *)(long)fd);
 	delay_table_send(key, fd);
 }
@@ -127,9 +126,8 @@ void router_update(struct iphdr *ip_header)
 /* Destroy router table */
 void router_destroy()
 {
-	if(table != NULL)
-	{
-		log_info(LOG_NOTICE,"destroy router table");
+	if(table != NULL){
+		log_info(LOG_NOTICE, "destroy router table");
 		hash_destory(table);
 		free(table);
 		table = NULL;

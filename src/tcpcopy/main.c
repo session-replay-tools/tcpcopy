@@ -60,7 +60,7 @@ static void usage(void) {
 #endif
 	printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
 		   "               default value is 512:\n"
-		   "-M <num>       MTU sent to backend(default:1500, max value 4096)\n"
+		   "-M <num>       MTU sent to backend(default:1500)\n"
 		   "-t <num>       session timeout\n"
 		   "               if the target system is slow, set this larger\n");
 	printf("-l <file>      log file path\n"

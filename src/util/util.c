@@ -10,8 +10,7 @@ inline uint64_t get_key(uint32_t ip, uint16_t port)
 
 inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
 {
-	uint16_t dest_port;
-	dest_port = orig_port;
+	uint16_t dest_port = orig_port;
 	if(dest_port < (65536 - add)){
 		dest_port += add;
 	}else{
@@ -20,9 +19,10 @@ inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add)
 	return dest_port;
 }
 
+static unsigned int seed = 0;
+
 uint16_t get_port_by_rand_addition(uint16_t orig_port)
 {
-	static unsigned int seed = 0;
 	struct timeval  tp;
 	uint16_t        port_add;
 
@@ -34,14 +34,13 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 	port_add = port_add + 1024;
 
 	return get_appropriate_port(ntohs(orig_port), port_add);
-	
 }
 
 uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,
 		int shift_factor)
 {
 	uint16_t        port_add;
-	port_add = (2048 << shift_factor) + rand_port;
+	port_add = (shift_factor << 11) + rand_port;
 
 	return get_appropriate_port(ntohs(orig_port), port_add);
 }
@@ -72,6 +71,7 @@ int check_pack_src(ip_port_pair_mappings_t *transfer,
 	for(i = 0; i < transfer->num; i++){
 		pair = mappings[i];
 		if(ip == pair->online_ip && port == pair->online_port){
+			/* We are interested in INPUT raw socket */
 			ret = LOCAL;
 			break;
 		}else if(ip == pair->target_ip && port == pair->target_port){
@@ -95,7 +95,7 @@ unsigned char *copy_ip_packet(struct iphdr *ip_header)
 	return data;
 }
 
-unsigned short csum (unsigned short *packet, int pack_len) 
+unsigned short csum(unsigned short *packet, int pack_len) 
 { 
 	register unsigned long sum = 0; 
 	while (pack_len > 1) {
@@ -112,7 +112,7 @@ unsigned short csum (unsigned short *packet, int pack_len)
 } 
 
 
-static unsigned short buf[2048]; 
+static unsigned short buf[32768]; 
 
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
 		int pack_len)

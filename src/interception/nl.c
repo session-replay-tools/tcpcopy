@@ -5,8 +5,7 @@ static int sock_init(int protocol)
 	int sock = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if(-1 == sock){
 		perror("socket:");
-		log_info(LOG_ERR,"create netlink socket error:%s",
-				strerror(errno));
+		log_info(LOG_ERR,"create netlink sock error:%s", strerror(errno));
 		sync(); 
 		exit(errno);
 	}
@@ -46,11 +45,10 @@ void nl_set_mode(int sock, uint8_t mode, size_t range)
 	mode_data = NLMSG_DATA(nl_header);
 	mode_data->value = mode;
 	mode_data->range = range;
-	if(sendto(sock, (void *)nl_header, nl_header->nlmsg_len,0,
+	if(sendto(sock, (void *)nl_header, nl_header->nlmsg_len, 0,
 				(struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0){
-		perror("cannot set mode:");
-		log_info(LOG_ERR,
-				"can not set mode for netlink,check if ip queue is up:%s",
+		perror("can't set mode:");
+		log_info(LOG_ERR, "can't set mode,check if ip queue is up:%s",
 				strerror(errno));
 		sync(); 
 		exit(errno);
@@ -59,7 +57,7 @@ void nl_set_mode(int sock, uint8_t mode, size_t range)
 	}
 }
 
-/* Receive message from netlink socket*/
+/* Receive message from netlink socket */
 ssize_t nl_recv(int sock, void *buffer, size_t length)
 {
 	ssize_t recv_len = recv(sock, buffer, length, 0);

@@ -1,8 +1,8 @@
 #include "../core/xcopy.h"
 #include "log.h"
 
-static FILE           *file = NULL;
-int                    g_log_level;
+static FILE  *file = NULL;
+int          g_log_level;
 
 #if (MULTI_THREADS)  
 static pthread_mutex_t mutex;
@@ -20,7 +20,7 @@ static char *err_levels[] = {
 	"debug"
 };
 
-void log_init(const char* path)
+void log_init(const char *path)
 {
 #if (DEBUG_TCPCOPY)
 	g_log_level = LOG_DEBUG;
@@ -62,7 +62,6 @@ void log_info(int level, const char *fmt, ...)
 #if (MULTI_THREADS)  
 		pthread_mutex_lock(&mutex);
 #endif
-
 		if (file) {
 			t = time(0);
 			fprintf(file, "[%s] ", err_levels[level]);
@@ -75,7 +74,7 @@ void log_info(int level, const char *fmt, ...)
 				return;
 			}
 			len = strlen(p_time_str);
-			p_time_str[len-1] = '\0';
+			p_time_str[len - 1] = '\0';
 			fprintf(file,"%s usec=%ld ", p_time_str, usec.tv_usec);
 			va_start(args, fmt);
 			(void)vfprintf(file, fmt, args);
@@ -100,6 +99,5 @@ void log_end()
 #if (MULTI_THREADS)  
 	pthread_mutex_unlock(&mutex);
 #endif
-
 }
 

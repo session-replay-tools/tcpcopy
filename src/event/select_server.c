@@ -1,5 +1,5 @@
-#include "select_server.h"
 #include "../core/xcopy.h"
+#include "select_server.h"
 
 static int              	max_fd;
 static fd_set           	read_set;
@@ -9,13 +9,13 @@ static int              	fd_nums;
 
 
 /* Set select event callback function */
-void select_sever_set_callback(select_server_func func)
+void select_server_set_callback(select_server_func func)
 {
 	callback_func = func;
 }
 
 /* Add fd to select read set */
-void select_sever_add(int fd)
+void select_server_add(int fd)
 {
 	if(fd > MAX_FD_VALUE){
 		log_info(LOG_WARN, "fd:%d which is more than 1023", fd);
@@ -34,13 +34,13 @@ void select_sever_add(int fd)
 }
 
 /* Delete fd from select read set */
-void select_sever_del(int fd)
+void select_server_del(int fd)
 {
 	int i, j;
 	if(fd <= MAX_FD_VALUE){
 		FD_CLR(fd, &read_set);
 		max_fd = 0;
-		for(i=0; i < fd_nums; i++){
+		for(i = 0; i < fd_nums; i++){
 			if(valid_fds[i] == fd){
 				j = i;
 				while(j < (fd_nums-1)){
@@ -65,9 +65,9 @@ void select_server_run()
 {
 	fd_set r_set;
 	int    i, ret;
-	while(1){
+	while(true){
 		r_set = read_set;
-		ret   = select(max_fd+1, &r_set, NULL, NULL, NULL);
+		ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
 		if(-1 == ret){
 			continue;
 		}else if(0 == ret){
