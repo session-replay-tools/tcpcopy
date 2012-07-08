@@ -20,7 +20,7 @@
 #endif
 #include "manager.h"
 
-/* Global variables */
+/* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
 static void set_signal_handler(){
@@ -39,6 +39,7 @@ static void usage(void) {
 		   "               or :\n"
 		   "               online_port-target_ip:target_port,...\n");
 	printf("-c <ip>        localhost will be changed to this ip address\n"
+		   "               when sending to another machine\n"
 		   "               default value is online ip\n");
 #if (TCPCOPY_MYSQL_ADVANCED)  
 	printf("-u <pair>      user password pair for mysql\n"
@@ -49,6 +50,7 @@ static void usage(void) {
 		   "               that of online\n");
 #endif
 	printf("-n <num>       the number of replication for multi-copying\n"
+		   "               the less,the better\n"
 		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "               max value allowed is 1023:\n");
@@ -64,8 +66,8 @@ static void usage(void) {
 		   "-t <num>       session timeout\n"
 		   "               if the target system is slow, set this larger\n");
 	printf("-l <file>      log file path\n"
-		   "-p <num>       remote server listening port\n"
-		   "-P <file>      save PID in <file>, only used with -d option\n"
+		   "-p <num>       remote server listening port\n");
+    printf("-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
 		   "-v             version\n"
 		   "-d             run as a daemon\n");
@@ -160,9 +162,7 @@ static int read_args(int argc, char **argv){
 				fprintf(stderr, "Illegal argument \"%c\"\n", c);
 				exit(EXIT_FAILURE);
 		}
-
 	}
-
 	return 0;
 }
 
@@ -197,13 +197,11 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
 		strncpy(buffer, p, len);
 		inetAddr = inet_addr(buffer);	
 		*ip = inetAddr;
-		p = split + 1;
+		p   = split + 1;
 	}else{
 		log_info(LOG_NOTICE, "set global port for tcpcopy");
 	}
-
 	*port = atoi(p);
-
 	return 0;
 }
 
@@ -336,11 +334,11 @@ static int set_details()
 	/* Generate random port for avoiding port conflicts */
 	gettimeofday(&tp, NULL);
 	seed = tp.tv_usec;
-	rand_port = (int)((rand_r(&seed)/(RAND_MAX+1.0))*512);
+	rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
 	clt_settings.rand_port_shifted = rand_port;
 	/* Set signal handler */	
 	set_signal_handler();
-	/* Set ip port pair mapping according to settings*/
+	/* Set ip port pair mapping according to settings */
 	retrieve_target_addresses();
 #if (TCPCOPY_MYSQL_ADVANCED)  
 	if(NULL != clt_settings.user_pwd){
@@ -386,7 +384,7 @@ static void settings_init()
 int main(int argc ,char **argv)
 {
 	int ret;
-	/* set defaults */
+	/* Set defaults */
 	settings_init();
 	/* Read args */
 	read_args(argc, argv);

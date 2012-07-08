@@ -96,7 +96,7 @@ static char *get_pack_from_pool()
 	read_cnt = read_cnt + len + sizeof(int);
 
 	pthread_cond_signal(&empty);
-	pthread_mutex_unlock (&mutex);
+	pthread_mutex_unlock(&mutex);
 
 	/* The packet minimum length is 40 bytes */
 	if(len < 40){
@@ -116,8 +116,6 @@ static void *dispose(void *thread_id)
 	worker_pid = (long int)syscall(224) ;
 	log_info(LOG_WARN, "worker thread, pid=%ld", worker_pid);
 
-	/* Give a hint to terminal */
-	printf("I am booted\n");
 	if(NULL != thread_id){
 		log_info(LOG_NOTICE, "booted,tid:%d", *((int*)thread_id));
 	}else{
@@ -351,12 +349,12 @@ static void check_resource_usage()
 		log_info(LOG_ERR, "getrusage:%s", strerror(errno));	
 	}
 	/* Total amount of user time used */
-	log_info(LOG_NOTICE, "user time used:%ld",usage.ru_utime.tv_sec);
+	log_info(LOG_NOTICE, "user time used:%ld", usage.ru_utime.tv_sec);
 	/* Total amount of system time used */
-	log_info(LOG_NOTICE, "sys  time used:%ld",usage.ru_stime.tv_sec);
+	log_info(LOG_NOTICE, "sys  time used:%ld", usage.ru_stime.tv_sec);
 	/* Maximum resident set size (in kilobytes) */
 	/* This is only valid since Linux 2.6.32 */
-	log_info(LOG_NOTICE, "max memory size:%ld",usage.ru_maxrss);
+	log_info(LOG_NOTICE, "max memory size:%ld", usage.ru_maxrss);
 	if(usage.ru_maxrss > clt_settings.max_rss){
 		log_info(LOG_WARN, "occupies too much memory,limit:%ld",
 				clt_settings.max_rss);
@@ -500,11 +498,11 @@ int tcp_copy_init()
 		pthread_mutex_init(&mutex, NULL);
 		pthread_cond_init(&full, NULL);
 		pthread_cond_init(&empty, NULL);
+		/*TODO To solve memory leak of pthread_create reported by valgrind */
 		if((ret = pthread_create(&work_tid, NULL, dispose, &work_tid)) != 0){
 			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
 			exit(EXIT_FAILURE);
 		}
-		/*TODO To solve memory leak of pthread_create reported by valgrind */
 #endif
 		/* Add connections to the tested server for exchanging info */
 		mappings = clt_settings.transfer.mappings;
