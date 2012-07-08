@@ -102,7 +102,7 @@ typedef struct session_s{
 	/* Dst or backend closed flag */
 	uint32_t dst_closed:1;
 	/* Slide window full flag */
-	uint32_t slide_window_full:1;
+	uint32_t last_window_full:1;
 	/* Candidate response waiting flag */
 	uint32_t candidate_response_waiting:1;
 	/* Waiting previous packet flag */

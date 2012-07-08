@@ -732,7 +732,7 @@ static int check_session_obsolete(session_t *s, time_t cur,
 			/* If it is idle for less than 3 seconds */
 			threshold = threshold << 2;
 		}
-		if(s->slide_window_full){
+		if(s->last_window_full){
 			/* If slide window is full */
 			threshold = threshold << 2;
 		}
@@ -1392,24 +1392,9 @@ static bool check_mysql_padding(struct iphdr *ip_header,
 }
 #endif
 
-/*
- * Check if the packet is the right packet for noraml copying
- */
-static bool check_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
-{
-	uint16_t  cont_len;
-
-	cont_len = get_pack_cont_len(ip_header, tcp_header);
-
-	if( cont_len > 0){
-		return true;
-	}
-	return false;
-
-}
-
+/*TODO READ HERE*/
 /* Check ack from backend */
-static int check_backend_ack(session_t *s,struct iphdr *ip_header,
+static int check_backend_ack(session_t *s, struct iphdr *ip_header,
 		 struct tcphdr *tcp_header, uint32_t ack, uint16_t cont_len)
 {
 	bool slide_window_empty = false;
@@ -1448,15 +1433,15 @@ static int check_backend_ack(session_t *s,struct iphdr *ip_header,
 		if(0 == tcp_header->window){
 			log_info(LOG_NOTICE, "slide window zero:%u", s->src_h_port);
 			/* Although slide window is full, it may require retransmission */
-			if(!s->slide_window_full){
+			if(!s->last_window_full){
 				s->resp_last_ack_seq = ack;
-				s->slide_window_full = 1;
+				s->last_window_full = 1;
 				update_retransmission_packets(s);
 				return DISP_STOP;
 			}
 		}else{
-			if(s->slide_window_full){
-				s->slide_window_full = 0;
+			if(s->last_window_full){
+				s->last_window_full = 0;
 				s->vir_already_retransmit = 0;
 				slide_window_empty = true;
 			}
@@ -2126,7 +2111,7 @@ void process_recv(session_t *s, struct iphdr *ip_header,
 	}
 
 	/* If slide window is full, we wait*/
-	if(s->slide_window_full){
+	if(s->last_window_full){
 		save_packet(s->unsend_packets, ip_header, tcp_header);
 		return;
 	}
@@ -2488,7 +2473,7 @@ void process(char *packet)
 			}else
 			{
 				/* We check if we can pad tcp handshake */
-				if(check_padding(ip_header, tcp_header)){
+				if(get_pack_cont_len(ip_header, tcp_header) > 0){
 #if (TCPCOPY_MYSQL_BASIC)
 					if(!check_mysql_padding(ip_header,tcp_header)){
 						return;
