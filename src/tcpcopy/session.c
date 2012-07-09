@@ -2266,7 +2266,7 @@ static void output_stat(time_t now, int run_time)
 	double    ratio;
 
 	last_stat_time = now;
-	log_info(LOG_WARN, "active:%llu,rel reqs:%llu,obs del:%llu",
+	log_info(LOG_WARN, "active:%u,rel reqs:%llu,obs del:%llu",
 			sessions_table->total, leave_cnt, obs_cnt);
 	log_info(LOG_WARN, "conns:%llu,total resp packs:%llu,c-resp packs:%llu",
 			conn_cnt, resp_cnt, resp_cont_cnt);
