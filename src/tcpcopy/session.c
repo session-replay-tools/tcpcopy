@@ -1575,6 +1575,7 @@ static void mysql_check_need_sec_auth(session_t *s,
 
 /*
  * Processing backend packets
+ * TODO Have not considered TCP Keepalive situations
  */
 void process_backend_packet(session_t *s, struct iphdr *ip_header,
 		struct tcphdr *tcp_header)
@@ -1804,6 +1805,36 @@ static int process_client_fin(session_t *s, struct iphdr *ip_header,
 	return DISP_STOP;
 }
 
+/* 
+ * When server's response comes first
+ * If packet's syn and ack are not according to the tcp protocol,
+ * then it may encouter problems here
+ */
+static bool is_wait_greet(session_t *s, struct iphdr *ip_header,
+		struct tcphdr *tcp_header)
+{
+	uint32_t seq, ack;
+	if(s->status < SEND_REQUEST && s->req_valid_last_ack_sent){
+		ack = ntohl(tcp_header->ack_seq);
+		seq = ntohl(tcp_header->seq);
+		if(ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq){
+			s->need_resp_greet = 1;
+			if(!s->resp_greet_received){
+				log_info(LOG_NOTICE, "it should wait:%u", s->src_h_port);
+				/* It must wait for response */
+				return true;
+			}else{
+				s->need_resp_greet = 0;
+				return false;
+			}
+		}
+	}
+	if(s->need_resp_greet && !s->resp_greet_received){
+		return true;
+	}
+	return false;
+}
+
 #if (TCPCOPY_MYSQL_BASIC)
 static int process_mysql_clt_auth_pack(session_t *s, 
 		struct iphdr *ip_header, struct tcphdr *tcp_header, 
@@ -2007,51 +2038,26 @@ static void process_clt_afer_filtering(session_t *s,
 		if(len > 0){
 			s->candidate_response_waiting = 1;
 			wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+			return;
 		}else if(SYN_CONFIRM == s->status){
 			if(s->vir_next_seq == ntohl(tcp_header->seq)){
 				wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+				return;
 			}
 		}
 	}
-}
-
-/* 
- * When server's response comes first
- * If packet's syn and ack are not according to the tcp protocol,
- * then it may encouter problems here
- */
-static bool is_wait_greet(session_t *s, struct iphdr *ip_header,
-		struct tcphdr *tcp_header)
-{
-	uint32_t seq, ack;
-	if(s->status < SEND_REQUEST && s->req_valid_last_ack_sent){
-		ack = ntohl(tcp_header->ack_seq);
-		seq = ntohl(tcp_header->seq);
-		if(ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq){
-			s->need_resp_greet = 1;
-			if(!s->resp_greet_received){
-				log_info(LOG_NOTICE, "it should wait:%u", s->src_h_port);
-				/* It must wait for response */
-				return true;
-			}else{
-				s->need_resp_greet = 0;
-				return false;
-			}
-		}
-	}
-	if(s->need_resp_greet && !s->resp_greet_received){
-		return true;
-	}
-	return false;
+#if (DEBUG_TCPCOPY)
+	log_info(LOG_DEBUG, "drop packet:%u", s->src_h_port);
+#endif	
 }
 
 /*
  * Processing client packets
- * TODO
- * The following has not been met yet:
- * TCP is always allowed to send 1 byte of data 
- * beyond the end of a closed window which confuses tcpcopy.
- * It will be resolved later
+ * TODO 
+ * 1)Have not consider TCP Keepalive
+ * 2)TCP is always allowed to send 1 byte of data 
+ *   beyond the end of a closed window which confuses tcpcopy.
+ * These will be resolved later
  * 
  */
 void process_client_packet(session_t *s, struct iphdr *ip_header,
