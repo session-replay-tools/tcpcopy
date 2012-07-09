@@ -52,7 +52,7 @@ static int sigignore(int sig)
 
 static void signal_handler(int sig)
 {
-	log_info(LOG_ERR,"set signal handler:%d", sig);
+	log_info(LOG_ERR, "set signal handler:%d", sig);
 	printf("set signal handler:%d\n", sig);
 	if(SIGSEGV == sig){    
 		log_info(LOG_ERR, "SIGSEGV error");
@@ -101,7 +101,7 @@ static int retrieve_ip_addr()
 		srv_settings.passed_ips.ips[count++] = address;
 
 		if(count == MAX_ALLOWED_IP_NUM){
-			log_info(LOG_WARN,"reach the limit for passing firewall");
+			log_info(LOG_WARN, "reach the limit for passing firewall");
 			break;
 		}
 

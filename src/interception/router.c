@@ -52,8 +52,8 @@ void route_delete_obsolete(time_t cur_time)
 void router_init(size_t size)
 {
 	table = hash_create(size);
-	strcpy(table->name,"router-table");
-	log_info(LOG_NOTICE,"create %s, size:%u", table->name, table->size);
+	strcpy(table->name, "router-table");
+	log_info(LOG_NOTICE, "create %s, size:%u", table->name, table->size);
 }
 
 /* Delete item in router table */
@@ -86,7 +86,7 @@ void router_update(struct iphdr *ip_header)
 #endif
 
 	if(ip_header->protocol != IPPROTO_TCP){
-		log_info(LOG_INFO,"this is not a tcp packet");
+		log_info(LOG_INFO, "this is not a tcp packet");
 		return;
 	}
 	size_ip = ip_header->ihl << 2;
@@ -115,7 +115,7 @@ void router_update(struct iphdr *ip_header)
 	fd  = hash_find(table, key);
 	if( NULL == fd ){
 #if (DEBUG_TCPCOPY)
-		log_info(LOG_INFO,"fd is null");
+		log_info(LOG_INFO, "fd is null");
 #endif
 		delay_table_add(key, &msg);
 		return ;

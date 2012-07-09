@@ -20,7 +20,7 @@ static void set_sock_no_delay(int sock)
 		sync(); 
 		exit(errno);
 	}else{
-		log_info(LOG_NOTICE,"setsockopt ok");
+		log_info(LOG_NOTICE, "setsockopt ok");
 	}
 	return;
 }

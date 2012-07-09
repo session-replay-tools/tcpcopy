@@ -75,7 +75,7 @@ void log_info(int level, const char *fmt, ...)
 			}
 			len = strlen(p_time_str);
 			p_time_str[len - 1] = '\0';
-			fprintf(file,"%s usec=%ld ", p_time_str, usec.tv_usec);
+			fprintf(file, "%s usec=%ld ", p_time_str, usec.tv_usec);
 			va_start(args, fmt);
 			(void)vfprintf(file, fmt, args);
 			fprintf( file, "\n" );

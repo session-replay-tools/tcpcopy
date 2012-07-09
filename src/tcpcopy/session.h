@@ -136,7 +136,7 @@ typedef struct session_s{
 #if (TCPCOPY_MYSQL_BASIC)
 	/* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
 	uint32_t mysql_excute_times:8;
-	/* The number of greet content packets receiving from backend */
+	/* The number of content packets after receiving greet */
 	uint32_t mysql_cont_num_aft_greet:4;
 	/* Request begin flag for mysql */
 	uint32_t mysql_req_begin:1;

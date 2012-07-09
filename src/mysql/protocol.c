@@ -131,7 +131,7 @@ int parse_handshake_init_cont(unsigned char *payload,
 	str = (char *)p;
 	count = p - payload + 8;
 	if(count > length){
-		log_info(LOG_ERR,"payload len is too short for init:%u,%u",
+		log_info(LOG_ERR, "payload len is too short for init:%u,%u",
 				length, count);
 		return 0;
 	}

@@ -38,16 +38,16 @@ void strace_pack(int level, int flag,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 
 	}else if(TO_BAKEND_FLAG == flag){
-		log_info(level, "to bak: %s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+		log_info(level, "to bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 
 	}else if(FAKED_CLIENT_FLAG == flag){
-		log_info(level, "fake clt%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+		log_info(level, "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 	}else if(UNKNOWN_FLAG == flag){
-		log_info(level, "unkown packet %s:%u-->%s:%u,len %u,seq=%u,ack=%u",
+		log_info(level, "unkown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
 				src_ip, ntohs(tcp_header->source), dst_ip,
 				ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 	}else{

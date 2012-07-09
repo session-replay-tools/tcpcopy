@@ -86,7 +86,7 @@ static void sock_listen(int sock)
 		sync(); 
 		exit(errno);
 	}else{
-		log_info(LOG_NOTICE,"it listens successfully");
+		log_info(LOG_NOTICE, "it listens successfully");
 	}
 }
 
@@ -155,7 +155,7 @@ int msg_client_send(int sock, uint32_t c_ip, uint16_t c_port, uint16_t type)
 	buf.type = type;
 	send_len = send(sock, (const void *)&buf, sizeof(buf), 0);
 	if(send_len != buf_len){
-		log_info(LOG_WARN,"send length:%ld,buffer size:%ld",
+		log_info(LOG_WARN, "send length:%ld,buffer size:%ld",
 				send_len, buf_len);
 		return -1;
 	}

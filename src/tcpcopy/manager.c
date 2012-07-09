@@ -513,7 +513,7 @@ int tcp_copy_init()
 			target_port = pair->target_port;
 			address_add_msg_conn(online_port, target_ip, 
 					clt_settings.srv_port);
-			log_info(LOG_NOTICE,"add a tunnel for exchanging info:%u",
+			log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
 					ntohs(target_port));
 		}
 		return SUCCESS;

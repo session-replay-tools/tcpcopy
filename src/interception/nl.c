@@ -5,7 +5,7 @@ static int sock_init(int protocol)
 	int sock = socket(AF_NETLINK, SOCK_RAW, protocol);
 	if(-1 == sock){
 		perror("socket:");
-		log_info(LOG_ERR,"create netlink sock error:%s", strerror(errno));
+		log_info(LOG_ERR, "create netlink sock:%s", strerror(errno));
 		sync(); 
 		exit(errno);
 	}
@@ -62,11 +62,11 @@ ssize_t nl_recv(int sock, void *buffer, size_t length)
 {
 	ssize_t recv_len = recv(sock, buffer, length, 0);
 	if(recv_len < 0){
-		log_info(LOG_ERR,"recv length less than 0 for netlink");
+		log_info(LOG_ERR, "recv length less than 0 for netlink");
 		return -1;
 	}
 	if((size_t)recv_len < sizeof(struct nlmsghdr)){
-		log_info(LOG_ERR,"recv length not right for netlink");
+		log_info(LOG_ERR, "recv length not right for netlink");
 		return -1;
 	}
 	return recv_len;

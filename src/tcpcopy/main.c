@@ -227,7 +227,7 @@ static void parse_one_target(int index, const char *target)
 	if(split != NULL){
 		len = (size_t)(split - p);
 	}else{
-		log_info(LOG_WARN,"target info is not valid:%s", p);
+		log_info(LOG_WARN, "target info is not valid:%s", p);
 		return;
 	}
 	strncpy(buffer, p, len);

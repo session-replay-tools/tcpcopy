@@ -27,7 +27,7 @@ void delay_table_delete_obsolete(time_t cur_time)
 	p_link_node ln, tail;
 	hash_node   *hn1, *hn2;
 
-	log_info(LOG_NOTICE,"delay total:%u", table->total);
+	log_info(LOG_NOTICE, "delay total:%u", table->total);
 
 	for(i = 0; i < table->size; i++){
 		l  = table->lists[i];
@@ -68,8 +68,8 @@ void delay_table_init(size_t size)
 {
 	table = hash_create(size);
 	hash_set_timeout(table, 30);
-	strcpy(table->name,"delay-table");
-	log_info(LOG_NOTICE,"create %s,size:%u", table->name, table->size);
+	strcpy(table->name, "delay-table");
+	log_info(LOG_NOTICE, "create %s,size:%u", table->name, table->size);
 	msg_item_cnt       = 0;
 	msg_item_free_cnt  = 0;
 	msg_item_destr_cnt = 0;
@@ -150,7 +150,7 @@ void delay_table_destroy()
 	hash_node   *hn;
 
 	if(table != NULL){
-		log_info(LOG_NOTICE,"destroy delayed table,total:%u", table->total);
+		log_info(LOG_NOTICE, "destroy delay table,total:%u", table->total);
 		for(i = 0; i < table->size; i++){
 			list = table->lists[i];
 			ln   = link_list_first(list);
@@ -167,9 +167,9 @@ void delay_table_destroy()
 			}
 		}
 
-		log_info(LOG_NOTICE,"destroy msg list items:%llu,free:%llu,total:%llu",
+		log_info(LOG_NOTICE, "destroy items:%llu,free:%llu,total:%llu",
 				msg_item_destr_cnt, msg_item_free_cnt, msg_item_cnt);
-		log_info(LOG_NOTICE,"create msg list:%llu,free:%llu,destroyList:%llu",
+		log_info(LOG_NOTICE, "create msg list:%llu,free:%llu,destr:%llu",
 				msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt);
 		hash_destory(table);
 		free(table);
