@@ -573,7 +573,9 @@ static int send_reserved_packets(session_t *s)
 			cont_len   = get_pack_cont_len(ip_header, tcp_header);
 			if(cont_len > 0){
 				/* Special disposure here */
+#if (DEBUG_TCPCOPY)
 				log_info(LOG_NOTICE, "reserved strange:%u", s->src_h_port);
+#endif
 				diff = s->vir_next_seq - cur_seq;
 				if(!trim_packet(s, ip_header, tcp_header, diff)){
 					omit_transfer = true;
@@ -1266,11 +1268,15 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 	bool     result;
 	uint16_t target_port;
 	uint64_t new_key;
+#if (DEBUG_TCPCOPY)
 	log_info(LOG_NOTICE, "fake syn:%u", s->src_h_port);
+#endif
 	if(is_hard){
 		target_port = get_port_by_rand_addition(tcp_header->source);
+#if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE, "change port from :%u to :%u",
 				ntohs(tcp_header->source), target_port);
+#endif
 		s->src_h_port = target_port;
 		target_port = htons(target_port);
 		new_key = get_key(ip_header->saddr, target_port);

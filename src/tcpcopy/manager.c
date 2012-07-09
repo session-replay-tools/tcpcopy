@@ -32,9 +32,7 @@ static void put_packet_to_pool(const char *packet, int len)
 	uint64_t  next_w_cnt = 0, diff = 0;
 	char      *p;
 
-
 	packs_put_cnt++;
-
 	pthread_mutex_lock(&mutex);
 	next_w_cnt     = write_cnt + len + sizeof(int);	
 	next_w_pointer = next_w_cnt%pool_size;
@@ -107,7 +105,8 @@ static char *get_pack_from_pool()
 }
 
 /*
- * Process packets here
+ * Thread's entrance 
+ * TODO Multiple threading may be removed later
  */
 static void *dispose(void *thread_id)
 {
