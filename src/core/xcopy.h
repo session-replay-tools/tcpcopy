@@ -60,18 +60,6 @@
 /* In defence of occuping too much memory */
 #define MAX_MEMORY_SIZE 524288
 
-/* If set 1,then tcpcopy client works at multiple threading mode */
-#define MULTI_THREADS 0
-
-#if(MULTI_THREADS)
-/*
- * TCPCopy client pool constants, only valid for multiple threading
- */
-#define RECV_POOL_SIZE_SHF 24     /* Default 16M size */
-#define RECV_POOL_MAX_SIZE_SHF 30 /* Max 1G size */
-#define RECV_POOL_MIN_SIZE_SHF 20 /* Min 1M size */
-#endif
-
 /* Log constants */
 #define LOG_STDERR            0
 #define LOG_EMERG             1
@@ -176,9 +164,6 @@ enum packet_classification{
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if(MULTI_THREADS)
-#include <pthread.h>
-#endif
 
 typedef struct ip_port_pair_mapping_s
 {
@@ -209,14 +194,6 @@ typedef struct xcopy_clt_settings {
 	unsigned int  factor:8;
 	/* MTU sent to backend */
 	unsigned int  mtu:16;
-#if(MULTI_THREADS)
-	/* 
-	 * Pool memory factor
-	 * Pool size is equal to 2^(pool_fact) or (1 << pool_fact)
-	 * Max value allowed is 30
-	 */
-	unsigned int pool_fact:5;
-#endif
 	/* Daemon flag */
 	unsigned int do_daemonize:1;
 	/* Max memory size allowed for tcpcopy client(max size 2G) */

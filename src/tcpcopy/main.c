@@ -54,12 +54,6 @@ static void usage(void) {
 		   "               max value allowed is 1023:\n"
 		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
 		   "               max value allowed is 1023:\n");
-#if (MULTI_THREADS)  
-	printf("-b <num>       buffer factor for raw socket input(range 20~30)\n"
-		   "               buffer size is equal to 2^(value) or 1 << value\n"
-		   "               default value is 24, which means 16M bytes\n"
-		   "               max value allowed is 30, which means 1G bytes\n");
-#endif
 	printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
 		   "               default value is 512:\n"
 		   "-M <num>       MTU sent to backend(default:1500)\n"
@@ -77,9 +71,6 @@ static void usage(void) {
 
 static int read_args(int argc, char **argv){
 	int  c;
-#if (MULTI_THREADS)  
-	int value;
-#endif
 	
 	while (-1 != (c = getopt(argc, argv,
 		 "x:" /* where we copy request from and to */
@@ -89,9 +80,6 @@ static int read_args(int argc, char **argv){
 #endif
 		 "n:" /* the replicated number of each request for multi-copying */
 		 "f:" /* port shift factor for mutiple tcpcopy instances */
-#if (MULTI_THREADS)  
-		 "b:" /* buffer factor for raw socket input*/
-#endif
 		 "m:" /* max memory to use for tcpcopy client in megabytes */
 		 "p:" /* remote server listening port */
 		 "M:" /* MTU sent to backend */
@@ -120,17 +108,6 @@ static int read_args(int argc, char **argv){
 			case 'f':
 				clt_settings.factor = atoi(optarg);
 				break;
-#if (MULTI_THREADS)  
-			case 'b':
-				value = atoi(optarg);
-				if(value >RECV_POOL_MAX_SIZE_SHF){
-					value = RECV_POOL_MAX_SIZE_SHF;
-				}else if(value < RECV_POOL_MIN_SIZE_SHF){
-					value = RECV_POOL_MIN_SIZE_SHF;
-				}
-				clt_settings.pool_fact= value;
-				break;
-#endif
 			case 'm':
 				clt_settings.max_rss = 1024*atoi(optarg);
 				break;
@@ -373,9 +350,6 @@ static void settings_init()
 	clt_settings.max_rss = MAX_MEMORY_SIZE;
 	clt_settings.srv_port = SERVER_PORT;
 	clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
-#if (MULTI_THREADS)  
-	clt_settings.pool_fact = RECV_POOL_SIZE_SHF;
-#endif
 }
 
 /*

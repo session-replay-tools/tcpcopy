@@ -11,130 +11,7 @@ static int       raw_sock;
 static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint32_t  localhost;
 
-#if (MULTI_THREADS)  
-static int       read_over_flag = 1;
-static char      *pool, *item;
-size_t           pool_max_addr, pool_size, pool_fact;
-static uint64_t  read_cnt = 0, write_cnt = 0, packs_put_cnt = 0;
-static uint64_t  recv_pack_cnt_from_pool = 0;
-static long int        main_pid, worker_pid;
-static pthread_mutex_t mutex;
-static pthread_cond_t  empty, full;
-static pthread_t       work_tid; 
-
-/*
- * Put the packet to the buffered pool
- */
-static void put_packet_to_pool(const char *packet, int len)
-{
-	int       act_len = len, next_w_pointer = 0, w_pointer = 0;
-	int       *size_p;
-	uint64_t  next_w_cnt = 0, diff = 0;
-	char      *p;
-
-	packs_put_cnt++;
-	pthread_mutex_lock(&mutex);
-	next_w_cnt     = write_cnt + len + sizeof(int);	
-	next_w_pointer = next_w_cnt%pool_size;
-	if(next_w_pointer > pool_max_addr){
-		next_w_cnt = (next_w_cnt/pool_size + 1) << pool_fact;
-		len += pool_size - next_w_pointer;
-	}
-	if(len > 65535){
-		log_info(LOG_NOTICE, "len is %d", len);
-	}
-	diff = next_w_cnt - read_cnt;
-	while(1){
-		if(diff > pool_size){
-			log_info(LOG_ERR, "pool is full");
-			log_info(LOG_ERR, "read:%llu, write:%llu, next_w_cnt:%llu",
-					read_cnt, write_cnt, next_w_cnt);
-
-			pthread_cond_wait(&empty, &mutex);
-		}else
-		{
-			break;
-		}
-		diff = next_w_cnt - read_cnt;
-	}
-	w_pointer = write_cnt % pool_size;
-	size_p    = (int*)(pool + w_pointer);
-	p         = pool + w_pointer + sizeof(int);
-	write_cnt = next_w_cnt;
-	/* Put packet to pool */
-	memcpy(p, packet, act_len);
-	*size_p   = len;
-	pthread_cond_signal(&full);
-	pthread_mutex_unlock(&mutex);
-}
-
-/*
- * Get one packet from buffered pool
- */
-static char *get_pack_from_pool()
-{
-	int  read_pos, len;
-	char *p;
-
-	recv_pack_cnt_from_pool++;
-	read_over_flag = 0;
-
-	pthread_mutex_lock (&mutex);
-	if(read_cnt >= write_cnt){
-		read_over_flag = 1;
-		pthread_cond_wait(&full, &mutex);
-	}
-	read_pos = read_cnt%pool_size;
-	p        = pool + read_pos + sizeof(int);
-	len      = *(int*)(pool + read_pos);
-	if(len >65535){
-		log_info(LOG_ERR, "len is too long:%d", len);
-	}
-	memcpy(item, p, len);
-	read_cnt = read_cnt + len + sizeof(int);
-
-	pthread_cond_signal(&empty);
-	pthread_mutex_unlock(&mutex);
-
-	/* The packet minimum length is 40 bytes */
-	if(len < 40){
-		log_info(LOG_WARN, "packet len is less than 40");
-	}
-
-	return item;
-}
-
-/*
- * Thread's entrance 
- * TODO Multiple threading may be removed later
- */
-static void *dispose(void *thread_id)
-{
-	char *packet;
-
-	worker_pid = (long int)syscall(224) ;
-	log_info(LOG_WARN, "worker thread, pid=%ld", worker_pid);
-
-	if(NULL != thread_id){
-		log_info(LOG_NOTICE, "booted,tid:%d", *((int*)thread_id));
-	}else{
-		log_info(LOG_NOTICE, "I am booted with no thread id");
-	}
-	/* Loop for processing packets */
-	while(1){
-		packet = get_pack_from_pool();
-		process(packet);
-	}
-
-	return NULL;
-}
-#endif
-
-
 static void process_packet(bool backup, char *packet, int length){
-#if (MULTI_THREADS)  
-	put_packet_to_pool((const char *)packet, length);
-#else
 	char tmp_packet[RECV_BUF_SIZE];
 	if(!backup){
 		process(packet);
@@ -142,7 +19,6 @@ static void process_packet(bool backup, char *packet, int length){
 		memcpy(tmp_packet, packet, length);
 		process(tmp_packet);
 	}
-#endif
 }
 
 static void set_nonblock(int socket)
@@ -323,14 +199,8 @@ static int retrieve_raw_sockets(int sock)
 		}
 
 		if(raw_packs%100000 == 0){
-#if (MULTI_THREADS)  
-			log_info(LOG_NOTICE,
-					"raw packets:%llu, valid :%llu, total in pool:%llu",
-					raw_packs, valid_raw_packs, packs_put_cnt);
-#else
 			log_info(LOG_NOTICE, "raw packets:%llu, valid :%llu",
 					raw_packs, valid_raw_packs);
-#endif
 		}
 	}
 	return 0;
@@ -375,11 +245,7 @@ static void dispose_event(int fd)
 			log_info(LOG_ERR, "NULL msg from msg_client_recv");
 			exit(EXIT_FAILURE);
 		}   
-#if (MULTI_THREADS)  
-		put_packet_to_pool((const char*)msg, sizeof(struct msg_server_s));
-#else
 		process((char*)msg);
-#endif
 	}   
 	if((event_cnt%1000000) == 0){
 		check_resource_usage();
@@ -389,7 +255,7 @@ static void dispose_event(int fd)
 void tcp_copy_exit()
 {
 	int i;
-	fprintf(stderr, "tcp copy exit\n");
+	fprintf(stderr, "exit tcpcopy\n");
 	destroy_for_sessions();
 	if(-1 != raw_sock){
 		close(raw_sock);
@@ -398,16 +264,6 @@ void tcp_copy_exit()
 	send_close();
 	address_close_sock();
 	log_end();
-#if (MULTI_THREADS)  
-	if(NULL != pool){
-		free(pool);
-		pool = NULL;
-	}
-	if(NULL != item){
-		free(item);
-		item = NULL;
-	}
-#endif
 	if(clt_settings.raw_transfer != NULL){
 		free(clt_settings.raw_transfer);
 		clt_settings.raw_transfer = NULL;
@@ -435,21 +291,8 @@ void tcp_copy_exit()
 
 void tcp_copy_over(const int sig)
 {
-#if (MULTI_THREADS)  
-	int total = 0;
-#endif
 	long int pid   = (long int)syscall(224);
 	log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
-#if (MULTI_THREADS)  
-	while(!read_over_flag){
-		sleep(1);
-		total++;
-		/* Wait for 30 seconds */
-		if(total > 30){
-			break;
-		}
-	}
-#endif
 	sync();
 	exit(EXIT_SUCCESS);
 }
@@ -458,33 +301,17 @@ void tcp_copy_over(const int sig)
 /* Initiate tcpcopy client */
 int tcp_copy_init()
 {
-#if (MULTI_THREADS)  
-	int                    i, ret;
-#else
 	int                    i;
-#endif
 	ip_port_pair_mapping_t *pair;
 	ip_port_pair_mapping_t **mappings;
 	uint16_t               online_port, target_port;
 	uint32_t               target_ip;
 
-#if (MULTI_THREADS)  
-	main_pid = getpid();
-	log_info(LOG_WARN, "main , pid=%d", main_pid);
-#endif
 	select_server_set_callback(dispose_event);
 
 	/* Init session table*/
 	init_for_sessions();
 	localhost = inet_addr("127.0.0.1");	
-#if (MULTI_THREADS)  
-	/* Init pool */
-	pool_fact = clt_settings.pool_fact;
-	pool_size = 1 << pool_fact;
-	pool_max_addr = pool_size - clt_settings.mtu;
-	pool = (char*)calloc(1, pool_size);
-	item = (char*)calloc(1, clt_settings.mtu+clt_settings.mtu);
-#endif
 
 	/* Init input raw socket info */
 	raw_sock = init_input_raw_socket();
@@ -493,16 +320,6 @@ int tcp_copy_init()
 		select_server_add(raw_sock);
 		/* Init output raw socket info */
 		send_init();
-#if (MULTI_THREADS)  
-		pthread_mutex_init(&mutex, NULL);
-		pthread_cond_init(&full, NULL);
-		pthread_cond_init(&empty, NULL);
-		/*TODO To solve memory leak of pthread_create reported by valgrind */
-		if((ret = pthread_create(&work_tid, NULL, dispose, &work_tid)) != 0){
-			fprintf(stderr, "Can't create thread: %s\n", strerror(ret));
-			exit(EXIT_FAILURE);
-		}
-#endif
 		/* Add connections to the tested server for exchanging info */
 		mappings = clt_settings.transfer.mappings;
 		for(i = 0; i < clt_settings.transfer.num; i++){
