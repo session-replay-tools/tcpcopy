@@ -44,7 +44,7 @@
 
 
 #define DEFAULT_TIMEOUT 120
-#define CHECK_INTERVAL  10
+#define CHECK_INTERVAL  15
 #define DEFAULT_SESSION_TIMEOUT 60
 
 /* Max fd number for select */

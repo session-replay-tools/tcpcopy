@@ -28,7 +28,9 @@ typedef struct session_s{
 	uint32_t dst_addr;
 	/* Online ip address(network byte order) */
 	uint32_t online_addr;
-	/* Src or client port(host byte order) */
+	/* Orginal src or client port(network byte order,never changed) */
+	uint16_t orig_src_port;
+	/* Src or client port(host byte order,it may be changed) */
 	uint16_t src_h_port;
 	/* Dst or backend port(network byte order) */
 	uint16_t dst_port;

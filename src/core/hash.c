@@ -98,7 +98,7 @@ bool hash_add(hash_table *table, uint64_t key, void *data)
 	p_link_node ln;
 	link_list   *l;
 
-	ln = hash_find_node(table,key);
+	ln = hash_find_node(table, key);
 	if(ln != NULL){
 		hn = (hash_node *) ln->data;
 		hn->data = data;

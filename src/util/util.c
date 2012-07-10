@@ -31,7 +31,7 @@ uint16_t get_port_by_rand_addition(uint16_t orig_port)
 		seed = tp.tv_usec;
 	}    
 	port_add = (uint16_t)(4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
-	port_add = port_add + 1024;
+	port_add = port_add + 32768;
 
 	return get_appropriate_port(ntohs(orig_port), port_add);
 }

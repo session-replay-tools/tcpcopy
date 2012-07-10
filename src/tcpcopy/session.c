@@ -9,7 +9,7 @@
 #endif
 
 static hash_table *sessions_table;
-static hash_table *transfer_port_table;
+static hash_table *tf_port_table;
 
 #if (TCPCOPY_MYSQL_BASIC)
 static hash_table *mysql_table;
@@ -289,7 +289,7 @@ static void session_rel_dynamic_mem(session_t *s)
 	}
 	if(s->port_transfered){
 		key = get_key(s->src_addr, s->faked_src_port);
-		if(!hash_del(transfer_port_table, key)){
+		if(!hash_del(tf_port_table, key)){
 			log_info(LOG_WARN, "no hash item for port transfer");
 		}
 		s->port_transfered = 0;
@@ -323,8 +323,8 @@ void init_for_sessions()
 	/* Create 65536 slots for session table */
 	sessions_table = hash_create(65536);
 	strcpy(sessions_table->name, "session-table");
-	transfer_port_table = hash_create(65536);
-	strcpy(transfer_port_table->name, "transfer port table");
+	tf_port_table = hash_create(65536);
+	strcpy(tf_port_table->name, "transfer port table");
 }
 
 void destroy_for_sessions()
@@ -362,14 +362,14 @@ void destroy_for_sessions()
 	free(sessions_table);
 	sessions_table = NULL;
 	/* Free transfer port table */
-	for(i = 0; i < transfer_port_table->size; i++){
-		list = transfer_port_table->lists[i];
+	for(i = 0; i < tf_port_table->size; i++){
+		list = tf_port_table->lists[i];
 		link_list_clear(list);
 		free(list);
 	}
-	free(transfer_port_table->lists);
-	free(transfer_port_table);
-	transfer_port_table = NULL;
+	free(tf_port_table->lists);
+	free(tf_port_table);
+	tf_port_table = NULL;
 }
 
 static void session_init(session_t *s, int flag)
@@ -465,7 +465,7 @@ static void session_init_for_next(session_t *s)
 	link_list   *list = s->next_sess_packs;
 	if(s->port_transfered){
 		key = get_key(s->src_addr, s->faked_src_port);
-		if(!hash_del(transfer_port_table, key)){
+		if(!hash_del(tf_port_table, key)){
 			log_info(LOG_WARN, "no hash item for port transfer");
 		}
 	}
@@ -489,14 +489,15 @@ static session_t *session_create(struct iphdr *ip_header,
 		return NULL;
 	}
 	session_init(s, SESS_CREATE);
-	s->src_addr    = ip_header->saddr;
-	s->online_addr = ip_header->daddr;
-	s->src_h_port  = ntohs(tcp_header->source);
-	s->online_port = tcp_header->source;
+	s->src_addr      = ip_header->saddr;
+	s->online_addr   = ip_header->daddr;
+	s->orig_src_port = tcp_header->source;
+	s->src_h_port    = ntohs(tcp_header->source);
+	s->online_port   = tcp_header->source;
 	test = get_test_pair(&(clt_settings.transfer), 
 			s->online_addr, s->online_port);
-	s->dst_addr    = test->target_ip;
-	s->dst_port    = test->target_port;
+	s->dst_addr      = test->target_ip;
+	s->dst_port      = test->target_port;
 	return s;
 }
 
@@ -1272,16 +1273,22 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
 	log_info(LOG_NOTICE, "fake syn:%u", s->src_h_port);
 #endif
 	if(is_hard){
-		target_port = get_port_by_rand_addition(tcp_header->source);
+		while(true){
+			target_port = get_port_by_rand_addition(tcp_header->source);
+			s->src_h_port = target_port;
+			target_port   = htons(target_port);
+			new_key       = get_key(ip_header->saddr, target_port);
+			if(NULL ==  hash_find(sessions_table, new_key)){
+				break;
+			}else{
+				log_info(LOG_NOTICE, "already exist:%u", s->src_h_port);
+			}
+		}
 #if (DEBUG_TCPCOPY)
 		log_info(LOG_NOTICE, "change port from :%u to :%u",
-				ntohs(tcp_header->source), target_port);
+				ntohs(tcp_header->source), s->src_h_port);
 #endif
-		s->src_h_port = target_port;
-		target_port = htons(target_port);
-		new_key = get_key(ip_header->saddr, target_port);
-		hash_add(transfer_port_table, new_key, 
-				(void *)(long)tcp_header->source);
+		hash_add(tf_port_table, new_key, (void *)(long)s->orig_src_port);
 		tcp_header->source = target_port;
 		s->faked_src_port  = tcp_header->source;
 		s->port_transfered = 1;
@@ -1494,6 +1501,8 @@ static void process_back_syn(session_t *s, struct iphdr *ip_header,
 #endif
 	s->status = SYN_CONFIRM;
 	s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + 1);
+	s->dst_closed  = 0;
+	s->reset_sent  = 0;
 	if(s->req_halfway_intercepted){
 		send_faked_third_handshake(s, ip_header, tcp_header);
 		send_reserved_packets(s);
@@ -1925,7 +1934,7 @@ static void proc_clt_cont_when_bak_closed(session_t *s,
 #endif
 	if(s->port_transfered){
 		key = get_key(ip_header->saddr, s->faked_src_port);
-		if(!hash_del(transfer_port_table, key)){
+		if(!hash_del(tf_port_table, key)){
 			log_info(LOG_WARN, "no hash item for port transfer");
 		}
 	}
@@ -2333,7 +2342,7 @@ void process(char *packet)
 		s = hash_find(sessions_table, key);
 		if(NULL == s){
 			/* Give another chance for port changed*/
-			ori_port = hash_find(transfer_port_table, key);
+			ori_port = hash_find(tf_port_table, key);
 			if(ori_port != NULL){
 				key = get_key(ip_header->daddr, (uint16_t)(long)ori_port);
 				s = hash_find(sessions_table, key);
