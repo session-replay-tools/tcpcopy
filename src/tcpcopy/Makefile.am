@@ -12,4 +12,4 @@ tcpcopy_LDADD=\
 				   ../mysql/libmysql.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a\
-				   -lpthread -lcrypto -lm
+				   -lcrypto -lm
