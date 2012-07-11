@@ -2786,7 +2786,7 @@ echo "${ECHO_T}$ac_cv_c_compiler_gnu" >&6
 GCC=`test $ac_compiler_gnu = yes && echo yes`
 ac_test_CFLAGS=${CFLAGS+set}
 ac_save_CFLAGS=$CFLAGS
-CFLAGS="-g"
+CFLAGS="-g "
 echo "$as_me:$LINENO: checking whether $CC accepts -g" >&5
 echo $ECHO_N "checking whether $CC accepts -g... $ECHO_C" >&6
 if test "${ac_cv_prog_cc_g+set}" = set; then
@@ -2844,9 +2844,9 @@ if test "$ac_test_CFLAGS" = set; then
   CFLAGS=$ac_save_CFLAGS
 elif test $ac_cv_prog_cc_g = yes; then
   if test "$GCC" = yes; then
-    CFLAGS="-g -pedantic -pg -Wall "
+    CFLAGS="-g "
   else
-    CFLAGS="-g -pedantic -pg -Wall"
+    CFLAGS="-g "
   fi
 else
   if test "$GCC" = yes; then
@@ -4709,7 +4709,7 @@ echo "${ECHO_T}$ac_cv_cxx_compiler_gnu" >&6
 GXX=`test $ac_compiler_gnu = yes && echo yes`
 ac_test_CXXFLAGS=${CXXFLAGS+set}
 ac_save_CXXFLAGS=$CXXFLAGS
-CXXFLAGS="-g"
+CXXFLAGS="-g "
 echo "$as_me:$LINENO: checking whether $CXX accepts -g" >&5
 echo $ECHO_N "checking whether $CXX accepts -g... $ECHO_C" >&6
 if test "${ac_cv_prog_cxx_g+set}" = set; then
@@ -4767,9 +4767,9 @@ if test "$ac_test_CXXFLAGS" = set; then
   CXXFLAGS=$ac_save_CXXFLAGS
 elif test $ac_cv_prog_cxx_g = yes; then
   if test "$GXX" = yes; then
-    CXXFLAGS="-g -pedantic -pg -Wall "
+    CXXFLAGS="-g "
   else
-    CXXFLAGS="-g -pedantic -pg -Wall"
+    CXXFLAGS="-g "
   fi
 else
   if test "$GXX" = yes; then
@@ -5454,9 +5454,9 @@ if test "$ac_test_FFLAGS" = set; then
   FFLAGS=$ac_save_FFLAGS
 elif test $ac_cv_prog_f77_g = yes; then
   if test "x$ac_cv_f77_compiler_gnu" = xyes; then
-    FFLAGS="-g -pedantic -pg -Wall "
+    FFLAGS="-g "
   else
-    FFLAGS="-g -pedantic -pg -Wall"
+    FFLAGS="-g "
   fi
 else
   if test "x$ac_cv_f77_compiler_gnu" = xyes; then
