@@ -120,19 +120,18 @@ static int retrieve_ip_addr()
 }
 
 static void usage(void) {  
-	printf("intercept " VERSION "\n");
-	printf("-x <passlist,> passed ip list through firewall\n"
-		   "               format:\n"
-		   "               ip1,ip2,...\n"
-		   "-p             tcp port number to listen on\n"
-		   "-s             hash table size for intercept\n"
-		   "-l <file>      log file path\n"
-		   "-P <file>      save PID in <file>, only used with -d option\n"
-		   "-b <ip>        server binded ip address for listening\n"
-		   "-v             intercept version\n"
-		   "-h             help\n"
-		   "-d             run as a daemon\n");
-	return;
+    printf("intercept " VERSION "\n");
+    printf("-x <passlist,> passed ip list through firewall\n"
+           "               format:\n"
+           "               ip1,ip2,...\n"
+           "-p             tcp port number to listen on\n"
+           "-s             hash table size for intercept\n"
+           "-l <file>      log file path\n"
+           "-P <file>      save PID in <file>, only used with -d option\n"
+           "-b <ip>        server binded ip address for listening\n"
+           "-v             intercept version\n"
+           "-h             help\n"
+           "-d             run as a daemon\n");
 }
 
 static int read_args(int argc, char **argv){
