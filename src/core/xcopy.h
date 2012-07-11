@@ -138,6 +138,7 @@ enum packet_classification{
 	UNKNOWN_FLAG
 };
 
+#include <limits.h>
 #include <asm/types.h>
 #include <stdarg.h>
 #include <netinet/in.h>
@@ -153,7 +154,6 @@ enum packet_classification{
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <limits.h>
 #include <signal.h>
 #include <unistd.h>
 #include <time.h>
