@@ -170,12 +170,12 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 SUBDIRS = src
 EXTRA_DIST = README\
-			 COPYING\
-			 AUTHORS\
-			 ChangeLog\
-			 INSTALL\
-			 NEWS\
-			 configure.ac
+             COPYING\
+             AUTHORS\
+             ChangeLog\
+             INSTALL\
+             NEWS\
+             configure.ac
 
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-recursive
