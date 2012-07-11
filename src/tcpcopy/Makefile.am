@@ -6,10 +6,10 @@ tcpcopy_SOURCES=\
 				session.c session.h\
 				main.c
 tcpcopy_LDADD=\
-				   ../core/libcore.a\
-				   ../log/liblog.a\
-				   ../util/libutil.a\
-				   ../mysql/libmysql.a\
-				   ../event/libevent.a\
-				   ../communication/libmsg.a\
-				   -lcrypto -lm
+			   ../core/libcore.a\
+			   ../log/liblog.a\
+			   ../util/libutil.a\
+			   ../mysql/libmysql.a\
+			   ../event/libevent.a\
+			   ../communication/libmsg.a\
+			   -lcrypto -lm

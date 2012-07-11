@@ -178,13 +178,13 @@ tcpcopy_SOURCES = \
 				main.c
 
 tcpcopy_LDADD = \
-				   ../core/libcore.a\
-				   ../log/liblog.a\
-				   ../util/libutil.a\
-				   ../mysql/libmysql.a\
-				   ../event/libevent.a\
-				   ../communication/libmsg.a\
-				   -lcrypto -lm
+			   ../core/libcore.a\
+			   ../log/liblog.a\
+			   ../util/libutil.a\
+			   ../mysql/libmysql.a\
+			   ../event/libevent.a\
+			   ../communication/libmsg.a\
+			   -lcrypto -lm
 
 all: all-am
 
