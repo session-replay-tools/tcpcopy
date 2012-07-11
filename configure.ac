@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(tcpcopy, 0.4.0, wangbin579@gmail.com)
+AC_INIT(tcpcopy, 0.5.0, wangbin579@gmail.com)
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([config.h])
 
 
-AM_INIT_AUTOMAKE(tcpcopy,0.4.0)
+AM_INIT_AUTOMAKE(tcpcopy,0.5.0)
 
 
 # Checks for programs.
@@ -50,6 +50,8 @@ AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket])
 AC_OUTPUT([
 Makefile
 src/Makefile
+src/core/Makefile
+src/util/Makefile
 src/log/Makefile
 src/mysql/Makefile
 src/interception/Makefile

@@ -14,7 +14,7 @@
 
 @SET_MAKE@
 
-SOURCES = $(interception_SOURCES)
+SOURCES = $(intercept_SOURCES)
 
 srcdir = @srcdir@
 top_srcdir = @top_srcdir@
@@ -38,7 +38,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-bin_PROGRAMS = interception$(EXEEXT)
+bin_PROGRAMS = intercept$(EXEEXT)
 subdir = src/interception
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -51,11 +51,12 @@ CONFIG_CLEAN_FILES =
 am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
-am_interception_OBJECTS = router.$(OBJEXT) delay.$(OBJEXT) \
-	hash.$(OBJEXT) interception.$(OBJEXT) linklist.$(OBJEXT) \
-	nl_firewall.$(OBJEXT) nl.$(OBJEXT) main.$(OBJEXT)
-interception_OBJECTS = $(am_interception_OBJECTS)
-interception_DEPENDENCIES = ../event/libevent.a ../log/liblog.a \
+am_intercept_OBJECTS = router.$(OBJEXT) delay.$(OBJEXT) \
+	interception.$(OBJEXT) nl_firewall.$(OBJEXT) nl.$(OBJEXT) \
+	main.$(OBJEXT)
+intercept_OBJECTS = $(am_intercept_OBJECTS)
+intercept_DEPENDENCIES = ../core/libcore.a ../log/liblog.a \
+	../util/libutil.a ../event/libevent.a \
 	../communication/libmsg.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -68,8 +69,8 @@ LTCOMPILE = $(LIBTOOL) --mode=compile --tag=CC $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link --tag=CC $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-SOURCES = $(interception_SOURCES)
-DIST_SOURCES = $(interception_SOURCES)
+SOURCES = $(intercept_SOURCES)
+DIST_SOURCES = $(intercept_SOURCES)
 ETAGS = etags
 CTAGS = ctags
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
@@ -170,19 +171,19 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-interception_SOURCES = \
+intercept_SOURCES = \
 					 router.c router.h\
 					 delay.c delay.h\
-					 hash.c hash.h\
 					 interception.c interception.h\
-					 linklist.c linklist.h\
 					 nl_firewall.c nl_firewall.h\
 					 nl.c nl.h\
 					 main.c
 
-interception_LDADD = \
-				   ../event/libevent.a\
+intercept_LDADD = \
+				   ../core/libcore.a\
 				   ../log/liblog.a\
+				   ../util/libutil.a\
+				   ../event/libevent.a\
 				   ../communication/libmsg.a
 
 all: all-am
@@ -246,9 +247,9 @@ clean-binPROGRAMS:
 	  echo " rm -f $$p $$f"; \
 	  rm -f $$p $$f ; \
 	done
-interception$(EXEEXT): $(interception_OBJECTS) $(interception_DEPENDENCIES) 
-	@rm -f interception$(EXEEXT)
-	$(LINK) $(interception_LDFLAGS) $(interception_OBJECTS) $(interception_LDADD) $(LIBS)
+intercept$(EXEEXT): $(intercept_OBJECTS) $(intercept_DEPENDENCIES) 
+	@rm -f intercept$(EXEEXT)
+	$(LINK) $(intercept_LDFLAGS) $(intercept_OBJECTS) $(intercept_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -257,9 +258,7 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/delay.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hash.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/interception.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/linklist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nl.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nl_firewall.Po@am__quote@

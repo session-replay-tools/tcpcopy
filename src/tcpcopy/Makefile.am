@@ -1,13 +1,15 @@
 bin_PROGRAMS=tcpcopy
 tcpcopy_SOURCES=\
 				address.c address.h\
-				send.cpp send.h\
-				session.cpp session.h\
-				getopt.c getopt.h\
-				main.cpp
+				send.c send.h\
+				manager.c manager.h\
+				session.c session.h\
+				main.c
 tcpcopy_LDADD=\
+				   ../core/libcore.a\
 				   ../log/liblog.a\
+				   ../util/libutil.a\
 				   ../mysql/libmysql.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a\
-				   -lpthread -lcrypto
+				   -lpthread -lcrypto -lm

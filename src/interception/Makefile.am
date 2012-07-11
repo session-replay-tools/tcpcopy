@@ -1,14 +1,14 @@
-bin_PROGRAMS=interception
-interception_SOURCES=\
+bin_PROGRAMS=intercept
+intercept_SOURCES=\
 					 router.c router.h\
 					 delay.c delay.h\
-					 hash.c hash.h\
 					 interception.c interception.h\
-					 linklist.c linklist.h\
 					 nl_firewall.c nl_firewall.h\
 					 nl.c nl.h\
 					 main.c
-interception_LDADD=\
-				   ../event/libevent.a\
+intercept_LDADD=\
+				   ../core/libcore.a\
 				   ../log/liblog.a\
+				   ../util/libutil.a\
+				   ../event/libevent.a\
 				   ../communication/libmsg.a

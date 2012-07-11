@@ -1,9 +1,10 @@
-#ifndef  PASSWORD_INC
-#define  PASSWORD_INC
+#ifndef  _PASSWORD_INC
+#define  _PASSWORD_INC
 
-#define SCRAMBLE_LENGTH 20
 
-void
-scramble(char *to, const char *message, const char *password);
+#if (TCPCOPY_MYSQL_ADVANCED) 
+void scramble(char *to, const char *message, const char *password);
+#endif
 
-#endif   /* ----- #ifndef PASSWORD_INC  ----- */
+#endif   /* ----- #ifndef _PASSWORD_INC  ----- */
+

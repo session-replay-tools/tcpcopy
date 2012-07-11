@@ -52,10 +52,11 @@ am__installdirs = "$(DESTDIR)$(bindir)"
 binPROGRAMS_INSTALL = $(INSTALL_PROGRAM)
 PROGRAMS = $(bin_PROGRAMS)
 am_tcpcopy_OBJECTS = address.$(OBJEXT) send.$(OBJEXT) \
-	session.$(OBJEXT) getopt.$(OBJEXT) main.$(OBJEXT)
+	manager.$(OBJEXT) session.$(OBJEXT) main.$(OBJEXT)
 tcpcopy_OBJECTS = $(am_tcpcopy_OBJECTS)
-tcpcopy_DEPENDENCIES = ../log/liblog.a ../mysql/libmysql.a \
-	../event/libevent.a ../communication/libmsg.a
+tcpcopy_DEPENDENCIES = ../core/libcore.a ../log/liblog.a \
+	../util/libutil.a ../mysql/libmysql.a ../event/libevent.a \
+	../communication/libmsg.a
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I$(top_builddir)
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -67,14 +68,6 @@ LTCOMPILE = $(LIBTOOL) --mode=compile --tag=CC $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link --tag=CC $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
-LTCXXCOMPILE = $(LIBTOOL) --mode=compile --tag=CXX $(CXX) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CXXFLAGS) $(CXXFLAGS)
-CXXLD = $(CXX)
-CXXLINK = $(LIBTOOL) --mode=link --tag=CXX $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(tcpcopy_SOURCES)
 DIST_SOURCES = $(tcpcopy_SOURCES)
 ETAGS = etags
@@ -179,22 +172,24 @@ sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 tcpcopy_SOURCES = \
 				address.c address.h\
-				send.cpp send.h\
-				session.cpp session.h\
-				getopt.c getopt.h\
-				main.cpp
+				send.c send.h\
+				manager.c manager.h\
+				session.c session.h\
+				main.c
 
 tcpcopy_LDADD = \
+				   ../core/libcore.a\
 				   ../log/liblog.a\
+				   ../util/libutil.a\
 				   ../mysql/libmysql.a\
 				   ../event/libevent.a\
 				   ../communication/libmsg.a\
-				   -lpthread -lcrypto
+				   -lpthread -lcrypto -lm
 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj
+.SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -254,7 +249,7 @@ clean-binPROGRAMS:
 	done
 tcpcopy$(EXEEXT): $(tcpcopy_OBJECTS) $(tcpcopy_DEPENDENCIES) 
 	@rm -f tcpcopy$(EXEEXT)
-	$(CXXLINK) $(tcpcopy_LDFLAGS) $(tcpcopy_OBJECTS) $(tcpcopy_LDADD) $(LIBS)
+	$(LINK) $(tcpcopy_LDFLAGS) $(tcpcopy_OBJECTS) $(tcpcopy_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -263,8 +258,8 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/address.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/getopt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/main.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/manager.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/send.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/session.Po@am__quote@
 
@@ -288,27 +283,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
-
-.cpp.o:
-@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
-
-.cpp.obj:
-@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ `$(CYGPATH_W) '$<'`; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.cpp.lo:
-@am__fastdepCXX_TRUE@	if $(LTCXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Plo"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
 
 mostlyclean-libtool:
 	-rm -f *.lo

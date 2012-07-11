@@ -50,7 +50,7 @@ CONFIG_CLEAN_FILES =
 LIBRARIES = $(noinst_LIBRARIES)
 ARFLAGS = cru
 libmysql_a_AR = $(AR) $(ARFLAGS)
-libmysql_a_DEPENDENCIES = ../log/liblog.a
+libmysql_a_DEPENDENCIES = ../core/libcore.a ../log/liblog.a
 am_libmysql_a_OBJECTS = pairs.$(OBJEXT) protocol.$(OBJEXT) \
 	sha1.$(OBJEXT) password.$(OBJEXT)
 libmysql_a_OBJECTS = $(am_libmysql_a_OBJECTS)
@@ -65,14 +65,6 @@ LTCOMPILE = $(LIBTOOL) --mode=compile --tag=CC $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --mode=link --tag=CC $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
-CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
-	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
-LTCXXCOMPILE = $(LIBTOOL) --mode=compile --tag=CXX $(CXX) $(DEFS) \
-	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
-	$(AM_CXXFLAGS) $(CXXFLAGS)
-CXXLD = $(CXX)
-CXXLINK = $(LIBTOOL) --mode=link --tag=CXX $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libmysql_a_SOURCES)
 DIST_SOURCES = $(libmysql_a_SOURCES)
 ETAGS = etags
@@ -178,15 +170,16 @@ target_alias = @target_alias@
 noinst_LIBRARIES = libmysql.a                                                                                                          
 libmysql_a_SOURCES = \
 				  my_config.h my_compiler.h my_dbug.h my_global.h my_attribute.h pairs.h m_string.h my_global.h \
-				  sha1.h password.h protocol.h pairs.cpp protocol.c sha1.c password.c 
+				  sha1.h password.h protocol.h pairs.c protocol.c sha1.c password.c 
 
 libmysql_a_LIBADD = \
+				 ../core/libcore.a\
 				 ../log/liblog.a
 
 all: all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cpp .lo .o .obj
+.SUFFIXES: .c .lo .o .obj
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -255,27 +248,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
-
-.cpp.o:
-@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
-
-.cpp.obj:
-@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ `$(CYGPATH_W) '$<'`; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.cpp.lo:
-@am__fastdepCXX_TRUE@	if $(LTCXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
-@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Plo"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
 
 mostlyclean-libtool:
 	-rm -f *.lo

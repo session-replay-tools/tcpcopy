@@ -1,41 +1,41 @@
-#include "../communication/msg.h"
-#include "../event/select_server.h"
-#include "../log/log.h"
 #include "address.h"
+#include "../event/select_server.h"
+#include "../communication/msg.h"
 
-static struct address_node addr[65536];
+static address_node_t addr[65536];
 
-void add_msg_connetion(uint16_t src_port,uint32_t dst_ip,uint16_t dst_port){
-	addr[src_port].ip = dst_ip;
-	addr[src_port].port = dst_port;
-	addr[src_port].sock = msg_copyer_init(dst_ip);
-	select_sever_add(addr[src_port].sock);
+/* This is for copying multiple ports */
+void address_add_msg_conn(uint16_t local_port, uint32_t dst_ip,
+		uint16_t dst_port)
+{
+	addr[local_port].ip   = dst_ip;
+	addr[local_port].port = dst_port;
+	addr[local_port].sock = msg_client_init(dst_ip, dst_port);
+	select_server_add(addr[local_port].sock);
 }
 
-int address_find_sock(uint16_t src_port){
-	if(addr[src_port].sock == 0){
-		logInfo(LOG_WARN,"it does not find address socket:%u",
-				ntohs(src_port));
+/* Find the message socket through local port */
+int address_find_sock(uint16_t local_port)
+{
+	if(0 == addr[local_port].sock){
+		log_info(LOG_WARN, "it can't find address socket:%u",
+				ntohs(local_port));
 		return -1;
 	}
-	return addr[src_port].sock;
+	return addr[local_port].sock;
 }
 
-int address_copy_or_not(uint16_t src_port){
-	if(addr[src_port].sock == 0){
-		logInfo(LOG_INFO,"address socket is not valid:%u",
-				ntohs(src_port));
-		return 0;
+/* Close sockets */
+int address_close_sock()
+{
+	int i;
+	for(i = 0; i< 65536; i++){
+		if(0 != addr[i].sock){
+			log_info(LOG_WARN, "it close socket:%d", addr[i].sock);
+			close(addr[i].sock);
+			addr[i].sock = 0;
+		}
 	}
-	return 1;
-}
-
-address *address_find_node(uint16_t src_port){
-	if(addr[src_port].sock == 0){
-		logInfo(LOG_INFO,"it does not find address socket pointer:%d",
-				ntohs(src_port));
-		return NULL;
-	}
-	return &addr[src_port];
+	return 0;
 }
 
