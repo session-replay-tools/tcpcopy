@@ -34,37 +34,37 @@ static void set_signal_handler(){
 static void usage(void) {  
 	printf("TCPCopy " VERSION "\n");
 	printf("-x <transfer,> what we copy and where send to\n"
-		   "               transfer format:\n"
-		   "               online_ip:online_port-target_ip:target_port,...\n"
-		   "               or :\n"
-		   "               online_port-target_ip:target_port,...\n");
+           "               transfer format:\n"
+           "               online_ip:online_port-target_ip:target_port,...\n"
+           "               or :\n"
+           "               online_port-target_ip:target_port,...\n");
 	printf("-c <ip>        localhost will be changed to this ip address\n"
-		   "               when sending to another machine\n"
-		   "               default value is online ip\n");
+           "               when sending to another machine\n"
+           "               default value is online ip\n");
 #if (TCPCOPY_MYSQL_ADVANCED)  
 	printf("-u <pair>      user password pair for mysql\n"
-		   "               pair format:\n"
-		   "               user1@psw1:user2@psw2:...\n"
-		   "               attension:\n"
-		   "               users of the target test should be the same as\n"
-		   "               that of online\n");
+           "               pair format:\n"
+           "               user1@psw1:user2@psw2:...\n"
+           "               attension:\n"
+           "               users of the target test should be the same as\n"
+           "               that of online\n");
 #endif
 	printf("-n <num>       the number of replication for multi-copying\n"
-		   "               the less,the better\n"
-		   "               max value allowed is 1023:\n"
-		   "-f <num>       port shift factor for mutiple tcpcopy instances\n"
-		   "               max value allowed is 1023:\n");
+           "               the less,the better\n"
+           "               max value allowed is 1023:\n"
+           "-f <num>       port shift factor for mutiple tcpcopy instances\n"
+           "               max value allowed is 1023:\n");
 	printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
-		   "               default value is 512:\n"
-		   "-M <num>       MTU sent to backend(default:1500)\n"
-		   "-t <num>       session timeout\n"
-		   "               if the target system is slow, set this larger\n");
+           "               default value is 512:\n"
+           "-M <num>       MTU sent to backend(default:1500)\n"
+           "-t <num>       session timeout\n"
+           "               if the target system is slow, set this larger\n");
 	printf("-l <file>      log file path\n"
-		   "-p <num>       remote server listening port\n");
+           "-p <num>       remote server listening port\n");
 	printf("-P <file>      save PID in <file>, only used with -d option\n"
-		   "-h             print this help and exit\n"
-		   "-v             version\n"
-		   "-d             run as a daemon\n");
+           "-h             print this help and exit\n"
+           "-v             version\n"
+           "-d             run as a daemon\n");
 }
 
 
