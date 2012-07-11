@@ -121,21 +121,21 @@
 #endif 
 
 enum session_status{
-	CLOSED       = 0,
-	SYN_SENT     = 1,
-	SYN_CONFIRM  = 2,
-	SEND_REQUEST = 4,
-	RECV_RESP    = 8,
-	SERVER_FIN   = 16,
-	CLIENT_FIN   =32
+    CLOSED       = 0,
+    SYN_SENT     = 1,
+    SYN_CONFIRM  = 2,
+    SEND_REQUEST = 4,
+    RECV_RESP    = 8,
+    SERVER_FIN   = 16,
+    CLIENT_FIN   =32
 };
 
 enum packet_classification{
-	CLIENT_FLAG,
-	BACKEND_FLAG,
-	FAKED_CLIENT_FLAG,
-	TO_BAKEND_FLAG,
-	UNKNOWN_FLAG
+    CLIENT_FLAG,
+    BACKEND_FLAG,
+    FAKED_CLIENT_FLAG,
+    TO_BAKEND_FLAG,
+    UNKNOWN_FLAG
 };
 
 #include <limits.h>
@@ -167,80 +167,80 @@ enum packet_classification{
 
 typedef struct ip_port_pair_mapping_s
 {
-	/* Online ip from the client perspective */
-	uint32_t online_ip;
-	uint32_t target_ip;
-	uint16_t online_port;
-	uint16_t target_port;
+    /* Online ip from the client perspective */
+    uint32_t online_ip;
+    uint32_t target_ip;
+    uint16_t online_port;
+    uint16_t target_port;
 }ip_port_pair_mapping_t;
 
 typedef struct ip_port_pair_mappings_s
 {
-	ip_port_pair_mapping_t **mappings;
-	int num;
+    ip_port_pair_mapping_t **mappings;
+    int num;
 }ip_port_pair_mappings_t;
 
 typedef struct passed_ip_addr_s{
-	/* It allows 32 ip addresses passed through server firewall */
-	uint32_t ips[MAX_ALLOWED_IP_NUM];
-	int num;
+    /* It allows 32 ip addresses passed through server firewall */
+    uint32_t ips[MAX_ALLOWED_IP_NUM];
+    int num;
 }passed_ip_addr_t;
 
 /* For tcpcopy client */
 typedef struct xcopy_clt_settings {
-	/* Replicated number of each request */
-	unsigned int  replica_num:10;
-	/* Port shift factor */
-	unsigned int  factor:8;
-	/* MTU sent to backend */
-	unsigned int  mtu:16;
-	/* Daemon flag */
-	unsigned int do_daemonize:1;
-	/* Max memory size allowed for tcpcopy client(max size 2G) */
-	unsigned int max_rss:21;
-	/* 
-	 * Max value for session timeout
-	 * If it reaches this value, the session will be removed 
-	 */
-	unsigned int session_timeout:16;
-	/* Online_ip online_port target_ip target_port string */
-	char *raw_transfer;
-	/* Pid file */
-	char *pid_file;
-	/* Error log path */
-	char *log_path;
-	/* Random port shifted */
-	uint16_t   rand_port_shifted;
-	/* Server listening port */
-	uint16_t   srv_port;
-	/* Ip address from localhost to (localhost transfered ip) */
-	uint32_t   lo_tf_ip;
+    /* Replicated number of each request */
+    unsigned int  replica_num:10;
+    /* Port shift factor */
+    unsigned int  factor:8;
+    /* MTU sent to backend */
+    unsigned int  mtu:16;
+    /* Daemon flag */
+    unsigned int do_daemonize:1;
+    /* Max memory size allowed for tcpcopy client(max size 2G) */
+    unsigned int max_rss:21;
+    /* 
+     * Max value for session timeout
+     * If it reaches this value, the session will be removed 
+     */
+    unsigned int session_timeout:16;
+    /* Online_ip online_port target_ip target_port string */
+    char *raw_transfer;
+    /* Pid file */
+    char *pid_file;
+    /* Error log path */
+    char *log_path;
+    /* Random port shifted */
+    uint16_t   rand_port_shifted;
+    /* Server listening port */
+    uint16_t   srv_port;
+    /* Ip address from localhost to (localhost transfered ip) */
+    uint32_t   lo_tf_ip;
 #ifdef TCPCOPY_MYSQL_ADVANCED
-	/* User password string for mysql */
-	char *user_pwd;
+    /* User password string for mysql */
+    char *user_pwd;
 #endif
-	/* Transfered online_ip online_port target_ip target_port */
-	ip_port_pair_mappings_t transfer;
+    /* Transfered online_ip online_port target_ip target_port */
+    ip_port_pair_mappings_t transfer;
 }xcopy_clt_settings;
 
 /* For intercept */
 typedef struct xcopy_srv_settings {
-	/* Raw ip list */
-	char *raw_ip_list;
-	/* Pid file */
-	char *pid_file;
-	/* Binded ip for security */
-	char *binded_ip;
-	/* Error log path */
-	char *log_path;
-	/* Hash size for kinds of table */
-	size_t hash_size;
-	/* TCP port number to listen on */
-	uint16_t port;
-	/* Daemon flag */
-	unsigned int do_daemonize:1;
-	/* Passed ip list */
-	passed_ip_addr_t passed_ips;
+    /* Raw ip list */
+    char *raw_ip_list;
+    /* Pid file */
+    char *pid_file;
+    /* Binded ip for security */
+    char *binded_ip;
+    /* Error log path */
+    char *log_path;
+    /* Hash size for kinds of table */
+    size_t hash_size;
+    /* TCP port number to listen on */
+    uint16_t port;
+    /* Daemon flag */
+    unsigned int do_daemonize:1;
+    /* Passed ip list */
+    passed_ip_addr_t passed_ips;
 }xcopy_srv_settings;
 
 /* Global variables*/
@@ -254,7 +254,7 @@ extern int g_log_level;
 
 /* Global functions */
 void strace_pack(int level, int flag, struct iphdr *ip_header,
-		struct tcphdr *tcp_header);
+        struct tcphdr *tcp_header);
 int daemonize();
 
 void log_info(int level, const char *fmt, ...);

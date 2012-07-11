@@ -1,11 +1,11 @@
 SUBDIRS = src
 EXTRA_DIST = README\
-			 COPYING\
-			 AUTHORS\
-			 ChangeLog\
-			 INSTALL\
-			 NEWS\
-			 configure.ac
+             COPYING\
+             AUTHORS\
+             ChangeLog\
+             INSTALL\
+             NEWS\
+             configure.ac
 
 .PHONY: release snapshot
 

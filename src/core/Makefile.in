@@ -167,9 +167,9 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-noinst_LIBRARIES = libcore.a                                                                                                          
+noinst_LIBRARIES = libcore.a
 libcore_a_SOURCES = \
-				  xcopy.h daemon.c debug.c link_list.h link_list.c hash.h hash.c
+                  xcopy.h daemon.c debug.c link_list.h link_list.c hash.h hash.c
 
 all: all-am
 
