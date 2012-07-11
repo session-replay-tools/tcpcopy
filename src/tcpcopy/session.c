@@ -347,7 +347,7 @@ void destroy_for_sessions()
 			hn = (hash_node *)ln->data;
 			if(hn->data != NULL){
 				s = hn->data;
-			    /* Delete session */
+				/* Delete session */
 				session_rel_dynamic_mem(s);
 				if(!hash_del(sessions_table, s->hash_key)){
 					log_info(LOG_ERR, "wrong del");
@@ -389,7 +389,7 @@ static void session_init(session_t *s, int flag)
 	}
 
 	if(s->unack_packets){
-		if(s->unack_packets->size >0){
+		if(s->unack_packets->size > 0){
 			link_list_clear(s->unack_packets);
 		}
 	}else{
@@ -401,7 +401,7 @@ static void session_init(session_t *s, int flag)
 		s->mysql_special_packets = link_list_create();
 	}else{
 		if(s->mysql_special_packets){
-			if(s->mysql_special_packets->size >0){
+			if(s->mysql_special_packets->size > 0){
 				link_list_clear(s->mysql_special_packets);
 			}
 		}else{
@@ -936,7 +936,7 @@ static bool check_reserved_content_left(session_t *s)
 		data = ln->data;
 		ip_header = (struct iphdr*)((char*)data);
 		cont_len  = get_pack_cont_len(ip_header, NULL);
-		if(cont_len>0){
+		if(cont_len > 0){
 			return true;
 		}
 		ln = link_list_get_next(list, ln);
@@ -2201,7 +2201,7 @@ void process_client_packet(session_t *s, struct iphdr *ip_header,
 
 void restore_buffered_next_session(session_t *s)
 {
-    p_link_node   ln;
+	p_link_node   ln;
 	unsigned char *data;
 	struct iphdr  *ip_header;
 	struct tcphdr *tcp_header;
