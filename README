@@ -32,17 +32,22 @@ Usage:
 
     2) Run:
        a) on the source host (root privilege is required):
-          ./tcpcopy local_ip1[:local_ip2:...] local_port remote_ip remote_port 
+          tcpcopy version <0.5
+          ./tcpcopy local_ip1[:local_ip2:...] local_port remote_ip remote_port
+          tcpcopy version >=0.5
+          ./tcpcopy -x local_port-remote_ip:remote_port 
  
        b) on the target host (root privilege is required):
           modprobe ip_queue # if not running
           iptables -I OUTPUT -p tcp --sport port -j QUEUE # if not set
-          ./interception 
+          ./interception (version <0.5) 
+          or
+          ./intercept (>=0.5)
 
 Example:
     Suppose there are two online hosts, 1.2.3.13 and 1.2.3.14. And 1.2.3.148 is the target host (similar to the online hosts). Port 12321 is used both as local port and remote port. We use tcpcopy to test if 1.2.3.148 can process 2X requests than a host can serve.
 
-    Here we use tcpcopy to perform the above test task.
+    Here we use tcpcopy version 0.4 to perform the above test task.
     
     1) on the target host (1.2.3.148)
        # modprobe ip_queue # if not run up
@@ -86,9 +91,7 @@ Example:
 Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
-    3) If you use tcpcopy to duplicate local requests, please keep lo MTU not more than 1500.
-    4) Interception (tcpcopy server) is single-threaded now.
-    5) Root privilege is required.
-    6) Long-lived requests (such as uploading a large file) does not work well until now
-    7) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
+    3) tcpcopy is single-threaded now.
+    4) Root privilege is required.
+    5) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
 
