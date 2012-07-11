@@ -4,7 +4,7 @@
 #define VERSION "0.5.0"
 
 /* Set nonzero for debug */
-#define DEBUG_TCPCOPY      1
+#define DEBUG_TCPCOPY      0
 
 /* Set nonzero for mysql skip-grant-table mode */
 #define TCPCOPY_MYSQL_SKIP 0

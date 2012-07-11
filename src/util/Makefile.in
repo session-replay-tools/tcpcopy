@@ -166,13 +166,13 @@ sbindir = @sbindir@
 sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
-noinst_LIBRARIES = libutil.a                                                                                                          
+noinst_LIBRARIES = libutil.a
 libutil_a_SOURCES = \
-				  util.h util.c
+                  util.h util.c
 
 libutil_a_LIBADD = \
-				 ../core/libcore.a\
-				 ../log/liblog.a
+                  ../core/libcore.a\
+                  ../log/liblog.a
 
 all: all-am
 
