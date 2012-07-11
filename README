@@ -32,10 +32,10 @@ Usage:
 
     2) Run:
        a) on the source host (root privilege is required):
-          tcpcopy version <0.5
-		  ./tcpcopy local_ip1[:local_ip2:...] local_port remote_ip remote_port 
-		  tcpcopy version >=0.5																	   
-          ./tcpcopy -x local_port-remote_ip:remote_port 
+		   tcpcopy version <0.5
+		   ./tcpcopy local_ip1[:local_ip2:...] local_port remote_ip remote_port
+           tcpcopy version >=0.5
+           ./tcpcopy -x local_port-remote_ip:remote_port 
  
        b) on the target host (root privilege is required):
           modprobe ip_queue # if not running
