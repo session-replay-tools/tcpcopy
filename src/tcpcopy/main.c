@@ -61,7 +61,7 @@ static void usage(void) {
 		   "               if the target system is slow, set this larger\n");
 	printf("-l <file>      log file path\n"
 		   "-p <num>       remote server listening port\n");
-    printf("-P <file>      save PID in <file>, only used with -d option\n"
+	printf("-P <file>      save PID in <file>, only used with -d option\n"
 		   "-h             print this help and exit\n"
 		   "-v             version\n"
 		   "-d             run as a daemon\n");
