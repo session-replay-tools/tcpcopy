@@ -323,8 +323,12 @@ void init_for_sessions()
     /* Create 65536 slots for session table */
     sessions_table = hash_create(65536);
     strcpy(sessions_table->name, "session-table");
-    tf_port_table = hash_create(65536);
+    tf_port_table  = hash_create(65536);
     strcpy(tf_port_table->name, "transfer port table");
+#if (TCPCOPY_MYSQL_BASIC)
+    mysql_table    = hash_create(65536);
+    strcpy(mysql_table->name, "mysql table");
+#endif
 }
 
 void destroy_for_sessions()
@@ -370,6 +374,16 @@ void destroy_for_sessions()
     free(tf_port_table->lists);
     free(tf_port_table);
     tf_port_table = NULL;
+#if (TCPCOPY_MYSQL_BASIC)
+    for(i = 0; i < mysql_table->size; i++){
+        list = mysql_table->lists[i];
+        link_list_clear(list);
+        free(list);
+    }
+    free(mysql_table->lists);
+    free(mysql_table);
+    mysql_table = NULL;
+#endif
 }
 
 static void session_init(session_t *s, int flag)
@@ -1772,7 +1786,7 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
 #if (TCPCOPY_MYSQL_BASIC)
     /* Remove old mysql info*/
     list = (link_list *)hash_find(mysql_table, s->src_h_port);
-    if(!list){
+    if(list){
         ln = link_list_first(list); 
         while(ln){
             tmp_ln = ln;
@@ -1855,7 +1869,11 @@ static int process_mysql_clt_auth_pack(session_t *s,
         struct iphdr *ip_header, struct tcphdr *tcp_header, 
         uint16_t cont_len)  
 {   
-    bool is_need_omit;
+    bool          is_need_omit;
+#if (!TCPCOPY_MYSQL_ADVANCED)
+    unsigned char *payload, pack_number;
+    uint16_t      size_tcp;
+#endif
     if(!s->req_halfway_intercepted){
         is_need_omit = false;
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -1870,9 +1888,10 @@ static int process_mysql_clt_auth_pack(session_t *s,
             /*
              * Check if mysql protocol validation ends? 
              */
-            payload =(unsigned char*)((char*)tcp_header + size_tcp);
+            size_tcp   = tcp_header->doff << 2;
+            payload  =(unsigned char*)((char*)tcp_header + size_tcp);
             /* Skip Packet Length */
-            payload = payload + 3;
+            payload  = payload + 3;
             pack_number = payload[0];
             /* If it is the second authenticate_user,then skip it */
             if(3 == pack_number){
