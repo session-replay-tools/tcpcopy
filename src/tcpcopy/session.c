@@ -329,6 +329,12 @@ void init_for_sessions()
     mysql_table    = hash_create(65536);
     strcpy(mysql_table->name, "mysql table");
 #endif
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    fir_auth_pack_table = hash_create(65536);
+    strcpy(fir_auth_pack_table->name, "first auth table");
+    sec_auth_pack_table = hash_create(65536);
+    strcpy(sec_auth_pack_table->name, "second auth table");
+#endif
 }
 
 void destroy_for_sessions()
@@ -366,23 +372,21 @@ void destroy_for_sessions()
     free(sessions_table);
     sessions_table = NULL;
     /* Free transfer port table */
-    for(i = 0; i < tf_port_table->size; i++){
-        list = tf_port_table->lists[i];
-        link_list_clear(list);
-        free(list);
-    }
-    free(tf_port_table->lists);
+    hash_destory(tf_port_table);
     free(tf_port_table);
     tf_port_table = NULL;
 #if (TCPCOPY_MYSQL_BASIC)
-    for(i = 0; i < mysql_table->size; i++){
-        list = mysql_table->lists[i];
-        link_list_clear(list);
-        free(list);
-    }
-    free(mysql_table->lists);
+    hash_destory(mysql_table);
     free(mysql_table);
     mysql_table = NULL;
+#endif
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    hash_destory(fir_auth_pack_table);
+    free(fir_auth_pack_table);
+    fir_auth_pack_table = NULL;
+    hash_destory(sec_auth_pack_table);
+    free(sec_auth_pack_table);
+    sec_auth_pack_table = NULL;
 #endif
 }
 
@@ -539,6 +543,68 @@ static void save_packet(link_list *list, struct iphdr *ip_header,
     log_info(LOG_NOTICE, "save packet");
 #endif
 }
+
+#if (TCPCOPY_MYSQL_ADVANCED)
+static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
+        struct tcphdr *tcp_header)
+{
+    void          *value;
+    char          encryption[16];
+    int           ch_auth_success;
+    unsigned char *payload;
+    uint16_t      size_tcp, cont_len;
+
+    size_tcp = tcp_header->doff << 2;
+    cont_len = get_pack_cont_len(ip_header, tcp_header);
+
+    if(!s->mysql_first_auth_sent){
+        log_info(LOG_NOTICE, "mysql login req from reserved");
+        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        ch_auth_success = change_client_auth_content(payload, 
+                (int)cont_len, s->mysql_password, s->mysql_scramble);
+        strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+        if(!ch_auth_success){
+            s->sess_over  = 1;
+            log_info(LOG_WARN, "it is strange here,possibility");
+            log_info(LOG_WARN, "1)user password pair not equal");
+            log_info(LOG_WARN, "2)half-intercepted");
+            return FAILURE;
+        }
+        s->mysql_first_auth_sent = 1;
+        value = hash_find(fir_auth_pack_table, s->hash_key);
+        if(value != NULL){
+            free(value);
+            log_info(LOG_NOTICE, "free for fir auth:%llu", s->hash_key);
+        }
+        value = (void *)copy_ip_packet(ip_header);
+        hash_add(fir_auth_pack_table, s->hash_key, value);
+        log_info(LOG_NOTICE, "set value for fir auth:%llu", s->hash_key);
+    }else if(s->mysql_first_auth_sent && s->mysql_sec_auth){
+        log_info(LOG_NOTICE, "sec login req from reserved");
+        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        memset(encryption, 0, 16);
+        memset(s->mysql_seed323, 0, SEED_323_LENGTH + 1);
+        memcpy(s->mysql_seed323, s->mysql_scramble, SEED_323_LENGTH);
+        new_crypt(encryption, s->mysql_password, s->mysql_seed323);
+        log_info(LOG_NOTICE, "change second req:%u", s->src_h_port);
+        /* Change sec auth content from client auth packets */
+        change_client_second_auth_content(payload, cont_len, encryption);
+        s->mysql_sec_auth = 0;
+        strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+        value = hash_find(sec_auth_pack_table, s->hash_key);
+        if(value != NULL){
+            free(value);
+            log_info(LOG_NOTICE, "free for sec auth:%llu", s->hash_key);
+        }
+        value = (void *)copy_ip_packet(ip_header);
+        hash_add(sec_auth_pack_table, s->hash_key, value);
+        log_info(LOG_WARN, "set sec auth packet:%llu", s->hash_key);
+
+    }
+
+    return SUCCESS;
+}
+#endif
 
 /*
  * Send reserved packets to backend
@@ -957,68 +1023,6 @@ static bool check_reserved_content_left(session_t *s)
     }
     return false;
 }
-
-#if (TCPCOPY_MYSQL_ADVANCED)
-static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
-        struct tcphdr *tcp_header)
-{
-    void          *value;
-    char          encryption[16];
-    int           ch_auth_success;
-    unsigned char *payload;
-    uint16_t      size_tcp, cont_len;
-
-    size_tcp = tcp_header->doff << 2;
-    cont_len = get_pack_cont_len(ip_header, tcp_header);
-
-    if(!s->mysql_first_auth_sent){
-        log_info(LOG_NOTICE, "mysql login req from reserved");
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
-        ch_auth_success = change_client_auth_content(payload, 
-                (int)cont_len, s->mysql_password, s->mysql_scramble);
-        strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-        if(!ch_auth_success){
-            s->sess_over  = 1;
-            log_info(LOG_WARN, "it is strange here,possibility");
-            log_info(LOG_WARN, "1)user password pair not equal");
-            log_info(LOG_WARN, "2)half-intercepted");
-            return FAILURE;
-        }
-        s->mysql_first_auth_sent = 1;
-        value = hash_find(fir_auth_pack_table, s->hash_key);
-        if(value != NULL){
-            free(value);
-            log_info(LOG_NOTICE, "free for fir auth:%llu", s->hash_key);
-        }
-        value = (void *)copy_ip_packet(ip_header);
-        hash_add(fir_auth_pack_table, s->hash_key, value);
-        log_info(LOG_NOTICE, "set value for fir auth:%llu", s->hash_key);
-    }else if(s->mysql_first_auth_sent && s->mysql_sec_auth){
-        log_info(LOG_NOTICE, "sec login req from reserved");
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
-        memset(encryption, 0, 16);
-        memset(s->mysql_seed323, 0, SEED_323_LENGTH + 1);
-        memcpy(s->mysql_seed323, s->mysql_scramble, SEED_323_LENGTH);
-        new_crypt(encryption, s->mysql_password, s->mysql_seed323);
-        log_info(LOG_NOTICE, "change second req:%u", s->src_h_port);
-        /* Change sec auth content from client auth packets */
-        change_client_second_auth_content(payload, cont_len, encryption);
-        s->mysql_sec_auth = 0;
-        strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-        value = hash_find(sec_auth_pack_table, s->hash_key);
-        if(value != NULL){
-            free(value);
-            log_info(LOG_NOTICE, "free for sec auth:%llu", s->hash_key);
-        }
-        value = (void *)copy_ip_packet(ip_header);
-        hash_add(sec_auth_pack_table, s->hash_key, value);
-        log_info(LOG_WARN, "set sec auth packet:%llu", s->hash_key);
-
-    }
-
-    return SUCCESS;
-}
-#endif
 
 #if (TCPCOPY_MYSQL_BASIC)
 static void mysql_prepare_for_new_session(session_t *s,

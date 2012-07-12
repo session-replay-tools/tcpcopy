@@ -3,7 +3,7 @@
 
 
 typedef struct mysql_user{
-	char *user;
+	char user[256];
 	char password[256];
 	struct mysql_user* next;
 }mysql_user;

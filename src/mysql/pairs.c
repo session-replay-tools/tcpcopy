@@ -39,7 +39,7 @@ char *retrieve_user_pwd(char *user)
 
 void retrieve_mysql_user_pwd_info(char *pairs)
 {
-    char       *p, *end, *q, *next, *pair_end, user[256];
+    char       *p, *end, *q, *next, *pair_end;
     mysql_user *p_user_info, *p_tmp_user_info;
     uint64_t   key;
     size_t     len;  
@@ -68,11 +68,14 @@ void retrieve_mysql_user_pwd_info(char *pairs)
         }else{
             pair_end = p + strlen(p) - 1;
         }
-        memset(user, 0, 256);
-        strncpy(user, p, q-p);
+        if((q-p) >= 256 || (pair_end - q) >= 256){
+            log_info(LOG_WARN, "too long for user or password");
+            exit(1);
+        }
         p_user_info = (mysql_user*)calloc(1, sizeof(mysql_user));
+        strncpy(p_user_info->user, p, q-p);
         strncpy(p_user_info->password, q + 1, pair_end - q);
-        key = get_key_from_user(user);
+        key = get_key_from_user(p_user_info->user);
         p_tmp_user_info = hash_find(user_pwd_table, key);
         if(NULL == p_tmp_user_info){
             hash_add(user_pwd_table, key, (void *)p_user_info);

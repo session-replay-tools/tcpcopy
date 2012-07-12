@@ -9,7 +9,7 @@
 /* Set nonzero for mysql skip-grant-table mode */
 #define TCPCOPY_MYSQL_SKIP 0
 /* Set nonzero for mysql normal mode */
-#define TCPCOPY_MYSQL_NO_SKIP 0
+#define TCPCOPY_MYSQL_NO_SKIP 1
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,

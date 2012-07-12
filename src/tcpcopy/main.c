@@ -321,8 +321,8 @@ static int set_details()
     if(NULL != clt_settings.user_pwd){
         retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
     }else{
-        log_info(LOG_ERR, "it must have -p argument");
-        fprintf(stderr, "no -p argument\n");
+        log_info(LOG_ERR, "it must have -u argument");
+        fprintf(stderr, "no -u argument\n");
         exit(EXIT_FAILURE);
 
     }
