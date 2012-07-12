@@ -1888,10 +1888,10 @@ static int process_mysql_clt_auth_pack(session_t *s,
             /*
              * Check if mysql protocol validation ends? 
              */
-            size_tcp   = tcp_header->doff << 2;
-            payload  =(unsigned char*)((char*)tcp_header + size_tcp);
+            size_tcp    = tcp_header->doff << 2;
+            payload     = (unsigned char*)((char*)tcp_header + size_tcp);
             /* Skip Packet Length */
-            payload  = payload + 3;
+            payload     = payload + 3;
             pack_number = payload[0];
             /* If it is the second authenticate_user,then skip it */
             if(3 == pack_number){
