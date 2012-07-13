@@ -1591,7 +1591,7 @@ static void mysql_check_need_sec_auth(session_t *s,
         struct iphdr *ip_header, struct tcphdr *tcp_header)
 {
     unsigned char *payload;
-    log_info(LOG_NOTICE, "check if it needs second auth");
+    log_info(LOG_NOTICE, "check if it needs second auth:%u", s->src_h_port);
     payload = (unsigned char*)((char*)tcp_header + sizeof(struct tcphdr));
     /* 
      * If it is the last data packet, 
@@ -2298,11 +2298,11 @@ static void output_stat(time_t now, int run_time)
     double    ratio;
 
     last_stat_time = now;
-    log_info(LOG_WARN, "active:%u,rel reqs:%llu,obs del:%llu",
+    log_info(LOG_NOTICE, "active:%u,rel reqs:%llu,obs del:%llu",
             sessions_table->total, leave_cnt, obs_cnt);
-    log_info(LOG_WARN, "conns:%llu,total resp packs:%llu,c-resp packs:%llu",
+    log_info(LOG_NOTICE, "conns:%llu,resp packs:%llu,c-resp packs:%llu",
             conn_cnt, resp_cnt, resp_cont_cnt);
-    log_info(LOG_WARN, "send Packets:%llu,send content packets:%llu",
+    log_info(LOG_NOTICE, "send Packets:%llu,send content packets:%llu",
             packs_sent_cnt, con_packs_sent_cnt);
     log_info(LOG_NOTICE, "reconnect for closed :%llu,for no syn:%llu",
             recon_for_closed_cnt, recon_for_no_syn_cnt);
