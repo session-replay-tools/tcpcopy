@@ -466,7 +466,7 @@ static void session_init(session_t *s, int flag)
         s->mysql_prepare_stat = 0;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED) 
-        s->mysql_cont_num_aft_greet = 0;
+        s->mysql_sec_auth_checked = 0;
 #endif
     }
 #if (TCPCOPY_MYSQL_BASIC)
@@ -1567,7 +1567,7 @@ static int mysql_process_greet(session_t *s, struct iphdr *ip_header,
 #endif
     log_info(LOG_NOTICE, "recv greeting from back");
 #if (TCPCOPY_MYSQL_ADVANCED) 
-    s->mysql_cont_num_aft_greet  = 0;
+    s->mysql_sec_auth_checked  = 0;
     payload =(unsigned char*)((char*)tcp_header + sizeof(struct tcphdr));
     memset(s->mysql_scramble, 0, SCRAMBLE_LENGTH + 1);
     ret = parse_handshake_init_cont(payload, cont_len, s->mysql_scramble);
@@ -1719,10 +1719,10 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
         }
 #if (TCPCOPY_MYSQL_ADVANCED)
         if(!is_greet){
-            if(0 == s->mysql_cont_num_aft_greet){
+            if(0 == s->mysql_sec_auth_checked){
                 mysql_check_need_sec_auth(s, ip_header, tcp_header);
+                s->mysql_sec_auth_checked = 1;
             }
-            s->mysql_cont_num_aft_greet++;
         }
 #endif
 

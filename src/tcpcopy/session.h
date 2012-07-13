@@ -138,8 +138,8 @@ typedef struct session_s{
 #if (TCPCOPY_MYSQL_BASIC)
     /* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
     uint32_t mysql_excute_times:8;
-    /* The number of content packets after receiving greet */
-    uint32_t mysql_cont_num_aft_greet:4;
+    /* The second auth checked flag */
+    uint32_t mysql_sec_auth_checked:1;
     /* Request begin flag for mysql */
     uint32_t mysql_req_begin:1;
     /* This indicates if it needs second auth */
