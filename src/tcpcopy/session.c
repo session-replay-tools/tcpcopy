@@ -1057,7 +1057,7 @@ static void mysql_prepare_for_new_session(session_t *s,
     }
 #endif
     if(!fir_auth_pack){
-        log_info(LOG_WARN, "no first auth packets here");
+        log_info(LOG_WARN, "no first auth packets here:%u", s->src_h_port);
         return;
     }
     fir_ip_header  = (struct iphdr*)copy_ip_packet(fir_auth_pack);
@@ -1078,9 +1078,9 @@ static void mysql_prepare_for_new_session(session_t *s,
         sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
         save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
-        log_info(LOG_NOTICE, "set second auth for non-skip");
+        log_info(LOG_NOTICE, "set sec auth for non-skip:%u" ,s->src_h_port);
     }else{
-        log_info(LOG_WARN, "no sec auth packet here");
+        log_info(LOG_WARN, "no sec auth packet here:%u", s->src_h_port);
     }
 #endif
 
@@ -1103,7 +1103,8 @@ static void mysql_prepare_for_new_session(session_t *s,
     }
 
 #if (DEBUG_TCPCOPY)
-    log_info(LOG_INFO, "total len subtracted:%u", total_cont_len);
+    log_info(LOG_INFO, "total len subtracted:%u,p:%u", 
+            total_cont_len, s->src_h_port);
 #endif
     /* Rearrange seq */
     tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_cont_len);
@@ -1302,7 +1303,7 @@ static void fake_syn(session_t *s, struct iphdr *ip_header,
                 log_info(LOG_NOTICE, "already exist:%u", s->src_h_port);
             }
         }
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_MYSQL_BASIC)
         log_info(LOG_NOTICE, "change port from :%u to :%u",
                 ntohs(tcp_header->source), s->src_h_port);
 #endif
@@ -1565,7 +1566,7 @@ static int mysql_process_greet(session_t *s, struct iphdr *ip_header,
     int           ret; 
     unsigned char *payload;
 #endif
-    log_info(LOG_NOTICE, "recv greeting from back");
+    log_info(LOG_NOTICE, "recv greeting from back:%u", s->src_h_port);
 #if (TCPCOPY_MYSQL_ADVANCED) 
     s->mysql_sec_auth_checked  = 0;
     payload =(unsigned char*)((char*)tcp_header + sizeof(struct tcphdr));
