@@ -27,7 +27,7 @@
     bool hash_add(hash_table*, uint64_t, void *);
     void *hash_find(hash_table*, uint64_t);
     bool hash_del(hash_table*, uint64_t);
-    void hash_destory(hash_table*);
+    void hash_destroy(hash_table*);
     void hash_deep_destroy(hash_table *table);
 
 

@@ -133,7 +133,7 @@ void hash_set_timeout(hash_table *table, int t)
     table->timeout = t;
 }
 
-void hash_destory(hash_table *table)
+void hash_destroy(hash_table *table)
 {
     uint32_t     index = 0;
     int          count = 0;
@@ -175,7 +175,7 @@ void hash_deep_destroy(hash_table *table)
             }
         }
     }
-    hash_destory(table);
+    hash_destroy(table);
 }
 
 
