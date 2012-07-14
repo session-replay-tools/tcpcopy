@@ -1036,7 +1036,7 @@ static void mysql_prepare_for_new_session(session_t *s,
     p_link_node   ln;
 #if (TCPCOPY_MYSQL_ADVANCED)
     struct iphdr  *sec_auth_packet = NULL, *sec_ip_header;
-    struct tcphdr *sec_tcp_header;
+    struct tcphdr *sec_tcp_header  = NULL;
     uint16_t      sec_cont_len;
     uint64_t      key;
     void          *value;
