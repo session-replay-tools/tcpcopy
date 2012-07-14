@@ -277,6 +277,7 @@ void tcp_copy_exit()
         free(clt_settings.user_pwd);
         clt_settings.user_pwd = NULL;
     }
+    release_mysql_user_pwd_info();
 #endif
     if(clt_settings.transfer.mappings != NULL){
         for(i = 0; i < clt_settings.transfer.num; i++){

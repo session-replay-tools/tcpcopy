@@ -381,10 +381,10 @@ void destroy_for_sessions()
     mysql_table = NULL;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED) 
-    hash_destory(fir_auth_pack_table);
+    hash_deep_destroy(fir_auth_pack_table);
     free(fir_auth_pack_table);
     fir_auth_pack_table = NULL;
-    hash_destory(sec_auth_pack_table);
+    hash_deep_destroy(sec_auth_pack_table);
     free(sec_auth_pack_table);
     sec_auth_pack_table = NULL;
 #endif
@@ -1800,9 +1800,9 @@ static void process_client_syn(session_t *s, struct iphdr *ip_header,
             free(tmp_ln->data);
             free(tmp_ln);
         }
-    }
-    if(!hash_del(mysql_table, s->src_h_port)){
-        log_info(LOG_ERR, "mysql table hash not deleted");
+        if(!hash_del(mysql_table, s->src_h_port)){
+            log_info(LOG_ERR, "mysql table hash not deleted");
+        }
     }
 #endif
     wrap_send_ip_packet(s, (unsigned char *)ip_header, true);

@@ -24,10 +24,11 @@
     hash_table *hash_create(size_t size);
     inline link_list_t *get_link_list(hash_table *table, uint64_t key);
     void hash_set_timeout(hash_table*, int);
-    void hash_destory(hash_table*);
     bool hash_add(hash_table*, uint64_t, void *);
     void *hash_find(hash_table*, uint64_t);
     bool hash_del(hash_table*, uint64_t);
+    void hash_destory(hash_table*);
+    void hash_deep_destroy(hash_table *table);
 
 
 #endif   /* ----- #ifndef _TCPCOPY_HASH_H_INC ----- */
