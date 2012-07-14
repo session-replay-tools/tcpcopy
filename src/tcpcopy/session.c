@@ -162,7 +162,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = get_pack_cont_len(ip_header, tcp_header);
     if(cont_len > 0){
-        s->status = SEND_REQUEST;
+        s->status = SEND_REQ;
         s->req_last_send_cont_time = time(0);
         s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
         s->vir_next_seq = s->vir_next_seq + cont_len;
@@ -626,15 +626,16 @@ static int mysql_dispose_auth(session_t *s, struct iphdr *ip_header,
 #endif
 
 /* 
- * When server's response comes first
+ * This happens when server's response comes first(mysql etc)
+ * Only support one greet packet here
  * If packet's syn and ack are not according to the tcp protocol,
- * then it may encouter problems here
+ * then it may be mistaken to be the greet packet
  */
-static bool is_wait_greet(session_t *s, struct iphdr *ip_header,
+static inline bool is_wait_greet(session_t *s, struct iphdr *ip_header,
         struct tcphdr *tcp_header)
 {
     uint32_t seq, ack;
-    if(s->status < SEND_REQUEST && s->req_valid_last_ack_sent){
+    if(s->req_valid_last_ack_sent){
         ack = ntohl(tcp_header->ack_seq);
         seq = ntohl(tcp_header->seq);
         if(ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq){
@@ -717,7 +718,7 @@ static int send_reserved_packets(session_t *s)
                 tcp_header->seq = htonl(s->vir_next_seq);
             }
         }
-        if(is_wait_greet(s, ip_header, tcp_header)){
+        if(s->status < SEND_REQ && is_wait_greet(s, ip_header, tcp_header)){
             break;
         }
         cont_len   = get_pack_cont_len(ip_header, tcp_header);
@@ -1757,7 +1758,7 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
             send_faked_rst(s, ip_header, tcp_header);
             return;
         }
-        if(s->status < SEND_REQUEST){
+        if(s->status < SEND_REQ){
             if(!s->resp_greet_received){
                 s->resp_greet_received = 1;
                 s->need_resp_greet = 0;
@@ -2196,7 +2197,7 @@ void process_client_packet(session_t *s, struct iphdr *ip_header,
         return;
     }
 
-    if(is_wait_greet(s, ip_header, tcp_header)){
+    if(s->status < SEND_REQ && is_wait_greet(s, ip_header, tcp_header)){
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
