@@ -2502,7 +2502,8 @@ void process(char *packet)
                 /* We check if we can pad tcp handshake */
                 if(get_pack_cont_len(ip_header, tcp_header) > 0){
 #if (TCPCOPY_MYSQL_BASIC)
-                    if(!check_mysql_padding(ip_header,tcp_header)){
+                    if(fir_auth_u_p && 
+                            !check_mysql_padding(ip_header,tcp_header)){
                         return;
                     }
 #endif
