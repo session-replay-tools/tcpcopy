@@ -1451,6 +1451,18 @@ static bool check_mysql_padding(struct iphdr *ip_header,
 {
     unsigned char *payload, command, pack_number;
     uint16_t      size_ip, size_tcp, tot_len, cont_len;
+#if (TCPCOPY_MYSQL_ADVANCED)
+    uint64_t key    = get_key(ip_header->saddr, tcp_header->source);
+    void     *value = hash_find(fir_auth_pack_table, key);
+    if(NULL == value){
+        return;
+    }
+#else
+    /* Valid only for mysql skip-grant-tables*/
+    if(NULL == fir_auth_u_p){
+        return;
+    }
+#endif
 
     size_ip  = ip_header->ihl << 2;
     size_tcp = tcp_header->doff << 2;
@@ -1945,6 +1957,7 @@ static int process_mysql_clt_auth_pack(session_t *s,
         if(!s->mysql_req_begin){
             if(!fir_auth_u_p){
                 fir_auth_u_p = (struct iphdr*)copy_ip_packet(ip_header);
+                log_info(LOG_NOTICE, "fir auth is set");
             }
             if(s->resp_greet_received){
                 s->mysql_req_login_received = 1;
@@ -2502,8 +2515,7 @@ void process(char *packet)
                 /* We check if we can pad tcp handshake */
                 if(get_pack_cont_len(ip_header, tcp_header) > 0){
 #if (TCPCOPY_MYSQL_BASIC)
-                    if(fir_auth_u_p && 
-                            !check_mysql_padding(ip_header,tcp_header)){
+                   if(!check_mysql_padding(ip_header,tcp_header)){
                         return;
                     }
 #endif
