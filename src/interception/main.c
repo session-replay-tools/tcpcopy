@@ -220,6 +220,19 @@ static void settings_init(void)
     srv_settings.binded_ip = NULL;
 }
 
+static void output_for_debug()
+{
+    /* Print intercept version */
+    log_info(LOG_NOTICE, "intercept version:%s", VERSION);
+    /* Print intercept working mode */
+#if (TCPCOPY_MYSQL_SKIP)
+    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_SKIP mode for intercept");
+#endif
+#if (TCPCOPY_MYSQL_NO_SKIP)
+    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_NO_SKIP mode for intercept");
+#endif
+}
+
 int main(int argc ,char **argv){
     /* Init settings */ 
     settings_init();
@@ -227,6 +240,8 @@ int main(int argc ,char **argv){
     read_args(argc, argv);
     /* Init log */
     log_init(srv_settings.log_path);
+    /* Output debug info */
+    output_for_debug();
     /* Set details */
     set_details(); 
     /* Init interception */
