@@ -159,28 +159,27 @@ static void output_for_debug(int argc, char **argv)
 #endif
 }
 
-static void parse_ip_port_pair(char *addr, uint32_t *ip,
+static int parse_ip_port_pair(const char *pair, uint32_t *ip,
         uint16_t *port)
 {
-    char    *seq, *ip_s, *port_s;
-    size_t   len;
-    uint16_t tmp_port;
+    size_t     len;
+    char       buffer[128];
+    const char *split, *p = pair;
+    uint32_t   inetAddr;
 
-    if ((seq = strchr(addr, ':')) == NULL) {
+    split = strchr(p, ':');
+    if(split != NULL){
+        len = (size_t)(split - p);
+        memset(buffer, 0 , 128);
+        strncpy(buffer, p, len);
+        inetAddr = inet_addr(buffer);   
+        *ip = inetAddr;
+        p   = split + 1;
+    }else{
         log_info(LOG_NOTICE, "set global port for tcpcopy");
-        *ip = 0;
-        port_s = addr;
-    } else {
-        ip_s = addr;
-        port_s = seq + 1;
-
-        *seq = '\0';
-        *ip = inet_addr(ip_s);
-        *seq = ':';
     }
-
-    tmp_port = atoi(port_s);
-    *port = htons(tmp_port);
+    *port = atoi(p);
+    return 0;
 }
 
 /*
@@ -189,31 +188,43 @@ static void parse_ip_port_pair(char *addr, uint32_t *ip,
  * or
  * 80-192.168.0.2:8080
  */
-static int parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
+static void parse_one_target(int index, const char *target)
 {
-    char   *seq, *addr1, *addr2;
-    size_t len;
+    size_t     len;
+    char       buffer[128];
+    const char *split, *p = target;
+    uint32_t   ip;
+    uint16_t   port;
+    ip_port_pair_mapping_t *map;
+    map = clt_settings.transfer.mappings[index];
+    memset(buffer, 0, 128);
 
-    if ((seq = strchr(addr, '-')) == NULL) {
-        log_info(LOG_WARN, "target \"%s\" is invalid", addr);
-        return -1;
-    } else {
-        *seq = '\0';
+    /* Parse online ip and port */
+    split = strchr(p, '-');
+    if(split != NULL){
+        len = (size_t)(split - p);
+    }else{
+        log_info(LOG_WARN, "target info is not valid:%s", p);
+        return;
     }
+    strncpy(buffer, p, len);
+    port = 0;
+    ip   = 0;
+    parse_ip_port_pair(buffer, &ip, &port);
+    map->online_ip   = ip;
+    map->online_port = htons(port);
 
-    addr1 = addr;
-    addr2 = seq + 1;
-
-    parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port);
-    parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port);
-
-    if (clt_settings.lo_tf_ip == 0) {
-        clt_settings.lo_tf_ip = ip_port->online_ip;
+    if(0 == clt_settings.lo_tf_ip){
+        clt_settings.lo_tf_ip = ip;
     }
+    p = split + 1;
 
-    *seq = '-';
-
-    return 0;
+    /* Parse target ip and port */
+    port = 0;
+    ip   = 0;
+    parse_ip_port_pair(p, &ip ,&port);
+    map->target_ip   = ip;
+    map->target_port = htons(port);
 }
 
 /* 
@@ -221,55 +232,63 @@ static int parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
  * Format(by -x argument): 
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
-static int retrieve_target_addresses(char *raw_transfer,
-        ip_port_pair_mappings_t *transfer)
-{
-    int   i;
-    char *p, *seq;
+static void retrieve_target_addresses(){
+    size_t     len, size;
+    int        count = 1, i;
+    const char *split, *p = clt_settings.raw_transfer;
+    char       buffer[128];
+    ip_port_pair_mapping_t **mappings;
 
-    if (raw_transfer == NULL) {
+    if(NULL == p){
         log_info(LOG_ERR, "it must have -x argument");
         fprintf(stderr, "no -x argument\n");
-        return -1;
+        exit(EXIT_FAILURE);
     }
-
-    for (transfer->num = 1, p = raw_transfer; *p; p++) {
-        if (*p == ',') {
-            transfer->num++;
+    memset(buffer, 0, 128);
+    
+    /* Retrieve target number */
+    while(1){
+        split = strchr(p, ',');
+        if(NULL == split){
+            break;
+        }else{
+            p = split + 1;
+            count++;
         }
     }
 
-    transfer->mappings = malloc(transfer->num *
-                                sizeof(ip_port_pair_mapping_t *));
-    if (transfer->mappings == NULL) {
-        // TODO log
-        return -1;
+    /* Allocate resources for target */
+    clt_settings.transfer.num = count;
+    size = sizeof(ip_port_pair_mapping_t *);
+    mappings = calloc(count, size);
+    size = sizeof(ip_port_pair_mapping_t);
+    for(i = 0; i < count; i++){
+        mappings[i] = (ip_port_pair_mapping_t *)calloc(1, size);
     }
+    clt_settings.transfer.mappings = mappings;
 
-    for(i = 0; i < transfer->num; i++) {
-        transfer->mappings[i] = malloc(sizeof(ip_port_pair_mapping_t));
-        if (transfer->mappings[i] == NULL) {
-            // TODO log
-            return -1;
+    /* Retrieve every target detail info */
+    p = clt_settings.raw_transfer;
+    i = 0;
+    while(1){
+        split = strchr(p, ',');
+        if(split != NULL){
+            len = (size_t)(split - p);
+        }else{
+            len = strlen(p);
         }
-
-        p = raw_transfer;
-
-        for ( ;; ) {
-            if ((seq = strchr(p, ',')) == NULL) {
-                parse_target(transfer->mappings[i], p);
-                break;
-            } else {
-                *seq = '\0';
-                parse_target(transfer->mappings[i], p);
-                *seq = ',';
-
-                p = seq + 1;
-            }
+        /* Now we have one target*/
+        strncpy(buffer, p, len);
+        /* Parse this target info */
+        parse_one_target(i, buffer);
+        if(NULL == split){
+            break;
+        }else{
+            p = split + 1;
         }
+        memset(buffer, 0, 128);
+        i++;
     }
-
-    return 0;
 }
 
 /* TODO It has to solve the sigignore warning problem */
@@ -297,12 +316,7 @@ static int set_details()
     /* Set signal handler */    
     set_signal_handler();
     /* Set ip port pair mapping according to settings */
-    if (retrieve_target_addresses(clt_settings.raw_transfer,
-                              &clt_settings.transfer) == -1)
-    {
-        exit(EXIT_FAILURE);
-    } 
-
+    retrieve_target_addresses();
 #if (TCPCOPY_MYSQL_ADVANCED)  
     if(NULL != clt_settings.user_pwd){
         retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
