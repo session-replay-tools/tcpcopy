@@ -133,11 +133,12 @@ void hash_set_timeout(hash_table *table, int t)
     table->timeout = t;
 }
 
-void hash_destory(hash_table *table)
+void hash_destroy(hash_table *table)
 {
     uint32_t     index = 0;
-    link_list    *l    = NULL;
     int          count = 0;
+    link_list    *l;
+
     for(; index < table->size; index++){
         l = table->lists[index];
         if(l != NULL){
@@ -151,4 +152,30 @@ void hash_destory(hash_table *table)
     log_info(LOG_NOTICE, "destroy items %d in table name:%s",
             count, table->name);
 }
+
+void hash_deep_destroy(hash_table *table)
+{
+    uint32_t     index = 0;
+    link_list    *l;
+    p_link_node  ln, tmp_ln;
+    hash_node    *hn;
+
+    for(; index < table->size; index++){
+        l = table->lists[index];
+        if(l != NULL){
+            ln   = link_list_first(l);   
+            while(ln){
+                tmp_ln = link_list_get_next(l, ln);
+                hn = (hash_node *)ln->data;
+                if(hn->data != NULL){
+                    free(hn->data);
+                    hn->data = NULL;
+                }
+                ln = tmp_ln;
+            }
+        }
+    }
+    hash_destroy(table);
+}
+
 

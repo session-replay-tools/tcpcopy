@@ -124,7 +124,7 @@ enum session_status{
     CLOSED       = 0,
     SYN_SENT     = 1,
     SYN_CONFIRM  = 2,
-    SEND_REQUEST = 4,
+    SEND_REQ     = 4,
     RECV_RESP    = 8,
     SERVER_FIN   = 16,
     CLIENT_FIN   =32

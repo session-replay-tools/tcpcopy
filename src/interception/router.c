@@ -128,7 +128,7 @@ void router_destroy()
 {
     if(table != NULL){
         log_info(LOG_NOTICE, "destroy router table");
-        hash_destory(table);
+        hash_destroy(table);
         free(table);
         table = NULL;
     }

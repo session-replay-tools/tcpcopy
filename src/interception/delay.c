@@ -171,7 +171,7 @@ void delay_table_destroy()
                 msg_item_destr_cnt, msg_item_free_cnt, msg_item_cnt);
         log_info(LOG_NOTICE, "create msg list:%llu,free:%llu,destr:%llu",
                 msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt);
-        hash_destory(table);
+        hash_destroy(table);
         free(table);
         table = NULL;
     }

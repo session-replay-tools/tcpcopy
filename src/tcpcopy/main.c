@@ -170,7 +170,7 @@ static int parse_ip_port_pair(const char *pair, uint32_t *ip,
     split = strchr(p, ':');
     if(split != NULL){
         len = (size_t)(split - p);
-        memset(buffer, 0 , 128);
+        memset(buffer, 0, 128);
         strncpy(buffer, p, len);
         inetAddr = inet_addr(buffer);   
         *ip = inetAddr;
