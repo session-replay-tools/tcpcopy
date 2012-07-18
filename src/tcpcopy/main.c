@@ -163,7 +163,6 @@ static void parse_ip_port_pair(char *addr, uint32_t *ip,
         uint16_t *port)
 {
     char    *seq, *ip_s, *port_s;
-    size_t   len;
     uint16_t tmp_port;
 
     if ((seq = strchr(addr, ':')) == NULL) {
@@ -192,7 +191,6 @@ static void parse_ip_port_pair(char *addr, uint32_t *ip,
 static int parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
 {
     char   *seq, *addr1, *addr2;
-    size_t len;
 
     if ((seq = strchr(addr, '-')) == NULL) {
         log_info(LOG_WARN, "target \"%s\" is invalid", addr);
