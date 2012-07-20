@@ -93,8 +93,11 @@ void retrieve_mysql_user_pwd_info(char *pairs)
 
 void release_mysql_user_pwd_info()
 {
-    hash_deep_destroy(user_pwd_table);
-    free(user_pwd_table);
-    user_pwd_table = NULL;
+    if(user_pwd_table != NULL)
+    {
+        hash_deep_destroy(user_pwd_table);
+        free(user_pwd_table);
+        user_pwd_table = NULL;
+    }
 }
 
