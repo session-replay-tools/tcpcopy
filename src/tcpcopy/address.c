@@ -5,13 +5,20 @@
 static address_node_t addr[65536];
 
 /* This is for copying multiple ports */
-void address_add_msg_conn(uint16_t local_port, uint32_t dst_ip,
-        uint16_t dst_port)
+int address_add_msg_conn(net_event_loop_t *event_loop, uint16_t local_port,
+        uint32_t dst_ip, uint16_t dst_port)
 {
     addr[local_port].ip   = dst_ip;
     addr[local_port].port = dst_port;
     addr[local_port].sock = msg_client_init(dst_ip, dst_port);
-    select_server_add(addr[local_port].sock);
+
+    if (add_event(event_loop, addr[local_port].sock, EV_READ_EVENT)
+            == EVENT_ERROR)
+    {
+        return -1;     
+    }
+
+    return 0;
 }
 
 /* Find the message socket through local port */
