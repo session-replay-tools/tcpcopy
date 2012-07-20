@@ -26,9 +26,10 @@ Usage:
     1) Install
        a) download the source code from github:
           git clone http://github.com/wangbin579/tcpcopy
-       b) ./configure
-       c) make
-       d) make install
+       b) sh autogen.sh
+       c) ./configure
+       d) make
+       e) make install
 
     2) Run:
        a) on the source host (root privilege is required):
