@@ -184,7 +184,7 @@ tcpcopy_LDADD = \
                ../mysql/libmysql.a\
                ../event/libevent.a\
                ../communication/libmsg.a\
-               -lcrypto -lm
+               -lm
 
 all: all-am
 
