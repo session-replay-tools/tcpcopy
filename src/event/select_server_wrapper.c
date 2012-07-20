@@ -29,7 +29,7 @@ int select_server_run_wrapper(net_event_loop_t *loop)
 {
     select_server_run2(loop);
 
-    return EVENT_ERROR;
+    return EVENT_AGAIN;
 }
 
 

@@ -9,6 +9,7 @@
 
 #define EVENT_OK     0
 #define EVENT_ERROR -1
+#define EVENT_AGAIN  1
 
 #define EV_NONE_EVENT  0
 #define EV_READ_EVENT  1

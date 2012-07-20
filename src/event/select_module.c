@@ -115,9 +115,14 @@ int select_polling(net_event_loop_t *loop)
 
     ret = select(io->max_fd + 1, &cur_read_set, NULL, NULL, NULL);
 
-    if (ret == -1 || ret == 0) {
+    if (ret == -1) {
         return EVENT_ERROR;
     }
+
+    if (ret == 0) {
+        return EVENT_AGAIN;
+    }
+
 
     for (i = 0; i < io->last; i++) {
         if (FD_ISSET(io->fds[i], &cur_read_set)) {

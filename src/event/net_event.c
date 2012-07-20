@@ -73,7 +73,7 @@ int process_events_cycle(net_event_loop_t *loop)
     for ( ;; ) {
         ret = actions->poll_handler(loop);
 
-        if (ret == EVENT_ERROR) {
+        if (ret == EVENT_ERROR || ret == EVENT_AGAIN) {
             continue;
         }
 
