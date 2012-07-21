@@ -10,6 +10,8 @@
 #define TCPCOPY_MYSQL_SKIP 0
 /* Set nonzero for mysql normal mode */
 #define TCPCOPY_MYSQL_NO_SKIP 0
+/* Set offline for tcpcopy */
+#define TCPCOPY_OFFLINE 1
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
@@ -209,6 +211,10 @@ typedef struct xcopy_clt_settings {
     char *pid_file;
     /* Error log path */
     char *log_path;
+#if (TCPCOPY_OFFLINE)
+    /* Pcap file */
+    char *pcap_file;
+#endif
     /* Random port shifted */
     uint16_t   rand_port_shifted;
     /* Server listening port */

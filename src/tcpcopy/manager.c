@@ -6,10 +6,17 @@
 #include "send.h"
 #include "manager.h"
 #include "session.h"
+#if (TCPCOPY_OFFLINE)
+#include <pcap.h>
+#endif
 
-static int       raw_sock;
+
+static int       raw_sock  = -1;
 static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint32_t  localhost;
+#if (TCPCOPY_OFFLINE)
+static pcap_t    *pcap = NULL;
+#endif
 
 static void process_packet(bool backup, char *packet, int length){
     char tmp_packet[RECV_BUF_SIZE];
@@ -264,19 +271,7 @@ void tcp_copy_exit()
     send_close();
     address_close_sock();
     log_end();
-    if(clt_settings.raw_transfer != NULL){
-        free(clt_settings.raw_transfer);
-        clt_settings.raw_transfer = NULL;
-    }
-    if(clt_settings.log_path != NULL){
-        free(clt_settings.log_path);
-        clt_settings.log_path = NULL;
-    }
 #ifdef TCPCOPY_MYSQL_ADVANCED
-    if(clt_settings.user_pwd != NULL){
-        free(clt_settings.user_pwd);
-        clt_settings.user_pwd = NULL;
-    }
     release_mysql_user_pwd_info();
 #endif
     if(clt_settings.transfer.mappings != NULL){
@@ -303,10 +298,14 @@ void tcp_copy_over(const int sig)
 int tcp_copy_init()
 {
     int                    i;
-    ip_port_pair_mapping_t *pair;
-    ip_port_pair_mapping_t **mappings;
+#if (TCPCOPY_OFFLINE)
+    char                  *pcap_file;
+    char                   ebuf[PCAP_ERRBUF_SIZE];
+#endif
     uint16_t               online_port, target_port;
     uint32_t               target_ip;
+    ip_port_pair_mapping_t *pair;
+    ip_port_pair_mapping_t **mappings;
 
     select_server_set_callback(dispose_event);
 
@@ -315,7 +314,10 @@ int tcp_copy_init()
     localhost = inet_addr("127.0.0.1"); 
 
     /* Init input raw socket info */
+    
+#if (!TCPCOPY_OFFLINE)
     raw_sock = init_input_raw_socket();
+#endif
     if(raw_sock != -1){
         /* Add the input raw socket to select */
         select_server_add(raw_sock);
@@ -335,6 +337,16 @@ int tcp_copy_init()
         }
         return SUCCESS;
     }else{
+#if (TCPCOPY_OFFLINE)
+        pcap_file = clt_settings.pcap_file;
+        if(pcap_file != NULL){
+            if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL){
+                log_info(LOG_ERR, "open %s,%s", pcap_file, ebuf);
+            }else{
+                return SUCCESS;
+            }
+        }
+#endif
         return FAILURE;
     }
 }
