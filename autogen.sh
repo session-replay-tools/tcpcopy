@@ -1,1 +1,1 @@
-autoreconf -if
+autoreconf -fvi
