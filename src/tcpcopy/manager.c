@@ -16,6 +16,7 @@ static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint32_t  localhost;
 #if (TCPCOPY_OFFLINE)
 static pcap_t    *pcap = NULL;
+static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
 static void process_packet(bool backup, char *packet, int length){
@@ -237,6 +238,44 @@ static void check_resource_usage()
     }
 }
 
+#if (TCPCOPY_OFFLINE)
+static 
+long timeval_diff(struct timeval *start, struct timeval *cur)
+{
+    long msec;
+    msec=(cur->tv_sec-start->tv_sec)*1000;
+    msec+=(cur->tv_usec-start->tv_usec)/1000;
+    return msec;
+}
+
+static 
+bool check_read_stop()
+{
+    long history_diff = timeval_diff(&last_pack_time, &first_pack_time);
+    long cur_diff     = timeval_diff(&cur_time, &base_time);
+    if(history_diff < cur_diff){
+        return false;
+    }
+    return true;
+}
+
+static void send_packets_from_pcap()
+{
+    struct pcap_pkthdr  pkt_hdr;  
+    unsigned char       *pkt_data;
+    bool                stop = false;
+    gettimeofday(&cur_time, NULL);
+    while(!stop){
+        pkt_data = (u_char *)pcap_next(pcap, &pkt_hdr);
+        if(pkt_data != NULL){
+            last_pack_time = pkt_hdr.ts;
+            stop = check_read_stop();
+        }
+    }
+}
+
+#endif
+
 /* Dispose one event*/
 static void dispose_event(int fd)
 {
@@ -254,6 +293,9 @@ static void dispose_event(int fd)
         }   
         process((char*)msg);
     }   
+#if (TCPCOPY_OFFLINE)
+    send_packets_from_pcap();
+#endif
     if((event_cnt%1000000) == 0){
         check_resource_usage();
     }
@@ -343,6 +385,8 @@ int tcp_copy_init()
             if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL){
                 log_info(LOG_ERR, "open %s,%s", pcap_file, ebuf);
             }else{
+                gettimeofday(&base_time, NULL);
+                send_packets_from_pcap();
                 return SUCCESS;
             }
         }
