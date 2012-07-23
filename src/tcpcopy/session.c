@@ -638,6 +638,11 @@ static inline bool is_wait_greet(session_t *s, struct iphdr *ip_header,
     if(s->req_valid_last_ack_sent){
         ack = ntohl(tcp_header->ack_seq);
         seq = ntohl(tcp_header->seq);
+        /* 
+         * For mysql,waiting is implied by the following
+         * when backend is closed
+         * (TODO Should be optimized)
+         */
         if(ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq){
             s->need_resp_greet = 1;
             if(!s->resp_greet_received){
@@ -653,6 +658,7 @@ static inline bool is_wait_greet(session_t *s, struct iphdr *ip_header,
     if(s->need_resp_greet && !s->resp_greet_received){
         return true;
     }
+
     return false;
 }
 

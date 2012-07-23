@@ -29,6 +29,7 @@ static void process_packet(bool backup, char *packet, int length){
     }
 }
 
+#if (!TCPCOPY_OFFLINE)
 static void set_nonblock(int socket)
 {
     int flags;
@@ -71,6 +72,7 @@ static int init_input_raw_socket()
 
     return sock;
 }
+#endif
 
 /* Replicate packets for multiple-copying */
 static int replicate_packs(char *packet, int length, int replica_num)
@@ -303,14 +305,16 @@ static int get_l2_len(const unsigned char *packet,
             return SLL_HDR_LEN;
             break;
         default:
-            errx(-1, "Unable to process unsupported DLT type: %s (0x%x)", 
+            log_info(LOG_ERR, "unsupported DLT type: %s (0x%x)", 
                     pcap_datalink_val_to_description(datalink), datalink);
             break;
     }
     return -1;
 }
 
+#ifdef FORCE_ALIGN
 static unsigned char pcap_ip_buf[65536];
+#endif
 
 static 
 unsigned char *get_ip_data(unsigned char *packet, 
