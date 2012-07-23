@@ -103,19 +103,95 @@ static int replicate_packs(char *packet, int length, int replica_num)
 
 }
 
+static int dispose_packet(char *recv_buf, int recv_len, int *need_flag)
+{
+    char     *packet, tmp_buf[RECV_BUF_SIZE];
+    int      replica_num, i, last, packet_num, max_payload;
+    int      index, payload_len;
+    uint16_t id, size_ip, size_tcp, tot_len, cont_len, pack_len, head_len;
+    uint32_t seq;
+    struct tcphdr *tcp_header;
+    struct iphdr  *ip_header;
+
+    packet = recv_buf;
+    if(is_packet_needed((const char *)packet)){
+        *need_flag = 1;
+        replica_num = clt_settings.replica_num;
+        packet_num = 1;
+        ip_header   = (struct iphdr*)packet;
+        if(localhost == ip_header->saddr){
+            if(0 != clt_settings.lo_tf_ip){
+                ip_header->saddr = clt_settings.lo_tf_ip;
+            }
+        }
+        /* 
+         * If packet length larger than MTU, then we split it. 
+         * This is to solve the ip fragmentation problem
+         */
+        if(recv_len > clt_settings.mtu){
+            /* Calculate number of packets */
+            size_ip     = ip_header->ihl << 2;
+            tot_len     = ntohs(ip_header -> tot_len);
+            if(tot_len != recv_len){
+                log_info(LOG_WARN, "packet len:%u, recv len:%u",
+                        tot_len, recv_len);
+                return FAILURE;
+            }
+            tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
+            size_tcp    = tcp_header->doff << 2;
+            cont_len    = tot_len - size_tcp - size_ip;
+            head_len    = size_ip + size_tcp;
+            max_payload = clt_settings.mtu - head_len;
+            packet_num  = (cont_len + max_payload - 1)/max_payload;
+            seq         = ntohl(tcp_header->seq);
+            last        = packet_num - 1;
+            id          = ip_header->id;
+#if (DEBUG_TCPCOPY)
+            strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+            log_info(LOG_INFO, "recv len:%d, more than MTU", recv_len);
+#endif
+            index = head_len;
+            for(i = 0 ; i < packet_num; i++){
+                tcp_header->seq = htonl(seq + i * max_payload);
+                if(i != last){
+                    pack_len = clt_settings.mtu;
+                }else{
+                    pack_len += (cont_len - packet_num * max_payload);
+                }
+                payload_len = pack_len - head_len;
+                ip_header->tot_len = htons(pack_len);
+                ip_header->id = id++;
+                /* Copy header here */
+                memcpy(tmp_buf, recv_buf, head_len);
+                /* Copy payload here */
+                memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
+                index = index + payload_len;
+                if(replica_num > 1){
+                    process_packet(true, tmp_buf, pack_len);
+                    replicate_packs(tmp_buf, pack_len, replica_num);
+                }else{
+                    process_packet(false, tmp_buf, pack_len);
+                }
+            }
+        }else{
+            if(replica_num > 1){
+                process_packet(true, packet, recv_len);
+                replicate_packs(packet, recv_len, replica_num);
+            }else{
+                process_packet(false, packet, recv_len);
+            }
+        }
+    }
+    return SUCCESS;
+}
+
 /*
  * Retrieve raw packets
  */
 static int retrieve_raw_sockets(int sock)
 {
-    char     *packet, recv_buf[RECV_BUF_SIZE], tmp_buf[RECV_BUF_SIZE];
-    int      replica_num, i, last, err, recv_len, packet_num, max_payload;
-    int      index, payload_len;
-    uint16_t id, size_ip, size_tcp, tot_len, cont_len, pack_len, head_len;
-    uint32_t seq;
-
-    struct tcphdr *tcp_header;
-    struct iphdr  *ip_header;
+    char     recv_buf[RECV_BUF_SIZE];
+    int      err, recv_len, need_flag = 0;
 
     while(1){
         recv_len = recvfrom(sock, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
@@ -136,74 +212,12 @@ static int retrieve_raw_sockets(int sock)
             log_info(LOG_ERR, "recv_len:%d ,it is too long", recv_len);
             break;
         }
-        packet = recv_buf;
-        if(is_packet_needed((const char *)packet)){
+
+        if(FAILURE == dispose_packet(recv_buf, recv_len, &need_flag)){
+            break;
+        }
+        if(need_flag){
             valid_raw_packs++;
-            replica_num = clt_settings.replica_num;
-            packet_num = 1;
-            ip_header   = (struct iphdr*)packet;
-            if(localhost == ip_header->saddr){
-                if(0 != clt_settings.lo_tf_ip){
-                    ip_header->saddr = clt_settings.lo_tf_ip;
-                }
-            }
-            /* 
-             * If packet length larger than MTU, then we split it. 
-             * This is to solve the ip fragmentation problem
-             */
-            if(recv_len > clt_settings.mtu){
-                /* Calculate number of packets */
-                size_ip     = ip_header->ihl << 2;
-                tot_len     = ntohs(ip_header -> tot_len);
-                if(tot_len != recv_len){
-                    log_info(LOG_WARN, "packet len:%u, recv len:%u",
-                            tot_len, recv_len);
-                    break;
-                }
-                tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
-                size_tcp    = tcp_header->doff << 2;
-                cont_len    = tot_len - size_tcp - size_ip;
-                head_len    = size_ip + size_tcp;
-                max_payload = clt_settings.mtu - head_len;
-                packet_num  = (cont_len + max_payload - 1)/max_payload;
-                seq         = ntohl(tcp_header->seq);
-                last        = packet_num - 1;
-                id          = ip_header->id;
-#if (DEBUG_TCPCOPY)
-                strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-                log_info(LOG_INFO, "recv len:%d, more than MTU", recv_len);
-#endif
-                index = head_len;
-                for(i = 0 ; i < packet_num; i++){
-                    tcp_header->seq = htonl(seq + i * max_payload);
-                    if(i != last){
-                        pack_len = clt_settings.mtu;
-                    }else{
-                        pack_len += (cont_len - packet_num * max_payload);
-                    }
-                    payload_len = pack_len - head_len;
-                    ip_header->tot_len = htons(pack_len);
-                    ip_header->id = id++;
-                    /* Copy header here */
-                    memcpy(tmp_buf, recv_buf, head_len);
-                    /* Copy payload here */
-                    memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
-                    index = index + payload_len;
-                    if(replica_num > 1){
-                        process_packet(true, tmp_buf, pack_len);
-                        replicate_packs(tmp_buf, pack_len, replica_num);
-                    }else{
-                        process_packet(false, tmp_buf, pack_len);
-                    }
-                }
-            }else{
-                if(replica_num > 1){
-                    process_packet(true, packet, recv_len);
-                    replicate_packs(packet, recv_len, replica_num);
-                }else{
-                    process_packet(false, packet, recv_len);
-                }
-            }
         }
 
         if(raw_packs%100000 == 0){
@@ -243,8 +257,8 @@ static
 long timeval_diff(struct timeval *start, struct timeval *cur)
 {
     long msec;
-    msec=(cur->tv_sec-start->tv_sec)*1000;
-    msec+=(cur->tv_usec-start->tv_usec)/1000;
+    msec  = (cur->tv_sec - start->tv_sec)*1000;
+    msec += (cur->tv_usec - start->tv_usec)/1000;
     return msec;
 }
 
@@ -259,32 +273,54 @@ bool check_read_stop()
     return true;
 }
 
-static int get_l2_len(const unsigned char *packet, const int pkt_len)
+static int get_l2_len(const unsigned char *packet,
+        const int pkt_len, const int datalink)
 {
-    struct ethernet_hdr *eth;
-    eth = (struct ethernet_hdr *)packet;
-    switch (ntohs(eth->ether_type)) {
-        case ETHERTYPE_VLAN:
-            return 18;
+    struct ethernet_hdr *eth_hdr;
+
+    switch (datalink) {
+        case DLT_RAW:
+            return 0;
             break;
 
+        case DLT_EN10MB:
+            eth_hdr = (struct ethernet_hdr *)packet;
+            switch (ntohs(eth_hdr->ether_type)) {
+                case ETHERTYPE_VLAN:
+                    return 18;
+                    break;
+                default:
+                    return 14;
+                    break;
+            }
+            break;
+
+        case DLT_C_HDLC:
+            return CISCO_HDLC_LEN;
+            break;
+
+        case DLT_LINUX_SLL:
+            return SLL_HDR_LEN;
+            break;
         default:
-            return 14;
+            errx(-1, "Unable to process unsupported DLT type: %s (0x%x)", 
+                    pcap_datalink_val_to_description(datalink), datalink);
             break;
     }
-    log_info(LOG_WARN, "bug in my code");
     return -1;
 }
 
 static unsigned char pcap_ip_buf[65536];
 
 static 
-unsigned char *get_ip_data(unsigned char *packet, const int pkt_len)
+unsigned char *get_ip_data(unsigned char *packet, 
+        const int pkt_len, int *p_l2_len)
 {
     int    l2_len;
     u_char *ptr;
 
-    l2_len = get_l2_len(packet, pkt_len);
+    l2_len = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
+    *p_l2_len = l2_len;
 
     if (pkt_len <= l2_len){
         return NULL;
@@ -306,7 +342,8 @@ unsigned char *get_ip_data(unsigned char *packet, const int pkt_len)
 static void send_packets_from_pcap()
 {
     struct pcap_pkthdr  pkt_hdr;  
-    unsigned char       *pkt_data;
+    unsigned char       *pkt_data, *ip_data;
+    int                 l2_len, ip_pack_len, need_flag = 0;
     bool                stop = false;
     gettimeofday(&cur_time, NULL);
     while(!stop){
@@ -317,7 +354,16 @@ static void send_packets_from_pcap()
             if(pkt_hdr.caplen < pkt_hdr.len){
                 log_info(LOG_WARN, "truncated packets,drop");
             }else{
-                process((char*)(get_ip_data(pkt_data, pkt_hdr.caplen)));
+                ip_data = get_ip_data(pkt_data, pkt_hdr.len, &l2_len);
+                if(ip_data != NULL){
+                    ip_pack_len = pkt_hdr.len - l2_len;
+                    dispose_packet((char*)ip_data, ip_pack_len, &need_flag);
+                    if(need_flag){
+                        valid_raw_packs++;
+                    }else{
+                        stop = false;
+                    }
+                }
             }
         }
     }
@@ -343,6 +389,7 @@ static void dispose_event(int fd)
         process((char*)msg);
     }   
 #if (TCPCOPY_OFFLINE)
+    log_info(LOG_DEBUG, "send_packets_from_pcap");
     send_packets_from_pcap();
 #endif
     if((event_cnt%1000000) == 0){
@@ -404,29 +451,28 @@ int tcp_copy_init()
     init_for_sessions();
     localhost = inet_addr("127.0.0.1"); 
 
-    /* Init input raw socket info */
+    /* Init output raw socket info */
+    send_init();
+    /* Add connections to the tested server for exchanging info */
+    mappings = clt_settings.transfer.mappings;
+    for(i = 0; i < clt_settings.transfer.num; i++){
+        pair = mappings[i];
+        online_port = pair->online_port;
+        target_ip   = pair->target_ip;
+        target_port = pair->target_port;
+        address_add_msg_conn(online_port, target_ip, 
+                clt_settings.srv_port);
+        log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
+                ntohs(target_port));
+    }
     
 #if (!TCPCOPY_OFFLINE)
+    /* Init input raw socket info */
     raw_sock = init_input_raw_socket();
 #endif
     if(raw_sock != -1){
         /* Add the input raw socket to select */
         select_server_add(raw_sock);
-        /* Init output raw socket info */
-        send_init();
-        /* Add connections to the tested server for exchanging info */
-        mappings = clt_settings.transfer.mappings;
-        for(i = 0; i < clt_settings.transfer.num; i++){
-            pair = mappings[i];
-            online_port = pair->online_port;
-            target_ip   = pair->target_ip;
-            target_port = pair->target_port;
-            address_add_msg_conn(online_port, target_ip, 
-                    clt_settings.srv_port);
-            log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
-                    ntohs(target_port));
-        }
-        return SUCCESS;
     }else{
 #if (TCPCOPY_OFFLINE)
         pcap_file = clt_settings.pcap_file;
@@ -435,12 +481,18 @@ int tcp_copy_init()
                 log_info(LOG_ERR, "open %s,%s", pcap_file, ebuf);
             }else{
                 gettimeofday(&base_time, NULL);
+                log_info(LOG_NOTICE, "open pcap success:%s", pcap_file);
+                log_info(LOG_NOTICE, "send the first packets here");
                 send_packets_from_pcap();
-                return SUCCESS;
             }
+        }else{
+            return FAILURE;
         }
-#endif
+#else
         return FAILURE;
+#endif
     }
+
+    return SUCCESS;
 }
 

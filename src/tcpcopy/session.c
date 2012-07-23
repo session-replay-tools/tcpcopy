@@ -1737,6 +1737,7 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
             /* Process syn packet */
             process_back_syn(s, ip_header, tcp_header);
         }
+        s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
         return;
     }else if(tcp_header->fin){
         s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);

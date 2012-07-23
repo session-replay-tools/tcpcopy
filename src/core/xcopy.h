@@ -4,7 +4,7 @@
 #define VERSION "0.5.0"
 
 /* Set nonzero for debug */
-#define DEBUG_TCPCOPY      0
+#define DEBUG_TCPCOPY      1
 
 /* Set nonzero for mysql skip-grant-table mode */
 #define TCPCOPY_MYSQL_SKIP 0
@@ -172,6 +172,9 @@ enum packet_classification{
 #ifndef ETHERTYPE_VLAN
 #define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */
 #endif
+#define CISCO_HDLC_LEN 4
+#define SLL_HDR_LEN 16
+
 /*  
  *  Ethernet II header
  *  Static header size: 14 bytes          
