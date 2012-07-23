@@ -82,6 +82,9 @@
 #define REMOTE  1
 #define LOCAL   2
 
+#define CHECK_DEST 1
+#define CHECK_SRC  2
+
 /* Session constants from the client perspective */
 #define SESS_CREATE    0
 #define SESS_KEEPALIVE 1  /* Online is active while backend is closed */

@@ -134,6 +134,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
 
     if(client){
         s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
+        s->req_valid_last_ack_sent = 1;
     }
     if(!s->unack_pack_omit_save_flag){
         ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -143,7 +144,6 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
     ip_header->daddr = s->dst_addr;
     tcp_header->dest = s->dst_port;
     s->vir_next_seq  = ntohl(tcp_header->seq);
-    s->req_valid_last_ack_sent = 1;
     /* Add virtual next seq when meeting syn or fin packet */
     if(tcp_header->syn || tcp_header->fin){
         if(tcp_header->syn){
@@ -2318,7 +2318,7 @@ bool is_packet_needed(const char *packet)
 
     /* Here we filter the packets we do care about */
     if(LOCAL == check_pack_src(&(clt_settings.transfer), 
-                ip_header->daddr, tcp_header->dest)){
+                ip_header->daddr, tcp_header->dest, CHECK_DEST)){
         is_needed = true;
         cont_len  = tot_len - size_tcp - size_ip;
         if(tcp_header->syn){
@@ -2327,6 +2327,8 @@ bool is_packet_needed(const char *packet)
             clt_cont_cnt++;
         }
         clt_packs_cnt++;
+    }else{
+        strace_pack(LOG_WARN, CLIENT_FLAG, ip_header, tcp_header);
     }
 
     return is_needed;
@@ -2400,7 +2402,8 @@ void process(char *packet)
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
     tf         = &(clt_settings.transfer);
 
-    if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
+    if(check_pack_src(tf, ip_header->saddr, tcp_header->source, CHECK_SRC)
+            == REMOTE){
         /* When the packet comes from the targeted test machine */
         key = get_key(ip_header->daddr, tcp_header->dest);
         s = hash_find(sessions_table, key);
@@ -2438,7 +2441,8 @@ void process(char *packet)
             log_info(LOG_DEBUG, "no active session for me");
 #endif
         }
-    }else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){
+    }else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest, CHECK_DEST)
+            == LOCAL){
         /* When the packet comes from client */
         if(clt_settings.factor){
             /* Change client source port*/
