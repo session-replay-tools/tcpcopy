@@ -259,6 +259,50 @@ bool check_read_stop()
     return true;
 }
 
+static int get_l2_len(const unsigned char *packet, const int pkt_len)
+{
+    struct ethernet_hdr *eth;
+    eth = (struct ethernet_hdr *)packet;
+    switch (ntohs(eth->ether_type)) {
+        case ETHERTYPE_VLAN:
+            return 18;
+            break;
+
+        default:
+            return 14;
+            break;
+    }
+    log_info(LOG_WARN, "bug in my code");
+    return -1;
+}
+
+static unsigned char pcap_ip_buf[65536];
+
+static 
+unsigned char *get_ip_data(unsigned char *packet, const int pkt_len)
+{
+    int    l2_len;
+    u_char *ptr;
+
+    l2_len = get_l2_len(packet, pkt_len);
+
+    if (pkt_len <= l2_len){
+        return NULL;
+    }
+#ifdef FORCE_ALIGN
+    if (l2_len % 4 == 0) {
+        ptr = (&(packet)[l2_len]);
+    } else {
+        ptr = pcap_ip_buf;
+        memcpy(ptr, (&(packet)[l2_len]), pkt_len - l2_len);
+    }
+#else
+    ptr = (&(packet)[l2_len]);
+#endif
+    return ptr;
+
+}
+
 static void send_packets_from_pcap()
 {
     struct pcap_pkthdr  pkt_hdr;  
@@ -270,6 +314,11 @@ static void send_packets_from_pcap()
         if(pkt_data != NULL){
             last_pack_time = pkt_hdr.ts;
             stop = check_read_stop();
+            if(pkt_hdr.caplen < pkt_hdr.len){
+                log_info(LOG_WARN, "truncated packets,drop");
+            }else{
+                process((char*)(get_ip_data(pkt_data, pkt_hdr.caplen)));
+            }
         }
     }
 }

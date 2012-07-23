@@ -167,6 +167,22 @@ enum packet_classification{
 #include <stdint.h>
 #include <getopt.h>
 
+#if (TCPCOPY_OFFLINE)
+#define ETHER_ADDR_LEN 0x6
+#ifndef ETHERTYPE_VLAN
+#define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */
+#endif
+/*  
+ *  Ethernet II header
+ *  Static header size: 14 bytes          
+ */ 
+struct ethernet_hdr{
+    uint8_t ether_dhost[ETHER_ADDR_LEN];
+    uint8_t ether_shost[ETHER_ADDR_LEN];
+    uint16_t ether_type;                 
+};
+#endif
+
 typedef struct ip_port_pair_mapping_s
 {
     /* Online ip from the client perspective */
