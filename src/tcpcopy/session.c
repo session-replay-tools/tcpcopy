@@ -1742,8 +1742,9 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
         if(!s->resp_syn_received){
             /* Process syn packet */
             process_back_syn(s, ip_header, tcp_header);
+        }else{
+            s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
         }
-        s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
         return;
     }else if(tcp_header->fin){
         s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
@@ -2333,8 +2334,6 @@ bool is_packet_needed(const char *packet)
             clt_cont_cnt++;
         }
         clt_packs_cnt++;
-    }else{
-        strace_pack(LOG_WARN, CLIENT_FLAG, ip_header, tcp_header);
     }
 
     return is_needed;
