@@ -82,3 +82,24 @@ void select_server_run()
     }
 }
 
+
+/* Run for receiving messages */
+void select_server_run2(cpy_event_loop_t *loop)
+{
+    fd_set r_set;
+    int    i, ret;
+
+    r_set = read_set;
+    ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
+    if(-1 == ret){
+        return;
+    }else if(0 == ret){
+        return;
+    }else{
+        for(i = 0; i < fd_nums; i++ ){
+            if(FD_ISSET(valid_fds[i], &r_set)){
+                callback_func(valid_fds[i]);
+            }
+        }
+    }
+}
