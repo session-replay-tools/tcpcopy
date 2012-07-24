@@ -1521,9 +1521,7 @@ static int check_backend_ack(session_t *s, struct iphdr *ip_header,
             return DISP_STOP;
         }
         if(s->src_closed && !tcp_header->fin){
-            /* Try to close the connection */
-            send_faked_rst(s, ip_header, tcp_header);
-            s->sess_over = 1;
+            send_faked_ack(s, ip_header, tcp_header, true);
             return DISP_STOP;
         }else{
             /* Simulaneous close */

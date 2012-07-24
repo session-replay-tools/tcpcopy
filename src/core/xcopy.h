@@ -11,7 +11,7 @@
 /* Set nonzero for mysql normal mode */
 #define TCPCOPY_MYSQL_NO_SKIP 0
 /* Set offline for tcpcopy */
-#define TCPCOPY_OFFLINE 0
+#define TCPCOPY_OFFLINE 1
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
