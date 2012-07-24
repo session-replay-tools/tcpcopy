@@ -390,8 +390,11 @@ static void send_packets_from_pcap(bool first)
                     }
                 }
             }
+            stop = check_read_stop();
+        }else{
+            log_info(LOG_WARN, "stop,null from pcap_next");
+            stop = true;
         }
-        stop = check_read_stop();
     }
 }
 
