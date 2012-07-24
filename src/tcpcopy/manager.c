@@ -19,13 +19,13 @@ static pcap_t    *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
-static void process_packet(bool backup, char *packet, int length){
+static bool process_packet(bool backup, char *packet, int length){
     char tmp_packet[RECV_BUF_SIZE];
     if(!backup){
-        process(packet, LOCAL);
+        return process(packet, LOCAL);
     }else{
         memcpy(tmp_packet, packet, length);
-        process(tmp_packet, LOCAL);
+        return process(tmp_packet, LOCAL);
     }
 }
 
@@ -75,7 +75,7 @@ static int init_input_raw_socket()
 #endif
 
 /* Replicate packets for multiple-copying */
-static int replicate_packs(char *packet, int length, int replica_num)
+static void replicate_packs(char *packet, int length, int replica_num)
 {
     int           i;
     struct tcphdr *tcp_header;
@@ -101,15 +101,14 @@ static int replicate_packs(char *packet, int length, int replica_num)
         tcp_header->source = htons(dest_port);
         process_packet(true, packet, length);
     }
-    return 0;
-
 }
 
-static int dispose_packet(char *recv_buf, int recv_len, int *need_flag)
+static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 {
     char     *packet, tmp_buf[RECV_BUF_SIZE];
     int      replica_num, i, last, packet_num, max_payload;
     int      index, payload_len;
+    bool     packet_valid = false;
     uint16_t id, size_ip, size_tcp, tot_len, cont_len, pack_len, head_len;
     uint32_t seq;
     struct tcphdr *tcp_header;
@@ -117,7 +116,6 @@ static int dispose_packet(char *recv_buf, int recv_len, int *need_flag)
 
     packet = recv_buf;
     if(is_packet_needed((const char *)packet)){
-        *need_flag = 1;
         replica_num = clt_settings.replica_num;
         packet_num = 1;
         ip_header   = (struct iphdr*)packet;
@@ -169,20 +167,23 @@ static int dispose_packet(char *recv_buf, int recv_len, int *need_flag)
                 memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
                 index = index + payload_len;
                 if(replica_num > 1){
-                    process_packet(true, tmp_buf, pack_len);
+                    packet_valid = process_packet(true, tmp_buf, pack_len);
                     replicate_packs(tmp_buf, pack_len, replica_num);
                 }else{
-                    process_packet(false, tmp_buf, pack_len);
+                    packet_valid = process_packet(false, tmp_buf, pack_len);
                 }
             }
         }else{
             if(replica_num > 1){
-                process_packet(true, packet, recv_len);
+                packet_valid = process_packet(true, packet, recv_len);
                 replicate_packs(packet, recv_len, replica_num);
             }else{
-                process_packet(false, packet, recv_len);
+                packet_valid = process_packet(false, packet, recv_len);
             }
         }
+    }
+    if(packet_valid){
+        *p_valid_flag = 1;
     }
     return SUCCESS;
 }
@@ -193,7 +194,7 @@ static int dispose_packet(char *recv_buf, int recv_len, int *need_flag)
 static int retrieve_raw_sockets(int sock)
 {
     char     recv_buf[RECV_BUF_SIZE];
-    int      err, recv_len, need_flag = 0;
+    int      err, recv_len, p_valid_flag = 0;
 
     while(1){
         recv_len = recvfrom(sock, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
@@ -215,10 +216,10 @@ static int retrieve_raw_sockets(int sock)
             break;
         }
 
-        if(FAILURE == dispose_packet(recv_buf, recv_len, &need_flag)){
+        if(FAILURE == dispose_packet(recv_buf, recv_len, &p_valid_flag)){
             break;
         }
-        if(need_flag){
+        if(p_valid_flag){
             valid_raw_packs++;
         }
 
@@ -256,9 +257,9 @@ static void check_resource_usage()
 
 #if (TCPCOPY_OFFLINE)
 static 
-long timeval_diff(struct timeval *start, struct timeval *cur)
+uint64_t timeval_diff(struct timeval *start, struct timeval *cur)
 {
-    long msec;
+    uint64_t msec;
     msec  = (cur->tv_sec - start->tv_sec)*1000;
     msec += (cur->tv_usec - start->tv_usec)/1000;
     return msec;
@@ -267,12 +268,21 @@ long timeval_diff(struct timeval *start, struct timeval *cur)
 static 
 bool check_read_stop()
 {
-    long history_diff = timeval_diff(&last_pack_time, &first_pack_time);
-    long cur_diff     = timeval_diff(&cur_time, &base_time);
-    if(history_diff < cur_diff){
+    uint64_t history_diff = timeval_diff(&first_pack_time, &last_pack_time);
+    uint64_t cur_diff     = timeval_diff(&base_time, &cur_time);
+    uint64_t diff;
+#if (DEBUG_TCPCOPY)
+    log_info(LOG_DEBUG, "diff,old:%llu,new:%llu", history_diff, cur_diff);
+#endif
+    if(history_diff <= cur_diff){
         return false;
     }
-    return true;
+    diff = history_diff - cur_diff;
+    /* More than 1 seconds */
+    if(diff > 1000){
+        return true;
+    }
+    return false;
 }
 
 static int get_l2_len(const unsigned char *packet,
@@ -343,33 +353,45 @@ unsigned char *get_ip_data(unsigned char *packet,
 
 }
 
-static void send_packets_from_pcap()
+static void send_packets_from_pcap(bool first)
 {
     struct pcap_pkthdr  pkt_hdr;  
     unsigned char       *pkt_data, *ip_data;
-    int                 l2_len, ip_pack_len, need_flag = 0;
-    bool                stop = false;
+    int                 l2_len, ip_pack_len, p_valid_flag = 0;
+    bool                stop;
     gettimeofday(&cur_time, NULL);
+
+    stop = check_read_stop();
     while(!stop){
         pkt_data = (u_char *)pcap_next(pcap, &pkt_hdr);
         if(pkt_data != NULL){
-            last_pack_time = pkt_hdr.ts;
-            stop = check_read_stop();
             if(pkt_hdr.caplen < pkt_hdr.len){
                 log_info(LOG_WARN, "truncated packets,drop");
             }else{
                 ip_data = get_ip_data(pkt_data, pkt_hdr.len, &l2_len);
                 if(ip_data != NULL){
                     ip_pack_len = pkt_hdr.len - l2_len;
-                    dispose_packet((char*)ip_data, ip_pack_len, &need_flag);
-                    if(need_flag){
+                    dispose_packet((char*)ip_data, ip_pack_len, &p_valid_flag);
+                    if(p_valid_flag){
+#if (DEBUG_TCPCOPY)
+                        log_info(LOG_DEBUG, "valid flag for packet");
+#endif
                         valid_raw_packs++;
+                        if(first){
+                            first_pack_time = pkt_hdr.ts;
+                            first = false;
+                        }
+                        last_pack_time = pkt_hdr.ts;
                     }else{
                         stop = false;
+#if (DEBUG_TCPCOPY)
+                        log_info(LOG_DEBUG, "stop,invalid flag for packet");
+#endif
                     }
                 }
             }
         }
+        stop = check_read_stop();
     }
 }
 
@@ -394,7 +416,7 @@ static void dispose_event(int fd)
     }   
 #if (TCPCOPY_OFFLINE)
     log_info(LOG_DEBUG, "send_packets_from_pcap");
-    send_packets_from_pcap();
+    send_packets_from_pcap(false);
 #endif
     if((event_cnt%1000000) == 0){
         check_resource_usage();
@@ -487,7 +509,7 @@ int tcp_copy_init()
                 gettimeofday(&base_time, NULL);
                 log_info(LOG_NOTICE, "open pcap success:%s", pcap_file);
                 log_info(LOG_NOTICE, "send the first packets here");
-                send_packets_from_pcap();
+                send_packets_from_pcap(true);
             }
         }else{
             return FAILURE;

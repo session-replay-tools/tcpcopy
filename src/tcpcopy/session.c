@@ -2374,7 +2374,7 @@ static void output_stat(time_t now, int run_time)
 /*
  * The main procedure for processing the filtered packets
  */
-void process(char *packet, int pack_src)
+bool process(char *packet, int pack_src)
 {
     struct tcphdr  *tcp_header;
     struct iphdr   *ip_header;
@@ -2426,7 +2426,6 @@ void process(char *packet, int pack_src)
                     session_init_for_next(s);
                     log_info(LOG_NOTICE, "init for next sess from bak");
                     restore_buffered_next_session(s);
-                    return;
                 }else{
                     send_router_info(s->online_port, ip_header->daddr,
                             tcp_header->dest, CLIENT_DEL);
@@ -2460,7 +2459,7 @@ void process(char *packet, int pack_src)
                     log_info(LOG_INFO, "duplicate syn");
                     strace_pack(LOG_INFO, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-                    return;
+                    return true;
                 }else{
                     /*
                      * Buffer the next session to current session
@@ -2479,20 +2478,18 @@ void process(char *packet, int pack_src)
                     log_info(LOG_INFO, "buffer the new session");
                     strace_pack(LOG_INFO, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-                    return;
+                    return true;
                 }
             }else{
                 /* Create a new session */
                 s = session_add(key, ip_header, tcp_header);
                 if(NULL == s){
-                    return;
+                    return true;
                 }
             }
             result = send_router_info(tcp_header->dest, 
                     ip_header->saddr, tcp_header->source, CLIENT_ADD);
-            if(!result){
-                return;
-            }else{
+            if(result){
                 process_client_packet(s, ip_header, tcp_header);
             }
         }else{
@@ -2505,7 +2502,6 @@ void process(char *packet, int pack_src)
                         session_init_for_next(s);
                         log_info(LOG_NOTICE, "init for next sess from clt");
                         restore_buffered_next_session(s);
-                        return;
                     }else{
                         send_router_info(s->online_port, ip_header->saddr,
                             htons(s->src_h_port), CLIENT_DEL);
@@ -2522,14 +2518,16 @@ void process(char *packet, int pack_src)
                 if(get_pack_cont_len(ip_header, tcp_header) > 0){
 #if (TCPCOPY_MYSQL_BASIC)
                    if(!check_mysql_padding(ip_header,tcp_header)){
-                        return;
+                        return false;
                     }
 #endif
                     s = session_add(key, ip_header, tcp_header);
                     if(NULL == s){
-                        return;
+                        return true;
                     }
                     process_client_packet(s, ip_header, tcp_header);
+                }else{
+                    return false;
                 }
             }
         }
@@ -2537,6 +2535,8 @@ void process(char *packet, int pack_src)
         /* We don't know where the packet comes from */
         log_info(LOG_WARN, "unknown packet");
         strace_pack(LOG_WARN, UNKNOWN_FLAG, ip_header, tcp_header);
+        return false;
     }
+    return true;
 }
 
