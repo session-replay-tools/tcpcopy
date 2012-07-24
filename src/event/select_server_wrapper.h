@@ -1,12 +1,14 @@
 #ifndef __SELECT_SERVER_WRAPPER_H__
 #define __SELECT_SERVER_WRAPPER_H__
 
-#include "net_event.h"
+#include "cpy_event.h"
 
-int select_server_create_fake(net_event_loop_t *loop);
-int select_server_destroy_fake(net_event_loop_t *loop); 
-int select_server_add_wrapper(net_event_loop_t *loop, int fd, int events);
-int select_server_del_wrapper(net_event_loop_t *loop, int fd, int events);
-int select_server_run_wrapper(net_event_loop_t *loop);
+int select_server_create_fake(cpy_event_loop_t *loop);
+int select_server_destroy_fake(cpy_event_loop_t *loop); 
+int select_server_add_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+        int events);
+int select_server_del_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+        int events);
+int select_server_run_wrapper(cpy_event_loop_t *loop);
 
 #endif

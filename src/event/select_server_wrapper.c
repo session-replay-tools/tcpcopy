@@ -1,35 +1,39 @@
 
 #include "select_server_wrapper.h"
+#include "../tcpcopy/manager.h"
 
-int select_server_create_fake(net_event_loop_t *loop)
+int select_server_create_fake(cpy_event_loop_t *loop)
 {
-    return EVENT_OK;
+    select_server_set_callback(dispose_event);
+    return CPY_EVENT_OK;
 }
 
-int select_server_destroy_fake(net_event_loop_t *loop)
+int select_server_destroy_fake(cpy_event_loop_t *loop)
 {
-    return EVENT_OK;
+    return CPY_EVENT_OK;
 }
 
-int select_server_add_wrapper(net_event_loop_t *loop, int fd, int events)
+int select_server_add_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+        int events)
 {
-    select_server_add(fd);
+    select_server_add(efd->fd);
 
-    return EVENT_OK;
+    return CPY_EVENT_OK;
 }
 
-int select_server_del_wrapper(net_event_loop_t *loop, int fd, int events)
+int select_server_del_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+        int events)
 {
-    select_server_del(fd);
+    select_server_del(efd->fd);
 
-    return EVENT_OK;
+    return CPY_EVENT_OK;
 }
 
-int select_server_run_wrapper(net_event_loop_t *loop)
+int select_server_run_wrapper(cpy_event_loop_t *loop)
 {
     select_server_run2(loop);
 
-    return EVENT_AGAIN;
+    return CPY_EVENT_AGAIN;
 }
 
 

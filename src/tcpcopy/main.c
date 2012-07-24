@@ -20,7 +20,7 @@
 #endif
 #include "manager.h"
 
-#include "../event/net_event.h"
+#include "../event/cpy_event.h"
 
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
@@ -140,9 +140,9 @@ static int read_args(int argc, char **argv){
                 break;
             case 'i':
                 if (strncmp(optarg, "select", 6) == 0) {
-                    clt_settings.multiplex_io = EV_SELECT;
+                    clt_settings.multiplex_io = CPY_EVENT_SELECT;
                 } else {
-                    clt_settings.multiplex_io = EV_SELECT_OLD;
+                    clt_settings.multiplex_io = CPY_EVENT_SELECT_OLD;
                 }
                 break;
             default:
@@ -349,7 +349,7 @@ static void settings_init()
  */
 int main(int argc ,char **argv)
 {
-    net_event_loop_t event_loop;
+    cpy_event_loop_t event_loop;
 
     int ret;
     /* Set defaults */
@@ -363,13 +363,21 @@ int main(int argc ,char **argv)
     /* Set details for running */
     set_details();
 
+    ret = cpy_event_loop_init(&event_loop, clt_settings.multiplex_io,
+                              MAX_FD_NUM);
+    if (ret == CPY_EVENT_ERROR) {
+        log_info(LOG_ERR, "event loop init failed, io type:%d",
+                 clt_settings.multiplex_io);
+        return -1;
+    }
+
     /* Initiate tcpcopy client*/
     ret = tcp_copy_init(&event_loop);
     if(SUCCESS != ret){
         exit(EXIT_FAILURE);
     }
     /* Run now */
-    process_events_cycle(&event_loop);
+    cpy_event_process_cycle(&event_loop);
 
     return 0;
 }

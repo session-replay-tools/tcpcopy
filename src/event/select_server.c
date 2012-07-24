@@ -84,7 +84,7 @@ void select_server_run()
 
 
 /* Run for receiving messages */
-void select_server_run2(net_event_loop_t *loop)
+void select_server_run2(cpy_event_loop_t *loop)
 {
     fd_set r_set;
     int    i, ret;
@@ -98,7 +98,7 @@ void select_server_run2(net_event_loop_t *loop)
     }else{
         for(i = 0; i < fd_nums; i++ ){
             if(FD_ISSET(valid_fds[i], &r_set)){
-                loop->read_handler(valid_fds[i]);
+                callback_func(valid_fds[i]);
             }
         }
     }

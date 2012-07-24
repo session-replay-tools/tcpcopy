@@ -231,7 +231,7 @@ static void check_resource_usage()
 }
 
 /* Dispose one event*/
-static void dispose_event(int fd)
+void dispose_event(int fd)
 {
     struct msg_server_s *msg;
 
@@ -300,19 +300,17 @@ void tcp_copy_over(const int sig)
 
 
 /* Initiate tcpcopy client */
-int tcp_copy_init(net_event_loop_t *event_loop)
+int tcp_copy_init(cpy_event_loop_t *event_loop)
 {
     int                    i, ret;
     ip_port_pair_mapping_t *pair;
     ip_port_pair_mapping_t **mappings;
     uint16_t               online_port, target_port;
     uint32_t               target_ip;
+    cpy_event_t            *raw_socket_event;
 
-    ret = event_loop_init(event_loop, clt_settings.multiplex_io, MAX_FD_NUM,
-                          dispose_event, NULL);
-    if (ret == EVENT_ERROR) {
-        return FAILURE;
-    }
+    /* keep it temporarily */
+    select_server_set_callback(dispose_event);
 
     /* Init session table*/
     init_for_sessions();
@@ -322,7 +320,17 @@ int tcp_copy_init(net_event_loop_t *event_loop)
     raw_sock = init_input_raw_socket();
     if(raw_sock != -1){
         /* Add the input raw socket to select */
-        if (add_event(event_loop, raw_sock, EV_READ_EVENT) == EVENT_ERROR) {
+        raw_socket_event = cpy_event_create(raw_sock, dispose_event_wrapper,
+                                           NULL);
+        if (raw_socket_event == NULL) {
+            return FAILURE;
+        }
+
+        if (cpy_event_add(event_loop, raw_socket_event, CPY_EVENT_READ)
+                == CPY_EVENT_ERROR)
+        {
+            log_info(LOG_ERR, "add raw socket(%d) to event loop failed.",
+                     raw_socket_event->fd);
             return FAILURE;
         }
 
@@ -351,3 +359,8 @@ int tcp_copy_init(net_event_loop_t *event_loop)
     }
 }
 
+/* keep it temporarily */
+void dispose_event_wrapper(cpy_event_t *efd)
+{
+    dispose_event(efd->fd);
+}

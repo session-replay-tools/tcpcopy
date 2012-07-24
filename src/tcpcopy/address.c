@@ -1,19 +1,28 @@
 #include "address.h"
+#include "manager.h"
 #include "../event/select_server.h"
 #include "../communication/msg.h"
 
 static address_node_t addr[65536];
 
 /* This is for copying multiple ports */
-int address_add_msg_conn(net_event_loop_t *event_loop, uint16_t local_port,
+int address_add_msg_conn(cpy_event_loop_t *event_loop, uint16_t local_port,
         uint32_t dst_ip, uint16_t dst_port)
 {
+    cpy_event_t  *msg_socket_event;
+
     addr[local_port].ip   = dst_ip;
     addr[local_port].port = dst_port;
     addr[local_port].sock = msg_client_init(dst_ip, dst_port);
 
-    if (add_event(event_loop, addr[local_port].sock, EV_READ_EVENT)
-            == EVENT_ERROR)
+    msg_socket_event = cpy_event_create(addr[local_port].sock,
+                                        dispose_event_wrapper, NULL);
+    if (msg_socket_event == NULL) {
+        return -1;
+    }
+
+    if (cpy_event_add(event_loop, msg_socket_event, CPY_EVENT_READ)
+            == CPY_EVENT_ERROR)
     {
         return -1;     
     }
