@@ -2374,7 +2374,7 @@ static void output_stat(time_t now, int run_time)
 /*
  * The main procedure for processing the filtered packets
  */
-void process(char *packet)
+void process(char *packet, int pack_src)
 {
     struct tcphdr  *tcp_header;
     struct iphdr   *ip_header;
@@ -2405,8 +2405,7 @@ void process(char *packet)
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
     tf         = &(clt_settings.transfer);
 
-    if(check_pack_src(tf, ip_header->saddr, tcp_header->source, CHECK_SRC)
-            == REMOTE){
+    if(REMOTE == pack_src){
         /* When the packet comes from the targeted test machine */
         key = get_key(ip_header->daddr, tcp_header->dest);
         s = hash_find(sessions_table, key);
@@ -2444,8 +2443,7 @@ void process(char *packet)
             log_info(LOG_DEBUG, "no active session for me");
 #endif
         }
-    }else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest, CHECK_DEST)
-            == LOCAL){
+    }else if(LOCAL == pack_src){
         /* When the packet comes from client */
         if(clt_settings.factor){
             /* Change client source port*/

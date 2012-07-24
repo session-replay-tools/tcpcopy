@@ -22,10 +22,10 @@ static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 static void process_packet(bool backup, char *packet, int length){
     char tmp_packet[RECV_BUF_SIZE];
     if(!backup){
-        process(packet);
+        process(packet, LOCAL);
     }else{
         memcpy(tmp_packet, packet, length);
-        process(tmp_packet);
+        process(tmp_packet, LOCAL);
     }
 }
 
@@ -390,7 +390,7 @@ static void dispose_event(int fd)
             log_info(LOG_ERR, "NULL msg from msg_client_recv");
             exit(EXIT_FAILURE);
         }   
-        process((char*)msg);
+        process((char*)msg, REMOTE);
     }   
 #if (TCPCOPY_OFFLINE)
     log_info(LOG_DEBUG, "send_packets_from_pcap");

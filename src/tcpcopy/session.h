@@ -10,7 +10,7 @@
 /* Global functions */
 void init_for_sessions();
 void destroy_for_sessions();
-void process(char *packet);
+void process(char *packet, int pack_src);
 bool is_packet_needed(const char *packet);
 
 typedef struct session_s{
