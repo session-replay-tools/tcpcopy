@@ -272,7 +272,7 @@ static int retrieve_target_addresses(char *raw_transfer,
     }
 
     p = raw_transfer;
-
+    i = 0;
     for ( ;; ) {
         if ((seq = strchr(p, ',')) == NULL) {
             parse_target(transfer->mappings[i], p);
@@ -284,6 +284,7 @@ static int retrieve_target_addresses(char *raw_transfer,
 
             p = seq + 1;
         }
+        i++;
     }
 
     return 0;
