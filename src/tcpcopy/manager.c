@@ -353,7 +353,7 @@ unsigned char *get_ip_data(unsigned char *packet,
 
 }
 
-static void send_packets_from_pcap(bool first)
+void send_packets_from_pcap(int first)
 {
     struct pcap_pkthdr  pkt_hdr;  
     unsigned char       *pkt_data, *ip_data;
@@ -379,7 +379,7 @@ static void send_packets_from_pcap(bool first)
                         valid_raw_packs++;
                         if(first){
                             first_pack_time = pkt_hdr.ts;
-                            first = false;
+                            first = 0;
                         }
                         last_pack_time = pkt_hdr.ts;
                     }else{
@@ -401,7 +401,7 @@ static void send_packets_from_pcap(bool first)
 #endif
 
 /* Dispose one event*/
-static void dispose_event(int fd)
+void dispose_event(int fd)
 {
     struct msg_server_s *msg;
 
@@ -419,7 +419,7 @@ static void dispose_event(int fd)
     }   
 #if (TCPCOPY_OFFLINE)
     log_info(LOG_DEBUG, "send_packets_from_pcap");
-    send_packets_from_pcap(false);
+    send_packets_from_pcap(0);
 #endif
     if((event_cnt%1000000) == 0){
         check_resource_usage();
@@ -462,7 +462,7 @@ void tcp_copy_over(const int sig)
 
 
 /* Initiate tcpcopy client */
-int tcp_copy_init()
+int tcp_copy_init(cpy_event_loop_t *event_loop)
 {
     int                    i;
 #if (TCPCOPY_OFFLINE)
@@ -473,7 +473,9 @@ int tcp_copy_init()
     uint32_t               target_ip;
     ip_port_pair_mapping_t *pair;
     ip_port_pair_mapping_t **mappings;
+    cpy_event_t            *raw_socket_event;
 
+    /* keep it temporarily */
     select_server_set_callback(dispose_event);
 
     /* Init session table*/
@@ -489,8 +491,11 @@ int tcp_copy_init()
         online_port = pair->online_port;
         target_ip   = pair->target_ip;
         target_port = pair->target_port;
-        address_add_msg_conn(online_port, target_ip, 
-                clt_settings.srv_port);
+        if(address_add_msg_conn(event_loop, online_port, target_ip, 
+                clt_settings.srv_port))
+        {
+            return FAILURE;
+        }
         log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
                 ntohs(target_port));
     }
@@ -501,9 +506,43 @@ int tcp_copy_init()
 #endif
     if(raw_sock != -1){
         /* Add the input raw socket to select */
-        select_server_add(raw_sock);
+        raw_socket_event = cpy_event_create(raw_sock, dispose_event_wrapper,
+                                           NULL);
+        if (raw_socket_event == NULL) {
+            return FAILURE;
+        }
+
+        if (cpy_event_add(event_loop, raw_socket_event, CPY_EVENT_READ)
+                == CPY_EVENT_ERROR)
+        {
+            log_info(LOG_ERR, "add raw socket(%d) to event loop failed.",
+                     raw_socket_event->fd);
+            return FAILURE;
+        }
+
+        /* Init output raw socket info */
+        send_init();
+        /* Add connections to the tested server for exchanging info */
+        mappings = clt_settings.transfer.mappings;
+        for(i = 0; i < clt_settings.transfer.num; i++){
+            pair = mappings[i];
+            online_port = pair->online_port;
+            target_ip   = pair->target_ip;
+            target_port = pair->target_port;
+
+            if (address_add_msg_conn(event_loop, online_port, target_ip, 
+                                     clt_settings.srv_port) == -1)
+            {
+                return FAILURE;
+            }
+
+            log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
+                    ntohs(target_port));
+        }
+        return SUCCESS;
     }else{
 #if (TCPCOPY_OFFLINE)
+        select_offline_set_callback(send_packets_from_pcap);
         pcap_file = clt_settings.pcap_file;
         if(pcap_file != NULL){
             if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL){
@@ -512,7 +551,7 @@ int tcp_copy_init()
                 gettimeofday(&base_time, NULL);
                 log_info(LOG_NOTICE, "open pcap success:%s", pcap_file);
                 log_info(LOG_NOTICE, "send the first packets here");
-                send_packets_from_pcap(true);
+                send_packets_from_pcap(1);
             }
         }else{
             return FAILURE;
@@ -525,3 +564,8 @@ int tcp_copy_init()
     return SUCCESS;
 }
 
+/* keep it temporarily */
+void dispose_event_wrapper(cpy_event_t *efd)
+{
+    dispose_event(efd->fd);
+}

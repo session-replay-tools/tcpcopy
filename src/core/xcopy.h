@@ -4,14 +4,14 @@
 #define VERSION "0.5.0"
 
 /* Set nonzero for debug */
-#define DEBUG_TCPCOPY      0
+#define DEBUG_TCPCOPY      1
 
 /* Set nonzero for mysql skip-grant-table mode */
 #define TCPCOPY_MYSQL_SKIP 0
 /* Set nonzero for mysql normal mode */
 #define TCPCOPY_MYSQL_NO_SKIP 0
 /* Set offline for tcpcopy */
-#define TCPCOPY_OFFLINE 0
+#define TCPCOPY_OFFLINE 1
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
@@ -249,6 +249,7 @@ typedef struct xcopy_clt_settings {
 #endif
     /* Transfered online_ip online_port target_ip target_port */
     ip_port_pair_mappings_t transfer;
+    int multiplex_io;
 }xcopy_clt_settings;
 
 /* For intercept */

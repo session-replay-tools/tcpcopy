@@ -20,6 +20,8 @@
 #endif
 #include "manager.h"
 
+#include "../event/cpy_event.h"
+
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
@@ -92,6 +94,7 @@ static int read_args(int argc, char **argv){
          "t:" /* session timeout value */
          "l:" /* error log file path */
          "P:" /* save PID in file */
+         "i:" /* select multiplexing io mode */
          "h"  /* help, licence info */   
          "v"  /* verbose */
          "d"  /* daemon mode */
@@ -145,6 +148,13 @@ static int read_args(int argc, char **argv){
                 break;
             case 'P':
                 clt_settings.pid_file = optarg;
+                break;
+            case 'e':
+                if (strncmp(optarg, "select", 6) == 0) {
+                    clt_settings.multiplex_io = CPY_EVENT_SELECT;
+                } else {
+                    clt_settings.multiplex_io = CPY_EVENT_SELECT_OLD;
+                }
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
@@ -305,7 +315,8 @@ static int set_details()
     set_signal_handler();
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
-                              &clt_settings.transfer) == -1){
+                              &clt_settings.transfer) == -1)
+    {
         exit(EXIT_FAILURE);
     } 
 
@@ -349,6 +360,8 @@ static void settings_init()
  */
 int main(int argc ,char **argv)
 {
+    cpy_event_loop_t event_loop;
+
     int ret;
     /* Set defaults */
     settings_init();
@@ -360,13 +373,23 @@ int main(int argc ,char **argv)
     output_for_debug(argc, argv);
     /* Set details for running */
     set_details();
+
+    ret = cpy_event_loop_init(&event_loop, clt_settings.multiplex_io,
+                              MAX_FD_NUM);
+    if (ret == CPY_EVENT_ERROR) {
+        log_info(LOG_ERR, "event loop init failed, io type:%d",
+                 clt_settings.multiplex_io);
+        return -1;
+    }
+
     /* Initiate tcpcopy client*/
-    ret = tcp_copy_init();
+    ret = tcp_copy_init(&event_loop);
     if(SUCCESS != ret){
         exit(EXIT_FAILURE);
     }
     /* Run now */
-    select_server_run();
+    cpy_event_process_cycle(&event_loop);
+
     return 0;
 }
 
