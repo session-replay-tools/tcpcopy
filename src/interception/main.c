@@ -25,18 +25,6 @@ static void release_resources()
     interception_over();
     log_info(LOG_NOTICE, "release_resources end except log file");
     log_end();
-    if(srv_settings.raw_ip_list != NULL){
-        free(srv_settings.raw_ip_list);
-        srv_settings.raw_ip_list = NULL;
-    }
-    if(srv_settings.binded_ip != NULL){
-        free(srv_settings.binded_ip);
-        srv_settings.binded_ip = NULL;
-    }
-    if(srv_settings.log_path != NULL){
-        free(srv_settings.log_path);
-        srv_settings.log_path = NULL;
-    }
 }
 
 /* TODO It has to solve the sigignore warning problem */
@@ -149,7 +137,7 @@ static int read_args(int argc, char **argv){
         ))) {
         switch (c) {
             case 'x':
-                srv_settings.raw_ip_list = strdup(optarg);
+                srv_settings.raw_ip_list = optarg;
                 break;
             case 'p':
                 srv_settings.port = (uint16_t)atoi(optarg);
@@ -158,13 +146,13 @@ static int read_args(int argc, char **argv){
                 srv_settings.hash_size = (size_t)atoi(optarg);
                 break;
             case 'b':
-                srv_settings.binded_ip = strdup(optarg);
+                srv_settings.binded_ip = optarg;
                 break;
             case 'h':
                 usage();
                 exit(EXIT_SUCCESS);
             case 'l':
-                srv_settings.log_path = strdup(optarg);
+                srv_settings.log_path = optarg;
                 break;
             case 'P':
                 srv_settings.pid_file = optarg;

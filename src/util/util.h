@@ -11,7 +11,7 @@ uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,
 ip_port_pair_mapping_t *get_test_pair(ip_port_pair_mappings_t *target,
         uint32_t ip, uint16_t port);
 int check_pack_src(ip_port_pair_mappings_t *target, uint32_t ip, 
-        uint16_t port);
+        uint16_t port, int src_flag);
 unsigned char *copy_ip_packet(struct iphdr *ip_header);
 unsigned short csum (unsigned short *packet, int pack_len);
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,

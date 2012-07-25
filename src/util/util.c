@@ -62,7 +62,7 @@ ip_port_pair_mapping_t *get_test_pair(ip_port_pair_mappings_t *transfer,
 }
 
 int check_pack_src(ip_port_pair_mappings_t *transfer,
-        uint32_t ip, uint16_t port)
+        uint32_t ip, uint16_t port, int src_flag)
 {
     int i;
     int ret = UNKNOWN;
@@ -70,16 +70,20 @@ int check_pack_src(ip_port_pair_mappings_t *transfer,
     ip_port_pair_mapping_t **mappings = transfer->mappings;
     for(i = 0; i < transfer->num; i++){
         pair = mappings[i];
-        if(ip == pair->online_ip && port == pair->online_port){
+        if(CHECK_DEST == src_flag){
             /* We are interested in INPUT raw socket */
-            ret = LOCAL;
-            break;
-        }else if(ip == pair->target_ip && port == pair->target_port){
-            ret = REMOTE;
-            break;
-        }else if(0 == pair->online_ip && port == pair->online_port){
-            ret = LOCAL;
-            break;
+            if(ip == pair->online_ip && port == pair->online_port){
+                ret = LOCAL;
+                break;
+            }else if(0 == pair->online_ip && port == pair->online_port){
+                ret = LOCAL;
+                break;
+            }
+        }else if(CHECK_SRC == src_flag){
+            if(ip == pair->target_ip && port == pair->target_port){
+                ret = REMOTE;
+                break;
+            }
         }
     }
     return ret;

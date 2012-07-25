@@ -41,6 +41,9 @@ static void usage(void) {
     printf("-c <ip>        localhost will be changed to this ip address\n"
            "               when sending to another machine\n"
            "               default value is online ip\n");
+#if (TCPCOPY_OFFLINE)
+    printf("-i <file>      input pcap file(only valid for offline)\n");
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)  
     printf("-u <pair>      user password pair for mysql\n"
            "               pair format:\n"
@@ -75,6 +78,9 @@ static int read_args(int argc, char **argv){
     while (-1 != (c = getopt(argc, argv,
          "x:" /* where we copy request from and to */
          "c:" /* localhost will be changed to this ip address */
+#if (TCPCOPY_OFFLINE)
+         "i:" /* input pcap file */
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)  
          "u:" /* user password pair for mysql*/
 #endif
@@ -92,14 +98,19 @@ static int read_args(int argc, char **argv){
         ))) {
         switch (c) {
             case 'x':
-                clt_settings.raw_transfer= strdup(optarg);
+                clt_settings.raw_transfer = optarg;
                 break;
             case 'c':
                 clt_settings.lo_tf_ip = inet_addr(optarg);
                 break;
+#if (TCPCOPY_OFFLINE)  
+            case 'i':
+                clt_settings.pcap_file= optarg;
+                break;
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)  
             case 'u':
-                clt_settings.user_pwd = strdup(optarg);
+                clt_settings.user_pwd = optarg;
                 break;
 #endif
             case 'n':
@@ -112,7 +123,7 @@ static int read_args(int argc, char **argv){
                 clt_settings.max_rss = 1024*atoi(optarg);
                 break;
             case 'l':
-                clt_settings.log_path = strdup(optarg);
+                clt_settings.log_path = optarg;
                 break;
             case 'M':
                 clt_settings.mtu = atoi(optarg);

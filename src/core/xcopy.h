@@ -10,6 +10,8 @@
 #define TCPCOPY_MYSQL_SKIP 0
 /* Set nonzero for mysql normal mode */
 #define TCPCOPY_MYSQL_NO_SKIP 0
+/* Set offline for tcpcopy */
+#define TCPCOPY_OFFLINE 0
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
@@ -79,6 +81,9 @@
 #define UNKNOWN 0
 #define REMOTE  1
 #define LOCAL   2
+
+#define CHECK_DEST 1
+#define CHECK_SRC  2
 
 /* Session constants from the client perspective */
 #define SESS_CREATE    0
@@ -165,6 +170,25 @@ enum packet_classification{
 #include <stdint.h>
 #include <getopt.h>
 
+#if (TCPCOPY_OFFLINE)
+#define ETHER_ADDR_LEN 0x6
+#ifndef ETHERTYPE_VLAN
+#define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */
+#endif
+#define CISCO_HDLC_LEN 4
+#define SLL_HDR_LEN 16
+
+/*  
+ *  Ethernet II header
+ *  Static header size: 14 bytes          
+ */ 
+struct ethernet_hdr{
+    uint8_t ether_dhost[ETHER_ADDR_LEN];
+    uint8_t ether_shost[ETHER_ADDR_LEN];
+    uint16_t ether_type;                 
+};
+#endif
+
 typedef struct ip_port_pair_mapping_s
 {
     /* Online ip from the client perspective */
@@ -209,6 +233,10 @@ typedef struct xcopy_clt_settings {
     char *pid_file;
     /* Error log path */
     char *log_path;
+#if (TCPCOPY_OFFLINE)
+    /* Pcap file */
+    char *pcap_file;
+#endif
     /* Random port shifted */
     uint16_t   rand_port_shifted;
     /* Server listening port */

@@ -134,6 +134,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
 
     if(client){
         s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
+        s->req_valid_last_ack_sent = 1;
     }
     if(!s->unack_pack_omit_save_flag){
         ln = link_node_malloc(copy_ip_packet(ip_header));
@@ -143,7 +144,6 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
     ip_header->daddr = s->dst_addr;
     tcp_header->dest = s->dst_port;
     s->vir_next_seq  = ntohl(tcp_header->seq);
-    s->req_valid_last_ack_sent = 1;
     /* Add virtual next seq when meeting syn or fin packet */
     if(tcp_header->syn || tcp_header->fin){
         if(tcp_header->syn){
@@ -638,6 +638,11 @@ static inline bool is_wait_greet(session_t *s, struct iphdr *ip_header,
     if(s->req_valid_last_ack_sent){
         ack = ntohl(tcp_header->ack_seq);
         seq = ntohl(tcp_header->seq);
+        /* 
+         * For mysql,waiting is implied by the following
+         * when backend is closed
+         * (TODO Should be optimized)
+         */
         if(ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq){
             s->need_resp_greet = 1;
             if(!s->resp_greet_received){
@@ -653,6 +658,7 @@ static inline bool is_wait_greet(session_t *s, struct iphdr *ip_header,
     if(s->need_resp_greet && !s->resp_greet_received){
         return true;
     }
+
     return false;
 }
 
@@ -1515,9 +1521,7 @@ static int check_backend_ack(session_t *s, struct iphdr *ip_header,
             return DISP_STOP;
         }
         if(s->src_closed && !tcp_header->fin){
-            /* Try to close the connection */
-            send_faked_rst(s, ip_header, tcp_header);
-            s->sess_over = 1;
+            send_faked_ack(s, ip_header, tcp_header, true);
             return DISP_STOP;
         }else{
             /* Simulaneous close */
@@ -1736,6 +1740,8 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
         if(!s->resp_syn_received){
             /* Process syn packet */
             process_back_syn(s, ip_header, tcp_header);
+        }else{
+            s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
         }
         return;
     }else if(tcp_header->fin){
@@ -2317,7 +2323,7 @@ bool is_packet_needed(const char *packet)
 
     /* Here we filter the packets we do care about */
     if(LOCAL == check_pack_src(&(clt_settings.transfer), 
-                ip_header->daddr, tcp_header->dest)){
+                ip_header->daddr, tcp_header->dest, CHECK_DEST)){
         is_needed = true;
         cont_len  = tot_len - size_tcp - size_ip;
         if(tcp_header->syn){
@@ -2368,7 +2374,7 @@ static void output_stat(time_t now, int run_time)
 /*
  * The main procedure for processing the filtered packets
  */
-void process(char *packet)
+bool process(char *packet, int pack_src)
 {
     struct tcphdr  *tcp_header;
     struct iphdr   *ip_header;
@@ -2399,7 +2405,7 @@ void process(char *packet)
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
     tf         = &(clt_settings.transfer);
 
-    if(check_pack_src(tf, ip_header->saddr, tcp_header->source) == REMOTE){
+    if(REMOTE == pack_src){
         /* When the packet comes from the targeted test machine */
         key = get_key(ip_header->daddr, tcp_header->dest);
         s = hash_find(sessions_table, key);
@@ -2420,7 +2426,6 @@ void process(char *packet)
                     session_init_for_next(s);
                     log_info(LOG_NOTICE, "init for next sess from bak");
                     restore_buffered_next_session(s);
-                    return;
                 }else{
                     send_router_info(s->online_port, ip_header->daddr,
                             tcp_header->dest, CLIENT_DEL);
@@ -2437,7 +2442,7 @@ void process(char *packet)
             log_info(LOG_DEBUG, "no active session for me");
 #endif
         }
-    }else if(check_pack_src(tf, ip_header->daddr, tcp_header->dest) == LOCAL){
+    }else if(LOCAL == pack_src){
         /* When the packet comes from client */
         if(clt_settings.factor){
             /* Change client source port*/
@@ -2454,7 +2459,7 @@ void process(char *packet)
                     log_info(LOG_INFO, "duplicate syn");
                     strace_pack(LOG_INFO, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-                    return;
+                    return true;
                 }else{
                     /*
                      * Buffer the next session to current session
@@ -2473,20 +2478,18 @@ void process(char *packet)
                     log_info(LOG_INFO, "buffer the new session");
                     strace_pack(LOG_INFO, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-                    return;
+                    return true;
                 }
             }else{
                 /* Create a new session */
                 s = session_add(key, ip_header, tcp_header);
                 if(NULL == s){
-                    return;
+                    return true;
                 }
             }
             result = send_router_info(tcp_header->dest, 
                     ip_header->saddr, tcp_header->source, CLIENT_ADD);
-            if(!result){
-                return;
-            }else{
+            if(result){
                 process_client_packet(s, ip_header, tcp_header);
             }
         }else{
@@ -2499,7 +2502,6 @@ void process(char *packet)
                         session_init_for_next(s);
                         log_info(LOG_NOTICE, "init for next sess from clt");
                         restore_buffered_next_session(s);
-                        return;
                     }else{
                         send_router_info(s->online_port, ip_header->saddr,
                             htons(s->src_h_port), CLIENT_DEL);
@@ -2516,14 +2518,16 @@ void process(char *packet)
                 if(get_pack_cont_len(ip_header, tcp_header) > 0){
 #if (TCPCOPY_MYSQL_BASIC)
                    if(!check_mysql_padding(ip_header,tcp_header)){
-                        return;
+                        return false;
                     }
 #endif
                     s = session_add(key, ip_header, tcp_header);
                     if(NULL == s){
-                        return;
+                        return true;
                     }
                     process_client_packet(s, ip_header, tcp_header);
+                }else{
+                    return false;
                 }
             }
         }
@@ -2531,6 +2535,8 @@ void process(char *packet)
         /* We don't know where the packet comes from */
         log_info(LOG_WARN, "unknown packet");
         strace_pack(LOG_WARN, UNKNOWN_FLAG, ip_header, tcp_header);
+        return false;
     }
+    return true;
 }
 
