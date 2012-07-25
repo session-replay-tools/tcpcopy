@@ -75,20 +75,12 @@ void select_server_run()
 {
     fd_set r_set;
     int    i, ret;
-    struct timeval timeout; 
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
     while(true){
         r_set = read_set;
-        ret   = select(max_fd + 1, &r_set, NULL, NULL, &timeout);
+        ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
         if(-1 == ret){
             continue;
         }else if(0 == ret){
-#if (TCPCOPY_OFFLINE)
-            if(offline_func) {
-                offline_func(0);
-            }
-#endif
             continue;
         }else{
             for(i = 0; i < fd_nums; i++ ){
@@ -101,7 +93,7 @@ void select_server_run()
 }
 
 /* Run for receiving messages */
-void select_server_run2(cpy_event_loop_t *loop)
+void select_server_client_run(cpy_event_loop_t *loop)
 {
     fd_set r_set;
     int    i, ret;

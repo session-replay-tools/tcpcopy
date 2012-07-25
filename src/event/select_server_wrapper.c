@@ -32,7 +32,7 @@ int select_server_del_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
 
 int select_server_run_wrapper(cpy_event_loop_t *loop)
 {
-    select_server_run2(loop);
+    select_server_client_run(loop);
 
     return CPY_EVENT_AGAIN;
 }

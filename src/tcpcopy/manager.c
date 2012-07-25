@@ -359,6 +359,10 @@ void send_packets_from_pcap(int first)
     unsigned char       *pkt_data, *ip_data;
     int                 l2_len, ip_pack_len, p_valid_flag = 0;
     bool                stop;
+
+    if(NULL == pcap){
+        return;
+    }
     gettimeofday(&cur_time, NULL);
 
     stop = check_read_stop();
@@ -546,7 +550,10 @@ int tcp_copy_init(cpy_event_loop_t *event_loop)
         pcap_file = clt_settings.pcap_file;
         if(pcap_file != NULL){
             if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL){
-                log_info(LOG_ERR, "open %s,%s", pcap_file, ebuf);
+                log_info(LOG_ERR, "open %s" , ebuf);
+                fprintf(stderr, "open %s\n", ebuf);
+                return FAILURE;
+
             }else{
                 gettimeofday(&base_time, NULL);
                 log_info(LOG_NOTICE, "open pcap success:%s", pcap_file);

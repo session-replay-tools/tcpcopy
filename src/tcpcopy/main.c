@@ -275,16 +275,15 @@ static int retrieve_target_addresses(char *raw_transfer,
     i = 0;
     for ( ;; ) {
         if ((seq = strchr(p, ',')) == NULL) {
-            parse_target(transfer->mappings[i], p);
+            parse_target(transfer->mappings[i++], p);
             break;
         } else {
             *seq = '\0';
-            parse_target(transfer->mappings[i], p);
+            parse_target(transfer->mappings[i++], p);
             *seq = ',';
 
             p = seq + 1;
         }
-        i++;
     }
 
     return 0;
@@ -320,6 +319,14 @@ static int set_details()
     {
         exit(EXIT_FAILURE);
     } 
+
+#if (TCPCOPY_OFFLINE)
+    if(NULL == clt_settings.pcap_file){
+        log_info(LOG_ERR, "it must have -i argument for offline");
+        fprintf(stderr, "no -i argument\n");
+        exit(EXIT_FAILURE);
+    }
+#endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)  
     if(NULL != clt_settings.user_pwd){
