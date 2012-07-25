@@ -2,13 +2,12 @@
 #include "select_server.h"
 #include "../tcpcopy/manager.h"
 
-static int                        max_fd;
+static int                        max_fd, fd_nums, valid_fds[MAX_FD_NUM];
 static fd_set                     read_set;
 static select_server_func         callback_func;
+#if (TCPCOPY_OFFLINE)
 static select_server_offline_func offline_func;
-static int                        valid_fds[MAX_FD_NUM];
-static int                        fd_nums;
-
+#endif
 
 /* Set select event callback function */
 void select_server_set_callback(select_server_func func)
@@ -73,8 +72,9 @@ void select_server_del(int fd)
 /* Run for receiving messages */
 void select_server_run()
 {
-    fd_set r_set;
-    int    i, ret;
+    int            i, ret;
+    fd_set         r_set;
+ 
     while(true){
         r_set = read_set;
         ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
