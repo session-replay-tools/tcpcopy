@@ -269,20 +269,20 @@ static int retrieve_target_addresses(char *raw_transfer,
         if (transfer->mappings[i] == NULL) {
             return -1;
         }
+    }
 
-        p = raw_transfer;
+    p = raw_transfer;
 
-        for ( ;; ) {
-            if ((seq = strchr(p, ',')) == NULL) {
-                parse_target(transfer->mappings[i], p);
-                break;
-            } else {
-                *seq = '\0';
-                parse_target(transfer->mappings[i], p);
-                *seq = ',';
+    for ( ;; ) {
+        if ((seq = strchr(p, ',')) == NULL) {
+            parse_target(transfer->mappings[i], p);
+            break;
+        } else {
+            *seq = '\0';
+            parse_target(transfer->mappings[i], p);
+            *seq = ',';
 
-                p = seq + 1;
-            }
+            p = seq + 1;
         }
     }
 
