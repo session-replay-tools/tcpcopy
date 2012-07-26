@@ -4,7 +4,7 @@
 AC_PREREQ(2.59)
 AC_INIT(tcpcopy, 0.5.0, wangbin579@gmail.com)
 AC_CONFIG_SRCDIR([src/interception/main.c])
-AC_CONFIG_HEADER([config.h])
+AC_CONFIG_HEADER([src/core/config.h])
 
 
 AM_INIT_AUTOMAKE(tcpcopy,0.5.0)
@@ -21,7 +21,7 @@ AM_PROG_LIBTOOL
 
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),,enable_debug=no)
 if test "x$enable_debug" = "xyes";then
-	AC_DEFINE(TC_DEBUG, 1, [Define if we're using X Session Management.])
+	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
 fi
 
 # Checks for header files.
