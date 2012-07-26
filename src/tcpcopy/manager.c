@@ -15,7 +15,8 @@ static int       raw_sock  = -1;
 static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 static uint32_t  localhost;
 #if (TCPCOPY_OFFLINE)
-static pcap_t    *pcap = NULL;
+static bool      read_pcap_over= false;
+static pcap_t   *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
@@ -360,7 +361,7 @@ void send_packets_from_pcap(int first)
     int                 l2_len, ip_pack_len, p_valid_flag = 0;
     bool                stop;
 
-    if(NULL == pcap){
+    if(NULL == pcap || read_pcap_over){
         return;
     }
     gettimeofday(&cur_time, NULL);
@@ -398,6 +399,7 @@ void send_packets_from_pcap(int first)
         }else{
             log_info(LOG_WARN, "stop,null from pcap_next");
             stop = true;
+            read_pcap_over = true;
         }
     }
 }
@@ -422,8 +424,10 @@ void dispose_event(int fd)
         process((char*)msg, REMOTE);
     }   
 #if (TCPCOPY_OFFLINE)
-    log_info(LOG_DEBUG, "send_packets_from_pcap");
-    send_packets_from_pcap(0);
+    if(!read_pcap_over){
+        log_info(LOG_DEBUG, "send_packets_from_pcap");
+        send_packets_from_pcap(0);
+    }
 #endif
     if((event_cnt%1000000) == 0){
         check_resource_usage();
@@ -460,7 +464,6 @@ void tcp_copy_over(const int sig)
 {
     long int pid   = (long int)syscall(224);
     log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
-    sync();
     exit(EXIT_SUCCESS);
 }
 
