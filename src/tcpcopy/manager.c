@@ -1,3 +1,4 @@
+#include "../core/xcopy.h"
 #include "../communication/msg.h"
 #include "../util/util.h"
 #include "../log/log.h"
@@ -461,7 +462,7 @@ void tcp_copy_exit()
 
 void tcp_copy_over(const int sig)
 {
-    long int pid   = (long int)syscall(224);
+    long int pid   = (long int)syscall(SYS_gettid);
     log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
     exit(EXIT_SUCCESS);
 }

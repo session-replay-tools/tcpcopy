@@ -1,4 +1,5 @@
 #include "xcopy.h"
+#include "../log/log.h"
 
 /* Strace packet info for debug */
 void strace_pack(int level, int flag,
@@ -28,30 +29,36 @@ void strace_pack(int level, int flag,
     window          = tcp_header->window;
 
     if(BACKEND_FLAG == flag){
-        log_info(level, "from bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+        tc_log_debug8(level, 
+                "from bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 
     }else if(CLIENT_FLAG == flag){
-        log_info(level, "recv clt:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+        tc_log_debug8(level, 
+                "recv clt:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 
     }else if(TO_BAKEND_FLAG == flag){
-        log_info(level, "to bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+        tc_log_debug8(level, 
+                "to bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
 
     }else if(FAKED_CLIENT_FLAG == flag){
-        log_info(level, "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+        tc_log_debug8(level, 
+                "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
     }else if(UNKNOWN_FLAG == flag){
-        log_info(level, "unkown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
+        tc_log_debug7(level, 
+                "unkown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq);
     }else{
-        log_info(level, "strange %s:%u-->%s:%u,length %u,seq=%u,ack=%u",
+        tc_log_debug7(level, 
+                "strange %s:%u-->%s:%u,length %u,seq=%u,ack=%u",
                 src_ip, ntohs(tcp_header->source), dst_ip,
                 ntohs(tcp_header->dest), pack_size, seq, ack_seq);
     }

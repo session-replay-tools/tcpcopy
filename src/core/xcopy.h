@@ -1,8 +1,6 @@
 #ifndef  _XCOPY_H_INC
 #define  _XCOPY_H_INC
 
-#define VERSION "0.5.0"
-
 /* Set nonzero for debug */
 #define DEBUG_TCPCOPY      0
 
@@ -154,6 +152,7 @@ enum packet_classification{
 #include <linux/netfilter_ipv4/ip_queue.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#include <sys/syscall.h>
 #include <sys/resource.h>
 #include <sys/select.h>
 #include <sys/socket.h>

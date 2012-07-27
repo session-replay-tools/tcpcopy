@@ -34,6 +34,8 @@ void log_info(int level, const char *fmt, ...);
 #define tc_log_debug7(level, fmt, a1, a2, a3, a4, a5, a6, a7)           \
     log_info(level, (const char *) fmt, a1, a2, a3, a4, a5, a6, a7)
 
+#define tc_log_debug8(level, fmt, a1, a2, a3, a4, a5, a6, a7, a8)       \
+    log_info(level, (const char *) fmt, a1, a2, a3, a4, a5, a6, a7, a8)
 #else
 
 #define tc_log_debug0(level, fmt)
@@ -44,6 +46,7 @@ void log_info(int level, const char *fmt, ...);
 #define tc_log_debug5(level, fmt, a1, a2, a3, a4, a5)
 #define tc_log_debug6(level, fmt, a1, a2, a3, a4, a5, a6)
 #define tc_log_debug7(level, fmt, a1, a2, a3, a4, a5, a6, a7)
+#define tc_log_debug8(level, fmt, a1, a2, a3, a4, a5, a6, a7, a8)
 
 #endif /* TCPCOPY_DEBUG */
 
