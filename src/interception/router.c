@@ -2,6 +2,7 @@
 #include "delay.h"
 #include "../communication/msg.h"
 #include "../core/hash.h"
+#include "../log/log.h"
 #include "../util/util.h"
 
 static hash_table *table;
@@ -114,9 +115,7 @@ void router_update(struct iphdr *ip_header)
     key = get_key(ip_header->daddr, tcp_header->dest);
     fd  = hash_find(table, key);
     if( NULL == fd ){
-#if (DEBUG_TCPCOPY)
-        log_info(LOG_INFO, "fd is null");
-#endif
+        tc_log_debug0(LOG_INFO, "fd is null");
         delay_table_add(key, &msg);
         return ;
     }

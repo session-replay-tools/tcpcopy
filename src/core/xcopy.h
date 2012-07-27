@@ -1,9 +1,6 @@
 #ifndef  _XCOPY_H_INC
 #define  _XCOPY_H_INC
 
-/* Set nonzero for debug */
-#define DEBUG_TCPCOPY      0
-
 /* Set nonzero for mysql skip-grant-table mode */
 #define TCPCOPY_MYSQL_SKIP 0
 /* Set nonzero for mysql normal mode */
@@ -276,9 +273,6 @@ typedef struct xcopy_srv_settings {
 extern xcopy_clt_settings clt_settings;
 /* For tcpcopy server(intercept program) */
 extern xcopy_srv_settings srv_settings;
-
-/* Global log level */
-extern int g_log_level;
 
 /* Global functions */
 void strace_pack(int level, int flag, struct iphdr *ip_header,

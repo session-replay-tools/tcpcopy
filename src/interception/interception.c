@@ -1,4 +1,5 @@
 #include "../core/xcopy.h"
+#include "../log/log.h"
 #include "../communication/msg.h"
 #include "../event/select_server.h"
 #include "router.h"
@@ -24,17 +25,6 @@ static void set_sock_no_delay(int sock)
     }
     return;
 }
-
-#if (DEBUG_TCPCOPY)
-static void output_debug(int level, struct iphdr *ip_header)
-{
-    size_t        size_ip;
-    struct tcphdr *tcp_header;
-    size_ip    = ip_header->ihl<<2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-    strace_pack(level, BACKEND_FLAG, ip_header, tcp_header);
-}
-#endif
 
 static uint32_t seq = 1;
 static unsigned char buffer[128];
@@ -117,9 +107,6 @@ static void interception_process(int fd)
                     delay_table_delete_obsolete(now);
                     last_clean_time = now;
                 }
-#if (DEBUG_TCPCOPY)
-                output_debug(LOG_DEBUG, ip_header);
-#endif
                  /* Drop the packet */
                 dispose_netlink_packet(NF_DROP, packet_id);     
             }
@@ -134,10 +121,8 @@ static void interception_process(int fd)
 #endif
                 router_add(c_msg->client_ip, c_msg->client_port, fd);
             }else if(c_msg->type == CLIENT_DEL){
-#if (DEBUG_TCPCOPY)
-                log_info(LOG_NOTICE, "del client router:%u", 
+                tc_log_debug1(LOG_NOTICE, "del client router:%u", 
                         ntohs(c_msg->client_port));
-#endif
                 router_del(c_msg->client_ip, c_msg->client_port);
             }
         }else{

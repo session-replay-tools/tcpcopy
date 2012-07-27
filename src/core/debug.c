@@ -12,10 +12,6 @@ void strace_pack(int level, int flag,
     uint32_t       pack_size;
     uint16_t       window;
 
-    if(g_log_level < level){
-        return;
-    }
-
     src_addr.s_addr = ip_header->saddr;
     tmp_buf         = inet_ntoa(src_addr);
     strcpy(src_ip, tmp_buf);

@@ -6,11 +6,11 @@ static int tcp_sock_init()
     int sock = socket(AF_INET, SOCK_STREAM, 0);
     if( sock < 0){          
         perror("socket:");                                        
-        tc_log_debug1(LOG_ERR, "socket create:%s", strerror(errno));
+        log_info(LOG_ERR, "socket create:%s", strerror(errno));
         sync();
         exit(errno);
     }else{
-        tc_log_debug0(LOG_NOTICE, "socket created successfully");
+        log_info(LOG_NOTICE, "socket created successfully");
     }
     return sock;
 }
@@ -27,7 +27,7 @@ static void connect_to_server(int sock, uint32_t ip, uint16_t port)
     length = (socklen_t)(sizeof(remote_addr));
     if(connect(sock, (struct sockaddr *)&remote_addr, length) == -1){
         perror("connect to remote:");                         
-        tc_log_debug1(LOG_ERR, "it can not connect to remote server:%s",
+        log_info(LOG_ERR, "it can not connect to remote server:%s",
                 strerror(errno));
         sync(); 
         exit(errno);
@@ -41,7 +41,7 @@ static void set_sock_no_delay(int sock)
     if(setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, length) 
             == -1){
         perror("setsockopt:");
-        tc_log_debug1(LOG_ERR, "setsocket when setting TCP_NODELAY:%s",
+        log_info(LOG_ERR, "setsocket when setting TCP_NODELAY:%s",
                 strerror(errno));
         sync(); 
         exit(errno);
@@ -71,11 +71,11 @@ static void sock_bind(int sock, const char *binded_ip, uint16_t port)
     length = (socklen_t)(sizeof(local_addr));
     if(bind(sock, (struct sockaddr *)&local_addr, length) == -1){
         perror("can not bind:");
-        tc_log_debug1(LOG_ERR, "bind error:%s", strerror(errno));
+        log_info(LOG_ERR, "bind error:%s", strerror(errno));
         sync(); 
         exit(errno);
     }else{
-        tc_log_debug0(LOG_NOTICE, "it binds address successfully");
+        log_info(LOG_NOTICE, "it binds address successfully");
     }
 }
 
@@ -83,11 +83,11 @@ static void sock_listen(int sock)
 {
     if(listen(sock, 5) == -1){
         perror("sock listen:");
-        tc_log_debug1(LOG_ERR, "it can not listen:%s", strerror(errno));
+        log_info(LOG_ERR, "it can not listen:%s", strerror(errno));
         sync(); 
         exit(errno);
     }else{
-        tc_log_debug0(LOG_NOTICE, "it listens successfully");
+        log_info(LOG_NOTICE, "it listens successfully");
     }
 }
 
@@ -156,7 +156,7 @@ int msg_client_send(int sock, uint32_t c_ip, uint16_t c_port, uint16_t type)
     buf.type = type;
     send_len = send(sock, (const void *)&buf, sizeof(buf), 0);
     if(send_len != buf_len){
-        tc_log_debug2(LOG_WARN, "send length:%ld,buffer size:%ld",
+        log_info(LOG_NOTICE, "send length:%ld,buffer size:%ld",
                 send_len, buf_len);
         return -1;
     }
@@ -170,7 +170,7 @@ int msg_server_send(int sock, struct msg_server_s *msg)
     send_len = send(sock, (const void *)msg, (size_t)msg_len, 0);
     if(send_len != -1){
         if(send_len != msg_len){
-            tc_log_debug1(LOG_NOTICE, "send len not equal to msg size:%u",
+            log_info(LOG_NOTICE, "send len not equal to msg size:%u",
                     send_len);  
             return -1;
         }
