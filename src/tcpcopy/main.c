@@ -167,6 +167,7 @@ read_args(int argc, char **argv)
                 exit(EXIT_FAILURE);
         }
     }
+
     return 0;
 }
 
@@ -318,8 +319,8 @@ static int
 set_details()
 {
     int            rand_port;
-    struct timeval tp;
     unsigned int   seed;
+    struct timeval tp;
 
     /* Generate random port for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -387,9 +388,9 @@ settings_init()
 int
 main(int argc ,char **argv)
 {
+    int ret;
     cpy_event_loop_t event_loop;
 
-    int ret;
     /* Set defaults */
     settings_init();
     /* Read args */

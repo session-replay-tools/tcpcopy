@@ -13,13 +13,13 @@
 #endif
 
 
-static int       raw_sock  = -1;
-static uint32_t  localhost;
-static uint64_t  event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
+static int           raw_sock  = -1;
+static uint32_t      localhost;
+static uint64_t      event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
 
 #if (TCPCOPY_OFFLINE)
-static bool      read_pcap_over= false;
-static pcap_t   *pcap = NULL;
+static bool           read_pcap_over= false;
+static pcap_t        *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
@@ -52,8 +52,8 @@ set_nonblock(int socket)
 static int
 init_input_raw_socket()
 {
-    int       sock, recv_buf_opt, ret;
-    socklen_t opt_len;
+    int        sock, recv_buf_opt, ret;
+    socklen_t  opt_len;
 
 #if (COPY_LINK_PACKETS)
     /* 
@@ -94,11 +94,11 @@ init_input_raw_socket()
 static void
 replicate_packs(char *packet, int length, int replica_num)
 {
-    int            i;
-    uint16_t       orig_port, addition, dest_port, rand_port;
-    uint32_t       size_ip;
-    struct tcphdr *tcp_header;
-    struct iphdr  *ip_header;
+    int             i;
+    uint16_t        orig_port, addition, dest_port, rand_port;
+    uint32_t        size_ip;
+    struct tcphdr  *tcp_header;
+    struct iphdr   *ip_header;
     
     ip_header  = (struct iphdr*)packet;
     size_ip    = ip_header->ihl << 2;
@@ -225,8 +225,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 static int
 retrieve_raw_sockets(int sock)
 {
-    char     recv_buf[RECV_BUF_SIZE];
     int      err, recv_len, p_valid_flag = 0;
+    char     recv_buf[RECV_BUF_SIZE];
 
     while (true) {
 
@@ -271,8 +271,8 @@ retrieve_raw_sockets(int sock)
 static void 
 check_resource_usage()
 {
-    int           who = RUSAGE_SELF, ret;
-    struct rusage usage;
+    int            who = RUSAGE_SELF, ret;
+    struct rusage  usage;
 
     ret = getrusage(who, &usage);
     if (-1 == ret) {
@@ -310,9 +310,10 @@ timeval_diff(struct timeval *start, struct timeval *cur)
 static bool
 check_read_stop()
 {
-    uint64_t history_diff = timeval_diff(&first_pack_time, &last_pack_time);
-    uint64_t cur_diff     = timeval_diff(&base_time, &cur_time);
-    uint64_t diff;
+    uint64_t diff, history_diff, cur_diff;
+
+    history_diff = timeval_diff(&first_pack_time, &last_pack_time);
+    cur_diff     = timeval_diff(&base_time, &cur_time);
 
     tc_log_debug2(LOG_DEBUG, "diff,old:%llu,new:%llu", 
             history_diff, cur_diff);
@@ -370,10 +371,10 @@ static unsigned char pcap_ip_buf[65536];
 static unsigned char *
 get_ip_data(unsigned char *packet, const int pkt_len, int *p_l2_len)
 {
-    int     l2_len;
-    u_char *ptr;
+    int      l2_len;
+    u_char  *ptr;
 
-    l2_len = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
+    l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
     *p_l2_len = l2_len;
 
     if (pkt_len <= l2_len) {
@@ -399,7 +400,7 @@ send_packets_from_pcap(int first)
 {
     int                 l2_len, ip_pack_len, p_valid_flag = 0;
     bool                stop;
-    unsigned char       *pkt_data, *ip_data;
+    unsigned char      *pkt_data, *ip_data;
     struct pcap_pkthdr  pkt_hdr;  
 
     if (NULL == pcap || read_pcap_over) {
@@ -530,14 +531,14 @@ tcp_copy_over(const int sig)
 int
 tcp_copy_init(cpy_event_loop_t *event_loop)
 {
-    int                    i;
+    int                      i;
 #if (TCPCOPY_OFFLINE)
-    char                  *pcap_file, ebuf[PCAP_ERRBUF_SIZE];
+    char                    *pcap_file, ebuf[PCAP_ERRBUF_SIZE];
 #endif
-    uint16_t               online_port, target_port;
-    uint32_t               target_ip;
-    cpy_event_t            *raw_socket_event;
-    ip_port_pair_mapping_t *pair, **mappings;
+    uint16_t                 online_port, target_port;
+    uint32_t                 target_ip;
+    cpy_event_t             *raw_socket_event;
+    ip_port_pair_mapping_t  *pair, **mappings;
 
     /* keep it temporarily */
     select_server_set_callback(dispose_event);

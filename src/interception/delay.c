@@ -11,7 +11,7 @@ copy_message(struct msg_server_s *msg)
 {
     struct msg_server_s *cmsg;
 
-    cmsg=(struct msg_server_s *)malloc(sizeof(struct msg_server_s));
+    cmsg = (struct msg_server_s *)malloc(sizeof(struct msg_server_s));
     if (NULL == cmsg) {
         perror("malloc");
         log_info(LOG_ERR, "malloc error:%s", strerror(errno));
@@ -93,7 +93,7 @@ delay_table_add(uint64_t key, struct msg_server_s *msg)
     p_link_node          ln;
     struct msg_server_s *cmsg;
 
-    msg_list =(link_list *)hash_find(table, key);
+    msg_list = (link_list *)hash_find(table, key);
     if (NULL == msg_list) {
         msg_ls_cnt++;
         msg_list = link_list_create();
@@ -118,7 +118,7 @@ delay_table_send(uint64_t key, int fd)
     p_link_node          first;
     struct msg_server_s *msg ;
 
-    msg_list =(link_list *)hash_find(table, key);
+    msg_list = (link_list *)hash_find(table, key);
     if (NULL == msg_list) {
         return; 
     }
@@ -141,7 +141,7 @@ delay_table_del(uint64_t key)
     link_list    *msg_list;
     p_link_node   first;
 
-    msg_list =(link_list *)hash_find(table, key);
+    msg_list = (link_list *)hash_find(table, key);
     if (NULL == msg_list) {
         return; 
     }
@@ -177,7 +177,7 @@ delay_table_destroy()
             while (ln) {
                 hn = (hash_node *)ln->data;
                 if (hn->data != NULL) {
-                    msg_list=(link_list *)hn->data;
+                    msg_list = (link_list *)hn->data;
                     msg_item_destr_cnt += link_list_clear(msg_list);
                     free(msg_list);
                     msg_ls_destr_cnt++;

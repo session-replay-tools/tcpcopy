@@ -4,7 +4,7 @@
 inline uint64_t
 get_key(uint32_t ip, uint16_t port)
 {
-    uint64_t value =((uint64_t)ip) << 16;
+    uint64_t value = ((uint64_t)ip) << 16;
 
     value += port;
 

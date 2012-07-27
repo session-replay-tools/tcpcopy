@@ -113,7 +113,7 @@ router_update(struct iphdr *ip_header)
     size_tcp = tcp_header->doff << 2;
     cont_len = tot_len - size_ip - size_tcp;
     if (cont_len > 0) {
-        payload =(unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char*)((char*)tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
             /*
              * Only transfer payload if content length is less
