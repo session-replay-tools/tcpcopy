@@ -286,7 +286,5 @@ void strace_pack(int level, int flag, struct iphdr *ip_header,
         struct tcphdr *tcp_header);
 int daemonize();
 
-void log_info(int level, const char *fmt, ...);
-
 #endif   /* ----- #ifndef _XCOPY_H_INC ----- */
 

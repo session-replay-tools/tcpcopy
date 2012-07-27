@@ -89,16 +89,15 @@ static void replicate_packs(char *packet, int length, int replica_num)
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
     orig_port  = ntohs(tcp_header->source);
 
-#if (DEBUG_TCPCOPY)
-    log_info(LOG_DEBUG, "orig port:%u", orig_port);
-#endif
+    tc_log_debug1(LOG_DEBUG, "orig port:%u", orig_port);
+
     rand_port = clt_settings.rand_port_shifted;
     for(i = 1; i < replica_num; i++){
         addition   = (((i << 1)-1) << 5) + rand_port;
         dest_port  = get_appropriate_port(orig_port, addition);
-#if (DEBUG_TCPCOPY)
-        log_info(LOG_DEBUG, "new port:%u,add:%u", dest_port, addition);
-#endif
+
+        tc_log_debug2(LOG_DEBUG, "new port:%u,add:%u", dest_port, addition);
+
         tcp_header->source = htons(dest_port);
         process_packet(true, packet, length);
     }
