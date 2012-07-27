@@ -178,6 +178,9 @@ static void output_for_debug(int argc, char **argv)
 #if (TCPCOPY_MYSQL_NO_SKIP)
     log_info(LOG_NOTICE, "TCPCOPY_MYSQL_NO_SKIP mode");
 #endif
+#if (TCPCOPY_OFFLINE)
+    log_info(LOG_NOTICE, "TCPCOPY_OFFLINE mode");
+#endif
 }
 
 static void parse_ip_port_pair(char *addr, uint32_t *ip,
