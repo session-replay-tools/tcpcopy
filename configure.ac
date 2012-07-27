@@ -19,9 +19,24 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
 
-AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),,enable_debug=no)
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),,debug=no)
 if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
+fi
+
+AC_ARG_ENABLE(sgt, AS_HELP_STRING([--enable-mysqlsgt],[compile with only mysql skip-grant-tables support]),,sgt=no)
+if test "x$enable_mysqlsgt" = "xyes";then
+	AC_DEFINE(TCPCOPY_MYSQL_SKIP, 1, [Define if --enable-mysqlsgt])
+fi
+
+AC_ARG_ENABLE(mysql, AS_HELP_STRING([--enable-mysql],[compile with only mysql support]),,mysql=no)
+if test "x$enable_mysql" = "xyes";then
+	AC_DEFINE(TCPCOPY_MYSQL_NO_SKIP, 1, [Define if --enable-mysql])
+fi
+
+AC_ARG_ENABLE(offline, AS_HELP_STRING([--enable-offline],[compile with only offline support]),,offline=no)
+if test "x$enable_offline" = "xyes";then
+	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
 fi
 
 # Checks for header files.
