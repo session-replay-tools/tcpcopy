@@ -15,23 +15,28 @@ static char *err_levels[] = {
     "debug"
 };
 
-void log_init(const char *path)
+void
+log_init(const char *path)
 {
-    if(NULL == path){
+    if (NULL == path) {
         file = fopen("error.log", "a+");
-    }else{
+    } else {
         file = fopen(path, "a+");
     }
 }
 
-static struct timeval get_time()
+static struct timeval
+get_time()
 {
     struct timeval tp;
+
     gettimeofday(&tp, NULL);
+
     return tp;
 }
 
-void log_info(int level, const char *fmt, ...)
+void
+log_info(int level, const char *fmt, ...)
 {
     va_list         args;
     struct tm       local_time, *p_local_time;
@@ -44,11 +49,11 @@ void log_info(int level, const char *fmt, ...)
         t = time(0);
         fprintf(file, "[%s] ", err_levels[level]);
         p_local_time = localtime_r(&t, &local_time);
-        if(NULL == p_local_time){
+        if (NULL == p_local_time) {
             return;
         }
         p_time_str = asctime_r(p_local_time, time_str);
-        if(NULL == p_time_str){
+        if (NULL == p_time_str) {
             return;
         }
         len = strlen(p_time_str);
@@ -61,9 +66,10 @@ void log_info(int level, const char *fmt, ...)
     }
 }
 
-void log_end()
+void
+log_end()
 {
-    if(file){
+    if (file) {
         (void)fclose(file);
         file = NULL;
     }   

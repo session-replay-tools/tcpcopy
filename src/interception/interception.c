@@ -7,29 +7,31 @@
 #include "nl_firewall.h"
 #include "interception.h"
 
-static int    firewall_sock;
-static int    msg_listen_sock;
+static int    firewall_sock, msg_listen_sock;
 static time_t last_clean_time;
 
-static void set_sock_no_delay(int sock)
+static void
+set_sock_no_delay(int sock)
 {
     int flag = 1;
-    if(setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
-                sizeof(flag)) == -1){
+
+    if (setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
+                sizeof(flag)) == -1)
+    {
         perror("setsockopt:");
         log_info(LOG_ERR, "setsockopt error:%s", strerror(errno));
         sync(); 
         exit(errno);
-    }else{
+    } else {
         log_info(LOG_NOTICE, "setsockopt ok");
     }
-    return;
 }
 
-static uint32_t seq = 1;
+static uint32_t      seq = 1;
 static unsigned char buffer[128];
 
-static int dispose_netlink_packet(int verdict, unsigned long packet_id)
+static int
+dispose_netlink_packet(int verdict, unsigned long packet_id)
 {
     struct nlmsghdr        *nl_header = (struct nlmsghdr*)buffer;
     struct ipq_verdict_msg *ver_data;
@@ -59,8 +61,9 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
      * after every IPQM PACKET message is received.
      *
      */
-    if(sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
-                (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0){
+    if (sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
+                (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
+    {
         perror("unable to send mode message");
         log_info(LOG_ERR, "unable to send mode message:%s", strerror(errno));
         sync(); 
@@ -70,39 +73,42 @@ static int dispose_netlink_packet(int verdict, unsigned long packet_id)
     return 1;
 }
 
-static void interception_process(int fd)
+static void
+interception_process(int fd)
 {
     int                    diff, new_fd, i, pass_through_flag = 0;
     time_t                 now;
+    struct iphdr          *ip_header;
     unsigned long          packet_id;
-    struct iphdr           *ip_header;
-    struct msg_client_s    *c_msg;
+    struct msg_client_s   *c_msg;
 
-    if(fd == msg_listen_sock){
+    if (fd == msg_listen_sock) {
+
         new_fd = accept(msg_listen_sock, NULL, NULL);   
         set_sock_no_delay(new_fd);
-        if(new_fd != -1){
+        if (new_fd != -1) {
             select_server_add(new_fd);
         }
-    }else if(fd == firewall_sock){
+    } else if (fd == firewall_sock) {
+
         packet_id = 0;
         ip_header = nl_firewall_recv(firewall_sock, &packet_id);
-        if(ip_header != NULL){
+        if (ip_header != NULL) {
             /* Check if it is the valid user to pass through firewall */
-            for(i = 0; i < srv_settings.passed_ips.num; i++){
-                if(srv_settings.passed_ips.ips[i] == ip_header->daddr){
+            for (i = 0; i < srv_settings.passed_ips.num; i++) {
+                if (srv_settings.passed_ips.ips[i] == ip_header->daddr) {
                     pass_through_flag = 1;
                     break;
                 }
             }
-            if(pass_through_flag){
+            if (pass_through_flag) {
                 /* Pass through the firewall */
                 dispose_netlink_packet(NF_ACCEPT, packet_id);   
-            }else{
+            } else {
                 router_update(ip_header);
                 now  = time(0);
                 diff = now - last_clean_time;
-                if(diff > CHECK_INTERVAL){
+                if (diff > CHECK_INTERVAL) {
                     route_delete_obsolete(now);
                     delay_table_delete_obsolete(now);
                     last_clean_time = now;
@@ -111,19 +117,20 @@ static void interception_process(int fd)
                 dispose_netlink_packet(NF_DROP, packet_id);     
             }
         }
-    }else{
+    } else {
+
         c_msg = msg_server_recv(fd);
-        if(c_msg){
-            if(c_msg->type == CLIENT_ADD){
+        if (c_msg) {
+            if (c_msg->type == CLIENT_ADD) {
                 tc_log_debug1(LOG_NOTICE, "add client router:%u", 
                         ntohs(c_msg->client_port));
                 router_add(c_msg->client_ip, c_msg->client_port, fd);
-            }else if(c_msg->type == CLIENT_DEL){
+            } else if (c_msg->type == CLIENT_DEL) {
                 tc_log_debug1(LOG_NOTICE, "del client router:%u", 
                         ntohs(c_msg->client_port));
                 router_del(c_msg->client_ip, c_msg->client_port);
             }
-        }else{
+        } else {
             close(fd);
             select_server_del(fd);
             log_info(LOG_NOTICE, "close sock:%d", fd);
@@ -132,7 +139,8 @@ static void interception_process(int fd)
 }
 
 /* Initiate for tcpcopy server */
-void interception_init(uint16_t port)
+void
+interception_init(uint16_t port)
 {
     delay_table_init(srv_settings.hash_size);
     router_init(srv_settings.hash_size << 1);
@@ -153,19 +161,21 @@ void interception_run()
 }
 
 /* Clear resources for interception */
-void interception_over()
+void
+interception_over()
 {
-    if(firewall_sock != -1){
+    if (firewall_sock != -1) {
         close(firewall_sock);
         firewall_sock = -1;
         log_info(LOG_NOTICE, "firewall sock is closed");
     }
 
-    if(msg_listen_sock != -1){
+    if (msg_listen_sock != -1) {
         close(msg_listen_sock);
         msg_listen_sock = -1;
         log_info(LOG_NOTICE, "msg listen sock is closed");
     }
+
     router_destroy();
     delay_table_destroy();
 }

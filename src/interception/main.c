@@ -19,7 +19,8 @@
 
 xcopy_srv_settings srv_settings;
 
-static void release_resources()
+static void
+release_resources()
 {
     log_info(LOG_NOTICE, "release_resources begin");
     interception_over();
@@ -28,37 +29,42 @@ static void release_resources()
 }
 
 /* TODO It has to solve the sigignore warning problem */
-static int sigignore(int sig) 
+static int
+sigignore(int sig) 
 {    
     struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
 
-    if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
+    if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
     }       
     return 0;
 }
 
-static void signal_handler(int sig)
+static void
+signal_handler(int sig)
 {
     log_info(LOG_ERR, "set signal handler:%d", sig);
     printf("set signal handler:%d\n", sig);
-    if(SIGSEGV == sig){    
+
+    if (SIGSEGV == sig) {    
         log_info(LOG_ERR, "SIGSEGV error");
         release_resources();
         /* Avoid dead loop*/
         signal(SIGSEGV, SIG_DFL);
         kill(getpid(), sig);
-    }else{    
+    } else {    
         exit(EXIT_SUCCESS);
     } 
 }
 
-static void set_signal_handler(){
-    int i=1;
+static void
+set_signal_handler() {
+    int i = 1;
+
     atexit(release_resources);
     /* Just to try */
-    for(; i<SIGTTOU; i++){
-        if(i != SIGPIPE){
+    for (; i<SIGTTOU; i++) {
+        if (i != SIGPIPE) {
             signal(i, signal_handler);
         }
     }
@@ -66,36 +72,38 @@ static void set_signal_handler(){
 }
 
 /* Retrieve ip addresses */
-static int retrieve_ip_addr()
+static int
+retrieve_ip_addr()
 {
-    size_t      len;
-    int         count = 0;
+    int          count = 0;
+    char         tmp[32];
+    size_t       len;
+    uint32_t     address;
     const char  *split, *p;
-    char        tmp[32];
-    uint32_t    address;
 
     memset(tmp, 0, 32);
     p = srv_settings.raw_ip_list;
 
-    while(1){
+    while (true) {
         split = strchr(p, ',');
-        if(split != NULL){   
+        if (split != NULL) {   
             len = (size_t)(split - p);
-        }else{   
+        } else {   
             len = strlen(p);
         }   
+
         strncpy(tmp, p, len);
         address = inet_addr(tmp);    
         srv_settings.passed_ips.ips[count++] = address;
 
-        if(count == MAX_ALLOWED_IP_NUM){
+        if (count == MAX_ALLOWED_IP_NUM) {
             log_info(LOG_WARN, "reach the limit for passing firewall");
             break;
         }
 
-        if(NULL == split){
+        if (NULL == split) {
             break;
-        }else{
+        } else {
             p = split + 1;
         }
 
@@ -107,7 +115,9 @@ static int retrieve_ip_addr()
     return 1;
 }
 
-static void usage(void) {  
+static void
+usage(void)
+{  
     printf("intercept " VERSION "\n");
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
@@ -122,8 +132,10 @@ static void usage(void) {
            "-d             run as a daemon\n");
 }
 
-static int read_args(int argc, char **argv){
+static int
+read_args(int argc, char **argv) {
     int  c;
+
     while (-1 != (c = getopt(argc, argv,
          "x:" /* ip list passed through ip firewall */
          "p:" /* TCP port number to listen on */
@@ -134,7 +146,8 @@ static int read_args(int argc, char **argv){
          "P:" /* save PID in file */
          "v"  /* print version and exit*/
          "d"  /* daemon mode */
-        ))) {
+        )))
+    {
         switch (c) {
             case 'x':
                 srv_settings.raw_ip_list = optarg;
@@ -173,7 +186,8 @@ static int read_args(int argc, char **argv){
     return 0;
 }
 
-static void set_details()
+static void
+set_details()
 {
     /* Set signal handler */    
     set_signal_handler();
@@ -183,7 +197,7 @@ static void set_details()
         exit(EXIT_FAILURE);
     }
     /* Retrieve ip address */
-    if(srv_settings.raw_ip_list != NULL){
+    if (srv_settings.raw_ip_list != NULL) {
         retrieve_ip_addr();
     }
     /* Daemonize */
@@ -221,7 +235,8 @@ static void output_for_debug()
 #endif
 }
 
-int main(int argc ,char **argv){
+int
+main(int argc ,char **argv) {
     /* Init settings */ 
     settings_init();
     /* Read args */
