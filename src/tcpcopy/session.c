@@ -183,7 +183,7 @@ static void wrap_send_ip_packet(session_t *s, unsigned char *data,
      */
     ip_header->check = 0;
     ip_header->check = csum((unsigned short *)ip_header, size_ip); 
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
     strace_pack(LOG_DEBUG, TO_BAKEND_FLAG, ip_header, tcp_header);
 #endif
     packs_sent_cnt++;
@@ -691,14 +691,12 @@ static int send_reserved_packets(session_t *s)
         size_ip    = ip_header->ihl << 2;
         tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
         strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif
         if(cur_seq > s->vir_next_seq){
             /* We need to wait for previous packet */
-#if (DEBUG_TCPCOPY)
-            log_info(LOG_NOTICE, "we need to wait previous pack");
-#endif
+            tc_log_debug0(LOG_NOTICE, "we need to wait prev pack");
             s->is_waiting_previous_packet = 1;
             s->candidate_response_waiting = 0;
             break;
@@ -706,9 +704,8 @@ static int send_reserved_packets(session_t *s)
             cont_len   = get_pack_cont_len(ip_header, tcp_header);
             if(cont_len > 0){
                 /* Special disposure here */
-#if (DEBUG_TCPCOPY)
-                log_info(LOG_NOTICE, "reserved strange:%u", s->src_h_port);
-#endif
+                tc_log_debug1(LOG_NOTICE, "reserved strange:%u", 
+                        s->src_h_port);
                 diff = s->vir_next_seq - cur_seq;
                 if(!trim_packet(s, ip_header, tcp_header, diff)){
                     omit_transfer = true;
@@ -1215,7 +1212,7 @@ static void send_faked_syn(session_t *s, struct iphdr *ip_header,
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_prepare_for_new_session(s, f_ip_header, f_tcp_header);
 #endif
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
     strace_pack(LOG_DEBUG, FAKED_CLIENT_FLAG, f_ip_header, f_tcp_header);
 #endif
     wrap_send_ip_packet(s, f_s_buf, true);
@@ -1248,7 +1245,7 @@ static void send_faked_third_handshake(session_t *s,
     f_tcp_header->ack_seq = s->vir_ack_seq;
     f_tcp_header->seq     = tcp_header->ack_seq;
     
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
     strace_pack(LOG_DEBUG, FAKED_CLIENT_FLAG, f_ip_header, f_tcp_header);
 #endif
     wrap_send_ip_packet(s, fake_ack_buf, false);
@@ -1661,7 +1658,7 @@ void process_backend_packet(session_t *s, struct iphdr *ip_header,
     bool     is_greet = false; 
 
     resp_cnt++;
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
     strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
 #endif
 
@@ -2099,7 +2096,7 @@ void process_client_packet(session_t *s, struct iphdr *ip_header,
     int       is_new_req;
     uint16_t  cont_len;
 
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
     strace_pack(LOG_DEBUG, CLIENT_FLAG, ip_header, tcp_header);
 #endif  
     /* Change source port for multiple copying,etc */
@@ -2382,10 +2379,10 @@ bool process(char *packet, int pack_src)
                 }
             }
         }else{
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
             strace_pack(LOG_DEBUG, BACKEND_FLAG, ip_header, tcp_header);
-            log_info(LOG_DEBUG, "no active session for me");
 #endif
+            tc_log_debug0(LOG_DEBUG, "no active session for me");
         }
     }else if(LOCAL == pack_src){
         /* When the packet comes from client */

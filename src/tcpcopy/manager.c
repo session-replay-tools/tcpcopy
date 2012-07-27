@@ -147,10 +147,10 @@ static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
             seq         = ntohl(tcp_header->seq);
             last        = packet_num - 1;
             id          = ip_header->id;
-#if (DEBUG_TCPCOPY)
+#if (TCPCOPY_DEBUG)
             strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-            log_info(LOG_INFO, "recv len:%d, more than MTU", recv_len);
 #endif
+            tc_log_debug1(LOG_INFO, "recv:%d, more than MTU", recv_len);
             index = head_len;
             for(i = 0 ; i < packet_num; i++){
                 tcp_header->seq = htonl(seq + i * max_payload);
@@ -272,9 +272,8 @@ bool check_read_stop()
     uint64_t history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     uint64_t cur_diff     = timeval_diff(&base_time, &cur_time);
     uint64_t diff;
-#if (DEBUG_TCPCOPY)
-    log_info(LOG_DEBUG, "diff,old:%llu,new:%llu", history_diff, cur_diff);
-#endif
+    tc_log_debug2(LOG_DEBUG, "diff,old:%llu,new:%llu", 
+            history_diff, cur_diff);
     if(history_diff <= cur_diff){
         return false;
     }
@@ -378,9 +377,7 @@ void send_packets_from_pcap(int first)
                     ip_pack_len = pkt_hdr.len - l2_len;
                     dispose_packet((char*)ip_data, ip_pack_len, &p_valid_flag);
                     if(p_valid_flag){
-#if (DEBUG_TCPCOPY)
-                        log_info(LOG_DEBUG, "valid flag for packet");
-#endif
+                        tc_log_debug0(LOG_DEBUG, "valid flag for packet");
                         valid_raw_packs++;
                         if(first){
                             first_pack_time = pkt_hdr.ts;
@@ -389,9 +386,7 @@ void send_packets_from_pcap(int first)
                         last_pack_time = pkt_hdr.ts;
                     }else{
                         stop = false;
-#if (DEBUG_TCPCOPY)
-                        log_info(LOG_DEBUG, "stop,invalid flag for packet");
-#endif
+                        tc_log_debug0(LOG_DEBUG, "stop,invalid flag");
                     }
                 }
             }
