@@ -20,7 +20,9 @@
 #endif
 #include "manager.h"
 
-#include "../event/cpy_event.h"
+
+#include "../core/tc_time.h"
+#include "../event/tc_event.h"
 
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
@@ -94,7 +96,6 @@ static int read_args(int argc, char **argv){
          "t:" /* session timeout value */
          "l:" /* error log file path */
          "P:" /* save PID in file */
-         "i:" /* select multiplexing io mode */
          "h"  /* help, licence info */   
          "v"  /* verbose */
          "d"  /* daemon mode */
@@ -148,13 +149,6 @@ static int read_args(int argc, char **argv){
                 break;
             case 'P':
                 clt_settings.pid_file = optarg;
-                break;
-            case 'e':
-                if (strncmp(optarg, "select", 6) == 0) {
-                    clt_settings.multiplex_io = CPY_EVENT_SELECT;
-                } else {
-                    clt_settings.multiplex_io = CPY_EVENT_SELECT_OLD;
-                }
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
@@ -371,12 +365,14 @@ static void settings_init()
  */
 int main(int argc ,char **argv)
 {
-    cpy_event_loop_t event_loop;
+    int             ret;
+    tc_event_loop_t event_loop;
 
-    int ret;
+    /* first, init time */
+    tc_time_update();
+
     /* Set defaults */
     settings_init();
-    /* Read args */
     read_args(argc, argv);
     /* Init log for outputing debug info */
     log_init(clt_settings.log_path);
@@ -385,11 +381,9 @@ int main(int argc ,char **argv)
     /* Set details for running */
     set_details();
 
-    ret = cpy_event_loop_init(&event_loop, clt_settings.multiplex_io,
-                              MAX_FD_NUM);
-    if (ret == CPY_EVENT_ERROR) {
-        log_info(LOG_ERR, "event loop init failed, io type:%d",
-                 clt_settings.multiplex_io);
+    ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
+    if (ret == TC_EVENT_ERROR) {
+        log_info(LOG_ERR, "event loop init failed");
         return -1;
     }
 
@@ -398,8 +392,9 @@ int main(int argc ,char **argv)
     if(SUCCESS != ret){
         exit(EXIT_FAILURE);
     }
+
     /* Run now */
-    cpy_event_process_cycle(&event_loop);
+    tc_event_process_cycle(&event_loop);
 
     return 0;
 }

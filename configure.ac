@@ -19,10 +19,11 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
 
-AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),,enable_debug=no)
-if test "x$enable_debug" = "xyes";then
-	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
-fi
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),
+    AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug]), )
+
+AC_ARG_ENABLE(select-module, AS_HELP_STRING([--enable-select-module],[use select module]),
+    AC_DEFINE(TCPCOPY_USE_SELECT, 1, [Define if --enable-select-module]), )
 
 # Checks for header files.
 AC_HEADER_STDC

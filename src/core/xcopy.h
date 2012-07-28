@@ -245,7 +245,6 @@ typedef struct xcopy_clt_settings {
 #endif
     /* Transfered online_ip online_port target_ip target_port */
     ip_port_pair_mappings_t transfer;
-    int multiplex_io;
 }xcopy_clt_settings;
 
 /* For intercept */
