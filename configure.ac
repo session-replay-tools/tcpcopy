@@ -61,6 +61,10 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket])
 
+if test "x$enable_offline" = "xyes";then
+    LIBS="-lpcap"
+fi
+
 #AC_CONFIG_FILES([Makefile])
 AC_OUTPUT([
 Makefile
