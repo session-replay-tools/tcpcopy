@@ -1,5 +1,6 @@
-#include "../core/hash.h"
-#include "util.h"
+
+#include "../core/xcopy.h"
+#include "../tcpcopy/tcpcopy.h"
 
 inline uint64_t
 get_key(uint32_t ip, uint16_t port)

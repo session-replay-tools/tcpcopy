@@ -1,5 +1,5 @@
+
 #include "../core/xcopy.h"
-#include "log.h"
 
 static FILE  *file = NULL;
 

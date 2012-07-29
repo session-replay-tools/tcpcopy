@@ -1,5 +1,5 @@
+
 #include "xcopy.h"
-#include "../log/log.h"
 
 /* Strace packet info for debug */
 void 

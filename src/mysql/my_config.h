@@ -480,8 +480,10 @@
 #define SIGNAL_WITH_VIO_CLOSE 1
 
 /* Windows stuff, mostly functions, that have Posix analogs but named differently */
+#if 0
 #define S_IROTH _S_IREAD
 #define S_IFIFO _S_IFIFO
+#endif
 /* #undef IPPROTO_IPV6 */
 /* #undef IPV6_V6ONLY */
 #define sigset_t int

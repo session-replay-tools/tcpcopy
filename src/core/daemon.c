@@ -1,4 +1,5 @@
-#include "../core/xcopy.h"
+
+#include "xcopy.h"
 
 int
 daemonize()

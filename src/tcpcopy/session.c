@@ -1,10 +1,7 @@
 
-#include "../communication/msg.h"
-#include "../util/util.h"
-#include "../log/log.h"
-#include "send.h"
-#include "address.h"
-#include "session.h"
+#include "../core/xcopy.h"
+#include "tcpcopy.h"
+
 #if (TCPCOPY_MYSQL_ADVANCED)
 #include "../mysql/protocol.h"
 #endif

@@ -2,6 +2,7 @@
 #define  _TCPCOPY_UTIL_H_INC
 
 #include "../core/xcopy.h"
+#include "../tcpcopy/tcpcopy.h"
 
 inline uint64_t get_key(uint32_t s_ip, uint16_t s_port);
 inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);

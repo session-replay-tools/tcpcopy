@@ -1,10 +1,5 @@
-#include "../core/config.h"
-#include "../core/tc_time.h"
-#include "tc_event.h"
 
-#include "select_server_wrapper.h"
-#include "tc_select_module.h"
-
+#include "../core/xcopy.h"
 
 static tc_event_actions_t tc_event_actions = {
 #if (TCPCOPY_USE_SELECT)

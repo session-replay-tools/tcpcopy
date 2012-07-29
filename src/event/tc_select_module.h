@@ -1,10 +1,7 @@
 #ifndef __SELECT_MODULE_H__
 #define __SELECT_MODULE_H__
 
-#include <sys/select.h>
-
 #include "../core/xcopy.h"
-#include "tc_event.h"
 
 typedef struct tc_select_multiplex_io_s   tc_select_multiplex_io_t;
 

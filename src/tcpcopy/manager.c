@@ -1,14 +1,7 @@
 
 #include "../core/xcopy.h"
-#include "../core/tc_time.h"
-#include "../communication/msg.h"
-#include "../util/util.h"
-#include "../log/log.h"
-#include "../event/select_server.h"
-#include "address.h"
-#include "send.h"
-#include "manager.h"
-#include "session.h"
+#include "tcpcopy.h"
+
 #if (TCPCOPY_OFFLINE)
 #include <pcap.h>
 #endif
@@ -540,6 +533,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     uint32_t                 target_ip;
     tc_event_t              *raw_socket_event;
     ip_port_pair_mapping_t  *pair, **mappings;
+
+    /* keep it temporarily */
+    select_server_set_callback(dispose_event);
 
     /* Register a timer to check resource every minute */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);

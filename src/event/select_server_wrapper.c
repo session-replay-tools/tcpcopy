@@ -1,11 +1,8 @@
 
-#include "select_server_wrapper.h"
-#include "select_server.h"
-#include "../tcpcopy/manager.h"
+#include "../core/xcopy.h"
 
 int select_server_create_fake(tc_event_loop_t *loop)
 {
-    select_server_set_callback(dispose_event);
     return TC_EVENT_OK;
 }
 
