@@ -145,13 +145,13 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         link_list_append(s->unack_packets, ln);
     }
 
-    /* Set the destination ip and port*/
+    /* set the destination ip and port*/
     ip_header->daddr = s->dst_addr;
     tcp_header->dest = s->dst_port;
 
     s->vir_next_seq  = ntohl(tcp_header->seq);
 
-    /* Add virtual next seq when meeting syn or fin packet */
+    /* add virtual next seq when meeting syn or fin packet */
     if (tcp_header->syn || tcp_header->fin) {
 
         if (tcp_header->syn) {

@@ -67,7 +67,7 @@ init_input_raw_socket()
      */
     sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
 #else 
-    /* Copy ip datagram from IP layer*/
+    /* copy ip datagram from IP layer*/
     sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 #endif
 
@@ -538,7 +538,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 #endif
     uint16_t                 online_port, target_port;
     uint32_t                 target_ip;
-    tc_event_t             *raw_socket_event;
+    tc_event_t              *raw_socket_event;
     ip_port_pair_mapping_t  *pair, **mappings;
 
     /* Register a timer to check resource every minute */
@@ -643,7 +643,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     return SUCCESS;
 }
 
-/* Keep it temporarily */
+/* keep it temporarily */
 void 
 dispose_event_wrapper(tc_event_t *efd)
 {
