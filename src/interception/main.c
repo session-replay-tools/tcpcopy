@@ -10,9 +10,6 @@
  *      bo  wang <wangbo@corp.netease.com>
  */
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
 #include "../core/xcopy.h"
 #include "../log/log.h"
 #include "interception.h"
