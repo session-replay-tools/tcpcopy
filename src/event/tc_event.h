@@ -1,7 +1,7 @@
 #ifndef __NET_EVENT_H__
 #define __NET_EVENT_H__
 
-#include <stdlib.h>
+#include "../core/xcopy.h"
 
 #define TC_EVENT_SELECT_OLD   0
 #define TC_EVENT_SELECT       1

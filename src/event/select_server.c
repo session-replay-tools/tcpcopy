@@ -1,6 +1,5 @@
+
 #include "../core/xcopy.h"
-#include "select_server.h"
-#include "../tcpcopy/manager.h"
 
 static int                        max_fd, fd_nums, valid_fds[MAX_FD_NUM];
 static fd_set                     read_set;

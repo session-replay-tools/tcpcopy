@@ -1,7 +1,7 @@
 #ifndef __SELECT_SERVER_WRAPPER_H__
 #define __SELECT_SERVER_WRAPPER_H__
 
-#include "tc_event.h"
+#include "../core/xcopy.h"
 
 int select_server_create_fake(tc_event_loop_t *loop);
 int select_server_destroy_fake(tc_event_loop_t *loop); 

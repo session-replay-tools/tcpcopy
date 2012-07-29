@@ -1,4 +1,5 @@
 #include "../core/xcopy.h"
+
 #include "my_global.h"
 #include "password.h"
 #include "sha1.h"

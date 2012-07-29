@@ -3,6 +3,34 @@
 
 #include "config.h"
 
+#include <limits.h>
+#include <asm/types.h>
+#include <stdarg.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+#include <linux/netlink.h>
+#include <linux/netfilter_ipv4.h>
+#include <linux/netfilter_ipv4/ip_queue.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/syscall.h>
+#include <sys/resource.h>
+#include <sys/select.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <unistd.h>
+#include <time.h>
+#include <errno.h>
+#include <math.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdint.h>
+#include <getopt.h>
+
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
  * then tcpcopy works only for mysql which sets
@@ -52,17 +80,6 @@
 /* In defence of occuping too much memory */
 #define MAX_MEMORY_SIZE 524288
 
-/* Log constants */
-#define LOG_STDERR            0
-#define LOG_EMERG             1
-#define LOG_ALERT             2
-#define LOG_CRIT              3
-#define LOG_ERR               4
-#define LOG_WARN              5
-#define LOG_NOTICE            6
-#define LOG_INFO              7
-#define LOG_DEBUG             8
-
 /* The route flags */
 #define  CLIENT_ADD   1
 #define  CLIENT_DEL   2
@@ -107,13 +124,13 @@
 #endif
 
 /* Bool constants*/
-#if HAVE_STDBOOL_H
+#if (HAVE_STDBOOL_H)
 #include <stdbool.h>
 #else
 #define bool char
 #define false 0
 #define true 1
-#endif 
+#endif /* HAVE_STDBOOL_H */ 
 
 enum session_status{
     CLOSED       = 0,
@@ -133,39 +150,13 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#include <limits.h>
-#include <asm/types.h>
-#include <stdarg.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-#include <linux/netlink.h>
-#include <linux/netfilter_ipv4.h>
-#include <linux/netfilter_ipv4/ip_queue.h>
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <sys/syscall.h>
-#include <sys/resource.h>
-#include <sys/select.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <signal.h>
-#include <unistd.h>
-#include <time.h>
-#include <errno.h>
-#include <math.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdint.h>
-#include <getopt.h>
-
 #if (TCPCOPY_OFFLINE)
 #define ETHER_ADDR_LEN 0x6
+
 #ifndef ETHERTYPE_VLAN
 #define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */
 #endif
+
 #define CISCO_HDLC_LEN 4
 #define SLL_HDR_LEN 16
 
@@ -173,105 +164,32 @@ enum packet_classification{
  *  Ethernet II header
  *  Static header size: 14 bytes          
  */ 
-struct ethernet_hdr{
+struct ethernet_hdr {
     uint8_t ether_dhost[ETHER_ADDR_LEN];
     uint8_t ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
-#endif
-
-typedef struct ip_port_pair_mapping_s
-{
-    /* Online ip from the client perspective */
-    uint32_t online_ip;
-    uint32_t target_ip;
-    uint16_t online_port;
-    uint16_t target_port;
-}ip_port_pair_mapping_t;
-
-typedef struct ip_port_pair_mappings_s
-{
-    ip_port_pair_mapping_t **mappings;
-    int num;
-}ip_port_pair_mappings_t;
-
-typedef struct passed_ip_addr_s{
-    /* It allows 32 ip addresses passed through server firewall */
-    uint32_t ips[MAX_ALLOWED_IP_NUM];
-    int num;
-}passed_ip_addr_t;
-
-/* For tcpcopy client */
-typedef struct xcopy_clt_settings {
-    /* Replicated number of each request */
-    unsigned int  replica_num:10;
-    /* Port shift factor */
-    unsigned int  factor:8;
-    /* MTU sent to backend */
-    unsigned int  mtu:16;
-    /* Daemon flag */
-    unsigned int do_daemonize:1;
-    /* Max memory size allowed for tcpcopy client(max size 2G) */
-    unsigned int max_rss:21;
-    /* 
-     * Max value for session timeout
-     * If it reaches this value, the session will be removed 
-     */
-    unsigned int session_timeout:16;
-    /* Online_ip online_port target_ip target_port string */
-    char *raw_transfer;
-    /* Pid file */
-    char *pid_file;
-    /* Error log path */
-    char *log_path;
-#if (TCPCOPY_OFFLINE)
-    /* Pcap file */
-    char *pcap_file;
-#endif
-    /* Random port shifted */
-    uint16_t   rand_port_shifted;
-    /* Server listening port */
-    uint16_t   srv_port;
-    /* Ip address from localhost to (localhost transfered ip) */
-    uint32_t   lo_tf_ip;
-#ifdef TCPCOPY_MYSQL_ADVANCED
-    /* User password string for mysql */
-    char *user_pwd;
-#endif
-    /* Transfered online_ip online_port target_ip target_port */
-    ip_port_pair_mappings_t transfer;
-}xcopy_clt_settings;
-
-/* For intercept */
-typedef struct xcopy_srv_settings {
-    /* Raw ip list */
-    char *raw_ip_list;
-    /* Pid file */
-    char *pid_file;
-    /* Binded ip for security */
-    char *binded_ip;
-    /* Error log path */
-    char *log_path;
-    /* Hash size for kinds of table */
-    size_t hash_size;
-    /* TCP port number to listen on */
-    uint16_t port;
-    /* Daemon flag */
-    unsigned int do_daemonize:1;
-    /* Passed ip list */
-    passed_ip_addr_t passed_ips;
-}xcopy_srv_settings;
-
-/* Global variables*/
-/* For tcpcopy client*/
-extern xcopy_clt_settings clt_settings;
-/* For tcpcopy server(intercept program) */
-extern xcopy_srv_settings srv_settings;
+#endif /* TCPCOPY_OFFLINE */
 
 /* Global functions */
 void strace_pack(int level, int flag, struct iphdr *ip_header,
         struct tcphdr *tcp_header);
 int daemonize();
 
-#endif   /* ----- #ifndef _XCOPY_H_INC ----- */
+
+typedef struct cpy_event_loop_s cpy_event_loop_t;
+typedef struct cpy_event_s      cpy_event_t;
+
+#include "link_list.h"
+#include "hash.h"
+#include "tc_time.h"
+
+#include "../event/tc_event.h"
+#include "../event/tc_select_module.h"
+#include "../event/select_server.h"
+#include "../event/select_server_wrapper.h"
+#include "../log/log.h"
+#include "../communication/msg.h"
+
+#endif /* _XCOPY_H_INC */
 

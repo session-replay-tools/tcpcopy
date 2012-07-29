@@ -1,7 +1,17 @@
 #ifndef  _LOG_H_INC
 #define  _LOG_H_INC
 
-#include "config.h"
+#include "../core/xcopy.h"
+
+#define LOG_STDERR            0
+#define LOG_EMERG             1
+#define LOG_ALERT             2
+#define LOG_CRIT              3
+#define LOG_ERR               4
+#define LOG_WARN              5
+#define LOG_NOTICE            6
+#define LOG_INFO              7
+#define LOG_DEBUG             8
 
 void log_init();
 void log_end();

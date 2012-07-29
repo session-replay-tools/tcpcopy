@@ -1,9 +1,5 @@
-#include "router.h"
-#include "delay.h"
-#include "../communication/msg.h"
-#include "../core/hash.h"
-#include "../log/log.h"
-#include "../util/util.h"
+#include "../core/xcopy.h"
+#include "intercept.h"
 
 static hash_table *table;
 

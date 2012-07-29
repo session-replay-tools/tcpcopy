@@ -1,4 +1,5 @@
-#include "nl.h"
+
+#include "../core/xcopy.h"
 
 static int
 sock_init(int protocol)

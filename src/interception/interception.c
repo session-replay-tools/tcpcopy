@@ -1,11 +1,5 @@
 #include "../core/xcopy.h"
-#include "../log/log.h"
-#include "../communication/msg.h"
-#include "../event/select_server.h"
-#include "router.h"
-#include "delay.h"
-#include "nl_firewall.h"
-#include "interception.h"
+#include "intercept.h"
 
 static int    firewall_sock, msg_listen_sock;
 static time_t last_clean_time;
