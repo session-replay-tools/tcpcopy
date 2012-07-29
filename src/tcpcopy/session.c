@@ -1607,12 +1607,12 @@ check_mysql_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
     uint64_t key    = get_key(ip_header->saddr, tcp_header->source);
     void     *value = hash_find(fir_auth_pack_table, key);
     if (NULL == value) {
-        return;
+        return false;
     }
 #else
     /* Valid only for mysql skip-grant-tables*/
     if (NULL == fir_auth_u_p) {
-        return;
+        return false;
     }
 #endif
 
@@ -2284,17 +2284,15 @@ check_wait_prev_packet(session_t *s, struct iphdr *ip_header,
 
 static int
 is_continuous_packet(session_t *s, struct iphdr *ip_header,
-        struct tcphdr *tcp_header, int is_new_req)
+        struct tcphdr *tcp_header)
 {
     uint32_t cur_seq = ntohl(tcp_header->seq);
 
     if (s->candidate_response_waiting) {
         if (cur_seq > s->req_last_cont_sent_seq) {
-            if (!is_new_req) {
-                wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
-                tc_log_debug0(LOG_DEBUG, "it is a continuous req");
-                return DISP_STOP;
-            }
+            wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+            tc_log_debug0(LOG_DEBUG, "it is a continuous req");
+            return DISP_STOP;
         }
     }
 
@@ -2335,7 +2333,7 @@ void
 process_client_packet(session_t *s, struct iphdr *ip_header,
         struct tcphdr *tcp_header)
 {
-    int       is_new_req;
+    int       is_new_req = 0;
     uint16_t  cont_len;
 
 #if (TCPCOPY_DEBUG)
@@ -2450,8 +2448,8 @@ process_client_packet(session_t *s, struct iphdr *ip_header,
         }
 
         /* Check if it is a continuous packet */
-        if (DISP_STOP == is_continuous_packet(s, ip_header, 
-                    tcp_header, is_new_req)) {
+        if (!is_new_req && DISP_STOP == is_continuous_packet(s,
+                    ip_header, tcp_header)) {
             return;
         }
 
