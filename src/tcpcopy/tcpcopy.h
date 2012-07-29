@@ -54,6 +54,11 @@ extern xcopy_clt_settings clt_settings;
 
 #include "../util/util.h"
 
+#ifdef TCPCOPY_MYSQL_ADVANCED
+#include "../mysql/pairs.h"
+#include "../mysql/protocol.h"
+#endif
+
 #include "address.h"
 #include "manager.h"
 #include "send.h"

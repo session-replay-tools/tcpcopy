@@ -2,10 +2,6 @@
 #include "../core/xcopy.h"
 #include "tcpcopy.h"
 
-#if (TCPCOPY_MYSQL_ADVANCED)
-#include "../mysql/protocol.h"
-#endif
-
 static hash_table *sessions_table;
 static hash_table *tf_port_table;
 
@@ -1203,7 +1199,7 @@ mysql_prepare_for_new_session(session_t *s,
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     void           *value;
-    uint16_t        sec_cont_len;
+    uint16_t        sec_cont_len = 0;
     uint64_t        key;
     struct iphdr   *sec_auth_packet = NULL, *sec_ip_header;
     struct tcphdr  *sec_tcp_header  = NULL;

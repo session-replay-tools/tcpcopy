@@ -30,6 +30,9 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
+#if (TCPCOPY_OFFLINE)
+#include <pcap.h>
+#endif
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,

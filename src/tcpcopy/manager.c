@@ -2,10 +2,6 @@
 #include "../core/xcopy.h"
 #include "tcpcopy.h"
 
-#if (TCPCOPY_OFFLINE)
-#include <pcap.h>
-#endif
-
 static int           raw_sock  = -1;
 static uint32_t      localhost;
 static uint64_t      raw_packs = 0, valid_raw_packs = 0;
