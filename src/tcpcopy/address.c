@@ -1,7 +1,6 @@
-#include "address.h"
-#include "manager.h"
-#include "../event/select_server.h"
-#include "../communication/msg.h"
+
+#include "../core/xcopy.h"
+#include "tcpcopy.h"
 
 static address_node_t addr[65536];
 

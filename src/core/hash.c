@@ -1,5 +1,5 @@
+
 #include "xcopy.h"
-#include "hash.h"
 
 static hash_node *
 hash_node_malloc(uint64_t key, void *data)

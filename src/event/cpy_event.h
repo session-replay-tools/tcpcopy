@@ -1,7 +1,7 @@
 #ifndef __NET_EVENT_H__
 #define __NET_EVENT_H__
 
-#include <stdlib.h>
+#include "../core/xcopy.h"
 
 #define CPY_EVENT_SELECT_OLD   0
 #define CPY_EVENT_SELECT       1
@@ -17,9 +17,6 @@
 
 #define cpy_event_push_active_event(head, ev) \
     ev->next = head; head = ev; 
-
-typedef struct cpy_event_loop_s cpy_event_loop_t;
-typedef struct cpy_event_s      cpy_event_t;
 
 typedef int (*ev_create_pt) (cpy_event_loop_t *loop);
 typedef int (*ev_destroy_pt) (cpy_event_loop_t *loop);

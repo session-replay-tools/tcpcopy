@@ -1,13 +1,7 @@
 
 #include "../core/xcopy.h"
-#include "../communication/msg.h"
-#include "../util/util.h"
-#include "../log/log.h"
-#include "../event/select_server.h"
-#include "address.h"
-#include "send.h"
-#include "manager.h"
-#include "session.h"
+#include "tcpcopy.h"
+
 #if (TCPCOPY_OFFLINE)
 #include <pcap.h>
 #endif

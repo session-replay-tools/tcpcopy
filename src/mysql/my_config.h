@@ -480,8 +480,10 @@
 #define SIGNAL_WITH_VIO_CLOSE 1
 
 /* Windows stuff, mostly functions, that have Posix analogs but named differently */
+#if 0
 #define S_IROTH _S_IREAD
 #define S_IFIFO _S_IFIFO
+#endif
 /* #undef IPPROTO_IPV6 */
 /* #undef IPV6_V6ONLY */
 #define sigset_t int
@@ -600,6 +602,7 @@
 
 /* #undef SO_EXT */
 
+#if 0
 #define PACKAGE "mysql"
 #define PACKAGE_BUGREPORT ""
 #define PACKAGE_NAME "MySQL Server"
@@ -607,6 +610,6 @@
 #define PACKAGE_TARNAME "mysql"
 #define PACKAGE_VERSION "5.5.8"
 #define PROTOCOL_VERSION 10
-
+#endif
 
 #endif

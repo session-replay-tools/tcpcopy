@@ -2,7 +2,7 @@
 #define  _TCP_SESSION_H_INC
 
 #include "../core/xcopy.h"
-#include "../core/hash.h"
+#include "tcpcopy.h"
 
 #define FAKE_IP_DATAGRAM_LEN 40
 #define IP_HEADER_LEN 20

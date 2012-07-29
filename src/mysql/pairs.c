@@ -1,5 +1,7 @@
+
+#include "../core/xcopy.h"
+
 #include "pairs.h"
-#include "../core/hash.h"
 
 static hash_table *user_pwd_table;
 

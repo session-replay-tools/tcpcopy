@@ -1,9 +1,5 @@
 
-#include "cpy_event.h"
-
-#include "select_server_wrapper.h"
-#include "cpy_select_module.h"
-
+#include "../core/xcopy.h"
 
 static cpy_event_actions_t cpy_event_actions[] = {
     /* old implementing */

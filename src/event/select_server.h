@@ -1,7 +1,7 @@
 #ifndef  _TCPCOPY_SELECT_SERVER_H_INC
 #define  _TCPCOPY_SELECT_SERVER_H_INC
 
-#include "cpy_event.h"
+#include "../core/xcopy.h"
 
 typedef void (*select_server_func)(int fd);
 typedef void (*select_server_offline_func)(int first);

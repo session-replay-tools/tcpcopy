@@ -12,15 +12,12 @@
  */
 
 #include "../core/xcopy.h"
-#include "../log/log.h"
-#include "../event/select_server.h"
+#include "tcpcopy.h"
+
 #if (TCPCOPY_MYSQL_ADVANCED)
 #include "../mysql/pairs.h"
 #include "../mysql/protocol.h"
 #endif
-#include "manager.h"
-
-#include "../event/cpy_event.h"
 
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;

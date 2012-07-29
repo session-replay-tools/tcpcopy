@@ -2,7 +2,7 @@
 #define  _MANAGER_H_INC
 
 #include "../core/xcopy.h"
-#include "../event/cpy_event.h"
+#include "tcpcopy.h"
 
 int tcp_copy_init(cpy_event_loop_t *event_loop);
 void tcp_copy_over(const int sig);
