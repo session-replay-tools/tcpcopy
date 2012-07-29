@@ -120,7 +120,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
     char           *packet, tmp_buf[RECV_BUF_SIZE];
     bool            packet_valid = false;
     uint16_t        id, size_ip, size_tcp, tot_len, cont_len, 
-                    pack_len, head_len;
+                    pack_len = 0, head_len;
     uint32_t        seq;
     struct tcphdr  *tcp_header;
     struct iphdr   *ip_header;
@@ -173,7 +173,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
             for (i = 0 ; i < packet_num; i++) {
                 tcp_header->seq = htonl(seq + i * max_payload);
                 if (i != last) {
-                    pack_len = clt_settings.mtu;
+                    pack_len  = clt_settings.mtu;
                 } else {
                     pack_len += (cont_len - packet_num * max_payload);
                 }

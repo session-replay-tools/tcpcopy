@@ -60,6 +60,7 @@ get_test_pair(ip_port_pair_mappings_t *transfer, uint32_t ip, uint16_t port)
     int                     i;
     ip_port_pair_mapping_t *pair, **mappings;
 
+    pair     = NULL;
     mappings = transfer->mappings;
     for (i = 0; i < transfer->num; i++) {
         pair = mappings[i];
