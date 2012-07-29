@@ -182,9 +182,10 @@ typedef struct cpy_event_s      cpy_event_t;
 
 #include "link_list.h"
 #include "hash.h"
+#include "tc_time.h"
 
-#include "../event/cpy_event.h"
-#include "../event/cpy_select_module.h"
+#include "../event/tc_event.h"
+#include "../event/tc_select_module.h"
 #include "../event/select_server.h"
 #include "../event/select_server_wrapper.h"
 #include "../log/log.h"

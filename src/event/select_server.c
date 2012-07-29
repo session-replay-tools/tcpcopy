@@ -98,8 +98,8 @@ select_server_run()
 }
 
 /* Run for receiving messages */
-void
-select_server_client_run(cpy_event_loop_t *loop)
+void 
+select_server_client_run(tc_event_loop_t *loop)
 {
     int     i, ret;
     fd_set  r_set;

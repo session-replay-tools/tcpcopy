@@ -6,10 +6,9 @@
 #include <pcap.h>
 #endif
 
-
 static int           raw_sock  = -1;
 static uint32_t      localhost;
-static uint64_t      event_cnt = 0, raw_packs = 0, valid_raw_packs = 0;
+static uint64_t      raw_packs = 0, valid_raw_packs = 0;
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
@@ -262,31 +261,36 @@ retrieve_raw_sockets(int sock)
 }
 
 /* Check resource usage, such as memory usage and cpu usage */
-static void 
-check_resource_usage()
+static void
+check_resource_usage(tc_event_timer_t *evt)
 {
-    int            who = RUSAGE_SELF, ret;
-    struct rusage  usage;
+    int           ret, who;
+    struct rusage usage;
+
+    who = RUSAGE_SELF;
 
     ret = getrusage(who, &usage);
-    if (-1 == ret) {
+    if (ret == -1) {
         perror("getrusage");
         log_info(LOG_ERR, "getrusage:%s", strerror(errno)); 
     }
 
     /* Total amount of user time used */
     log_info(LOG_NOTICE, "user time used:%ld", usage.ru_utime.tv_sec);
+
     /* Total amount of system time used */
     log_info(LOG_NOTICE, "sys  time used:%ld", usage.ru_stime.tv_sec);
+
     /* Maximum resident set size (in kilobytes) */
     /* This is only valid since Linux 2.6.32 */
     log_info(LOG_NOTICE, "max memory size:%ld", usage.ru_maxrss);
 
-    if (usage.ru_maxrss > clt_settings.max_rss) {
-
+    if (usage.ru_maxrss > clt_settings.max_rss){
         log_info(LOG_WARN, "occupies too much memory,limit:%ld",
-                clt_settings.max_rss);
+                 clt_settings.max_rss);
     }
+
+    evt->msec = tc_current_time_msec + 60000;
 }
 
 #if (TCPCOPY_OFFLINE)
@@ -454,8 +458,7 @@ dispose_event(int fd)
 {
     struct msg_server_s *msg;
 
-    event_cnt++;
-    if (fd == raw_sock) {
+    if(fd == raw_sock){
         retrieve_raw_sockets(fd);
     } else {
 
@@ -473,9 +476,6 @@ dispose_event(int fd)
         send_packets_from_pcap(0);
     }
 #endif
-    if ((event_cnt%1000000) == 0) {
-        check_resource_usage();
-    }
 }
 
 void 
@@ -523,7 +523,7 @@ tcp_copy_over(const int sig)
 
 /* Initiate tcpcopy client */
 int
-tcp_copy_init(cpy_event_loop_t *event_loop)
+tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i;
 #if (TCPCOPY_OFFLINE)
@@ -531,11 +531,14 @@ tcp_copy_init(cpy_event_loop_t *event_loop)
 #endif
     uint16_t                 online_port, target_port;
     uint32_t                 target_ip;
-    cpy_event_t             *raw_socket_event;
+    tc_event_t             *raw_socket_event;
     ip_port_pair_mapping_t  *pair, **mappings;
 
     /* keep it temporarily */
     select_server_set_callback(dispose_event);
+
+    /* Register a timer to check resource every minute */
+    tc_event_timer_add(event_loop, 60000, check_resource_usage);
 
     /* Init session table*/
     init_for_sessions();
@@ -568,14 +571,14 @@ tcp_copy_init(cpy_event_loop_t *event_loop)
     if (raw_sock != -1) {
 
         /* Add the input raw socket to select */
-        raw_socket_event = cpy_event_create(raw_sock, dispose_event_wrapper,
+        raw_socket_event = tc_event_create(raw_sock, dispose_event_wrapper,
                                            NULL);
         if (raw_socket_event == NULL) {
             return FAILURE;
         }
 
-        if (cpy_event_add(event_loop, raw_socket_event, CPY_EVENT_READ)
-                == CPY_EVENT_ERROR)
+        if (tc_event_add(event_loop, raw_socket_event, TC_EVENT_READ)
+                == TC_EVENT_ERROR)
         {
             log_info(LOG_ERR, "add raw socket(%d) to event loop failed.",
                      raw_socket_event->fd);
@@ -638,7 +641,7 @@ tcp_copy_init(cpy_event_loop_t *event_loop)
 
 /* Keep it temporarily */
 void 
-dispose_event_wrapper(cpy_event_t *efd)
+dispose_event_wrapper(tc_event_t *efd)
 {
     dispose_event(efd->fd);
 }

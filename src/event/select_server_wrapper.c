@@ -1,37 +1,37 @@
 
 #include "../core/xcopy.h"
 
-int select_server_create_fake(cpy_event_loop_t *loop)
+int select_server_create_fake(tc_event_loop_t *loop)
 {
-    return CPY_EVENT_OK;
+    return TC_EVENT_OK;
 }
 
-int select_server_destroy_fake(cpy_event_loop_t *loop)
+int select_server_destroy_fake(tc_event_loop_t *loop)
 {
-    return CPY_EVENT_OK;
+    return TC_EVENT_OK;
 }
 
-int select_server_add_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+int select_server_add_wrapper(tc_event_loop_t *loop, tc_event_t *efd,
         int events)
 {
     select_server_add(efd->fd);
 
-    return CPY_EVENT_OK;
+    return TC_EVENT_OK;
 }
 
-int select_server_del_wrapper(cpy_event_loop_t *loop, cpy_event_t *efd,
+int select_server_del_wrapper(tc_event_loop_t *loop, tc_event_t *efd,
         int events)
 {
     select_server_del(efd->fd);
 
-    return CPY_EVENT_OK;
+    return TC_EVENT_OK;
 }
 
-int select_server_run_wrapper(cpy_event_loop_t *loop)
+int select_server_run_wrapper(tc_event_loop_t *loop, long timeout)
 {
     select_server_client_run(loop);
 
-    return CPY_EVENT_AGAIN;
+    return TC_EVENT_AGAIN;
 }
 
 

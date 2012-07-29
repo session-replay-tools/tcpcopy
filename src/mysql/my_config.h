@@ -592,24 +592,4 @@
 # define HAVE_NDB_BINLOG 1
 #endif
 
-#define DEFAULT_MYSQL_HOME "C:/Program Files/MySQL/MySQL Server 5.5"
-#define SHAREDIR "share"
-#define DEFAULT_BASEDIR "C:/Program Files/MySQL/MySQL Server 5.5"
-#define MYSQL_DATADIR "C:/Program Files/MySQL/MySQL Server 5.5/data"
-#define DEFAULT_CHARSET_HOME "C:/Program Files/MySQL/MySQL Server 5.5"
-#define PLUGINDIR "C:/Program Files/MySQL/MySQL Server 5.5/lib/plugin"
-/* #undef DEFAULT_SYSCONFDIR */
-
-/* #undef SO_EXT */
-
-#if 0
-#define PACKAGE "mysql"
-#define PACKAGE_BUGREPORT ""
-#define PACKAGE_NAME "MySQL Server"
-#define PACKAGE_STRING "MySQL Server 5.5.8"
-#define PACKAGE_TARNAME "mysql"
-#define PACKAGE_VERSION "5.5.8"
-#define PROTOCOL_VERSION 10
-#endif
-
 #endif
