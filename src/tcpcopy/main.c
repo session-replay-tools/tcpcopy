@@ -25,7 +25,9 @@
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
-static void set_signal_handler(){
+static void
+set_signal_handler()
+{
     atexit(tcp_copy_exit);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
@@ -33,7 +35,9 @@ static void set_signal_handler(){
     signal(SIGTERM, tcp_copy_over);
 }
 
-static void usage(void) {  
+static void
+usage(void)
+{  
     printf("TCPCopy " VERSION "\n");
     printf("-x <transfer,> what we copy and where send to\n"
            "               transfer format:\n"
@@ -74,7 +78,9 @@ static void usage(void) {
 
 
 
-static int read_args(int argc, char **argv){
+static int
+read_args(int argc, char **argv)
+{
     int  c;
     
     while (-1 != (c = getopt(argc, argv,
@@ -161,10 +167,12 @@ static int read_args(int argc, char **argv){
                 exit(EXIT_FAILURE);
         }
     }
+
     return 0;
 }
 
-static void output_for_debug(int argc, char **argv)
+static void
+output_for_debug(int argc, char **argv)
 {
     /* Print tcpcopy version */
     log_info(LOG_NOTICE, "tcpcopy version:%s", VERSION);
@@ -183,8 +191,8 @@ static void output_for_debug(int argc, char **argv)
 #endif
 }
 
-static void parse_ip_port_pair(char *addr, uint32_t *ip,
-        uint16_t *port)
+static void
+parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 {
     char    *seq, *ip_s, *port_s;
     uint16_t tmp_port;
@@ -212,7 +220,8 @@ static void parse_ip_port_pair(char *addr, uint32_t *ip,
  * or
  * 80-192.168.0.2:8080
  */
-static int parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
+static int
+parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
 {
     char   *seq, *addr1, *addr2;
 
@@ -240,10 +249,11 @@ static int parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
 
 /* 
  * Retrieve target addresses
- * Format(by -x argument): 
+ * Format
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
-static int retrieve_target_addresses(char *raw_transfer,
+static int
+retrieve_target_addresses(char *raw_transfer,
         ip_port_pair_mappings_t *transfer)
 {
     int   i;
@@ -267,7 +277,7 @@ static int retrieve_target_addresses(char *raw_transfer,
         return -1;
     }
 
-    for(i = 0; i < transfer->num; i++) {
+    for (i = 0; i < transfer->num; i++) {
         transfer->mappings[i] = malloc(sizeof(ip_port_pair_mapping_t));
         if (transfer->mappings[i] == NULL) {
             return -1;
@@ -293,29 +303,34 @@ static int retrieve_target_addresses(char *raw_transfer,
 }
 
 /* TODO It has to solve the sigignore warning problem */
-static int sigignore(int sig) 
+static int
+sigignore(int sig) 
 {    
     struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
 
-    if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1){
+    if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
     }       
+
     return 0;
 }
 
-static int set_details()
+static int
+set_details()
 {
     int            rand_port;
-    struct timeval tp;
     unsigned int   seed;
+    struct timeval tp;
 
     /* Generate random port for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
     rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
+
     /* Set signal handler */    
     set_signal_handler();
+
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
@@ -324,7 +339,7 @@ static int set_details()
     } 
 
 #if (TCPCOPY_OFFLINE)
-    if(NULL == clt_settings.pcap_file){
+    if (NULL == clt_settings.pcap_file) {
         log_info(LOG_ERR, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
         exit(EXIT_FAILURE);
@@ -332,13 +347,12 @@ static int set_details()
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)  
-    if(NULL != clt_settings.user_pwd){
+    if (NULL != clt_settings.user_pwd) {
         retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
-    }else{
+    } else {
         log_info(LOG_ERR, "it must have -u argument");
         fprintf(stderr, "no -u argument\n");
         exit(EXIT_FAILURE);
-
     }
 #endif
 
@@ -353,11 +367,13 @@ static int set_details()
             exit(EXIT_FAILURE);
         }    
     }    
+
     return 0;
 }
 
 /* Set defaults */
-static void settings_init()
+static void
+settings_init()
 {
     /* Init values */
     clt_settings.mtu = DEFAULT_MTU;
@@ -369,11 +385,12 @@ static void settings_init()
 /*
  * Main entry point
  */
-int main(int argc ,char **argv)
+int
+main(int argc ,char **argv)
 {
+    int ret;
     cpy_event_loop_t event_loop;
 
-    int ret;
     /* Set defaults */
     settings_init();
     /* Read args */
@@ -395,7 +412,7 @@ int main(int argc ,char **argv)
 
     /* Initiate tcpcopy client*/
     ret = tcp_copy_init(&event_loop);
-    if(SUCCESS != ret){
+    if (SUCCESS != ret) {
         exit(EXIT_FAILURE);
     }
     /* Run now */

@@ -3,22 +3,23 @@
 #include "protocol.h"
 #include "password.h"
 
-static inline unsigned char char_val(unsigned char X)
+static inline unsigned char
+char_val(unsigned char X)
 {
     return (unsigned char) (X >= '0' && X <= '9' ? X-'0':
             X >= 'A' && X <= 'Z' ? X-'A'+10 : X-'a'+10);
 }
 
-static void new_hash(uint64_t *result, const char *password)
+static void
+new_hash(uint64_t *result, const char *password)
 {
-    uint64_t   nr  = 1345345333L, add = 7;
-    uint64_t   nr2 = 0x12345671L, tmp;
     int        i = 0, length;
+    uint64_t   nr  = 1345345333L, add = 7, nr2 = 0x12345671L, tmp;
 
     length = strlen(password);
 
     for (; i < length; ++i) {
-        if(' ' == password[i] || '\t' == password[i]){
+        if (' ' == password[i] || '\t' == password[i]) {
             /* Skip spaces */
             continue;
         }
@@ -37,15 +38,17 @@ static void new_hash(uint64_t *result, const char *password)
 /*
  * Right from Monty's code
  */
-void new_crypt(char *result, const char *password, char *message)
+void
+new_crypt(char *result, const char *password, char *message)
 {
+    int      length, i;
     char     b;
     double   d;
     uint64_t pw[2], msg[2], max, seed1, seed2;
-    int      length, i;
 
     new_hash(pw, message);
     new_hash(msg, password);
+
     max = 0x3fffffffL;
     seed1 = (pw[0] ^ msg[0]) % max;
     seed2 = (pw[1] ^ msg[1]) % max;
@@ -58,8 +61,10 @@ void new_crypt(char *result, const char *password, char *message)
         b = (char)floor((d * 31) + 64);
         result[i] = b;
     }
+
     seed1 = ((seed1 * 3) + seed2) % max;
     seed2 = (seed1 + seed2 + 33) % max;
+
     d = (double) seed1 / (double) max;
     b = (char) floor(d * 31);
 
@@ -68,20 +73,21 @@ void new_crypt(char *result, const char *password, char *message)
     }
 }
 
-int is_last_data_packet(unsigned char *payload)
+int
+is_last_data_packet(unsigned char *payload)
 {
+    size_t         len;
     unsigned char *p;
-    size_t        len;
 
     p   = payload;
     len = p[0] + (p[1] << 8) + (p[2] << 16);
 
-    if(len < 9){
+    if (len < 9) {
         /*Skip Packet Length*/
         p = p + 3;
         /*Skip Packet Number*/
         p = p + 1;
-        if(254 == p[0]){
+        if (254 == p[0]) {
             return 1;
         }
     }
@@ -89,8 +95,9 @@ int is_last_data_packet(unsigned char *payload)
 }
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
-int parse_handshake_init_cont(unsigned char *payload,
-                        size_t length, char *scramble_buff)
+int
+parse_handshake_init_cont(unsigned char *payload, size_t length, 
+        char *scramble_buff)
 {
     /*
      * The following is the protocol format of mysql handshake
@@ -111,9 +118,9 @@ int parse_handshake_init_cont(unsigned char *payload,
      * 1                            \0 byte, terminating 
      *                              the second part of a scramble
      */
-    unsigned char *p;
     char          *str;
-    size_t        len, count, str_len;
+    size_t         len, count, str_len;
+    unsigned char *p;
 
     p = payload;
     /* Skip Packet Length */
@@ -130,7 +137,7 @@ int parse_handshake_init_cont(unsigned char *payload,
     p  += 4;
     str = (char *)p;
     count = p - payload + 8;
-    if(count > length){
+    if (count > length) {
         log_info(LOG_ERR, "payload len is too short for init:%u,%u",
                 length, count);
         return 0;
@@ -153,11 +160,11 @@ int parse_handshake_init_cont(unsigned char *payload,
     str = (char *)p;
     str_len = strlen(str) + 8;
     count = p - payload + strlen(str);
-    if(str_len > SCRAMBLE_LENGTH|| count > length){
-        if(count >length){
+    if (str_len > SCRAMBLE_LENGTH|| count > length) {
+        if (count >length) {
             log_info(LOG_ERR, "payload len is too short for init2:%u,%u",
                     length, count);
-        }else{
+        } else {
             log_info(LOG_ERR, "scramble is too long:%u", str_len);
         }
         return 0;
@@ -168,8 +175,9 @@ int parse_handshake_init_cont(unsigned char *payload,
     return 1;
 }
 
-int change_client_auth_content(unsigned char *payload,
-                        int length, char *password, char *message)
+int
+change_client_auth_content(unsigned char *payload, int length,
+        char *password, char *message)
 {
     /*
      * 4                            client_flags
@@ -180,12 +188,12 @@ int change_client_auth_content(unsigned char *payload,
      * n (Length Coded Binary)      scramble_buff (1 + x bytes) 
      * n (Null-Terminated String)   databasename (optional)
      */
-    char   *str;
-    size_t len, i;
-    char   user[256], *pwd;
+    char          *str, user[256], *pwd;
+    size_t         len, i;
     unsigned char *p, scramble_buff[SCRAMBLE_LENGTH + 1];
 
     memset(scramble_buff, 0, SCRAMBLE_LENGTH + 1);
+
     p = payload;
     /* Skip mysql packet header */
     /* Skip Packet Length */
@@ -201,43 +209,51 @@ int change_client_auth_content(unsigned char *payload,
     /* Skip (filler) always 0x00... */
     p = p + 23;
     len = p - payload;
-    if(len > length){
+    if (len > length) {
         log_info(LOG_ERR, "payload len is too short:%u,%u", length, len);
         return 0;
     }
+
     str = (char *)p;
     /* Retrieve user */
     memset(user, 0, 256);
     strcpy(user, str);
+
     pwd = retrieve_user_pwd(user);
-    if(pwd != NULL){
+    if (pwd != NULL) {
         log_info(LOG_WARN, "user:%s,pwd:%s", user, pwd);
-    }else{
+    } else {
         log_info(LOG_WARN, "user:%s,pwd is null", user);
         return 0;
     }
+
     /* Skip user */
     p = p + strlen(str) + 1;
+
     /* Skip scramble_buff length */
     p = p + 1;
     len = p - payload + SCRAMBLE_LENGTH;
-    if(len > length){
+    if (len > length) {
         log_info(LOG_ERR, "payload len is too short too:%u,%u",
                 length, len);
         return 0;
     }
+
     scramble((char*)scramble_buff, message, pwd);
+
     /* Change scramble_buff according the target server scramble */
-    for(i = 0; i < SCRAMBLE_LENGTH; i++){
+    for (i = 0; i < SCRAMBLE_LENGTH; i++) {
         p[i] = scramble_buff[i];
     }
+
     /* Save password */
     strcpy(password, pwd);
-    return 1;
 
+    return 1;
 }
 
-int change_client_second_auth_content(unsigned char *payload,size_t length,
+int 
+change_client_second_auth_content(unsigned char *payload,size_t length,
         char *new_content)
 {
     /*
@@ -249,23 +265,26 @@ int change_client_second_auth_content(unsigned char *payload,size_t length,
      * n (Length Coded Binary)      scramble_buff (1 + x bytes) 
      * n (Null-Terminated String)   databasename (optional)
      */
+    size_t         i, len;
     unsigned char *p;
-    size_t        i, len;
 
     p = payload;
     /* Skip mysql packet header */
     /* Skip Packet Length */
     p = p + 3;
+
     /* Skip Packet Number */
     p = p + 1;
+
     len = p - payload + 8;
-    if(len > length){
+    if (len > length) {
         log_info(LOG_ERR, "payload len is too short for sec :%u,%u",
                 length, len);
         return 0;
     }
+
     /* Change scramble_buff according to the target server scramble */
-    for(i = 0; i < 8; i++){
+    for (i = 0; i < 8; i++) {
         p[i] = new_content[i];
     }
     return 1;

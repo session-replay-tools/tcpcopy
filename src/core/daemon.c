@@ -1,6 +1,7 @@
 #include "../core/xcopy.h"
 
-int daemonize()
+int
+daemonize()
 {
     int fd;
 
@@ -12,7 +13,7 @@ int daemonize()
         default:
             _exit(EXIT_SUCCESS);
     }
-    if (setsid() == -1){
+    if (setsid() == -1) {
         return (-1);
     }
 

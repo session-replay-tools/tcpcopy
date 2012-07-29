@@ -13,4 +13,4 @@ tcpcopy_LDADD=\
                ../mysql/libmysql.a\
                ../event/libevent.a\
                ../communication/libmsg.a\
-			   -lm
+			   -lpcap -lm
