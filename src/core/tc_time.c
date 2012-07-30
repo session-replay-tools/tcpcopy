@@ -1,4 +1,5 @@
-#include "tc_time.h"
+
+#include <xcopy.h>
 
 volatile time_t tc_current_time_sec;
 volatile long   tc_current_time_msec;

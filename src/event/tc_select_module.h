@@ -1,7 +1,7 @@
 #ifndef __SELECT_MODULE_H__
 #define __SELECT_MODULE_H__
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 typedef struct tc_select_multiplex_io_s   tc_select_multiplex_io_t;
 

@@ -1,8 +1,8 @@
 #ifndef  _DELAY_H_INC
 #define  _DELAY_H_INC
 
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 void delay_table_init(size_t size);
 void delay_table_delete_obsolete(time_t cur_time);  

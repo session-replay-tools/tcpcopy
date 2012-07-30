@@ -1,8 +1,8 @@
 #ifndef  _ADDRESS_H_INC
 #define  _ADDRESS_H_INC
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 typedef struct address_node_s{
     uint32_t ip;

@@ -1,5 +1,5 @@
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 static int    firewall_sock, msg_listen_sock;
 static time_t last_clean_time;

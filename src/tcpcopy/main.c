@@ -11,8 +11,8 @@
  *      bo  wang <wangbo@corp.netease.com>
  */
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 #if (TCPCOPY_MYSQL_ADVANCED)
 #include "../mysql/pairs.h"
