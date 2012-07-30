@@ -2,9 +2,9 @@
 #include "../core/xcopy.h"
 #include "tcpcopy.h"
 
-static int           raw_sock  = -1;
-static uint32_t      localhost;
-static uint64_t      raw_packs = 0, valid_raw_packs = 0;
+static int            raw_sock  = -1;
+static uint32_t       localhost;
+static uint64_t       raw_packs = 0, valid_raw_packs = 0;
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
@@ -99,7 +99,7 @@ replicate_packs(char *packet, int length, int replica_num)
 
     for (i = 1; i < replica_num; i++) {
 
-        addition   = (((i << 1)-1) << 5) + rand_port;
+        addition   = (((i << 1) - 1) << 5) + rand_port;
         dest_port  = get_appropriate_port(orig_port, addition);
         tcp_header->source = htons(dest_port);
         process_packet(true, packet, length);

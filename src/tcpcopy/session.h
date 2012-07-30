@@ -162,8 +162,8 @@ typedef struct session_s{
     link_list *mysql_special_packets;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
-    char mysql_scramble[SCRAMBLE_LENGTH+1];
-    char mysql_seed323[SEED_323_LENGTH+1];
+    char mysql_scramble[SCRAMBLE_LENGTH + 1];
+    char mysql_seed323[SEED_323_LENGTH + 1];
     char mysql_password[MAX_PASSWORD_LEN];
 #endif
 
