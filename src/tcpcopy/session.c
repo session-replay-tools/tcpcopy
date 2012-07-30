@@ -505,10 +505,12 @@ session_init(session_t *s, int flag)
         s->sess_over   = 0;
         s->src_closed  = 0;
         s->dst_closed  = 0;
-        s->req_valid_last_ack_sent = 0;
+        s->last_window_full = 0;
         s->candidate_response_waiting = 0;
+        s->delay_sent_flag = 0;
         s->is_waiting_previous_packet = 0;
         s->req_syn_ok = 0;
+        s->req_valid_last_ack_sent = 0;
         s->req_halfway_intercepted = 0;
         s->resp_syn_received = 0;
         s->sess_candidate_erased = 0;
