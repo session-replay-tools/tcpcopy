@@ -186,16 +186,16 @@ int daemonize();
 typedef struct cpy_event_loop_s cpy_event_loop_t;
 typedef struct cpy_event_s      cpy_event_t;
 
-#include "link_list.h"
-#include "hash.h"
-#include "tc_time.h"
+#include <link_list.h>
+#include <hash.h>
+#include <tc_time.h>
 
-#include "../event/tc_event.h"
-#include "../event/tc_select_module.h"
-#include "../event/select_server.h"
-#include "../event/select_server_wrapper.h"
-#include "../log/log.h"
-#include "../communication/msg.h"
+#include <tc_event.h>
+#include <tc_select_module.h>
+#include <select_server.h>
+#include <select_server_wrapper.h>
+#include <log.h>
+#include <msg.h>
 
 #endif /* _XCOPY_H_INC */
 

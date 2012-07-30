@@ -1,5 +1,5 @@
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 static int
 tcp_sock_init()

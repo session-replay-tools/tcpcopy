@@ -1,7 +1,7 @@
 #ifndef  _TCPCOPY_HASH_H_INC
 #define  _TCPCOPY_HASH_H_INC
 
-#include "xcopy.h"
+#include <xcopy.h>
 
 typedef struct hash_node_s{
     uint64_t key;

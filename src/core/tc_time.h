@@ -1,8 +1,7 @@
 #ifndef __TIME_H__
 #define __TIME_H__
 
-#include <time.h>
-#include <sys/time.h>
+#include <xcopy.h>
 
 #define tc_time() tc_current_time_sec
 

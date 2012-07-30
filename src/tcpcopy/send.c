@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 static int                 sock;
 static struct sockaddr_in  dst_addr;

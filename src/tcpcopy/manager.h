@@ -1,8 +1,8 @@
 #ifndef  _MANAGER_H_INC
 #define  _MANAGER_H_INC
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 extern tc_event_loop_t event_loop;
 

@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 static hash_table *sessions_table;
 static hash_table *tf_port_table;

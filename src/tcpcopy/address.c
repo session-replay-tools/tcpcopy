@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 static address_node_t addr[65536];
 

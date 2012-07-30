@@ -1,7 +1,7 @@
 #ifndef  _LOG_H_INC
 #define  _LOG_H_INC
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 #define LOG_STDERR            0
 #define LOG_EMERG             1

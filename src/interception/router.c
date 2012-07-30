@@ -1,5 +1,5 @@
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 static hash_table *table;
 

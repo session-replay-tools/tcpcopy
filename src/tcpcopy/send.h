@@ -1,8 +1,8 @@
 #ifndef  _RAW_SOCKET_SEND_H_INC
 #define  _RAW_SOCKET_SEND_H_INC
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 int send_init();
 int send_close();

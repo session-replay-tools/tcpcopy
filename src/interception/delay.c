@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 static uint64_t     msg_item_cnt, msg_item_free_cnt, msg_item_destr_cnt,
                     msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt;
