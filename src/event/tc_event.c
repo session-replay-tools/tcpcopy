@@ -36,6 +36,27 @@ int tc_event_loop_init(tc_event_loop_t *loop, int size)
     return TC_EVENT_OK;
 }
 
+int tc_event_loop_finish(tc_event_loop_t *loop)
+{
+    tc_event_timer_t   *timer, *curr;
+    tc_event_actions_t *actions;
+
+    actions = loop->actions;
+
+    /* destroy io module */
+    actions->destroy(loop);
+
+    /* destroy all timers */
+    for (timer = loop->timers; timer; ) {
+        curr = timer;
+        timer = timer->next;
+
+        free(curr);
+    }
+
+    return TC_EVENT_OK;
+}
+
 int tc_event_add(tc_event_loop_t *loop, tc_event_t *ev, int events)
 {
     tc_event_actions_t *actions;

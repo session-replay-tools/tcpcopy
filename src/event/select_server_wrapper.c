@@ -15,6 +15,7 @@ int select_server_add_wrapper(tc_event_loop_t *loop, tc_event_t *efd,
         int events)
 {
     select_server_add(efd->fd);
+    free(efd);
 
     return TC_EVENT_OK;
 }

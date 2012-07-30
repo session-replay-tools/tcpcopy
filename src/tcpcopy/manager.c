@@ -479,6 +479,7 @@ tcp_copy_exit()
 {
     int i;
 
+    tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
 
     if (-1 != raw_sock) {
