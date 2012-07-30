@@ -13,82 +13,9 @@ void destroy_for_sessions();
 bool process(char *packet, int pack_src);
 bool is_packet_needed(const char *packet);
 
-typedef struct session_s{
-    /* The hash key for this session */
-    uint64_t hash_key;
-
-#if (TCPCOPY_MYSQL_BASIC)
-    /* The seq diff between virtual sequence and client sequence */
-    uint32_t mysql_vir_req_seq_diff;
-#endif
-
-    /* Src or client ip address(network byte order) */
-    uint32_t src_addr;
-    /* Dst or backend ip address(network byte order) */
-    uint32_t dst_addr;
-    /* Online ip address(network byte order) */
-    uint32_t online_addr;
-    /* Orginal src or client port(network byte order,never changed) */
-    uint16_t orig_src_port;
-    /* Src or client port(host byte order,it may be changed) */
-    uint16_t src_h_port;
-    /* Dst or backend port(network byte order) */
-    uint16_t dst_port;
-    /* Online port(network byte order) */
-    uint16_t online_port;
-    /* Faked src or client port(network byte order) */
-    uint16_t faked_src_port;
-
-
-    /* These values will be sent to backend just for cheating */
-    /* Virtual acknowledgement sequence that sends to backend */
-    /* (host by order)*/
-    uint32_t vir_ack_seq;
-    /* Virtual next expected sequence (host byte order) */
-    uint32_t vir_next_seq;
-
-    /* Response variables */
-    /* Last acknowledgement seq from backend response (host byte order) */
-    uint32_t resp_last_ack_seq;
-    /* Last seq from backend response (host byte order) */
-    uint32_t resp_last_seq;
-
-    /* Captured variables */
-    /* These variables only refer to online values*/
-    /***********************begin************************/
-    /*TODO Some variables may be unioned*/
-    /* Last syn sequence of client packet */
-    uint32_t req_last_syn_seq;
-    /* Last sequence of client content packet which has been sent */
-    uint32_t req_last_cont_sent_seq;
-    /* Last ack sequence of client packet which is sent to bakend */
-    uint32_t req_last_ack_sent_seq;
-    /* Last client content packet's ack sequence which is captured */
-    uint32_t req_cont_last_ack_seq;
-    /* Current client content packet's ack seq which is captured */
-    uint32_t req_cont_cur_ack_seq;
-    /***********************end***************************/
-
-    /* Record time */
-    /* Last update time */
-    time_t   last_update_time;
-    /* Session create time */
-    time_t   create_time;
-    /* The time of last receiving backend content */
-    time_t   resp_last_recv_cont_time;
-    /* The time of sending the last content packet */
-    time_t   req_last_send_cont_time;
-
+typedef struct sess_state_machine_s{
     /* The session status */
     uint32_t status:8;
-    /*
-     * The number of the response packets last received 
-     * which have the same acknowledgement sequence.
-     * This is for checking retransmission Required from backend
-     */
-    uint32_t resp_last_same_ack_num:8;
-    /* The id from client ip header */
-    uint32_t req_ip_id:16;
     /* The flag indicates if the session has retransmitted or not */
     uint32_t vir_already_retransmit:1;
     /* This is for successful retransmission statistics */
@@ -140,8 +67,6 @@ typedef struct session_s{
     /* Reset packet sent flag */
     uint32_t reset_sent:1;
 #if (TCPCOPY_MYSQL_BASIC)
-    /* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
-    uint32_t mysql_excute_times:8;
     /* The second auth checked flag */
     uint32_t mysql_sec_auth_checked:1;
     /* Request begin flag for mysql */
@@ -158,6 +83,88 @@ typedef struct session_s{
     uint32_t mysql_first_excution:1;
 #endif
 
+}sess_state_machine_t;
+
+typedef struct session_s{
+    /* The hash key for this session */
+    uint64_t hash_key;
+
+#if (TCPCOPY_MYSQL_BASIC)
+    /* The seq diff between virtual sequence and client sequence */
+    uint32_t mysql_vir_req_seq_diff;
+#endif
+
+    /* Src or client ip address(network byte order) */
+    uint32_t src_addr;
+    /* Dst or backend ip address(network byte order) */
+    uint32_t dst_addr;
+    /* Online ip address(network byte order) */
+    uint32_t online_addr;
+    /* Orginal src or client port(network byte order,never changed) */
+    uint16_t orig_src_port;
+    /* Src or client port(host byte order,it may be changed) */
+    uint16_t src_h_port;
+    /* Dst or backend port(network byte order) */
+    uint16_t dst_port;
+    /* Online port(network byte order) */
+    uint16_t online_port;
+    /* Faked src or client port(network byte order) */
+    uint16_t faked_src_port;
+
+    /* These values will be sent to backend just for cheating */
+    /* Virtual acknowledgement sequence that sends to backend */
+    /* (host by order)*/
+    uint32_t vir_ack_seq;
+    /* Virtual next expected sequence (host byte order) */
+    uint32_t vir_next_seq;
+
+    /* Response variables */
+    /* Last acknowledgement seq from backend response (host byte order) */
+    uint32_t resp_last_ack_seq;
+    /* Last seq from backend response (host byte order) */
+    uint32_t resp_last_seq;
+
+    /* Captured variables */
+    /* These variables only refer to online values*/
+    /***********************begin************************/
+    /*TODO Some variables may be unioned*/
+    /* Last syn sequence of client packet */
+    uint32_t req_last_syn_seq;
+    /* Last sequence of client content packet which has been sent */
+    uint32_t req_last_cont_sent_seq;
+    /* Last ack sequence of client packet which is sent to bakend */
+    uint32_t req_last_ack_sent_seq;
+    /* Last client content packet's ack sequence which is captured */
+    uint32_t req_cont_last_ack_seq;
+    /* Current client content packet's ack seq which is captured */
+    uint32_t req_cont_cur_ack_seq;
+    /***********************end***************************/
+
+    /* Record time */
+    /* Last update time */
+    time_t   last_update_time;
+    /* Session create time */
+    time_t   create_time;
+    /* The time of last receiving backend content */
+    time_t   resp_last_recv_cont_time;
+    /* The time of sending the last content packet */
+    time_t   req_last_send_cont_time;
+    /* Kinds of states of session */
+    sess_state_machine_t sm; 
+
+    /* The id from client ip header */
+    uint32_t req_ip_id:16;
+    /*
+     * The number of the response packets last received 
+     * which have the same acknowledgement sequence.
+     * This is for checking retransmission Required from backend
+     */
+    uint32_t resp_last_same_ack_num:8;
+#if (TCPCOPY_MYSQL_BASIC)
+    /* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
+    uint32_t mysql_excute_times:8;
+#endif
+ 
     link_list *unsend_packets;
     link_list *next_sess_packs;
     link_list *unack_packets;
