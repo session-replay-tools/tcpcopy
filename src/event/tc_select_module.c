@@ -29,9 +29,14 @@ int tc_select_create (tc_event_loop_t *loop)
 
 int tc_select_destroy (tc_event_loop_t *loop)
 {
+    int                       i;
     tc_select_multiplex_io_t *io;
     
     io = loop->io;
+
+    for (i = 0; i < io->last; i++) {
+        free(io->evs[i]);
+    }
 
     free(io->evs);
     free(loop->io);

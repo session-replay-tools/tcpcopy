@@ -4,6 +4,8 @@
 #include "../core/xcopy.h"
 #include "../event/tc_event.h"
 
+extern tc_event_loop_t event_loop;
+
 int tcp_copy_init(tc_event_loop_t *event_loop);
 void tcp_copy_over(const int sig);
 void tcp_copy_exit();

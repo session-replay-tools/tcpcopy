@@ -27,6 +27,8 @@
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
+tc_event_loop_t event_loop;
+
 static void
 set_signal_handler()
 {
@@ -383,7 +385,6 @@ int
 main(int argc ,char **argv)
 {
     int             ret;
-    tc_event_loop_t event_loop;
 
     /* first, init time */
     tc_time_update();
