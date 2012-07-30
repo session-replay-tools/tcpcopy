@@ -454,7 +454,7 @@ dispose_event(int fd)
 {
     struct msg_server_s *msg;
 
-    if(fd == raw_sock) {
+    if (fd == raw_sock) {
         retrieve_raw_sockets(fd);
     } else {
 
