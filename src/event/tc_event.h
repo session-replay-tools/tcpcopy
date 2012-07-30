@@ -66,6 +66,7 @@ struct tc_event_loop_s {
 
 
 int tc_event_loop_init(tc_event_loop_t *loop, int size);
+int tc_event_loop_finish(tc_event_loop_t *loop);
 int tc_event_process_cycle(tc_event_loop_t *loop);
 int tc_event_add(tc_event_loop_t *loop, tc_event_t *ev, int events);
 int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events);
