@@ -46,6 +46,7 @@ int tc_event_loop_finish(tc_event_loop_t *loop)
     if (actions != NULL){
         /* destroy io module */
         actions->destroy(loop);
+
         loop->actions = NULL;
     }
 
@@ -56,6 +57,7 @@ int tc_event_loop_finish(tc_event_loop_t *loop)
 
         free(curr);
     }
+
     loop->timers = NULL;
 
     return TC_EVENT_OK;
