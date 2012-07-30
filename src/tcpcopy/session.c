@@ -739,7 +739,7 @@ is_wait_greet(session_t *s, struct iphdr *ip_header, struct tcphdr *tcp_header)
 static int
 send_reserved_packets(session_t *s)
 {
-    int             count = 0; 
+    int             count = 0, total_cont_sent = 0; 
     bool            need_pause = false, cand_pause = false,
                     omit_transfer = false; 
     uint16_t        size_ip, cont_len;
@@ -807,6 +807,10 @@ send_reserved_packets(session_t *s)
         cont_len   = get_pack_cont_len(ip_header, tcp_header);
         if (!omit_transfer && cont_len > 0) {
 
+            if (total_cont_sent > MAX_SIZE_PER_CONTINUOUS_SEND) {
+                s->delay_sent_flag = 1;
+                break;
+            }
 #if (TCPCOPY_MYSQL_ADVANCED) 
             if (FAILURE == mysql_dispose_auth(s, ip_header, tcp_header)) {
                 break;
@@ -856,6 +860,7 @@ send_reserved_packets(session_t *s)
                 s->sess_candidate_erased = 0;
             }
             wrap_send_ip_packet(s, data, true);
+            total_cont_sent += cont_len;
         }
 
         tmp_ln = ln;
@@ -1641,7 +1646,7 @@ check_mysql_padding(struct iphdr *ip_header, struct tcphdr *tcp_header)
 
 static int
 check_backend_ack(session_t *s, struct iphdr *ip_header,
-         struct tcphdr *tcp_header, uint32_t ack, uint16_t cont_len)
+         struct tcphdr *tcp_header, uint32_t seq, uint32_t ack)
 {
     bool slide_window_empty = false;
 
@@ -1682,7 +1687,8 @@ check_backend_ack(session_t *s, struct iphdr *ip_header,
             /* Although slide window is full, it may require retransmission */
             if (!s->last_window_full) {
                 s->resp_last_ack_seq = ack;
-                s->last_window_full = 1;
+                s->resp_last_seq     = seq;
+                s->last_window_full  = 1;
                 update_retransmission_packets(s);
                 return DISP_STOP;
             }
@@ -1700,7 +1706,9 @@ check_backend_ack(session_t *s, struct iphdr *ip_header,
             return DISP_CONTINUE;
         }
         /* Check if it needs retransmission */
-        if (0 == cont_len && !tcp_header->fin) {
+        if (!tcp_header->fin && seq == s->resp_last_seq
+                && ack == s->resp_last_ack_seq)
+        {
             s->resp_last_same_ack_num++;
             if (s->resp_last_same_ack_num > 1) {
                 /* It needs retransmission */
@@ -1846,7 +1854,7 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
     bool      is_greet = false; 
     time_t    current;
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
-    uint32_t  ack;
+    uint32_t  ack, seq;
 
     resp_cnt++;
 
@@ -1861,6 +1869,7 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
     }
 
     /* Retrieve packet info */
+    seq      = ntohl(tcp_header->seq);
     ack      = ntohl(tcp_header->ack_seq);
     tot_len  = ntohs(ip_header->tot_len);
     size_ip  = ip_header->ihl << 2;
@@ -1876,7 +1885,9 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
             retrans_succ_cnt++;
             s->vir_new_retransmit = 0;
         }
-        s->resp_last_same_ack_num = 0;
+        if (seq != s->resp_last_seq || ack != s->resp_last_ack_seq) {
+            s->resp_last_same_ack_num = 0;
+        }
         s->vir_already_retransmit = 0;
         resp_cont_cnt++;
         s->resp_last_recv_cont_time = current;
@@ -1886,12 +1897,14 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
     }
 
     /* Needs to check ack */
-    if (check_backend_ack(s, ip_header, tcp_header, ack,  cont_len) 
+    if (check_backend_ack(s, ip_header, tcp_header, seq, ack) 
             == DISP_STOP) {
         s->resp_last_ack_seq = ack;
+        s->resp_last_seq     = seq;
         return;
     }
 
+    s->resp_last_seq     = seq;
     s->resp_last_ack_seq = ack;
     /* Update session's retransmisson packets */
     update_retransmission_packets(s);
@@ -1981,11 +1994,19 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
                 tc_log_debug0(LOG_DEBUG, "receive back server's resp");
                 s->candidate_response_waiting = 0;
                 s->status = RECV_RESP;
+                s->delay_sent_flag = 0;
                 send_reserved_packets(s);
                 return;
             }
     } else {
         /* There are no content in packet */
+
+        if (s->delay_sent_flag) {
+            tc_log_debug1(LOG_DEBUG, "send delayed cont:%u", s->src_h_port);
+            s->delay_sent_flag = 0;
+            send_reserved_packets(s);
+            return;
+        }
         if (s->src_closed && !s->dst_closed) {
             send_faked_rst(s, ip_header, tcp_header);
             s->sess_over = 1;

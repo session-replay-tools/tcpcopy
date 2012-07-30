@@ -281,7 +281,7 @@ check_resource_usage(tc_event_timer_t *evt)
     /* This is only valid since Linux 2.6.32 */
     log_info(LOG_NOTICE, "max memory size:%ld", usage.ru_maxrss);
 
-    if (usage.ru_maxrss > clt_settings.max_rss){
+    if (usage.ru_maxrss > clt_settings.max_rss) {
         log_info(LOG_WARN, "occupies too much memory,limit:%ld",
                  clt_settings.max_rss);
     }
@@ -454,7 +454,7 @@ dispose_event(int fd)
 {
     struct msg_server_s *msg;
 
-    if(fd == raw_sock){
+    if(fd == raw_sock) {
         retrieve_raw_sockets(fd);
     } else {
 

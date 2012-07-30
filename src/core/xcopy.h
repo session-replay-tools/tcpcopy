@@ -60,6 +60,9 @@
 
 /* Set raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
+/* Max payload size per continuous send */
+#define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
+
 /* Default mtu for output raw socket */
 #define DEFAULT_MTU   1500
 /* Default listening port for intercept program */

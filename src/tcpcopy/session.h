@@ -50,6 +50,8 @@ typedef struct session_s{
     /* Response variables */
     /* Last acknowledgement seq from backend response (host byte order) */
     uint32_t resp_last_ack_seq;
+    /* Last seq from backend response (host byte order) */
+    uint32_t resp_last_seq;
 
     /* Captured variables */
     /* These variables only refer to online values*/
@@ -107,6 +109,8 @@ typedef struct session_s{
     uint32_t last_window_full:1;
     /* Candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
+    /* delay sent flag because of flow control */
+    uint32_t delay_sent_flag:1;
     /* Waiting previous packet flag */
     uint32_t is_waiting_previous_packet:1;
     /* This indicates if the session intercepted the syn packets from client
