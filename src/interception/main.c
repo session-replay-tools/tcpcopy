@@ -14,8 +14,8 @@
 #include <config.h>
 #endif
 
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 xcopy_srv_settings srv_settings;
 

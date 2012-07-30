@@ -1,5 +1,5 @@
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 static int
 sock_init(int protocol)

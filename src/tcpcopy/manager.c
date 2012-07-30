@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "tcpcopy.h"
+#include <xcopy.h>
+#include <tcpcopy.h>
 
 static int            raw_sock  = -1;
 static uint32_t       localhost;

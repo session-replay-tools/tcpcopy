@@ -1,6 +1,6 @@
 
-#include "../core/xcopy.h"
-#include "intercept.h"
+#include <xcopy.h>
+#include <intercept.h>
 
 /* Initiate for netlink firewall */
 int

@@ -1,5 +1,5 @@
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 static tc_event_actions_t tc_event_actions = {
 #if (TCPCOPY_USE_SELECT)

@@ -1,5 +1,5 @@
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 static int                        max_fd, fd_nums, valid_fds[MAX_FD_NUM];
 static fd_set                     read_set;

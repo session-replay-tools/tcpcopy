@@ -1,7 +1,7 @@
 #ifndef  _ROUTER_H_INC
 #define  _ROUTER_H_INC
 
-#include "../core/xcopy.h" 
+#include <xcopy.h> 
 
 void router_init(size_t size);
 void route_delete_obsolete(time_t cur_time);

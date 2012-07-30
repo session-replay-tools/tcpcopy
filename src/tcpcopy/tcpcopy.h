@@ -52,16 +52,16 @@ typedef struct xcopy_clt_settings {
 
 extern xcopy_clt_settings clt_settings;
 
-#include "../util/util.h"
+#include <util.h>
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
-#include "../mysql/pairs.h"
-#include "../mysql/protocol.h"
+#include <pairs.h>
+#include <protocol.h>
 #endif
 
-#include "address.h"
-#include "manager.h"
-#include "send.h"
-#include "session.h"
+#include <address.h>
+#include <manager.h>
+#include <send.h>
+#include <session.h>
 
 #endif /* __TCPCOPY_H__ */

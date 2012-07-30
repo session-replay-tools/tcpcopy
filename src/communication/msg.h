@@ -1,7 +1,7 @@
 #ifndef  _TCPCOPY_MSG_H__INC
 #define  _TCPCOPY_MSG_H__INC
 
-#include "../core/xcopy.h"
+#include <xcopy.h>
 
 #pragma pack(push,1)
 
