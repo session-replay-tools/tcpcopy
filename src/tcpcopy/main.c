@@ -14,11 +14,6 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-#if (TCPCOPY_MYSQL_ADVANCED)
-#include "../mysql/pairs.h"
-#include "../mysql/protocol.h"
-#endif
-
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
