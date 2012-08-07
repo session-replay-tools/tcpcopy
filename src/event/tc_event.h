@@ -77,7 +77,5 @@ void tc_event_destroy(tc_event_t *ev);
 
 int tc_event_timer_add(tc_event_loop_t *loop, long timer,
         tc_event_timer_handler_pt handler);
-static long tc_event_timer_find(tc_event_loop_t *loop);
-static void tc_event_timer_run(tc_event_loop_t *loop);
 
 #endif  /* __NET_EVENT_H__ */

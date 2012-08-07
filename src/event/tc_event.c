@@ -1,6 +1,9 @@
 
 #include <xcopy.h>
 
+static long tc_event_timer_find(tc_event_loop_t *loop);
+static void tc_event_timer_run(tc_event_loop_t *loop);
+
 static tc_event_actions_t tc_event_actions = {
 #if (TCPCOPY_USE_SELECT)
     tc_select_create,
