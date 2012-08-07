@@ -493,6 +493,10 @@ tcp_copy_exit()
     address_close_sock();
 #if (!TCPCOPY_OFFLINE)
     sync();
+#else
+    if (pcap != NULL) {
+        pcap_close(pcap);                                                                               
+    }   
 #endif
     log_end();
 
