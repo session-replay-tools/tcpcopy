@@ -1,6 +1,7 @@
 bin_PROGRAMS=intercept
 
 intercept_SOURCES=\
+                  intercept.h\
                   router.c router.h\
                   delay.c delay.h\
                   interception.c interception.h\

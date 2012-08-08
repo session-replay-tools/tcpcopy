@@ -1,6 +1,7 @@
 bin_PROGRAMS=tcpcopy
 
 tcpcopy_SOURCES=\
+                tcpcopy.h\
                 address.c address.h\
                 send.c send.h\
                 manager.c manager.h\

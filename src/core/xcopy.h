@@ -181,9 +181,6 @@ struct ethernet_hdr {
 int daemonize();
 
 
-typedef struct cpy_event_loop_s cpy_event_loop_t;
-typedef struct cpy_event_s      cpy_event_t;
-
 #include <link_list.h>
 #include <hash.h>
 #include <tc_time.h>
