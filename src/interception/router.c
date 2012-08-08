@@ -11,7 +11,7 @@ route_delete_obsolete(time_t cur_time)
     link_list   *l;
     p_link_node  ln;
 
-    log_info(LOG_NOTICE, "router size:%u", table->total);
+    tc_log_info(LOG_NOTICE, 0, "router size:%u", table->total);
 
     for (i = 0; i < table->size; i++) {
 
@@ -45,7 +45,7 @@ route_delete_obsolete(time_t cur_time)
         }
     } 
 
-    log_info(LOG_NOTICE, "router delete obsolete:%d", count);
+    tc_log_info(LOG_NOTICE, 0, "router delete obsolete:%d", count);
 }
 
 
@@ -55,7 +55,7 @@ router_init(size_t size)
 {
     table = hash_create(size);
     strcpy(table->name, "router-table");
-    log_info(LOG_NOTICE, "create %s, size:%u", table->name, table->size);
+    tc_log_info(LOG_NOTICE, 0, "create %s, size:%u", table->name, table->size);
 }
 
 /* Delete item in router table */
@@ -93,7 +93,7 @@ router_update(struct iphdr *ip_header)
 #endif
 
     if (ip_header->protocol != IPPROTO_TCP) {
-        log_info(LOG_INFO, "this is not a tcp packet");
+        tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
         return;
     }
 
@@ -123,7 +123,7 @@ router_update(struct iphdr *ip_header)
     key = get_key(ip_header->daddr, tcp_header->dest);
     fd  = hash_find(table, key);
     if ( NULL == fd ) {
-        tc_log_debug0(LOG_INFO, "fd is null");
+        tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         delay_table_add(key, &msg);
         return ;
     }
@@ -135,7 +135,7 @@ void
 router_destroy()
 {
     if (table != NULL) {
-        log_info(LOG_NOTICE, "destroy router table");
+        tc_log_info(LOG_NOTICE, 0, "destroy router table");
         hash_destroy(table);
         free(table);
         table = NULL;
