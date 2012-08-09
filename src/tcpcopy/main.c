@@ -288,11 +288,13 @@ retrieve_target_addresses(char *raw_transfer,
     return 0;
 }
 
-/* TODO It has to solve the sigignore warning problem */
 static int
 sigignore(int sig) 
 {    
-    struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+    struct sigaction sa;
+
+    sa.sa_handler = SIG_IGN;
+    sa.sa_flags = 0;
 
     if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
