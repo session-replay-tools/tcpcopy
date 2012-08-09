@@ -70,7 +70,7 @@ send_ip_packet(struct iphdr *ip_header, uint16_t tot_len)
          * which does general sk_buff cleaning,is called and an error EMSGSIZE 
          * is returned. On the other hand, normal raw socket frag.
          */
-        send_len = sendto(sock, (char *)ip_header, tot_len, 0,
+        send_len = sendto(sock, (void *)ip_header, tot_len, 0,
                 (struct sockaddr *)&dst_addr, sizeof(dst_addr));
 
         if (-1 == send_len) {
