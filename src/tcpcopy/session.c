@@ -1826,10 +1826,13 @@ void
 process_backend_packet(session_t *s, struct iphdr *ip_header,
         struct tcphdr *tcp_header)
 {
-    bool      is_greet = false; 
     time_t    current;
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
     uint32_t  ack, seq;
+
+#if (TCPCOPY_MYSQL_BASIC)
+    bool is_greet = false; 
+#endif
 
     resp_cnt++;
 
@@ -1937,7 +1940,9 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
             if (!s->sm.resp_greet_received) {
                 s->sm.resp_greet_received = 1;
                 s->sm.need_resp_greet = 0;
+#if (TCPCOPY_MYSQL_BASIC)
                 is_greet = true;
+#endif
             }
         }
 
@@ -2565,16 +2570,15 @@ output_stat(time_t now, int run_time)
 bool
 process(char *packet, int pack_src)
 {
-    int                       diff, run_time = 0;
-    bool                      result;
-    void                     *ori_port;
-    time_t                    now  = time(0);
-    uint16_t                  size_ip;
-    uint64_t                  key;
-    session_t                *s;
-    struct tcphdr            *tcp_header;
-    struct iphdr             *ip_header;
-    ip_port_pair_mappings_t  *tf;
+    int              diff, run_time = 0;
+    bool             result;
+    void            *ori_port;
+    time_t           now  = time(0);
+    uint16_t         size_ip;
+    uint64_t         key;
+    session_t       *s;
+    struct iphdr    *ip_header;
+    struct tcphdr   *tcp_header;
 
     if (0 == start_p_time) {
         start_p_time = now;
@@ -2593,7 +2597,6 @@ process(char *packet, int pack_src)
     ip_header  = (struct iphdr*)packet;
     size_ip    = ip_header->ihl<<2;
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
-    tf         = &(clt_settings.transfer);
 
     if (REMOTE == pack_src) {
 
