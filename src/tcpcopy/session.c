@@ -939,9 +939,9 @@ check_session_obsolete(session_t *s, time_t cur, time_t threshold_time)
     /* Check if the session is idle for a long time */
     if (diff < 30) {
         threshold = threshold << 2;
-        if (diff < 3) {
-            /* If it is idle for less than 3 seconds */
-            threshold = threshold << 2;
+        if (diff <= 3) {
+            /* If it is idle for less than or equal to  3 seconds */
+            threshold = threshold << 4;
         }
         if (s->sm.last_window_full) {
             /* If slide window is full */
