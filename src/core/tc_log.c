@@ -76,7 +76,7 @@ tc_log_info(int level, int err, const char *fmt, ...)
     p += n;
 
     if (err > 0) {
-        n = sprintf(p, " - %s", strerror(err));
+        n = sprintf(p, " (%s)", strerror(err));
         if (n < 0) {
             return;
         }
