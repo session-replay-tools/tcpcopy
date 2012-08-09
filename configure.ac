@@ -68,7 +68,7 @@ if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
 
-CFLAGS="-I../communication -I../core -I../event -I../interception -I../log -I../mysql -I../tcpcopy -I../util"
+CFLAGS=" -Wall -pedantic -I../communication -I../core -I../event -I../interception -I../log -I../mysql -I../tcpcopy -I../util"
 
 #AC_CONFIG_FILES([Makefile])
 AC_OUTPUT([

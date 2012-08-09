@@ -38,7 +38,7 @@ daemonize()
         }
 
         if (fd > STDERR_FILENO) {
-            if(close(fd) < 0) {
+            if (close(fd) < 0) {
                 perror("close");
                 return (-1);
             }

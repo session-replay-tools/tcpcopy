@@ -203,6 +203,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
     if (packet_valid) {
         *p_valid_flag = 1;
+    } else {
+        *p_valid_flag = 0;
     }
 
     return SUCCESS;
@@ -489,6 +491,13 @@ tcp_copy_exit()
 
     send_close();
     address_close_sock();
+#if (!TCPCOPY_OFFLINE)
+    sync();
+#else
+    if (pcap != NULL) {
+        pcap_close(pcap);                                                                               
+    }   
+#endif
     log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
