@@ -14,9 +14,7 @@ copy_message(struct msg_server_s *msg)
 
     cmsg = (struct msg_server_s *)malloc(sizeof(struct msg_server_s));
     if (NULL == cmsg) {
-        perror("malloc");
-        log_info(LOG_ERR, "malloc error:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "malloc error");
         exit(EXIT_FAILURE);
     }
     memcpy(cmsg, msg, sizeof(struct msg_server_s));
@@ -32,7 +30,7 @@ delay_table_delete_obsolete(time_t cur_time)
     link_list   *msg_list, *l;
     p_link_node  ln, tail;
 
-    log_info(LOG_NOTICE, "delay total:%u", table->total);
+    tc_log_info(LOG_NOTICE, 0, "delay total:%u", table->total);
 
     for (i = 0; i < table->size; i++) {
         l  = table->lists[i];
@@ -67,7 +65,7 @@ delay_table_delete_obsolete(time_t cur_time)
         } 
     }
 
-    log_info(LOG_NOTICE, "delay delete obsolete :%d", count);
+    tc_log_info(LOG_NOTICE, 0, "delay delete obsolete :%d", count);
 }
 
 
@@ -78,7 +76,7 @@ delay_table_init(size_t size)
     table = hash_create(size);
     hash_set_timeout(table, 30);
     strcpy(table->name, "delay-table");
-    log_info(LOG_NOTICE, "create %s,size:%u", table->name, table->size);
+    tc_log_info(LOG_NOTICE, 0, "create %s,size:%u", table->name, table->size);
     msg_item_cnt       = 0;
     msg_item_free_cnt  = 0;
     msg_item_destr_cnt = 0;
@@ -170,7 +168,7 @@ delay_table_destroy()
 
     if (table != NULL) {
 
-        log_info(LOG_NOTICE, "destroy delay table,total:%u", table->total);
+        tc_log_info(LOG_NOTICE, 0, "destroy delay table,total:%u", table->total);
 
         for (i = 0; i < table->size; i++) {
             list = table->lists[i];
@@ -188,9 +186,9 @@ delay_table_destroy()
             }
         }
 
-        log_info(LOG_NOTICE, "destroy items:%llu,free:%llu,total:%llu",
+        tc_log_info(LOG_NOTICE, 0, "destroy items:%llu,free:%llu,total:%llu",
                 msg_item_destr_cnt, msg_item_free_cnt, msg_item_cnt);
-        log_info(LOG_NOTICE, "create msg list:%llu,free:%llu,destr:%llu",
+        tc_log_info(LOG_NOTICE, 0, "create msg list:%llu,free:%llu,destr:%llu",
                 msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt);
 
         hash_destroy(table);

@@ -26,12 +26,12 @@ nl_firewall_recv(int sock, unsigned long *packet_id)
     exp_len = sizeof(struct ipq_packet_msg) + NLMSG_LENGTH(0);
 
     if (len < 0) {
-        log_info(LOG_WARN, "nl recv length is less than zero:%ld", len);
+        tc_log_info(LOG_WARN, 0, "nl recv length is less than zero:%ld", len);
         return NULL;
     }
     if (len < exp_len) {
-        log_info(LOG_WARN, "nl recv error:%ld", len);
-        log_info(LOG_WARN, "privilage problems or not the obj of tcpcopy");
+        tc_log_info(LOG_WARN, 0, "nl recv error:%ld", len);
+        tc_log_info(LOG_WARN, 0, "privilage problems or not the obj of tcpcopy");
         return NULL;
     } else {
         msg        = nl_get_payload(buffer);

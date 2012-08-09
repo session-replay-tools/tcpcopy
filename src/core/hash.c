@@ -7,10 +7,7 @@ hash_node_malloc(uint64_t key, void *data)
     hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
 
     if (NULL == hn) {
-        perror("can't malloc memory!");
-        log_info(LOG_ERR, "can't malloc memory for hash node:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
         exit(errno);
     }
 
@@ -64,20 +61,14 @@ hash_create(size_t size)
     hash_table *ht = (hash_table *)calloc(1, sizeof(hash_table));
 
     if (NULL == ht) {
-        perror("can't calloc memory!");
-        log_info(LOG_ERR, "can't calloc memory for hash table:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "can't calloc memory for hash table");
         exit(errno);
     }
 
     ht->size  = size;
     ht->lists = (link_list **) calloc(size, sizeof(link_list *));
     if (NULL == ht->lists) {
-        perror("can't calloc memory!");
-        log_info(LOG_ERR, "can't calloc memory for hash lists:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "can't calloc memory for hash lists");
         exit(errno);
     }
 
@@ -176,10 +167,10 @@ hash_destroy(hash_table *table)
 
     free(table->lists);
 
-    log_info(LOG_NOTICE, "total visit hash_find_node:%llu,compared:%llu",
-            table->total_visit, table->total_key_compared);
-    log_info(LOG_NOTICE, "destroy items %d in table name:%s",
-            count, table->name);
+    tc_log_info(LOG_NOTICE, 0, "total visit hash_find_node:%llu,compared:%llu",
+                table->total_visit, table->total_key_compared);
+    tc_log_info(LOG_NOTICE, 0, "destroy items %d in table name:%s",
+                count, table->name);
 }
 
 void

@@ -6,13 +6,11 @@ tcp_sock_init()
 {
     int sock = socket(AF_INET, SOCK_STREAM, 0);
 
-    if ( sock < 0) {          
-        perror("socket:");                                        
-        log_info(LOG_ERR, "socket create:%s", strerror(errno));
-        sync();
+    if (sock < 0) {          
+        tc_log_info(LOG_ERR, errno, "socket create:%s", strerror(errno));
         exit(errno);
     } else {
-        log_info(LOG_NOTICE, "socket created successfully");
+        tc_log_info(LOG_NOTICE, 0, "socket created successfully");
     }
 
     return sock;
@@ -31,10 +29,7 @@ connect_to_server(int sock, uint32_t ip, uint16_t port)
     length = (socklen_t)(sizeof(remote_addr));
 
     if (connect(sock, (struct sockaddr *)&remote_addr, length) == -1) {
-        perror("connect to remote:");                         
-        log_info(LOG_ERR, "it can not connect to remote server:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "it can not connect to remote server");
         exit(errno);
     }   
 
@@ -48,10 +43,7 @@ set_sock_no_delay(int sock)
 
     if (setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, length) 
             == -1) {
-        perror("setsockopt:");
-        log_info(LOG_ERR, "setsocket when setting TCP_NODELAY:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "setsocket when setting TCP_NODELAY");
         exit(errno);
     } 
 }
@@ -84,12 +76,10 @@ sock_bind(int sock, const char *binded_ip, uint16_t port)
 
     length = (socklen_t)(sizeof(local_addr));
     if (bind(sock, (struct sockaddr *)&local_addr, length) == -1) {
-        perror("can not bind:");
-        log_info(LOG_ERR, "bind error:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "bind error");
         exit(errno);
     } else {
-        log_info(LOG_NOTICE, "it binds address successfully");
+        tc_log_info(LOG_NOTICE, 0, "it binds address successfully");
     }
 }
 
@@ -97,12 +87,10 @@ static void
 sock_listen(int sock)
 {
     if (listen(sock, 5) == -1) {
-        perror("sock listen:");
-        log_info(LOG_ERR, "it can not listen:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "it can not listen");
         exit(errno);
     } else {
-        log_info(LOG_NOTICE, "it listens successfully");
+        tc_log_info(LOG_NOTICE, 0, "it listens successfully");
     }
 }
 
@@ -131,7 +119,7 @@ msg_client_recv(int sock)
         ret = recv(sock, (char *)&s_msg + len,
                 sizeof(struct msg_server_s) - len, 0);
         if (0 == ret) {
-            tc_log_debug0(LOG_DEBUG, "recv zero len in msg_client_recv");
+            tc_log_debug0(LOG_DEBUG, 0, "recv zero len in msg_client_recv");
             (void)close(sock);
             return NULL;
         } else if (-1 == ret) {
@@ -156,7 +144,7 @@ msg_server_recv(int sock)
         ret = recv(sock, (char *)&c_msg + len,
                 sizeof(struct msg_client_s) - len, 0);
         if (0 == ret) {
-            tc_log_debug0(LOG_DEBUG, "recv zero len in msg_server_recv");
+            tc_log_debug0(LOG_DEBUG, 0, "recv zero len in msg_server_recv");
             return NULL;
         } else if (-1 == ret) {
             continue;
@@ -182,7 +170,7 @@ msg_client_send(int sock, uint32_t c_ip, uint16_t c_port, uint16_t type)
 
     send_len = send(sock, (const void *)&buf, sizeof(buf), 0);
     if (send_len != buf_len) {
-        log_info(LOG_NOTICE, "send length:%ld,buffer size:%ld",
+        tc_log_info(LOG_NOTICE, 0, "send length:%ld,buffer size:%ld",
                 send_len, buf_len);
         return -1;
     }
@@ -199,7 +187,7 @@ msg_server_send(int sock, struct msg_server_s *msg)
     send_len = send(sock, (const void *)msg, (size_t)msg_len, 0);
     if (send_len != -1) {
         if (send_len != msg_len) {
-            log_info(LOG_NOTICE, "send len not equal to msg size:%u",
+            tc_log_info(LOG_NOTICE, 0, "send len not equal to msg size:%u",
                     send_len);  
             return -1;
         }

@@ -178,8 +178,6 @@ struct ethernet_hdr {
 #endif /* TCPCOPY_OFFLINE */
 
 /* Global functions */
-void strace_pack(int level, int flag, struct iphdr *ip_header,
-        struct tcphdr *tcp_header);
 int daemonize();
 
 
@@ -191,8 +189,12 @@ int daemonize();
 #include <tc_select_module.h>
 #include <select_server.h>
 #include <select_server_wrapper.h>
-#include <log.h>
+#include <tc_log.h>
 #include <msg.h>
+
+
+#define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
+
 
 #endif /* _XCOPY_H_INC */
 

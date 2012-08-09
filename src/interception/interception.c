@@ -12,12 +12,10 @@ set_sock_no_delay(int sock)
     if (setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
                 sizeof(flag)) == -1)
     {
-        perror("setsockopt:");
-        log_info(LOG_ERR, "setsockopt error:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "setsockopt error");
         exit(errno);
     } else {
-        log_info(LOG_NOTICE, "setsockopt ok");
+        tc_log_info(LOG_NOTICE, 0, "setsockopt ok");
     }
 }
 
@@ -58,9 +56,7 @@ dispose_netlink_packet(int verdict, unsigned long packet_id)
     if (sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
                 (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
     {
-        perror("unable to send mode message");
-        log_info(LOG_ERR, "unable to send mode message:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "unable to send mode message");
         exit(0);
     }
 
@@ -116,18 +112,18 @@ interception_process(int fd)
         c_msg = msg_server_recv(fd);
         if (c_msg) {
             if (c_msg->type == CLIENT_ADD) {
-                tc_log_debug1(LOG_NOTICE, "add client router:%u", 
+                tc_log_debug1(LOG_DEBUG, 0, "add client router:%u", 
                         ntohs(c_msg->client_port));
                 router_add(c_msg->client_ip, c_msg->client_port, fd);
             } else if (c_msg->type == CLIENT_DEL) {
-                tc_log_debug1(LOG_NOTICE, "del client router:%u", 
+                tc_log_debug1(LOG_DEBUG, 0, "del client router:%u", 
                         ntohs(c_msg->client_port));
                 router_del(c_msg->client_ip, c_msg->client_port);
             }
         } else {
             close(fd);
             select_server_del(fd);
-            log_info(LOG_NOTICE, "close sock:%d", fd);
+            tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
         }
     }
 }
@@ -140,10 +136,10 @@ interception_init(uint16_t port)
     router_init(srv_settings.hash_size << 1);
     select_server_set_callback(interception_process);
     msg_listen_sock = msg_server_init(srv_settings.binded_ip, port);
-    log_info(LOG_NOTICE, "msg listen socket:%d", msg_listen_sock);
+    tc_log_info(LOG_NOTICE, 0, "msg listen socket:%d", msg_listen_sock);
     select_server_add(msg_listen_sock);
     firewall_sock = nl_firewall_init();
-    log_info(LOG_NOTICE, "firewall socket:%d", firewall_sock);
+    tc_log_info(LOG_NOTICE, 0, "firewall socket:%d", firewall_sock);
     select_server_add(firewall_sock);
 }
 
@@ -161,13 +157,13 @@ interception_over()
     if (firewall_sock != -1) {
         close(firewall_sock);
         firewall_sock = -1;
-        log_info(LOG_NOTICE, "firewall sock is closed");
+        tc_log_info(LOG_NOTICE, 0, "firewall sock is closed");
     }
 
     if (msg_listen_sock != -1) {
         close(msg_listen_sock);
         msg_listen_sock = -1;
-        log_info(LOG_NOTICE, "msg listen sock is closed");
+        tc_log_info(LOG_NOTICE, 0, "msg listen sock is closed");
     }
 
     router_destroy();

@@ -161,19 +161,19 @@ static void
 output_for_debug(int argc, char **argv)
 {
     /* Print tcpcopy version */
-    log_info(LOG_NOTICE, "tcpcopy version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
     /* Print target */
-    log_info(LOG_NOTICE, "target:%s", clt_settings.raw_transfer);
+    tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
     /* Print tcpcopy working mode */
 #if (TCPCOPY_MYSQL_SKIP)
-    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_SKIP mode");
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode");
 #endif
 #if (TCPCOPY_MYSQL_NO_SKIP)
-    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_NO_SKIP mode");
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_NO_SKIP mode");
 #endif
 #if (TCPCOPY_OFFLINE)
-    log_info(LOG_NOTICE, "TCPCOPY_OFFLINE mode");
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_OFFLINE mode");
 #endif
 }
 
@@ -184,7 +184,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
     uint16_t tmp_port;
 
     if ((seq = strchr(addr, ':')) == NULL) {
-        log_info(LOG_NOTICE, "set global port for tcpcopy");
+        tc_log_info(LOG_NOTICE, 0, "set global port for tcpcopy");
         *ip = 0;
         port_s = addr;
     } else {
@@ -212,7 +212,7 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     char   *seq, *addr1, *addr2;
 
     if ((seq = strchr(addr, '-')) == NULL) {
-        log_info(LOG_WARN, "target \"%s\" is invalid", addr);
+        tc_log_info(LOG_WARN, 0, "target \"%s\" is invalid", addr);
         return -1;
     } else {
         *seq = '\0';
@@ -246,7 +246,7 @@ retrieve_target_addresses(char *raw_transfer,
     char *p, *seq;
 
     if (raw_transfer == NULL) {
-        log_info(LOG_ERR, "it must have -x argument");
+        tc_log_info(LOG_ERR, 0, "it must have -x argument");
         fprintf(stderr, "no -x argument\n");
         return -1;
     }
@@ -326,7 +326,7 @@ set_details()
 
 #if (TCPCOPY_OFFLINE)
     if (NULL == clt_settings.pcap_file) {
-        log_info(LOG_ERR, "it must have -i argument for offline");
+        tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
         exit(EXIT_FAILURE);
     }
@@ -336,7 +336,7 @@ set_details()
     if (NULL != clt_settings.user_pwd) {
         retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
     } else {
-        log_info(LOG_ERR, "it must have -u argument");
+        tc_log_info(LOG_ERR, 0, "it must have -u argument");
         fprintf(stderr, "no -u argument\n");
         exit(EXIT_FAILURE);
     }
@@ -345,8 +345,7 @@ set_details()
     /* Daemonize */
     if (clt_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
-            perror("Failed to ignore SIGHUP");
-            log_info(LOG_ERR, "Failed to ignore SIGHUP");
+            tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
         }    
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
@@ -383,7 +382,10 @@ main(int argc ,char **argv)
     settings_init();
     read_args(argc, argv);
     /* Init log for outputing debug info */
-    log_init(clt_settings.log_path);
+    if (tc_log_init(clt_settings.log_path) == -1) {
+        return -1;
+    }
+
     /* Output debug info */
     output_for_debug(argc, argv);
     /* Set details for running */
@@ -391,7 +393,7 @@ main(int argc ,char **argv)
 
     ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
     if (ret == TC_EVENT_ERROR) {
-        log_info(LOG_ERR, "event loop init failed");
+        tc_log_info(LOG_ERR, 0, "event loop init failed");
         return -1;
     }
 
