@@ -488,9 +488,7 @@ tcp_copy_exit()
     send_close();
     address_close_sock();
 
-#if (!TCPCOPY_OFFLINE)
-    sync();
-#else
+#if (TCPCOPY_OFFLINE)
     if (pcap != NULL) {
         pcap_close(pcap);                                                                               
     }   
