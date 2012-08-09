@@ -193,7 +193,7 @@ int daemonize();
 #include <msg.h>
 
 
-#define tc_cpymem(d, s, l) (memcpy(d, (void *) s, l) + l)
+#define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
 
 
 #endif /* _XCOPY_H_INC */
