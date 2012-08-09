@@ -28,15 +28,18 @@ release_resources()
     tc_log_end();
 }
 
-/* TODO It has to solve the sigignore warning problem */
 static int
-sigignore(int sig) 
-{    
-    struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+sigignore(int sig)
+{
+    struct sigaction sa;
+
+    sa.sa_handler = SIG_IGN;
+    sa.sa_flags = 0;
 
     if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
-    }       
+    }
+
     return 0;
 }
 
@@ -52,9 +55,9 @@ signal_handler(int sig)
         /* Avoid dead loop*/
         signal(SIGSEGV, SIG_DFL);
         kill(getpid(), sig);
-    } else {    
+    } else {
         exit(EXIT_SUCCESS);
-    } 
+    }
 }
 
 static void
@@ -86,14 +89,14 @@ retrieve_ip_addr()
 
     while (true) {
         split = strchr(p, ',');
-        if (split != NULL) {   
+        if (split != NULL) {
             len = (size_t)(split - p);
-        } else {   
+        } else {
             len = strlen(p);
-        }   
+        }
 
         strncpy(tmp, p, len);
-        address = inet_addr(tmp);    
+        address = inet_addr(tmp);
         srv_settings.passed_ips.ips[count++] = address;
 
         if (count == MAX_ALLOWED_IP_NUM) {
@@ -117,7 +120,7 @@ retrieve_ip_addr()
 
 static void
 usage(void)
-{  
+{
     printf("intercept " VERSION "\n");
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
@@ -141,7 +144,7 @@ read_args(int argc, char **argv) {
          "p:" /* TCP port number to listen on */
          "s:" /* Hash table size for intercept */
          "b:" /* binded ip address */
-         "h"  /* print this help and exit */   
+         "h"  /* print this help and exit */
          "l:" /* error log file path */
          "P:" /* save PID in file */
          "v"  /* print version and exit*/
@@ -189,7 +192,7 @@ read_args(int argc, char **argv) {
 static void
 set_details()
 {
-    /* Set signal handler */    
+    /* Set signal handler */
     set_signal_handler();
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
@@ -209,8 +212,8 @@ set_details()
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
-        }    
-    }    
+        }
+    }
 }
 
 /* Set defaults */
@@ -251,7 +254,7 @@ main(int argc ,char **argv) {
     /* Output debug info */
     output_for_debug();
     /* Set details */
-    set_details(); 
+    set_details();
     /* Init interception */
     interception_init(srv_settings.port);
     /* Run now */
