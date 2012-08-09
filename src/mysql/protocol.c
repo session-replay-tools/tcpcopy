@@ -139,7 +139,7 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     str = (char *)p;
     count = p - payload + 8;
     if (count > length) {
-        log_info(LOG_ERR, "payload len is too short for init:%u,%u",
+        tc_log_info(LOG_ERR, 0, "payload len is too short for init:%u,%u",
                 length, count);
         return 0;
     }
@@ -163,10 +163,10 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     count = p - payload + strlen(str);
     if (str_len > SCRAMBLE_LENGTH|| count > length) {
         if (count >length) {
-            log_info(LOG_ERR, 0, "payload len is too short for init2:%u,%u",
+            tc_log_info(LOG_ERR, 0, "payload len is too short for init2:%u,%u",
                     length, count);
         } else {
-            log_info(LOG_ERR, 0, "scramble is too long:%u", str_len);
+            tc_log_info(LOG_ERR, 0, "scramble is too long:%u", str_len);
         }
         return 0;
     }
@@ -211,7 +211,7 @@ change_client_auth_content(unsigned char *payload, int length,
     p = p + 23;
     len = p - payload;
     if (len > length) {
-        log_info(LOG_ERR, 0, "payload len is too short:%u,%u", length, len);
+        tc_log_info(LOG_ERR, 0, "payload len is too short:%u,%u", length, len);
         return 0;
     }
 
@@ -222,9 +222,9 @@ change_client_auth_content(unsigned char *payload, int length,
 
     pwd = retrieve_user_pwd(user);
     if (pwd != NULL) {
-        log_info(LOG_WARN, 0, "user:%s,pwd:%s", user, pwd);
+        tc_log_info(LOG_WARN, 0, "user:%s,pwd:%s", user, pwd);
     } else {
-        log_info(LOG_WARN, 0, "user:%s,pwd is null", user);
+        tc_log_info(LOG_WARN, 0, "user:%s,pwd is null", user);
         return 0;
     }
 
@@ -235,7 +235,7 @@ change_client_auth_content(unsigned char *payload, int length,
     p = p + 1;
     len = p - payload + SCRAMBLE_LENGTH;
     if (len > length) {
-        log_info(LOG_ERR, 0, "payload len is too short too:%u,%u",
+        tc_log_info(LOG_ERR, 0, "payload len is too short too:%u,%u",
                 length, len);
         return 0;
     }
@@ -279,7 +279,7 @@ change_client_second_auth_content(unsigned char *payload,size_t length,
 
     len = p - payload + 8;
     if (len > length) {
-        log_info(LOG_ERR, 0, "payload len is too short for sec :%u,%u",
+        tc_log_info(LOG_ERR, 0, "payload len is too short for sec :%u,%u",
                 length, len);
         return 0;
     }

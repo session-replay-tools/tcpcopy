@@ -236,6 +236,9 @@ static void output_for_debug()
 
 int
 main(int argc ,char **argv) {
+
+    tc_time_update();
+
     /* Init settings */ 
     settings_init();
     /* Read args */

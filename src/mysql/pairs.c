@@ -57,7 +57,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
     end = p + len;
 
     if (len <= 1) {
-        log_info(LOG_WARN, 0, "use password error:%s", pairs);
+        tc_log_info(LOG_WARN, 0, "use password error:%s:", pairs);
         exit(1);
     }
 
@@ -69,7 +69,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
             if (next != p) {
                 pair_end = next - 1;
             } else {
-                log_info(LOG_WARN, 0, "use password info error:%s", pairs);
+                tc_log_info(LOG_WARN, 0, "use password error:%s:", pairs);
                 exit(1);
             }
         } else {
@@ -77,7 +77,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
         }
 
         if ((q-p) >= 256 || (pair_end - q) >= 256) {
-            log_info(LOG_WARN, 0, "too long for user or password");
+            tc_log_info(LOG_WARN, 0, "too long for user or password");
             exit(1);
         }
 
