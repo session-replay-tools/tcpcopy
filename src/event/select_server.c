@@ -29,10 +29,10 @@ void
 select_server_add(int fd)
 {
     if (fd > MAX_FD_VALUE) {
-        log_info(LOG_WARN, "fd:%d which is more than 1023", fd);
+        tc_log_info(LOG_WARN, 0, "fd:%d which is more than 1023", fd);
     } else {
         if (fd_nums >= MAX_FD_NUM) {
-            log_info(LOG_WARN, "too many fds");
+            tc_log_info(LOG_WARN, 0, "too many fds");
         } else {
             FD_SET(fd, &read_set);
             if (fd > max_fd) {

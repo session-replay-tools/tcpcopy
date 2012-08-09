@@ -35,8 +35,8 @@ int
 address_find_sock(uint16_t local_port)
 {
     if (0 == addr[local_port].sock) {
-        log_info(LOG_WARN, "it can't find address socket:%u",
-                ntohs(local_port));
+        tc_log_info(LOG_WARN, 0, "it can't find address socket:%u",
+                    ntohs(local_port));
         return -1;
     }
     return addr[local_port].sock;
@@ -50,7 +50,7 @@ address_close_sock()
 
     for (i = 0; i< 65536; i++) {
         if (0 != addr[i].sock) {
-            log_info(LOG_WARN, "it close socket:%d", addr[i].sock);
+            tc_log_info(LOG_WARN, 0, "it close socket:%d", addr[i].sock);
             close(addr[i].sock);
             addr[i].sock = 0;
         }
