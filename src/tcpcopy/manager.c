@@ -158,9 +158,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
             last        = packet_num - 1;
             id          = ip_header->id;
 
-#if (TCPCOPY_DEBUG)
-            strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
-#endif
+            tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
+
             tc_log_debug1(LOG_DEBUG, 0, "recv:%d, more than MTU", recv_len);
             index = head_len;
 
