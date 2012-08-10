@@ -61,8 +61,7 @@ init_input_raw_socket()
 #endif
 
     if (-1 == sock) {
-        perror("socket");
-        log_info(LOG_ERR, "%s", strerror(errno));   
+        tc_log_info(LOG_ERR, errno, "socket");   
     }
 
     set_nonblock(sock);
@@ -71,8 +70,7 @@ init_input_raw_socket()
     opt_len = sizeof(int);
     ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &recv_buf_opt, opt_len);
     if (-1 == ret) {
-        perror("setsockopt");
-        log_info(LOG_ERR, "setsockopt:%s", strerror(errno));    
+        tc_log_info(LOG_ERR, errno, "setsockopt");    
     }
 
     return sock;
@@ -95,7 +93,7 @@ replicate_packs(char *packet, int length, int replica_num)
     rand_port  = clt_settings.rand_port_shifted;
     orig_port  = ntohs(tcp_header->source);
 
-    tc_log_debug1(LOG_DEBUG, "orig port:%u", orig_port);
+    tc_log_debug1(LOG_DEBUG, 0, "orig port:%u", orig_port);
 
     for (i = 1; i < replica_num; i++) {
 
@@ -104,7 +102,7 @@ replicate_packs(char *packet, int length, int replica_num)
         tcp_header->source = htons(dest_port);
         process_packet(true, packet, length);
 
-        tc_log_debug2(LOG_DEBUG, "new port:%u,add:%u", dest_port, addition);
+        tc_log_debug2(LOG_DEBUG, 0, "new port:%u,add:%u", dest_port, addition);
     }
 }
 
@@ -145,8 +143,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
             size_ip     = ip_header->ihl << 2;
             tot_len     = ntohs(ip_header -> tot_len);
             if (tot_len != recv_len) {
-                log_info(LOG_WARN, "packet len:%u, recv len:%u",
-                        tot_len, recv_len);
+                tc_log_info(LOG_WARN, 0, "packet len:%u, recv len:%u",
+                            tot_len, recv_len);
                 return FAILURE;
             }
 
@@ -161,9 +159,9 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
             id          = ip_header->id;
 
 #if (TCPCOPY_DEBUG)
-            strace_pack(LOG_NOTICE, CLIENT_FLAG, ip_header, tcp_header);
+            tc_log_trace(LOG_NOTICE, 0, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-            tc_log_debug1(LOG_INFO, "recv:%d, more than MTU", recv_len);
+            tc_log_debug1(LOG_DEBUG, 0, "recv:%d, more than MTU", recv_len);
             index = head_len;
 
             for (i = 0 ; i < packet_num; i++) {
@@ -227,17 +225,16 @@ retrieve_raw_sockets(int sock)
             if (EAGAIN == err) {
                 break;
             }
-            perror("recvfrom");
-            log_info(LOG_ERR, "recvfrom:%s", strerror(errno));
+            tc_log_info(LOG_ERR, errno, "recvfrom");
         }
         if (0 == recv_len) {
-            log_info(LOG_ERR, "recv len is 0");
+            tc_log_info(LOG_ERR, 0, "recv len is 0");
             break;
         }
 
         raw_packs++;
         if (recv_len > RECV_BUF_SIZE) {
-            log_info(LOG_ERR, "recv_len:%d ,it is too long", recv_len);
+            tc_log_info(LOG_ERR, 0, "recv_len:%d ,it is too long", recv_len);
             break;
         }
 
@@ -249,8 +246,8 @@ retrieve_raw_sockets(int sock)
             valid_raw_packs++;
         }
 
-        if (raw_packs%100000 == 0) {
-            log_info(LOG_NOTICE, "raw packets:%llu, valid :%llu",
+        if (raw_packs % 100000 == 0) {
+            tc_log_info(LOG_NOTICE, 0, "raw packets:%llu, valid :%llu",
                     raw_packs, valid_raw_packs);
         }
     }
@@ -269,22 +266,21 @@ check_resource_usage(tc_event_timer_t *evt)
 
     ret = getrusage(who, &usage);
     if (ret == -1) {
-        perror("getrusage");
-        log_info(LOG_ERR, "getrusage:%s", strerror(errno)); 
+        tc_log_info(LOG_ERR, errno, "getrusage"); 
     }
 
     /* Total amount of user time used */
-    log_info(LOG_NOTICE, "user time used:%ld", usage.ru_utime.tv_sec);
+    tc_log_info(LOG_NOTICE, 0, "user time used:%ld", usage.ru_utime.tv_sec);
 
     /* Total amount of system time used */
-    log_info(LOG_NOTICE, "sys  time used:%ld", usage.ru_stime.tv_sec);
+    tc_log_info(LOG_NOTICE, 0, "sys  time used:%ld", usage.ru_stime.tv_sec);
 
     /* Maximum resident set size (in kilobytes) */
     /* This is only valid since Linux 2.6.32 */
-    log_info(LOG_NOTICE, "max memory size:%ld", usage.ru_maxrss);
+    tc_log_info(LOG_NOTICE, 0, "max memory size:%ld", usage.ru_maxrss);
 
     if (usage.ru_maxrss > clt_settings.max_rss) {
-        log_info(LOG_WARN, "occupies too much memory,limit:%ld",
+        tc_log_info(LOG_WARN, 0, "occupies too much memory,limit:%ld",
                  clt_settings.max_rss);
     }
 
@@ -311,7 +307,7 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
-    tc_log_debug2(LOG_DEBUG, "diff,old:%llu,new:%llu", 
+    tc_log_debug2(LOG_DEBUG, 0, "diff,old:%llu,new:%llu", 
             history_diff, cur_diff);
     if (history_diff <= cur_diff) {
         return false;
@@ -352,7 +348,7 @@ get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
             return SLL_HDR_LEN;
             break;
         default:
-            log_info(LOG_ERR, "unsupported DLT type: %s (0x%x)", 
+            tc_log_info(LOG_ERR, 0, "unsupported DLT type: %s (0x%x)", 
                     pcap_datalink_val_to_description(datalink), datalink);
             break;
     }
@@ -413,7 +409,7 @@ send_packets_from_pcap(int first)
 
             if (pkt_hdr.caplen < pkt_hdr.len) {
 
-                log_info(LOG_WARN, "truncated packets,drop");
+                tc_log_info(LOG_WARN, 0, "truncated packets,drop");
             } else {
 
                 ip_data = get_ip_data(pkt_data, pkt_hdr.len, &l2_len);
@@ -423,7 +419,7 @@ send_packets_from_pcap(int first)
                     dispose_packet((char*)ip_data, ip_pack_len, &p_valid_flag);
                     if (p_valid_flag) {
 
-                        tc_log_debug0(LOG_DEBUG, "valid flag for packet");
+                        tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
                         valid_raw_packs++;
                         if (first) {
 
@@ -434,14 +430,14 @@ send_packets_from_pcap(int first)
                     } else {
 
                         stop = false;
-                        tc_log_debug0(LOG_DEBUG, "stop,invalid flag");
+                        tc_log_debug0(LOG_DEBUG, 0, "stop,invalid flag");
                     }
                 }
             }
             stop = check_read_stop();
         } else {
 
-            log_info(LOG_WARN, "stop,null from pcap_next");
+            tc_log_info(LOG_WARN, 0, "stop,null from pcap_next");
             stop = true;
             read_pcap_over = true;
         }
@@ -463,14 +459,14 @@ dispose_event(int fd)
         msg = msg_client_recv(fd);
         if (NULL == msg ) {
             fprintf(stderr, "NULL msg :\n");
-            log_info(LOG_ERR, "NULL msg from msg_client_recv");
+            tc_log_info(LOG_ERR, 0, "NULL msg from msg_client_recv");
             exit(EXIT_FAILURE);
         }   
         process((char*)msg, REMOTE);
     }   
 #if (TCPCOPY_OFFLINE)
     if (!read_pcap_over) {
-        log_info(LOG_DEBUG, "send_packets_from_pcap");
+        tc_log_debug0(LOG_DEBUG, 0, "send_packets_from_pcap");
         send_packets_from_pcap(0);
     }
 #endif
@@ -491,14 +487,13 @@ tcp_copy_exit()
 
     send_close();
     address_close_sock();
-#if (!TCPCOPY_OFFLINE)
-    sync();
-#else
+
+#if (TCPCOPY_OFFLINE)
     if (pcap != NULL) {
         pcap_close(pcap);                                                                               
     }   
 #endif
-    log_end();
+    tc_log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
     release_mysql_user_pwd_info();
@@ -522,7 +517,7 @@ tcp_copy_over(const int sig)
 {
     long int pid   = (long int)syscall(SYS_gettid);
 
-    log_info(LOG_WARN, "sig %d received, pid=%ld", sig, pid);
+    tc_log_info(LOG_WARN, 0, "sig %d received, pid=%ld", sig, pid);
     exit(EXIT_SUCCESS);
 }
 
@@ -566,7 +561,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         {
             return FAILURE;
         }
-        log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
+        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
                 ntohs(target_port));
     }
     
@@ -586,7 +581,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         if (tc_event_add(event_loop, raw_socket_event, TC_EVENT_READ)
                 == TC_EVENT_ERROR)
         {
-            log_info(LOG_ERR, "add raw socket(%d) to event loop failed.",
+            tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
                      raw_socket_event->fd);
             return FAILURE;
         }
@@ -609,7 +604,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
                 return FAILURE;
             }
 
-            log_info(LOG_NOTICE, "add a tunnel for exchanging info:%u",
+            tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
                     ntohs(target_port));
         }
 
@@ -623,15 +618,15 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         if (pcap_file != NULL) {
 
             if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
-                log_info(LOG_ERR, "open %s" , ebuf);
+                tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
                 fprintf(stderr, "open %s\n", ebuf);
                 return FAILURE;
 
             } else {
 
                 gettimeofday(&base_time, NULL);
-                log_info(LOG_NOTICE, "open pcap success:%s", pcap_file);
-                log_info(LOG_NOTICE, "send the first packets here");
+                tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
+                tc_log_info(LOG_NOTICE, 0, "send the first packets here");
                 send_packets_from_pcap(1);
             }
         } else {

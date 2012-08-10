@@ -17,9 +17,9 @@ send_init()
      */
     sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if (sock > 0) {
-        log_info(LOG_NOTICE, "create raw output socket successfully");
+        tc_log_info(LOG_NOTICE, 0, "create raw output socket successfully");
     } else {
-        log_info(LOG_ERR, "it can't create raw output socket");
+        tc_log_info(LOG_ERR, 0, "it can't create raw output socket");
     } 
 
     /*
@@ -27,8 +27,7 @@ send_init()
      * It does not need setting for linux,but *BSD needs
      */
     if (setsockopt(sock, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
-        perror("IP_HDRINCL");  
-        log_info(LOG_ERR, "%s", strerror(errno));
+        tc_log_info(LOG_ERR, errno, "IP_HDRINCL");
         exit(1);  
     }
 
@@ -70,12 +69,11 @@ send_ip_packet(struct iphdr *ip_header, uint16_t tot_len)
          * which does general sk_buff cleaning,is called and an error EMSGSIZE 
          * is returned. On the other hand, normal raw socket frag.
          */
-        send_len = sendto(sock, (char *)ip_header, tot_len, 0,
+        send_len = sendto(sock, (void *)ip_header, tot_len, 0,
                 (struct sockaddr *)&dst_addr, sizeof(dst_addr));
 
         if (-1 == send_len) {
-            perror("send to");
-            log_info(LOG_ERR, "send to:%s", strerror(errno));
+            tc_log_info(LOG_ERR, errno, "send to");
         }
 
     }

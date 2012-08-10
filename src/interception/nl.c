@@ -7,9 +7,7 @@ sock_init(int protocol)
     int sock = socket(AF_NETLINK, SOCK_RAW, protocol);
 
     if (-1 == sock) {
-        perror("socket:");
-        log_info(LOG_ERR, "create netlink sock:%s", strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "create netlink sock");
         exit(errno);
     }
 
@@ -56,13 +54,10 @@ nl_set_mode(int sock, uint8_t mode, size_t range)
     if (sendto(sock, (void *)nl_header, nl_header->nlmsg_len, 0,
                 (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
     {
-        perror("can't set mode:");
-        log_info(LOG_ERR, "can't set mode,check if ip queue is up:%s",
-                strerror(errno));
-        sync(); 
+        tc_log_info(LOG_ERR, errno, "can't set mode,check if ip queue is up");
         exit(errno);
     } else {
-        log_info(LOG_NOTICE, "sendto for ip queue is ok");
+        tc_log_info(LOG_NOTICE, 0, "sendto for ip queue is ok");
     }
 }
 
@@ -72,11 +67,11 @@ nl_recv(int sock, void *buffer, size_t length)
 {
     ssize_t recv_len = recv(sock, buffer, length, 0);
     if (recv_len < 0) {
-        log_info(LOG_ERR, "recv length less than 0 for netlink");
+        tc_log_info(LOG_ERR, 0, "recv length less than 0 for netlink");
         return -1;
     }
     if ((size_t)recv_len < sizeof(struct nlmsghdr)) {
-        log_info(LOG_ERR, "recv length not right for netlink");
+        tc_log_info(LOG_ERR, 0, "recv length not right for netlink");
         return -1;
     }
     return recv_len;

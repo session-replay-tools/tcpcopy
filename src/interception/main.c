@@ -22,39 +22,42 @@ xcopy_srv_settings srv_settings;
 static void
 release_resources()
 {
-    log_info(LOG_NOTICE, "release_resources begin");
+    tc_log_info(LOG_NOTICE, 0, "release_resources begin");
     interception_over();
-    log_info(LOG_NOTICE, "release_resources end except log file");
-    log_end();
+    tc_log_info(LOG_NOTICE, 0, "release_resources end except log file");
+    tc_log_end();
 }
 
-/* TODO It has to solve the sigignore warning problem */
 static int
-sigignore(int sig) 
-{    
-    struct sigaction sa = { .sa_handler = SIG_IGN, .sa_flags = 0 };
+sigignore(int sig)
+{
+    struct sigaction sa;
+
+    sa.sa_handler = SIG_IGN;
+    sa.sa_flags = 0;
 
     if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
-    }       
+    }
+
     return 0;
 }
 
 static void
 signal_handler(int sig)
 {
-    log_info(LOG_ERR, "set signal handler:%d", sig);
+    tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
     printf("set signal handler:%d\n", sig);
 
     if (SIGSEGV == sig) {    
-        log_info(LOG_ERR, "SIGSEGV error");
+        tc_log_info(LOG_ERR, 0, "SIGSEGV error");
         release_resources();
         /* Avoid dead loop*/
         signal(SIGSEGV, SIG_DFL);
         kill(getpid(), sig);
-    } else {    
+    } else {
         exit(EXIT_SUCCESS);
-    } 
+    }
 }
 
 static void
@@ -86,18 +89,18 @@ retrieve_ip_addr()
 
     while (true) {
         split = strchr(p, ',');
-        if (split != NULL) {   
+        if (split != NULL) {
             len = (size_t)(split - p);
-        } else {   
+        } else {
             len = strlen(p);
-        }   
+        }
 
         strncpy(tmp, p, len);
-        address = inet_addr(tmp);    
+        address = inet_addr(tmp);
         srv_settings.passed_ips.ips[count++] = address;
 
         if (count == MAX_ALLOWED_IP_NUM) {
-            log_info(LOG_WARN, "reach the limit for passing firewall");
+            tc_log_info(LOG_WARN, 0, "reach the limit for passing firewall");
             break;
         }
 
@@ -117,7 +120,7 @@ retrieve_ip_addr()
 
 static void
 usage(void)
-{  
+{
     printf("intercept " VERSION "\n");
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
@@ -141,7 +144,7 @@ read_args(int argc, char **argv) {
          "p:" /* TCP port number to listen on */
          "s:" /* Hash table size for intercept */
          "b:" /* binded ip address */
-         "h"  /* print this help and exit */   
+         "h"  /* print this help and exit */
          "l:" /* error log file path */
          "P:" /* save PID in file */
          "v"  /* print version and exit*/
@@ -189,7 +192,7 @@ read_args(int argc, char **argv) {
 static void
 set_details()
 {
-    /* Set signal handler */    
+    /* Set signal handler */
     set_signal_handler();
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
@@ -204,14 +207,13 @@ set_details()
     if (srv_settings.do_daemonize) {
         /* TODO why warning*/
         if (sigignore(SIGHUP) == -1) {
-            perror("Failed to ignore SIGHUP");
-            log_info(LOG_ERR, "Failed to ignore SIGHUP");
+            tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
         }    
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
-        }    
-    }    
+        }
+    }
 }
 
 /* Set defaults */
@@ -225,28 +227,34 @@ static void settings_init(void)
 static void output_for_debug()
 {
     /* Print intercept version */
-    log_info(LOG_NOTICE, "intercept version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
     /* Print intercept working mode */
 #if (TCPCOPY_MYSQL_SKIP)
-    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_SKIP mode for intercept");
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode for intercept");
 #endif
 #if (TCPCOPY_MYSQL_NO_SKIP)
-    log_info(LOG_NOTICE, "TCPCOPY_MYSQL_NO_SKIP mode for intercept");
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_NO_SKIP mode for intercept");
 #endif
 }
 
 int
 main(int argc ,char **argv) {
+
+    tc_time_update();
+
     /* Init settings */ 
     settings_init();
     /* Read args */
     read_args(argc, argv);
     /* Init log */
-    log_init(srv_settings.log_path);
+    if (tc_log_init(srv_settings.log_path) == -1) {
+        return -1;
+    }
+
     /* Output debug info */
     output_for_debug();
     /* Set details */
-    set_details(); 
+    set_details();
     /* Init interception */
     interception_init(srv_settings.port);
     /* Run now */

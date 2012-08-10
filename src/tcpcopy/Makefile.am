@@ -9,7 +9,6 @@ tcpcopy_SOURCES=\
                 main.c
 tcpcopy_LDADD=\
                ../core/libcore.a\
-               ../log/liblog.a\
                ../util/libutil.a\
                ../mysql/libmysql.a\
                ../event/libevent.a\
