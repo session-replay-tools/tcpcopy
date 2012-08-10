@@ -545,26 +545,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     init_for_sessions();
     localhost = inet_addr("127.0.0.1"); 
 
-    /* Init output raw socket info */
-    send_init();
-
-    /* Add connections to the tested server for exchanging info */
-    mappings = clt_settings.transfer.mappings;
-    for (i = 0; i < clt_settings.transfer.num; i++) {
-
-        pair = mappings[i];
-        online_port = pair->online_port;
-        target_ip   = pair->target_ip;
-        target_port = pair->target_port;
-        if (address_add_msg_conn(event_loop, online_port, target_ip, 
-                clt_settings.srv_port))
-        {
-            return FAILURE;
-        }
-        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
-                ntohs(target_port));
-    }
-    
 #if (!TCPCOPY_OFFLINE)
     /* Init input raw socket info */
     raw_sock = init_input_raw_socket();
