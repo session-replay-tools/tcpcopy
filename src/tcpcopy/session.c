@@ -2507,7 +2507,7 @@ is_packet_needed(const char *packet)
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
         header_len = size_tcp + size_ip;
         if (tot_len >= header_len) {
-            is_needed  = true;
+            is_needed = true;
             cont_len  = tot_len - header_len;
             if (tcp_header->syn) {
                 clt_syn_cnt++;
