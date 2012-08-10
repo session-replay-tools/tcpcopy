@@ -79,7 +79,7 @@ trim_packet(session_t *s, struct iphdr *ip_header,
         return false;
     }
 
-    ip_header->tot_len = htons(tot_len- diff);
+    ip_header->tot_len = htons(tot_len - diff);
     tcp_header->seq    = htonl(s->vir_next_seq);
     payload = (unsigned char*)((char*)tcp_header + size_tcp);
     memmove(payload, payload + diff, cont_len - diff);
@@ -2476,7 +2476,7 @@ bool
 is_packet_needed(const char *packet)
 {
     bool            is_needed = false;
-    uint16_t        size_ip, size_tcp, tot_len, cont_len;
+    uint16_t        size_ip, size_tcp, tot_len, cont_len, header_len;
     struct tcphdr  *tcp_header;
     struct iphdr   *ip_header;
 
@@ -2505,14 +2505,20 @@ is_packet_needed(const char *packet)
     /* Here we filter the packets we do care about */
     if (LOCAL == check_pack_src(&(clt_settings.transfer), 
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
-        is_needed = true;
-        cont_len  = tot_len - size_tcp - size_ip;
-        if (tcp_header->syn) {
-            clt_syn_cnt++;
-        } else if (cont_len > 0) {
-            clt_cont_cnt++;
+        header_len = size_tcp + size_ip;
+        if (tot_len >= header_len) {
+            is_needed  = true;
+            cont_len  = tot_len - header_len;
+            if (tcp_header->syn) {
+                clt_syn_cnt++;
+            } else if (cont_len > 0) {
+                clt_cont_cnt++;
+            }
+            clt_packs_cnt++;
+        } else {
+            tc_log_info(LOG_WARN, 0, "bad tot_len: %d bytes,header len:%d",
+                    tot_len, header_len);
         }
-        clt_packs_cnt++;
     }
 
     return is_needed;
