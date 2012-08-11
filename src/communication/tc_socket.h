@@ -18,7 +18,6 @@
 int tc_raw_socket_in_init();
 
 int tc_raw_socket_out_init();
-void tc_raw_socket_close(int fd);
 int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);
 
 int tc_nl_socket_init();

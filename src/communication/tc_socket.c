@@ -74,17 +74,6 @@ tc_raw_socket_out_init()
     return fd;
 }
 
-void
-tc_raw_socket_close(int fd)
-{
-    if (fd > 0) {
-        close(fd);
-        fd = -1;
-    }
-
-    return;
-}
-
 /*
  * Send the ip packet to the remote test server
  * (It will not go through ip fragmentation)
