@@ -115,7 +115,7 @@ delay_table_send(uint64_t key, int fd)
 {
     link_list           *msg_list;
     p_link_node          first;
-    struct msg_server_s *msg ;
+    msg_server_t        *msg ;
 
     msg_list = (link_list *)hash_find(table, key);
     if (NULL == msg_list) {
@@ -124,8 +124,10 @@ delay_table_send(uint64_t key, int fd)
 
     while (!link_list_is_empty(msg_list)) {
         first = link_list_pop_first(msg_list);
-        msg   = (first->data);
-        (void)msg_server_send(fd, msg);
+        msg = (first->data);
+
+        tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE); 
+
         msg_item_free_cnt++;
         link_node_internal_free(first);
         free(first);

@@ -17,6 +17,7 @@
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
+tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
 
 static void
@@ -367,6 +368,9 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+
+    tcpcopy_rsc.raw_socket_in = TC_INVALID_SOCKET;
+    tcpcopy_rsc.raw_socket_out = TC_INVALID_SOCKET;
 }
 
 /*

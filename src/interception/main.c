@@ -238,7 +238,8 @@ static void output_for_debug()
 }
 
 int
-main(int argc ,char **argv) {
+main(int argc ,char **argv)
+{
 
     tc_time_update();
 
@@ -246,7 +247,7 @@ main(int argc ,char **argv) {
     settings_init();
     /* Read args */
     read_args(argc, argv);
-    /* Init log */
+
     if (tc_log_init(srv_settings.log_path) == -1) {
         return -1;
     }
@@ -255,8 +256,11 @@ main(int argc ,char **argv) {
     output_for_debug();
     /* Set details */
     set_details();
-    /* Init interception */
-    interception_init(srv_settings.port);
+
+    if (interception_init(srv_settings.port) == TC_ERROR) {
+        exit(EXIT_FAILURE);
+    }
+
     /* Run now */
     interception_run();
 

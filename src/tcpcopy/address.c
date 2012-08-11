@@ -5,33 +5,45 @@
 static address_node_t addr[65536];
 
 /* This is for copying multiple ports */
-int 
+int
 address_add_msg_conn(tc_event_loop_t *event_loop, uint16_t local_port,
         uint32_t dst_ip, uint16_t dst_port)
 {
+    int          fd;
     tc_event_t  *msg_socket_event;
 
-    addr[local_port].ip   = dst_ip;
-    addr[local_port].port = dst_port;
-    addr[local_port].sock = msg_client_init(dst_ip, dst_port);
+    if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    }
 
-    msg_socket_event = tc_event_create(addr[local_port].sock,
-                                        dispose_event_wrapper, NULL);
+    if (tc_socket_connect(fd, dst_ip, dst_port) == TC_ERROR) {
+        return TC_ERROR;
+    }
+
+    if (tc_socket_set_nodelay(fd) == TC_ERROR) {
+        return TC_ERROR;
+    }
+
+    msg_socket_event = tc_event_create(fd, dispose_event_wrapper, NULL);
     if (msg_socket_event == NULL) {
-        return -1;
+        return TC_ERROR;
     }
 
     if (tc_event_add(event_loop, msg_socket_event, TC_EVENT_READ)
             == TC_EVENT_ERROR)
     {
-        return -1;     
+        return TC_ERROR;
     }
 
-    return 0;
+    addr[local_port].ip = dst_ip;
+    addr[local_port].port = dst_port;
+    addr[local_port].sock = fd;
+
+    return TC_OK;
 }
 
 /* Find the message socket through local port */
-int 
+int
 address_find_sock(uint16_t local_port)
 {
     if (0 == addr[local_port].sock) {

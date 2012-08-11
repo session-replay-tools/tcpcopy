@@ -50,7 +50,13 @@ typedef struct xcopy_clt_settings {
 } xcopy_clt_settings;
 
 
+typedef struct {
+    int raw_socket_out;
+    int raw_socket_in;
+} tc_tcpcopy_rsc_t;
+
 extern xcopy_clt_settings clt_settings;
+extern tc_tcpcopy_rsc_t tcpcopy_rsc;
 
 #include <util.h>
 
