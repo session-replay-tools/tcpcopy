@@ -1,6 +1,6 @@
 noinst_LIBRARIES=libcommunication.a
 
-libmsg_a_SOURCES=\
-                 msg.h tc_socket.c tc_socket.h
-libmsg_a_LIBADD=\
+libcommunication_a_SOURCES=\
+                 tc_socket.c tc_socket.h tc_msg.h
+libcommunication_a_LIBADD=\
                  ../core/libcore.a

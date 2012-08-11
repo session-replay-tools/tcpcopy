@@ -503,15 +503,17 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         online_port = pair->online_port;
         target_ip   = pair->target_ip;
         target_port = pair->target_port;
+
         if (address_add_msg_conn(event_loop, online_port, target_ip, 
-                clt_settings.srv_port))
+                    clt_settings.srv_port) == TC_ERROR)
         {
             return FAILURE;
         }
+
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
                 ntohs(target_port));
     }
-    
+
 #if (!TCPCOPY_OFFLINE)
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return FAILURE;
