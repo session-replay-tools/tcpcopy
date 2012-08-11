@@ -4,21 +4,6 @@
 static int    firewall_sock, msg_listen_sock;
 static time_t last_clean_time;
 
-static void
-set_sock_no_delay(int sock)
-{
-    int flag = 1;
-
-    if (setsockopt(sock, IPPROTO_TCP,TCP_NODELAY, (char *)&flag,
-                sizeof(flag)) == -1)
-    {
-        tc_log_info(LOG_ERR, errno, "setsockopt error");
-        exit(errno);
-    } else {
-        tc_log_info(LOG_NOTICE, 0, "setsockopt ok");
-    }
-}
-
 static uint32_t      seq = 1;
 static unsigned char buffer[128];
 
@@ -67,22 +52,33 @@ static void
 interception_process(int fd)
 {
     int                    diff, new_fd, i, pass_through_flag = 0;
+    char                   buffer[65535];
     time_t                 now;
+    msg_client_t           msg;
     struct iphdr          *ip_header;
     unsigned long          packet_id;
-    struct msg_client_s   *c_msg;
 
     if (fd == msg_listen_sock) {
-
-        new_fd = accept(msg_listen_sock, NULL, NULL);   
-        set_sock_no_delay(new_fd);
-        if (new_fd != -1) {
-            select_server_add(new_fd);
+        if ((new_fd = tc_socket_accept(msg_listen_sock)) == TC_INVALID_SOCKET) {
+            return;
         }
-    } else if (fd == firewall_sock) {
 
+        if (tc_socket_set_nodelay(new_fd) == TC_ERROR) {
+            return;
+        }
+
+        select_server_add(new_fd);
+
+    } else if (fd == firewall_sock) {
         packet_id = 0;
-        ip_header = nl_firewall_recv(firewall_sock, &packet_id);
+
+        if (tc_nl_socket_recv(firewall_sock, buffer, 65535) == TC_ERROR) {
+            return;
+        }
+
+        ip_header = tc_nl_ip_header(buffer);
+        packet_id = tc_nl_packet_id(buffer);
+
         if (ip_header != NULL) {
             /* Check if it is the valid user to pass through firewall */
             for (i = 0; i < srv_settings.passed_ips.num; i++) {
@@ -108,39 +104,62 @@ interception_process(int fd)
             }
         }
     } else {
-
-        c_msg = msg_server_recv(fd);
-        if (c_msg) {
-            if (c_msg->type == CLIENT_ADD) {
-                tc_log_debug1(LOG_DEBUG, 0, "add client router:%u", 
-                        ntohs(c_msg->client_port));
-                router_add(c_msg->client_ip, c_msg->client_port, fd);
-            } else if (c_msg->type == CLIENT_DEL) {
-                tc_log_debug1(LOG_DEBUG, 0, "del client router:%u", 
-                        ntohs(c_msg->client_port));
-                router_del(c_msg->client_ip, c_msg->client_port);
-            }
-        } else {
-            close(fd);
+        if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+            tc_socket_close(fd);
             select_server_del(fd);
             tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
+            return;
+        }
+
+        switch (msg.type) {
+        case CLIENT_ADD:
+            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u", 
+                          ntohs(msg.client_port));
+            router_add(msg.client_ip, msg.client_port, fd);
+            break;
+        case CLIENT_DEL:
+            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u", 
+                          ntohs(msg.client_port));
+            router_del(msg.client_ip, msg.client_port);
+            break;
         }
     }
 }
 
 /* Initiate for tcpcopy server */
-void
+int
 interception_init(uint16_t port)
 {
+    int fd;
+
     delay_table_init(srv_settings.hash_size);
     router_init(srv_settings.hash_size << 1);
+
     select_server_set_callback(interception_process);
-    msg_listen_sock = msg_server_init(srv_settings.binded_ip, port);
-    tc_log_info(LOG_NOTICE, 0, "msg listen socket:%d", msg_listen_sock);
-    select_server_add(msg_listen_sock);
-    firewall_sock = nl_firewall_init();
-    tc_log_info(LOG_NOTICE, 0, "firewall socket:%d", firewall_sock);
-    select_server_add(firewall_sock);
+
+    if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+
+    } else {
+        if (tc_socket_listen(fd, srv_settings.binded_ip, port) == TC_ERROR) {
+            return TC_ERROR;
+        }
+
+        tc_log_info(LOG_NOTICE, 0, "msg listen socket:%d", fd);
+        select_server_add(fd);
+        msg_listen_sock = fd;
+    }
+
+    if ((fd = tc_nl_socket_init()) == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+
+    } else {
+        tc_log_info(LOG_NOTICE, 0, "firewall socket:%d", fd);
+        select_server_add(fd);
+        firewall_sock = fd;
+    }
+
+    return TC_OK;
 }
 
 

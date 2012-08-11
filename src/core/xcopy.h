@@ -181,6 +181,15 @@ struct ethernet_hdr {
 int daemonize();
 
 
+#define TC_OK     0
+#define TC_ERROR -1
+
+#define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
+#define tc_memzero(d, l) (memset(d, 0, l))
+
+typedef struct iphdr  tc_ip_header_t;
+typedef struct tcphdr tc_tcp_header_t;
+
 #include <link_list.h>
 #include <hash.h>
 #include <tc_time.h>
@@ -190,10 +199,8 @@ int daemonize();
 #include <select_server.h>
 #include <select_server_wrapper.h>
 #include <tc_log.h>
-#include <msg.h>
-
-
-#define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
+#include <tc_msg.h>
+#include <tc_socket.h>
 
 
 #endif /* _XCOPY_H_INC */

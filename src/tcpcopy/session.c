@@ -113,8 +113,8 @@ get_pack_cont_len(struct iphdr *ip_header, struct tcphdr *tcp_header)
 static void
 wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
 {
+    int             ret;
     uint16_t        size_ip, tot_len, cont_len;
-    ssize_t         send_len;
     p_link_node     ln;
     struct iphdr   *ip_header;
     struct tcphdr  *tcp_header;
@@ -196,8 +196,9 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     s->req_ip_id = ntohs(ip_header->id);
     s->sm.unack_pack_omit_save_flag = 0;
 
-    send_len = send_ip_packet(ip_header, tot_len);
-    if (-1 == send_len) {
+    ret = tc_raw_socket_send(tcpcopy_rsc.raw_socket_out, ip_header, tot_len,
+                             ip_header->daddr);
+    if (ret == TC_ERROR) {
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
         tc_log_info(LOG_ERR, 0, "send to back error,tot_len is:%d,cont_len:%d",
                     tot_len,cont_len);
@@ -272,15 +273,20 @@ static bool
 send_router_info(uint32_t listening_port, uint32_t client_ip,
         uint16_t client_port, uint16_t type)
 {
-    int sock;
+    int          fd;
+    msg_client_t msg;
 
-    sock = address_find_sock(listening_port);
-    if (-1 == sock) {
+    fd = address_find_sock(listening_port);
+    if (fd == -1) {
         tc_log_info(LOG_WARN, 0, "sock invalid:%u", ntohs(listening_port));
         return false;
     }
 
-    if (-1 == msg_client_send(sock, client_ip, client_port, type)) {
+    msg.client_ip = client_ip;
+    msg.client_port = client_port;
+    msg.type = type;
+
+    if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "msg client send error:%u", ntohs(client_port));
         return false;
     }
@@ -2325,7 +2331,7 @@ process_client_packet(session_t *s, struct iphdr *ip_header,
     int       is_new_req = 0;
     uint16_t  cont_len;
 
-    tc_log_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
+    tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
     /* Change source port for multiple copying,etc */
     if (s->sm.port_transfered != 0) {

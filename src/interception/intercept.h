@@ -22,11 +22,9 @@ typedef struct xcopy_srv_settings {
 
 extern xcopy_srv_settings srv_settings;
 
-#include "../util/util.h"
-#include "delay.h"
-#include "interception.h"
-#include "nl.h"
-#include "nl_firewall.h"
-#include "router.h"
+#include <util.h>
+#include <delay.h>
+#include <interception.h>
+#include <router.h>
 
 #endif /* __INTERCEPT_H__ */

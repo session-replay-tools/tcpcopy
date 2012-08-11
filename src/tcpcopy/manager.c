@@ -2,7 +2,6 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-static int            raw_sock  = -1;
 static uint32_t       localhost;
 static uint64_t       raw_packs = 0, valid_raw_packs = 0;
 
@@ -26,56 +25,6 @@ process_packet(bool backup, char *packet, int length)
         return process(tmp_packet, LOCAL);
     }
 }
-
-#if (!TCPCOPY_OFFLINE)
-static void
-set_nonblock(int socket)
-{
-    int flags;
-
-    flags = fcntl(socket, F_GETFL, 0);
-    fcntl(socket, F_SETFL, flags | O_NONBLOCK);
-}
-
-/* Initiate input raw socket */
-static int
-init_input_raw_socket()
-{
-    int        sock, recv_buf_opt, ret;
-    socklen_t  opt_len;
-
-#if (COPY_LINK_PACKETS)
-    /* 
-     * AF_PACKET
-     * Packet sockets are used to receive or send raw packets 
-     * at the device driver level.They allow the user to 
-     * implement protocol modules in user space on top of 
-     * the physical layer. 
-     * ETH_P_IP
-     * Internet Protocol packet that is related to the Ethernet 
-     */
-    sock = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
-#else 
-    /* copy ip datagram from IP layer*/
-    sock = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-#endif
-
-    if (-1 == sock) {
-        tc_log_info(LOG_ERR, errno, "socket");   
-    }
-
-    set_nonblock(sock);
-
-    recv_buf_opt   = 67108864;
-    opt_len = sizeof(int);
-    ret = setsockopt(sock, SOL_SOCKET, SO_RCVBUF, &recv_buf_opt, opt_len);
-    if (-1 == ret) {
-        tc_log_info(LOG_ERR, errno, "setsockopt");    
-    }
-
-    return sock;
-}
-#endif
 
 /* Replicate packets for multiple-copying */
 static void
@@ -450,19 +399,19 @@ send_packets_from_pcap(int first)
 void
 dispose_event(int fd)
 {
-    struct msg_server_s *msg;
+    msg_server_t msg;
 
-    if (fd == raw_sock) {
+    if (fd == tcpcopy_rsc.raw_socket_in) {
         retrieve_raw_sockets(fd);
     } else {
-
-        msg = msg_client_recv(fd);
-        if (NULL == msg ) {
-            fprintf(stderr, "NULL msg :\n");
-            tc_log_info(LOG_ERR, 0, "NULL msg from msg_client_recv");
+        if (tc_socket_recv(fd, (char *) &msg, MSG_SERVER_SIZE) == TC_ERROR) {
+            tc_log_info(LOG_ERR, 0, 
+                        "Recv socket(%d) from server error, server may be close",
+                        fd);
             exit(EXIT_FAILURE);
-        }   
-        process((char*)msg, REMOTE);
+        }
+
+        process((char *) &msg, REMOTE);
     }   
 #if (TCPCOPY_OFFLINE)
     if (!read_pcap_over) {
@@ -479,11 +428,6 @@ tcp_copy_exit()
 
     tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
-
-    if (-1 != raw_sock) {
-        close(raw_sock);
-        raw_sock = -1;
-    }
 
     send_close();
     address_close_sock();
@@ -526,7 +470,7 @@ tcp_copy_over(const int sig)
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
-    int                      i;
+    int                      i, fd;
 #if (TCPCOPY_OFFLINE)
     char                    *pcap_file, ebuf[PCAP_ERRBUF_SIZE];
 #endif
@@ -545,8 +489,11 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     init_for_sessions();
     localhost = inet_addr("127.0.0.1"); 
 
-    /* Init output raw socket info */
-    send_init();
+    if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
+        return FAILURE;
+    } else {
+        tcpcopy_rsc.raw_socket_out = fd;
+    }
 
     /* Add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
@@ -558,7 +505,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         target_port = pair->target_port;
 
         if (address_add_msg_conn(event_loop, online_port, target_ip, 
-                    clt_settings.srv_port) == -1)
+                    clt_settings.srv_port) == TC_ERROR)
         {
             return FAILURE;
         }
@@ -568,55 +515,50 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     }
 
 #if (!TCPCOPY_OFFLINE)
-    /* Init input raw socket info */
-    raw_sock = init_input_raw_socket();
-#endif
-
-    if (raw_sock != -1) {
-
-        /* Add the input raw socket to select */
-        raw_socket_event = tc_event_create(raw_sock, dispose_event_wrapper,
-                                           NULL);
-        if (raw_socket_event == NULL) {
-            return FAILURE;
-        }
-
-        if (tc_event_add(event_loop, raw_socket_event, TC_EVENT_READ)
-                == TC_EVENT_ERROR)
-        {
-            tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
-                     raw_socket_event->fd);
-            return FAILURE;
-        }
-
-        return SUCCESS;
-    } else {
-
-#if (TCPCOPY_OFFLINE)
-        select_offline_set_callback(send_packets_from_pcap);
-
-        pcap_file = clt_settings.pcap_file;
-        if (pcap_file != NULL) {
-
-            if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
-                tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
-                fprintf(stderr, "open %s\n", ebuf);
-                return FAILURE;
-
-            } else {
-
-                gettimeofday(&base_time, NULL);
-                tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
-                tc_log_info(LOG_NOTICE, 0, "send the first packets here");
-                send_packets_from_pcap(1);
-            }
-        } else {
-            return FAILURE;
-        }
-#else
+    if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return FAILURE;
-#endif
     }
+
+    tc_socket_set_nonblocking(fd);
+
+    /* Add the input raw socket to select */
+    raw_socket_event = tc_event_create(fd, dispose_event_wrapper, NULL);
+    if (raw_socket_event == NULL) {
+        return FAILURE;
+    }
+
+    if (tc_event_add(event_loop, raw_socket_event, TC_EVENT_READ)
+            == TC_EVENT_ERROR)
+    {
+        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
+                    raw_socket_event->fd);
+        return FAILURE;
+    }
+
+    tcpcopy_rsc.raw_socket_in = fd;
+
+#else
+    select_offline_set_callback(send_packets_from_pcap);
+
+    pcap_file = clt_settings.pcap_file;
+    if (pcap_file != NULL) {
+
+        if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
+            tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
+            fprintf(stderr, "open %s\n", ebuf);
+            return FAILURE;
+
+        } else {
+
+            gettimeofday(&base_time, NULL);
+            tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
+            tc_log_info(LOG_NOTICE, 0, "send the first packets here");
+            send_packets_from_pcap(1);
+        }
+    } else {
+        return FAILURE;
+    }
+#endif
 
     return SUCCESS;
 }

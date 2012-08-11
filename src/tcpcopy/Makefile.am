@@ -12,5 +12,5 @@ tcpcopy_LDADD=\
                ../util/libutil.a\
                ../mysql/libmysql.a\
                ../event/libevent.a\
-               ../communication/libmsg.a\
+               ../communication/libcommunication.a\
                -lm

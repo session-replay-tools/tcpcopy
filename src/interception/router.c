@@ -85,8 +85,8 @@ router_update(struct iphdr *ip_header)
     void                   *fd;
     uint32_t                size_ip;
     uint64_t                key;
+    msg_server_t            msg;
     struct tcphdr          *tcp_header;
-    struct msg_server_s     msg;
 #if (TCPCOPY_MYSQL_ADVANCED) 
     uint32_t                size_tcp, cont_len, tot_len;
     unsigned char          *payload;
@@ -115,7 +115,7 @@ router_update(struct iphdr *ip_header)
              * Only transfer payload if content length is less
              * than MAX_PAYLOAD_LEN
              */
-            memcpy((void *)&(msg.payload), payload, cont_len);
+            memcpy((void *) &(msg.payload), payload, cont_len);
         }
     }
 #endif
@@ -127,7 +127,8 @@ router_update(struct iphdr *ip_header)
         delay_table_add(key, &msg);
         return ;
     }
-    msg_server_send((int)(long)fd, &msg);
+
+    tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
 }
 
 /* Destroy router table */
