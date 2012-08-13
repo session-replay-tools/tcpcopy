@@ -406,7 +406,7 @@ dispose_event(int fd)
     } else {
         if (tc_socket_recv(fd, (char *) &msg, MSG_SERVER_SIZE) == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, 
-                        "Recv socket(%d) from server error, server may be close",
+                        "Recv socket(%d) from server error, may be closed",
                         fd);
             exit(EXIT_FAILURE);
         }
