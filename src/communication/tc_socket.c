@@ -86,6 +86,9 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
     struct sockaddr_in  dst_addr;
 
     if (fd > 0) {
+        
+        memset(&dst_addr, 0, sizeof(struct sockaddr_in));
+
         dst_addr.sin_family = AF_INET;
         dst_addr.sin_addr.s_addr = ip;
 
