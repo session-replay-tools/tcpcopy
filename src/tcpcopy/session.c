@@ -2654,7 +2654,6 @@ process(char *packet, int pack_src)
                 /* Check if it is a duplicate syn */
                 if (tcp_header->seq == s->req_last_syn_seq) {
                     tc_log_debug0(LOG_DEBUG, 0, "duplicate syn");
-                    tc_log_trace(LOG_INFO, 0, CLIENT_FLAG, ip_header, tcp_header);
                     return true;
                 } else {
                     /*
@@ -2671,7 +2670,6 @@ process(char *packet, int pack_src)
                     }
                     save_packet(s->next_sess_packs, ip_header, tcp_header);
                     tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
-                    tc_log_trace(LOG_INFO, 0, CLIENT_FLAG, ip_header, tcp_header);
                     return true;
                 }
             } else {
