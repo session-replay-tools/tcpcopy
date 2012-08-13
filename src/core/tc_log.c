@@ -24,7 +24,7 @@ int
 tc_log_init(const char *file)
 {
     log_fd = open((file == NULL ? "error.log" : file),
-                  O_RDWR|O_CREAT|O_APPEND, 644);
+                  O_RDWR|O_CREAT|O_APPEND, 0644);
 
     if (log_fd == -1) {
         fprintf(stderr, "Open log file error: %s\n", strerror(errno));
