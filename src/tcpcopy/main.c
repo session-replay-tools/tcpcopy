@@ -332,8 +332,6 @@ set_details()
     /* Set signal handler */    
     set_signal_handler();
 
-    alarm(1);
-
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
@@ -369,6 +367,8 @@ set_details()
             exit(EXIT_FAILURE);
         }    
     }    
+
+    alarm(1);
 
     return 0;
 }
