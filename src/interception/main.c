@@ -64,6 +64,9 @@ static void
 caught_alarm_signal(int sig)
 {
     tc_time_update();
+
+    alarm(1);
+
     return;
 }
 
@@ -205,6 +208,9 @@ set_details()
 {
     /* Set signal handler */
     set_signal_handler();
+
+    alarm(1);
+
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
         perror("failed to ignore SIGPIPE; sigaction");

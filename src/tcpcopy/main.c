@@ -24,6 +24,9 @@ static void
 caught_alarm_signal(int sig)
 {
     tc_time_update();
+
+    alarm(1);
+
     return;
 }
 
@@ -328,6 +331,8 @@ set_details()
 
     /* Set signal handler */    
     set_signal_handler();
+
+    alarm(1);
 
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
