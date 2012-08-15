@@ -20,12 +20,20 @@ xcopy_clt_settings clt_settings;
 tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
 
+static uint64_t alarm_cnt = 0;
+
 static void
 caught_alarm_signal(int sig)
 {
     tc_time_update();
 
     alarm(1);
+
+    alarm_cnt++;
+
+    if (alarm_cnt % 5 == 0) {
+        output_stat();
+    }
 
     return;
 }

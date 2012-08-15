@@ -2532,37 +2532,54 @@ is_packet_needed(const char *packet)
 }
 
 /* Output statistics */
-static void
-output_stat(time_t now, int run_time)
+void
+output_stat()
 {
+    int       diff, run_time = 0;
     double    ratio;
+    time_t    now  = tc_current_time_sec;
 
-    last_stat_time = now;
+    if (last_stat_time == 0) {
+        last_stat_time = now;
+        return;
+    }
 
-    tc_log_info(LOG_NOTICE, 0,  "active:%u,rel reqs:%llu,obs del:%llu",
-            sessions_table->total, leave_cnt, obs_cnt);
-    tc_log_info(LOG_NOTICE, 0,  "conns:%llu,resp packs:%llu,c-resp packs:%llu",
-            conn_cnt, resp_cnt, resp_cont_cnt);
-    tc_log_info(LOG_NOTICE, 0,  "send Packets:%llu,send content packets:%llu",
-            packs_sent_cnt, con_packs_sent_cnt);
-    tc_log_info(LOG_NOTICE, 0,  "reconnect for closed :%llu,for no syn:%llu",
-            recon_for_closed_cnt, recon_for_no_syn_cnt);
-    tc_log_info(LOG_NOTICE, 0,  "successful retransmit:%llu", retrans_succ_cnt);
-    tc_log_info(LOG_NOTICE, 0,  "syn cnt:%llu,all clt packs:%llu, clt cont:%llu",
-            clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+    diff = now - last_stat_time;
 
-    clear_timeout_sessions();
+    if (diff > 5) {
 
-    if (run_time > 3) {
-        if (0 == resp_cont_cnt) {
-            tc_log_info(LOG_WARN, 0, "no responses after %d secends", run_time);
-        }
-        if (sessions_table->total > 0) {
-            ratio = 100*conn_cnt/sessions_table->total;
-            if (ratio < 80) {
-                tc_log_info(LOG_WARN, 0, "many connections can't be established");
+        last_stat_time = now;
+
+        tc_log_info(LOG_NOTICE, 0,  "active:%u,rel reqs:%llu,obs del:%llu",
+                sessions_table->total, leave_cnt, obs_cnt);
+        tc_log_info(LOG_NOTICE, 0,  "conns:%llu,resp packs:%llu,c-resp packs:%llu",
+                conn_cnt, resp_cnt, resp_cont_cnt);
+        tc_log_info(LOG_NOTICE, 0,  "send Packets:%llu,send content packets:%llu",
+                packs_sent_cnt, con_packs_sent_cnt);
+        tc_log_info(LOG_NOTICE, 0,  "reconnect for closed :%llu,for no syn:%llu",
+                recon_for_closed_cnt, recon_for_no_syn_cnt);
+        tc_log_info(LOG_NOTICE, 0,  "successful retransmit:%llu", retrans_succ_cnt);
+        tc_log_info(LOG_NOTICE, 0,  "syn cnt:%llu,all clt packs:%llu, clt cont:%llu",
+                clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+
+        clear_timeout_sessions();
+
+        run_time = now -start_p_time;
+
+        if (run_time > 3) {
+            if (0 == resp_cont_cnt) {
+                tc_log_info(LOG_WARN, 0, "no responses after %d secends", run_time);
+            }
+            if (sessions_table->total > 0) {
+                ratio = 100*conn_cnt/sessions_table->total;
+                if (ratio < 80) {
+                    tc_log_info(LOG_WARN, 0, "many connections can't be established");
+                }
             }
         }
+
+        /* We also activate dead session */
+        activate_dead_sessions();
     }
 }
 
@@ -2572,10 +2589,8 @@ output_stat(time_t now, int run_time)
 bool
 process(char *packet, int pack_src)
 {
-    int              diff, run_time = 0;
     bool             result;
     void            *ori_port;
-    time_t           now  = tc_current_time_sec;
     uint16_t         size_ip;
     uint64_t         key;
     session_t       *s;
@@ -2583,21 +2598,11 @@ process(char *packet, int pack_src)
     struct tcphdr   *tcp_header;
 
     if (0 == start_p_time) {
-        start_p_time = now;
-    } else {
-        run_time = now -start_p_time;
-    }
-
-    diff = now - last_stat_time;
-    if (diff > 5) {
-        /* Output statistics */
-        output_stat(now, run_time);
-        /* We also activate dead session */
-        activate_dead_sessions();
+        start_p_time = tc_current_time_sec;
     }
 
     ip_header  = (struct iphdr*)packet;
-    size_ip    = ip_header->ihl<<2;
+    size_ip    = ip_header->ihl << 2;
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
 
     if (REMOTE == pack_src) {
@@ -2616,7 +2621,7 @@ process(char *packet, int pack_src)
 
         if (s) {
 
-            s->last_update_time = now;
+            s->last_update_time = tc_current_time_sec;
             process_backend_packet(s, ip_header, tcp_header);
             if (check_session_over(s)) {
                 if (s->sm.sess_more) {
@@ -2691,7 +2696,7 @@ process(char *packet, int pack_src)
             s = hash_find(sessions_table, key);
             if (s) {
                 process_client_packet(s, ip_header, tcp_header);
-                s->last_update_time = now;
+                s->last_update_time = tc_current_time_sec;
                 if (check_session_over(s)) {
                     if (s->sm.sess_more) {
                         session_init_for_next(s);
