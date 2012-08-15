@@ -21,9 +21,18 @@ tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
 
 static void
+caught_alarm_signal(int sig)
+{
+    tc_time_update();
+    return;
+}
+
+
+static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
+    signal(SIGALRM, caught_alarm_signal);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);

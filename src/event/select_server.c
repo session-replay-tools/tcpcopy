@@ -82,8 +82,6 @@ select_server_run()
  
     while (true) {
 
-        tc_time_update();
-
         r_set = read_set;
         ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
         if (-1 == ret) {

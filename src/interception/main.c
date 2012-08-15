@@ -61,14 +61,25 @@ signal_handler(int sig)
 }
 
 static void
+caught_alarm_signal(int sig)
+{
+    tc_time_update();
+    return;
+}
+
+static void
 set_signal_handler() {
     int i = 1;
 
     atexit(release_resources);
     /* Just to try */
     for (; i<SIGTTOU; i++) {
-        if (i != SIGPIPE) {
-            signal(i, signal_handler);
+        if (i != SIGPIPE && i != SIGKILL && i !=SIGSTOP ) {
+            if (i != SIGALRM) {
+                signal(i, signal_handler);
+            } else {
+                signal(i, caught_alarm_signal);
+            }
         }
     }
 

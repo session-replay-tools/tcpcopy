@@ -2,9 +2,9 @@ bin_PROGRAMS=intercept
 
 intercept_SOURCES=\
                   intercept.h\
-                  router.c router.h\
-                  delay.c delay.h\
-                  interception.c interception.h\
+                  tc_router.c tc_router.h\
+                  tc_delay.c tc_delay.h\
+                  tc_interception.c tc_interception.h\
                   main.c
 intercept_LDADD=\
                  ../core/libcore.a\

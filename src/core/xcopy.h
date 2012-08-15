@@ -190,8 +190,8 @@ int daemonize();
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
 
-#include <link_list.h>
-#include <hash.h>
+#include <tc_link_list.h>
+#include <tc_hash.h>
 #include <tc_time.h>
 
 #include <tc_event.h>

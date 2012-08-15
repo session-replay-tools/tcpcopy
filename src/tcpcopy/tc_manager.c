@@ -427,9 +427,19 @@ tcp_copy_exit()
     int i;
 
     tc_event_loop_finish(&event_loop);
+
     destroy_for_sessions();
 
-    send_close();
+    if (tcpcopy_rsc.raw_socket_in > 0) {
+        close(tcpcopy_rsc.raw_socket_in);
+        tcpcopy_rsc.raw_socket_in = -1;
+    }
+
+    if (tcpcopy_rsc.raw_socket_out > 0) {
+        close(tcpcopy_rsc.raw_socket_out);
+        tcpcopy_rsc.raw_socket_out = -1;
+    }
+
     address_close_sock();
 
 #if (TCPCOPY_OFFLINE)
@@ -437,6 +447,7 @@ tcp_copy_exit()
         pcap_close(pcap);                                                                               
     }   
 #endif
+
     tc_log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
@@ -452,6 +463,7 @@ tcp_copy_exit()
         free(clt_settings.transfer.mappings);
         clt_settings.transfer.mappings = NULL;
     }
+
     exit(EXIT_SUCCESS);
 
 }
@@ -476,7 +488,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 #endif
     uint16_t                 online_port, target_port;
     uint32_t                 target_ip;
+#if (!TCPCOPY_OFFLINE)
     tc_event_t              *raw_socket_event;
+#endif
     ip_port_pair_mapping_t  *pair, **mappings;
 
     /* keep it temporarily */

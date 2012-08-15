@@ -165,7 +165,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     if (cont_len > 0) {
 
         s->sm.status = SEND_REQ;
-        s->req_last_send_cont_time = time(0);
+        s->req_last_send_cont_time = tc_current_time_sec;
         s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
         s->vir_next_seq = s->vir_next_seq + cont_len;
         if (s->sm.unack_pack_omit_save_flag) {
@@ -494,7 +494,7 @@ session_init(session_t *s, int flag)
     }
 #endif
 
-    s->create_time      = time(0);
+    s->create_time      = tc_current_time_sec;
     s->last_update_time = s->create_time;
     s->resp_last_recv_cont_time = s->create_time;
     s->req_last_send_cont_time  = s->create_time;
@@ -883,7 +883,7 @@ is_session_dead(session_t *s)
     int    packs_unsend, diff;
 
     packs_unsend = s->unsend_packets->size;
-    diff = time(0) - s->req_last_send_cont_time;
+    diff = tc_current_time_sec - s->req_last_send_cont_time;
 
     /* More than 2 seconds */
     if (diff > 2) {
@@ -1000,7 +1000,7 @@ clear_timeout_sessions()
     session_t   *s;
     p_link_node  ln, tmp_ln;
 
-    current = time(0);
+    current = tc_current_time_sec;
     threshold_time = current - clt_settings.session_timeout;
 
     tc_log_info(LOG_NOTICE, 0, "session size:%u", sessions_table->total);
@@ -1852,7 +1852,7 @@ process_backend_packet(session_t *s, struct iphdr *ip_header,
     size_tcp = tcp_header->doff << 2;
     cont_len = tot_len - size_tcp - size_ip;
 
-    current  = time(0);
+    current  = tc_current_time_sec;
 
     if (cont_len > 0) {
 
@@ -2575,7 +2575,7 @@ process(char *packet, int pack_src)
     int              diff, run_time = 0;
     bool             result;
     void            *ori_port;
-    time_t           now  = time(0);
+    time_t           now  = tc_current_time_sec;
     uint16_t         size_ip;
     uint64_t         key;
     session_t       *s;

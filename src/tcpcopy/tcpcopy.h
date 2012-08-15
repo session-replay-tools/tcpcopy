@@ -58,16 +58,15 @@ typedef struct {
 extern xcopy_clt_settings clt_settings;
 extern tc_tcpcopy_rsc_t tcpcopy_rsc;
 
-#include <util.h>
+#include <tc_util.h>
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
 #include <pairs.h>
 #include <protocol.h>
 #endif
 
-#include <address.h>
-#include <manager.h>
-#include <send.h>
-#include <session.h>
+#include <tc_address.h>
+#include <tc_manager.h>
+#include <tc_session.h>
 
 #endif /* __TCPCOPY_H__ */

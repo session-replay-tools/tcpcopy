@@ -92,7 +92,7 @@ interception_process(int fd)
                 dispose_netlink_packet(NF_ACCEPT, packet_id);   
             } else {
                 router_update(ip_header);
-                now  = time(0);
+                now  = tc_current_time_sec;
                 diff = now - last_clean_time;
                 if (diff > CHECK_INTERVAL) {
                     route_delete_obsolete(now);
