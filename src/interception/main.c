@@ -257,7 +257,7 @@ static void output_for_debug()
 }
 
 int
-main(int argc ,char **argv)
+main(int argc, char **argv)
 {
 
     tc_time_update();

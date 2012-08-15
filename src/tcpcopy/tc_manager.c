@@ -183,7 +183,7 @@ retrieve_raw_sockets(int sock)
 
         raw_packs++;
         if (recv_len > RECV_BUF_SIZE) {
-            tc_log_info(LOG_ERR, 0, "recv_len:%d ,it is too long", recv_len);
+            tc_log_info(LOG_ERR, 0, "recv_len:%d,it is too long", recv_len);
             break;
         }
 
@@ -558,7 +558,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     if (pcap_file != NULL) {
 
         if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
-            tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
+            tc_log_info(LOG_ERR, 0, "open %s", ebuf);
             fprintf(stderr, "open %s\n", ebuf);
             return FAILURE;
 

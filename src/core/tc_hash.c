@@ -119,7 +119,7 @@ hash_add(hash_table *table, uint64_t key, void *data)
         tmp = hash_node_malloc(key, data);
         ln  = link_node_malloc(tmp);
         l   = get_link_list(table, key);
-        link_list_push(l , ln);
+        link_list_push(l, ln);
         table->total++;
         return true;
     }

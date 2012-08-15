@@ -1231,7 +1231,7 @@ mysql_prepare_for_new_session(session_t *s,
         sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
         save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
-        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u" ,s->src_h_port);
+        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u",s->src_h_port);
     } else {
         tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
     }
@@ -1378,7 +1378,7 @@ send_faked_third_handshake(session_t *s,
  * Send faked ack packet to backend from the backend packet
  */
 static void 
-send_faked_ack(session_t *s , struct iphdr *ip_header, 
+send_faked_ack(session_t *s, struct iphdr *ip_header, 
         struct tcphdr *tcp_header, bool active)
 {
     struct iphdr   *f_ip_header;
