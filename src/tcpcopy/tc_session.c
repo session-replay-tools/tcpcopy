@@ -2539,8 +2539,12 @@ is_packet_needed(const char *packet)
 void
 output_stat()
 {
-    int       run_time = 0;
+    int       run_time;
     double    ratio;
+
+    if (start_p_time == 0) {
+        return;
+    }
 
     tc_log_info(LOG_NOTICE, 0, "active:%u,rel reqs:%llu,obs del:%llu",
             sessions_table->total, leave_cnt, obs_cnt);
