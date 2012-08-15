@@ -39,8 +39,6 @@ static uint64_t retrans_succ_cnt     = 0;
 static uint64_t recon_for_closed_cnt = 0;
 /* Total reconnections for halfway interception */
 static uint64_t recon_for_no_syn_cnt = 0;
-/* Last time for statistics */
-static time_t   last_stat_time       = 0;
 /* Start time for excuting the process function */
 static time_t   start_p_time         = 0;
 #if (TCPCOPY_MYSQL_BASIC)
@@ -1081,7 +1079,7 @@ retransmit_packets(session_t *s)
                 free(data);
                 free(tmp_ln);
             } else {
-                tc_log_info(LOG_NOTICE, 0, "no retrans packs:%u", s->src_h_port);
+                tc_log_info(LOG_NOTICE, 0, "no retrans pack:%u", s->src_h_port);
                 need_pause = true;
             }
         }
@@ -1207,7 +1205,7 @@ mysql_prepare_for_new_session(session_t *s,
 #endif
 
     if (!fir_auth_pack) {
-        tc_log_info(LOG_WARN, 0, "no first auth packets here:%u", s->src_h_port);
+        tc_log_info(LOG_WARN, 0, "no first auth packet here:%u", s->src_h_port);
         return;
     }
 
@@ -1233,7 +1231,7 @@ mysql_prepare_for_new_session(session_t *s,
         sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
         save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
-        tc_log_info(LOG_NOTICE, 0, "set sec auth for non-skip:%u" ,s->src_h_port);
+        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u" ,s->src_h_port);
     } else {
         tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
     }
@@ -1332,7 +1330,8 @@ send_faked_syn(session_t *s, struct iphdr *ip_header,
     mysql_prepare_for_new_session(s, f_ip_header, f_tcp_header);
 #endif
 
-    tc_log_debug_trace(LOG_DEBUG, 0, FAKED_CLIENT_FLAG, f_ip_header, f_tcp_header);
+    tc_log_debug_trace(LOG_DEBUG, 0, FAKED_CLIENT_FLAG,
+            f_ip_header, f_tcp_header);
 
     wrap_send_ip_packet(s, f_s_buf, true);
     s->sm.req_halfway_intercepted = 1;
@@ -1369,7 +1368,8 @@ send_faked_third_handshake(session_t *s,
     f_tcp_header->ack_seq = s->vir_ack_seq;
     f_tcp_header->seq     = tcp_header->ack_seq;
     
-    tc_log_debug_trace(LOG_DEBUG, 0, FAKED_CLIENT_FLAG, f_ip_header, f_tcp_header);
+    tc_log_debug_trace(LOG_DEBUG, 0, FAKED_CLIENT_FLAG,
+            f_ip_header, f_tcp_header);
 
     wrap_send_ip_packet(s, fake_ack_buf, false);
 }
@@ -1635,7 +1635,7 @@ check_backend_ack(session_t *s, struct iphdr *ip_header,
     } else if (ack < s->vir_next_seq) {
 
         /* If ack from test server is less than what we expect */
-        tc_log_debug3(LOG_DEBUG, 0, "bak ack less than vir_next_seq:%u,%u, p:%u",
+        tc_log_debug3(LOG_DEBUG, 0, "bak_ack less than vir_next_seq:%u,%u,p:%u",
                 ack, s->vir_next_seq, s->src_h_port);
 
         if (!s->sm.resp_syn_received) {
@@ -1694,7 +1694,8 @@ check_backend_ack(session_t *s, struct iphdr *ip_header,
                     }
                     s->sm.vir_already_retransmit = 1;
                 } else {
-                    tc_log_info(LOG_WARN, 0, "omit retransmit:%u", s->src_h_port);
+                    tc_log_info(LOG_WARN, 0, "omit retransmit:%u",
+                            s->src_h_port);
                 }
                 if (slide_window_empty) {
                     /* Send reserved packets when slide window available */
@@ -1781,7 +1782,8 @@ mysql_process_greet(session_t *s, struct iphdr *ip_header,
     if (!ret) {
         /* Try to print error info*/
         if (cont_len > 11) {
-            tc_log_debug_trace(LOG_DEBUG, 0, BACKEND_FLAG, ip_header, tcp_header);
+            tc_log_debug_trace(LOG_DEBUG, 0, BACKEND_FLAG,
+                    ip_header, tcp_header);
             tc_log_info(LOG_WARN, 0, "port:%u,payload:%s",
                         s->src_h_port, (char*)(payload + 11));
         }
@@ -2121,7 +2123,7 @@ process_mysql_clt_auth_pack(session_t *s, struct iphdr *ip_header,
             }
             if (0 == pack_number) {
                 s->sm.mysql_req_begin = 1;
-                tc_log_info(LOG_NOTICE, 0,  "it has no sec auth packet");
+                tc_log_info(LOG_NOTICE, 0, "it has no sec auth packet");
             }
         }
 #else
@@ -2129,7 +2131,7 @@ process_mysql_clt_auth_pack(session_t *s, struct iphdr *ip_header,
 #endif
 
         if (is_need_omit) {
-            tc_log_info(LOG_NOTICE, 0,  "omit sec validation for mysql");
+            tc_log_info(LOG_NOTICE, 0, "omit sec validation for mysql");
             s->mysql_vir_req_seq_diff = cont_len;
             g_seq_omit = s->mysql_vir_req_seq_diff;
             return DISP_STOP;
@@ -2138,7 +2140,7 @@ process_mysql_clt_auth_pack(session_t *s, struct iphdr *ip_header,
         if (!s->sm.mysql_req_begin) {
             if (!fir_auth_u_p) {
                 fir_auth_u_p = (struct iphdr*)copy_ip_packet(ip_header);
-                tc_log_info(LOG_NOTICE, 0,  "fir auth is set");
+                tc_log_info(LOG_NOTICE, 0, "fir auth is set");
             }
             if (s->sm.resp_greet_received) {
                 s->sm.mysql_req_login_received = 1;
@@ -2531,56 +2533,47 @@ is_packet_needed(const char *packet)
 
 }
 
-/* Output statistics */
+/*
+ * Output statistics
+ */
 void
 output_stat()
 {
-    int       diff, run_time = 0;
+    int       run_time = 0;
     double    ratio;
-    time_t    now  = tc_current_time_sec;
 
-    if (last_stat_time == 0) {
-        last_stat_time = now;
-        return;
-    }
+    tc_log_info(LOG_NOTICE, 0, "active:%u,rel reqs:%llu,obs del:%llu",
+            sessions_table->total, leave_cnt, obs_cnt);
+    tc_log_info(LOG_NOTICE, 0, "conns:%llu,resp packs:%llu,c-resp packs:%llu",
+            conn_cnt, resp_cnt, resp_cont_cnt);
+    tc_log_info(LOG_NOTICE, 0, "send Packets:%llu,send content packets:%llu",
+            packs_sent_cnt, con_packs_sent_cnt);
+    tc_log_info(LOG_NOTICE, 0, "reconnect for closed :%llu,for no syn:%llu",
+            recon_for_closed_cnt, recon_for_no_syn_cnt);
+    tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
+    tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
+            clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
 
-    diff = now - last_stat_time;
+    clear_timeout_sessions();
 
-    if (diff > 5) {
+    run_time = tc_current_time_sec - start_p_time;
 
-        last_stat_time = now;
-
-        tc_log_info(LOG_NOTICE, 0,  "active:%u,rel reqs:%llu,obs del:%llu",
-                sessions_table->total, leave_cnt, obs_cnt);
-        tc_log_info(LOG_NOTICE, 0,  "conns:%llu,resp packs:%llu,c-resp packs:%llu",
-                conn_cnt, resp_cnt, resp_cont_cnt);
-        tc_log_info(LOG_NOTICE, 0,  "send Packets:%llu,send content packets:%llu",
-                packs_sent_cnt, con_packs_sent_cnt);
-        tc_log_info(LOG_NOTICE, 0,  "reconnect for closed :%llu,for no syn:%llu",
-                recon_for_closed_cnt, recon_for_no_syn_cnt);
-        tc_log_info(LOG_NOTICE, 0,  "successful retransmit:%llu", retrans_succ_cnt);
-        tc_log_info(LOG_NOTICE, 0,  "syn cnt:%llu,all clt packs:%llu, clt cont:%llu",
-                clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
-
-        clear_timeout_sessions();
-
-        run_time = now -start_p_time;
-
-        if (run_time > 3) {
-            if (0 == resp_cont_cnt) {
-                tc_log_info(LOG_WARN, 0, "no responses after %d secends", run_time);
-            }
-            if (sessions_table->total > 0) {
-                ratio = 100*conn_cnt/sessions_table->total;
-                if (ratio < 80) {
-                    tc_log_info(LOG_WARN, 0, "many connections can't be established");
-                }
+    if (run_time > 3) {
+        if (0 == resp_cont_cnt) {
+            tc_log_info(LOG_WARN, 0, "no responses after %d secends",
+                    run_time);
+        }
+        if (sessions_table->total > 0) {
+            ratio = 100 * conn_cnt / sessions_table->total;
+            if (ratio < 80) {
+                tc_log_info(LOG_WARN, 0,
+                        "many connections can't be established");
             }
         }
-
-        /* We also activate dead session */
-        activate_dead_sessions();
     }
+
+    /* We also activate dead session */
+    activate_dead_sessions();
 }
 
 /*
@@ -2627,7 +2620,7 @@ process(char *packet, int pack_src)
                 if (s->sm.sess_more) {
                     /* Restore the next session which has the same key */
                     session_init_for_next(s);
-                    tc_log_info(LOG_NOTICE, 0,  "init for next sess from bak");
+                    tc_log_info(LOG_NOTICE, 0, "init for next sess from bak");
                     restore_buffered_next_session(s);
                 } else {
                     send_router_info(s->online_port, ip_header->daddr,
@@ -2700,14 +2693,15 @@ process(char *packet, int pack_src)
                 if (check_session_over(s)) {
                     if (s->sm.sess_more) {
                         session_init_for_next(s);
-                        tc_log_info(LOG_NOTICE, 0,  "init for next sess from clt");
+                        tc_log_info(LOG_NOTICE, 0, "init for next from clt");
                         restore_buffered_next_session(s);
                     } else {
                         send_router_info(s->online_port, ip_header->saddr,
                             htons(s->src_h_port), CLIENT_DEL);
                         session_rel_dynamic_mem(s);
                         if (!hash_del(sessions_table, s->hash_key)) {
-                            tc_log_info(LOG_ERR, 0, "wrong del:%u", s->src_h_port);
+                            tc_log_info(LOG_ERR, 0, "wrong del:%u",
+                                    s->src_h_port);
                         }
                         free(s);
                     }

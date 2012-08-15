@@ -71,7 +71,8 @@ caught_alarm_signal(int sig)
 }
 
 static void
-set_signal_handler() {
+set_signal_handler()
+{
     int i = 1;
 
     atexit(release_resources);
