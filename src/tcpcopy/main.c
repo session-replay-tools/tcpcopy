@@ -405,7 +405,7 @@ main(int argc ,char **argv)
 
     /* Initiate tcpcopy client*/
     ret = tcp_copy_init(&event_loop);
-    if (SUCCESS != ret) {
+    if (ret == TC_ERROR) {
         exit(EXIT_FAILURE);
     }
 

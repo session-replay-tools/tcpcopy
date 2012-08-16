@@ -6,6 +6,9 @@ tcpcopy_SOURCES=\
                 send.c send.h\
                 manager.c manager.h\
                 session.c session.h\
+				tc_offline_module.c tc_offline_module.h\
+				tc_packets_module.c tc_packets_module.h\
+				tc_message_module.c tc_message_module.h\
                 main.c
 tcpcopy_LDADD=\
                ../core/libcore.a\

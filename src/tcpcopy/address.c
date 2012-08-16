@@ -10,7 +10,7 @@ address_add_msg_conn(tc_event_loop_t *event_loop, uint16_t local_port,
         uint32_t dst_ip, uint16_t dst_port)
 {
     int          fd;
-    tc_event_t  *msg_socket_event;
+    tc_event_t  *msg_event;
 
     if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
@@ -24,12 +24,12 @@ address_add_msg_conn(tc_event_loop_t *event_loop, uint16_t local_port,
         return TC_ERROR;
     }
 
-    msg_socket_event = tc_event_create(fd, dispose_event_wrapper, NULL);
-    if (msg_socket_event == NULL) {
+    msg_event = tc_event_create(fd, tc_process_server_msg, NULL);
+    if (msg_event == NULL) {
         return TC_ERROR;
     }
 
-    if (tc_event_add(event_loop, msg_socket_event, TC_EVENT_READ)
+    if (tc_event_add(event_loop, msg_event, TC_EVENT_READ)
             == TC_EVENT_ERROR)
     {
         return TC_ERROR;

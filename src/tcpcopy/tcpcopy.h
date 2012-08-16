@@ -2,6 +2,8 @@
 #define __TCPCOPY_H__ 
 
 
+#define localhost (inet_addr("127.0.0.1"))
+
 typedef struct {
     /* Online ip from the client perspective */
     uint32_t online_ip;
@@ -69,5 +71,8 @@ extern tc_tcpcopy_rsc_t tcpcopy_rsc;
 #include <manager.h>
 #include <send.h>
 #include <session.h>
+#include <tc_message_module.h>
+#include <tc_offline_module.h>
+#include <tc_packets_module.h>
 
 #endif /* __TCPCOPY_H__ */
