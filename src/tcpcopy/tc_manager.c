@@ -147,10 +147,12 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         }
     }
 
-    if (packet_valid) {
-        *p_valid_flag = 1;
-    } else {
-        *p_valid_flag = 0;
+    if (p_valid_flag != NULL) {
+        if (packet_valid) {
+            *p_valid_flag = 1;
+        } else {
+            *p_valid_flag = 0;
+        }
     }
 
     return SUCCESS;
@@ -162,7 +164,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 static int
 retrieve_raw_sockets(int sock)
 {
-    int      err, recv_len, p_valid_flag = 0;
+    int      err, recv_len;
     char     recv_buf[RECV_BUF_SIZE];
 
     while (true) {
@@ -185,7 +187,7 @@ retrieve_raw_sockets(int sock)
             break;
         }
 
-        if (FAILURE == dispose_packet(recv_buf, recv_len, &p_valid_flag)) {
+        if (FAILURE == dispose_packet(recv_buf, recv_len, NULL)) {
             break;
         }
 
