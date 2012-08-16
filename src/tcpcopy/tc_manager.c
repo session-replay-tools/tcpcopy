@@ -419,6 +419,11 @@ dispose_event(int fd)
         send_packets_from_pcap(0);
     }
 #endif
+
+    if (tcpcopy_ctl.tc_output_stat) {
+        tc_interval_dispose();
+        tcpcopy_ctl.tc_output_stat = 0;
+    }
 }
 
 void 

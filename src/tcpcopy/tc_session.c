@@ -2576,6 +2576,20 @@ output_stat()
 
 }
 
+void
+tc_interval_dispose()
+{
+    /* output stat */
+    output_stat();
+
+    /* clear timeout sessions */
+    clear_timeout_sessions();
+
+    /* activate dead session */
+    activate_dead_sessions();
+
+}
+
 /*
  * The main procedure for processing the filtered packets
  */
@@ -2592,18 +2606,6 @@ process(char *packet, int pack_src)
 
     if (0 == start_p_time) {
         start_p_time = tc_current_time_sec;
-    }
-
-    if (tcpcopy_clt.tc_output_stat) {
-        output_stat();
-
-        /* clear timeout sessions */
-        clear_timeout_sessions();
-
-        /* We also activate dead session */
-        activate_dead_sessions();
-
-        tcpcopy_clt.tc_output_stat = 0;
     }
 
     ip_header  = (struct iphdr*)packet;

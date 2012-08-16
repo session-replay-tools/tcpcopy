@@ -61,7 +61,7 @@ typedef struct {
 
 extern xcopy_clt_settings clt_settings;
 extern tc_tcpcopy_rsc_t tcpcopy_rsc;
-extern tc_tcpcopy_ctl_t tcpcopy_clt;
+extern tc_tcpcopy_ctl_t tcpcopy_ctl;
 
 #include <tc_util.h>
 
