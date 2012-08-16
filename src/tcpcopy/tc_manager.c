@@ -426,6 +426,8 @@ tcp_copy_exit()
 {
     int i;
 
+    output_stat();
+
     tc_event_loop_finish(&event_loop);
 
     destroy_for_sessions();

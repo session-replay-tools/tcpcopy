@@ -82,6 +82,11 @@ select_server_run()
  
     while (true) {
 
+        if (tc_update_time) {
+            tc_time_update();
+            tc_update_time= false;
+        }
+
         r_set = read_set;
         ret   = select(max_fd + 1, &r_set, NULL, NULL, NULL);
         if (-1 == ret) {
@@ -105,6 +110,11 @@ select_server_client_run(tc_event_loop_t *loop)
     int     i, ret;
     fd_set  r_set;
     struct  timeval timeout; 
+
+    if (tc_update_time) {
+        tc_time_update();
+        tc_update_time = false;
+    }
 
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;

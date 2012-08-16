@@ -2558,8 +2558,6 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
 
-    clear_timeout_sessions();
-
     run_time = tc_current_time_sec - start_p_time;
 
     if (run_time > 3) {
@@ -2576,8 +2574,6 @@ output_stat()
         }
     }
 
-    /* We also activate dead session */
-    activate_dead_sessions();
 }
 
 /*
@@ -2596,6 +2592,18 @@ process(char *packet, int pack_src)
 
     if (0 == start_p_time) {
         start_p_time = tc_current_time_sec;
+    }
+
+    if (tcpcopy_clt.tc_output_stat) {
+        output_stat();
+
+        /* clear timeout sessions */
+        clear_timeout_sessions();
+
+        /* We also activate dead session */
+        activate_dead_sessions();
+
+        tcpcopy_clt.tc_output_stat = 0;
     }
 
     ip_header  = (struct iphdr*)packet;

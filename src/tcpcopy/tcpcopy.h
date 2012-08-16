@@ -55,8 +55,13 @@ typedef struct {
     int raw_socket_in;
 } tc_tcpcopy_rsc_t;
 
+typedef struct {
+    unsigned int tc_output_stat:1;
+}tc_tcpcopy_ctl_t;
+
 extern xcopy_clt_settings clt_settings;
 extern tc_tcpcopy_rsc_t tcpcopy_rsc;
+extern tc_tcpcopy_ctl_t tcpcopy_clt;
 
 #include <tc_util.h>
 

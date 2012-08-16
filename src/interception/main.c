@@ -19,6 +19,8 @@
 
 xcopy_srv_settings srv_settings;
 
+bool tc_update_time = false;
+
 static void
 release_resources()
 {
@@ -63,9 +65,7 @@ signal_handler(int sig)
 static void
 caught_alarm_signal(int sig)
 {
-    tc_time_update();
-
-    alarm(1);
+    tc_update_time = true;
 
     return;
 }
@@ -231,7 +231,7 @@ set_details()
         }
     }
 
-    alarm(1);
+    tc_timer_set(1, 0);
 
 }
 

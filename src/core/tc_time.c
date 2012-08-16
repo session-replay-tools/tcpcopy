@@ -10,6 +10,22 @@ volatile struct tm  tc_current_tm;
 static char cache_err_log_time[TC_ERR_LOG_TIME_LEN];
 
 void
+tc_timer_set(int sec, int usec)
+{
+    struct itimerval value;
+
+    value.it_value.tv_sec  = sec;
+    value.it_value.tv_usec = usec;
+    value.it_interval.tv_sec = sec;
+    value.it_interval.tv_usec = usec;
+
+    if (-1 == setitimer(ITIMER_REAL, &value, NULL)) {
+        tc_log_info(LOG_ERR, errno, "set timer failed");   
+    }
+
+}
+
+void
 tc_time_update()
 {
     long            msec, cur_time_msec;
