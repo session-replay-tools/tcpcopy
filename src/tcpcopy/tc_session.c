@@ -2577,7 +2577,7 @@ output_stat()
 }
 
 void
-tc_interval_dispose()
+tc_interval_dispose(tc_event_timer_t *evt)
 {
     /* output stat */
     output_stat();
@@ -2588,6 +2588,7 @@ tc_interval_dispose()
     /* activate dead session */
     activate_dead_sessions();
 
+    evt->msec = tc_current_time_msec + 5000;
 }
 
 /*

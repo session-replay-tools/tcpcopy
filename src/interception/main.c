@@ -231,7 +231,7 @@ set_details()
         }
     }
 
-    tc_timer_set(1, 0);
+    tc_timer_set(0, 100000);
 
 }
 

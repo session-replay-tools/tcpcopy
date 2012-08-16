@@ -19,21 +19,13 @@ xcopy_clt_settings clt_settings;
 
 tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
-tc_tcpcopy_ctl_t tcpcopy_ctl;
 
 bool tc_update_time = false;
-
-static uint64_t alarm_cnt = 0;
 
 static void
 caught_alarm_signal(int sig)
 {
     tc_update_time = true;
-
-    alarm_cnt++;
-    if (alarm_cnt % 5 == 0) {
-        tcpcopy_ctl.tc_interval= 1;
-    }
 
     return;
 }
@@ -376,7 +368,7 @@ set_details()
         }    
     }    
 
-    tc_timer_set(1, 0);
+    tc_timer_set(0, 100000);
 
     return 0;
 }

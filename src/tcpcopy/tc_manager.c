@@ -420,10 +420,6 @@ dispose_event(int fd)
     }
 #endif
 
-    if (tcpcopy_ctl.tc_interval) {
-        tc_interval_dispose();
-        tcpcopy_ctl.tc_interval= 0;
-    }
 }
 
 void 
@@ -505,6 +501,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     /* Register a timer to check resource every minute */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
+    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
     /* Init session table*/
     init_for_sessions();
