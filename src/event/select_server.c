@@ -114,6 +114,11 @@ select_server_client_run(tc_event_loop_t *loop)
     if (tc_update_time) {
         tc_time_update();
         tc_update_time = false;
+#if (TCPCOPY_OFFLINE)
+        if (offline_func) {
+            offline_func(0);
+        }
+#endif
     }
 
     timeout.tv_sec = 1;
@@ -125,11 +130,6 @@ select_server_client_run(tc_event_loop_t *loop)
     if (-1 == ret) {
         return;
     } else if (0 == ret) {
-#if (TCPCOPY_OFFLINE)
-            if (offline_func) {
-                offline_func(0);
-            }
-#endif
         return;
     } else {
         for (i = 0; i < fd_nums; i++ ) {
