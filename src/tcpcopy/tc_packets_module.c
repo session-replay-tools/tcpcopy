@@ -148,7 +148,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
     return TC_OK;
 }
 
-void
+static void
 tc_process_raw_socket_packet(tc_event_t *rev)
 {
     int  recv_len, p_valid_flag = 0;
@@ -187,5 +187,41 @@ tc_process_raw_socket_packet(tc_event_t *rev)
         }
 #endif
     }
+}
+
+int
+tc_packets_init(tc_event_loop_t *event_loop)
+{
+    int         fd;
+    tc_event_t *ev;
+
+    /* Init the raw socket to send */
+    if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    } else {
+        tc_raw_socket_out = fd;
+    }
+
+    /* Init the raw socket to recv */
+    if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    }
+
+    tc_socket_set_nonblocking(fd);
+
+    ev = tc_event_create(fd, tc_process_raw_socket_packet, NULL);
+    if (ev == NULL) {
+        return TC_ERROR;
+    }
+
+    if (tc_event_add(event_loop, ev, TC_EVENT_READ)
+            == TC_EVENT_ERROR)
+    {
+        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
+                    fd);
+        return TC_ERROR;
+    }
+
+    return TC_OK;
 }
 

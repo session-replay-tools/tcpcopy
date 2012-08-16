@@ -65,14 +65,29 @@ signal_handler(int sig)
 }
 
 static void
-set_signal_handler() {
+caught_alarm_signal(int sig)
+{
+    tc_time_update();
+
+    alarm(1);
+
+    return;
+}
+
+static void
+set_signal_handler()
+{
     int i = 1;
 
     atexit(release_resources);
     /* Just to try */
     for (; i<SIGTTOU; i++) {
-        if (i != SIGPIPE) {
-            signal(i, signal_handler);
+        if (i != SIGPIPE && i != SIGKILL && i !=SIGSTOP ) {
+            if (i != SIGALRM) {
+                signal(i, signal_handler);
+            } else {
+                signal(i, caught_alarm_signal);
+            }
         }
     }
 
@@ -198,6 +213,7 @@ set_details()
 {
     /* Set signal handler */
     set_signal_handler();
+
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
         perror("failed to ignore SIGPIPE; sigaction");
@@ -218,6 +234,9 @@ set_details()
             exit(EXIT_FAILURE);
         }
     }
+
+    alarm(1);
+
 }
 
 /* Set defaults */
@@ -242,7 +261,7 @@ static void output_for_debug()
 }
 
 int
-main(int argc ,char **argv)
+main(int argc, char **argv)
 {
     int ret;
 

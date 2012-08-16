@@ -17,13 +17,33 @@
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
-tc_tcpcopy_rsc_t tcpcopy_rsc;
+int tc_raw_socket_out;
 tc_event_loop_t event_loop;
+
+static uint64_t alarm_cnt = 0;
+
+static void
+caught_alarm_signal(int sig)
+{
+    tc_time_update();
+
+    alarm(1);
+
+    alarm_cnt++;
+
+    if (alarm_cnt % 5 == 0) {
+        output_stat();
+    }
+
+    return;
+}
+
 
 static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
+    signal(SIGALRM, caught_alarm_signal);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -356,6 +376,8 @@ set_details()
         }    
     }    
 
+    alarm(1);
+
     return 0;
 }
 
@@ -369,15 +391,14 @@ settings_init()
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
-    tcpcopy_rsc.raw_socket_in = TC_INVALID_SOCKET;
-    tcpcopy_rsc.raw_socket_out = TC_INVALID_SOCKET;
+    tc_raw_socket_out = TC_INVALID_SOCKET;
 }
 
 /*
  * Main entry point
  */
 int
-main(int argc ,char **argv)
+main(int argc, char **argv)
 {
     int             ret;
 

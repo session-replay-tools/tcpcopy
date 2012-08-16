@@ -2,6 +2,36 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
+static address_node_t addr[65536];
+
+int
+address_find_sock(uint16_t local_port)
+{
+    if (0 == addr[local_port].sock) {
+        tc_log_info(LOG_WARN, 0, "it can't find address socket:%u",
+                    ntohs(local_port));
+        return -1;
+    }
+    return addr[local_port].sock;
+}
+
+/* Close sockets */
+int
+address_close_sock()
+{
+    int i;
+
+    for (i = 0; i< 65536; i++) {
+        if (0 != addr[i].sock) {
+            tc_log_info(LOG_WARN, 0, "it close socket:%d", addr[i].sock);
+            close(addr[i].sock);
+            addr[i].sock = 0;
+        }
+    }
+
+    return 0;
+}
+
 /* Check resource usage, such as memory usage and cpu usage */
 static void
 check_resource_usage(tc_event_timer_t *evt)
@@ -42,9 +72,6 @@ tcp_copy_exit()
     tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
 
-    send_close();
-    address_close_sock();
-
 #if (TCPCOPY_OFFLINE)
     if (pcap != NULL) {
         pcap_close(pcap);                                                                               
@@ -65,8 +92,8 @@ tcp_copy_exit()
         free(clt_settings.transfer.mappings);
         clt_settings.transfer.mappings = NULL;
     }
-    exit(EXIT_SUCCESS);
 
+    exit(EXIT_SUCCESS);
 }
 
 void
@@ -87,9 +114,8 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 #if (TCPCOPY_OFFLINE)
     char                    *pcap_file, ebuf[PCAP_ERRBUF_SIZE];
 #endif
-    uint16_t                 online_port, target_port;
+    uint16_t                 online_port;
     uint32_t                 target_ip;
-    tc_event_t              *raw_socket_event;
     ip_port_pair_mapping_t  *pair, **mappings;
 
     /* Register a timer to check resource every minute */
@@ -98,10 +124,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     /* Init session table*/
     init_for_sessions();
 
-    if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
-        return TC_ERROR;
-    } else {
-        tcpcopy_rsc.raw_socket_out = fd;
+    /* Init packets for processing */
+    if (tc_packets_init(event_loop) == TC_ERROR) {
+        return TC_OK; 
     }
 
     /* Add connections to the tested server for exchanging info */
@@ -110,64 +135,20 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
         pair = mappings[i];
         online_port = pair->online_port;
-        target_ip   = pair->target_ip;
-        target_port = pair->target_port;
+        target_ip = pair->target_ip;
 
-        if (address_add_msg_conn(event_loop, online_port, target_ip, 
-                                 clt_settings.srv_port) == TC_ERROR)
-        {
+        fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+        if (fd == TC_INVALID_SOCKET) {
             return TC_ERROR;
         }
+
+        addr[online_port].ip = target_ip;
+        addr[online_port].port = clt_settings.srv_port;
+        addr[online_port].sock = fd;
 
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
-                ntohs(target_port));
+                    ntohs(clt_settings.srv_port));
     }
-
-#if (!TCPCOPY_OFFLINE)
-    if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
-        return TC_ERROR;
-    }
-
-    tc_socket_set_nonblocking(fd);
-
-    /* Add the input raw socket to select */
-    raw_socket_event = tc_event_create(fd, tc_process_raw_socket_packet, NULL);
-    if (raw_socket_event == NULL) {
-        return TC_ERROR;
-    }
-
-    if (tc_event_add(event_loop, raw_socket_event, TC_EVENT_READ)
-            == TC_EVENT_ERROR)
-    {
-        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
-                    raw_socket_event->fd);
-        return TC_ERROR;
-    }
-
-    tcpcopy_rsc.raw_socket_in = fd;
-
-#else
-    select_offline_set_callback(send_packets_from_pcap);
-
-    pcap_file = clt_settings.pcap_file;
-    if (pcap_file != NULL) {
-
-        if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
-            tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
-            fprintf(stderr, "open %s\n", ebuf);
-            return TC_ERROR;
-
-        } else {
-
-            gettimeofday(&base_time, NULL);
-            tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
-            tc_log_info(LOG_NOTICE, 0, "send the first packets here");
-            send_packets_from_pcap(1);
-        }
-    } else {
-        return TC_ERROR;
-    }
-#endif
 
     return TC_OK;
 }

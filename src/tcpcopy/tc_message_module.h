@@ -4,6 +4,6 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-void tc_process_server_msg(tc_event_t *rev);
+int tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port);
 
 #endif

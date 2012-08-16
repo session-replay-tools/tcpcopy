@@ -52,25 +52,19 @@ typedef struct xcopy_clt_settings {
 } xcopy_clt_settings;
 
 
-typedef struct {
-    int raw_socket_out;
-    int raw_socket_in;
-} tc_tcpcopy_rsc_t;
-
+extern int tc_raw_socket_out;
+extern tc_event_loop_t event_loop;
 extern xcopy_clt_settings clt_settings;
-extern tc_tcpcopy_rsc_t tcpcopy_rsc;
 
-#include <util.h>
+#include <tc_util.h>
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
 #include <pairs.h>
 #include <protocol.h>
 #endif
 
-#include <address.h>
-#include <manager.h>
-#include <send.h>
-#include <session.h>
+#include <tc_manager.h>
+#include <tc_session.h>
 #include <tc_message_module.h>
 #include <tc_offline_module.h>
 #include <tc_packets_module.h>

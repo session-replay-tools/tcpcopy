@@ -10,6 +10,6 @@ typedef struct {
 } tc_packets_status_t;
 
 
-void tc_process_raw_socket_packet(tc_event_t *efd);
+int tc_packets_init(tc_event_loop_t *event_loop);
 
 #endif /* __TC_PACKETS_MODULE_H__ */

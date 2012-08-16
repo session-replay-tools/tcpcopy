@@ -196,7 +196,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     s->req_ip_id = ntohs(ip_header->id);
     s->sm.unack_pack_omit_save_flag = 0;
 
-    ret = tc_raw_socket_send(tcpcopy_rsc.raw_socket_out, ip_header, tot_len,
+    ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
     if (ret == TC_ERROR) {
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
@@ -2532,7 +2532,7 @@ is_packet_needed(const char *packet)
 }
 
 /* Output statistics */
-static void
+void
 output_stat(time_t now, int run_time)
 {
     double    ratio;

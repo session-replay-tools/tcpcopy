@@ -162,6 +162,31 @@ send_packets_from_pcap(int first)
     }
 }
 
+int tc_offline_init()
+{
+    select_offline_set_callback(send_packets_from_pcap);
+
+    pcap_file = clt_settings.pcap_file;
+    if (pcap_file != NULL) {
+
+        if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
+            tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
+            fprintf(stderr, "open %s\n", ebuf);
+            return TC_ERROR;
+
+        } else {
+
+            gettimeofday(&base_time, NULL);
+            tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
+            tc_log_info(LOG_NOTICE, 0, "send the first packets here");
+            send_packets_from_pcap(1);
+        }
+    } else {
+        return TC_ERROR;
+    }
+
+}
+
 #endif
 
 
