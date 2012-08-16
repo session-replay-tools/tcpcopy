@@ -420,9 +420,9 @@ dispose_event(int fd)
     }
 #endif
 
-    if (tcpcopy_ctl.tc_output_stat) {
+    if (tcpcopy_ctl.tc_interval) {
         tc_interval_dispose();
-        tcpcopy_ctl.tc_output_stat = 0;
+        tcpcopy_ctl.tc_interval= 0;
     }
 }
 

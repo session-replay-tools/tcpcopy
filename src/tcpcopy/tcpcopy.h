@@ -56,7 +56,7 @@ typedef struct {
 } tc_tcpcopy_rsc_t;
 
 typedef struct {
-    unsigned int tc_output_stat:1;
+    unsigned int tc_interval:1;
 }tc_tcpcopy_ctl_t;
 
 extern xcopy_clt_settings clt_settings;

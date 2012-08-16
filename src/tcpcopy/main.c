@@ -32,7 +32,7 @@ caught_alarm_signal(int sig)
 
     alarm_cnt++;
     if (alarm_cnt % 5 == 0) {
-        tcpcopy_ctl.tc_output_stat = 1;
+        tcpcopy_ctl.tc_interval= 1;
     }
 
     return;
