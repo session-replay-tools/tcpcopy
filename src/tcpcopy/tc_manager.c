@@ -3,7 +3,6 @@
 #include <tcpcopy.h>
 
 static uint32_t       localhost;
-static uint64_t       raw_packs = 0, valid_raw_packs = 0;
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
@@ -181,7 +180,6 @@ retrieve_raw_sockets(int sock)
             break;
         }
 
-        raw_packs++;
         if (recv_len > RECV_BUF_SIZE) {
             tc_log_info(LOG_ERR, 0, "recv_len:%d,it is too long", recv_len);
             break;
@@ -191,14 +189,6 @@ retrieve_raw_sockets(int sock)
             break;
         }
 
-        if (p_valid_flag) {
-            valid_raw_packs++;
-        }
-
-        if (raw_packs % 100000 == 0) {
-            tc_log_info(LOG_NOTICE, 0, "raw packets:%llu, valid :%llu",
-                    raw_packs, valid_raw_packs);
-        }
     }
 
     return 0;
@@ -369,7 +359,6 @@ send_packets_from_pcap(int first)
                     if (p_valid_flag) {
 
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
-                        valid_raw_packs++;
                         if (first) {
 
                             first_pack_time = pkt_hdr.ts;
