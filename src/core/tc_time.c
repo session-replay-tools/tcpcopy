@@ -1,7 +1,7 @@
 
 #include <xcopy.h>
 
-
+volatile int        tc_update_time;
 volatile char      *tc_error_log_time;
 volatile time_t     tc_current_time_sec;
 volatile long       tc_current_time_msec;
@@ -9,20 +9,26 @@ volatile struct tm  tc_current_tm;
 
 static char cache_err_log_time[TC_ERR_LOG_TIME_LEN];
 
-void
-tc_timer_set(int sec, int usec)
+int
+tc_time_init(long msec)
 {
     struct itimerval value;
 
-    value.it_value.tv_sec  = sec;
-    value.it_value.tv_usec = usec;
-    value.it_interval.tv_sec = sec;
-    value.it_interval.tv_usec = usec;
+    tc_update_time = 0;
 
-    if (-1 == setitimer(ITIMER_REAL, &value, NULL)) {
-        tc_log_info(LOG_ERR, errno, "set timer failed");   
+    value.it_value.tv_sec = msec / 1000;
+    value.it_value.tv_usec = (msec % 1000) * 1000;
+    value.it_interval.tv_sec = msec / 1000;
+    value.it_interval.tv_usec = (msec % 1000) * 1000;
+
+    if (setitimer(ITIMER_REAL, &value, NULL) == -1) {
+        tc_log_info(LOG_ERR, errno, "setitimer failed");   
+        return TC_ERROR;
     }
 
+    tc_time_update();
+
+    return TC_OK;
 }
 
 void
@@ -72,4 +78,11 @@ tc_localtime(time_t sec, struct tm *tm)
 
     tm->tm_mon++;
     tm->tm_year += 1900;
+}
+
+/* this is a signal handler */
+void
+tc_time_sig_alarm(int sig)
+{
+    tc_update_time = 1;
 }

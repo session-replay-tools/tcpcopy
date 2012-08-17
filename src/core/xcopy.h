@@ -180,8 +180,6 @@ struct ethernet_hdr {
 /* Global functions */
 int daemonize();
 
-extern bool tc_update_time;
-
 #define TC_OK     0
 #define TC_ERROR -1
 
