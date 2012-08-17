@@ -1,11 +1,8 @@
 
-#if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
 static pcap_t        *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
-#endif
 
-#if (TCPCOPY_OFFLINE)
 static uint64_t
 timeval_diff(struct timeval *start, struct timeval *cur)
 {
@@ -186,7 +183,3 @@ int tc_offline_init()
     }
 
 }
-
-#endif
-
-
