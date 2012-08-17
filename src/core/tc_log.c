@@ -55,6 +55,10 @@ tc_log_info(int level, int err, const char *fmt, ...)
         return;
     }
 
+#if (TCPCOPY_DEBUG)
+    tc_time_update();
+#endif
+
     ll = &tc_log_levels[level];
 
     p = buffer;
@@ -116,39 +120,45 @@ tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
 
     if (BACKEND_FLAG == flag) {
         tc_log_info(level, err,
-                    "from bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+                    "from bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq,
+                    ack_seq, window);
 
     } else if (CLIENT_FLAG == flag) {
         tc_log_info(level, err,
-                    "recv clt:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+                    "recv clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq,
+                    ack_seq, window);
 
     } else if (TO_BAKEND_FLAG == flag) {
         tc_log_info(level, err,
-                    "to bak:%s:%u-->%s:%u,len %u ,seq=%u,ack=%u,win:%u",
+                    "to bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq,
+                    ack_seq, window);
 
     } else if (FAKED_CLIENT_FLAG == flag) {
         tc_log_info(level, err,
                     "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq,
+                    ack_seq, window);
 
     } else if (UNKNOWN_FLAG == flag) {
         tc_log_info(level, err,
                     "unkown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+                    ntohs(tcp_header->dest), pack_size,
+                    seq, ack_seq);
 
     } else{
         tc_log_info(level, err,
                     "strange %s:%u-->%s:%u,length %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
+                    ntohs(tcp_header->dest), pack_size,
+                    seq, ack_seq);
     }
 }
 

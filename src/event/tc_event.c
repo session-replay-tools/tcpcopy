@@ -112,8 +112,6 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 
         ret = actions->poll(loop, timeout);
 
-        tc_time_update();
-
         tc_event_timer_run(loop);
 
         if (ret == TC_EVENT_ERROR || ret == TC_EVENT_AGAIN) {

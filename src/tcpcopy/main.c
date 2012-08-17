@@ -20,10 +20,22 @@ xcopy_clt_settings clt_settings;
 tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
 
+bool tc_update_time = false;
+
+static void
+caught_alarm_signal(int sig)
+{
+    tc_update_time = true;
+
+    return;
+}
+
+
 static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
+    signal(SIGALRM, caught_alarm_signal);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -356,6 +368,8 @@ set_details()
         }    
     }    
 
+    tc_timer_set(0, 100000);
+
     return 0;
 }
 
@@ -377,7 +391,7 @@ settings_init()
  * Main entry point
  */
 int
-main(int argc ,char **argv)
+main(int argc, char **argv)
 {
     int             ret;
 

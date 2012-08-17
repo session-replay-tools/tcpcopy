@@ -2,10 +2,9 @@ bin_PROGRAMS=tcpcopy
 
 tcpcopy_SOURCES=\
                 tcpcopy.h\
-                address.c address.h\
-                send.c send.h\
-                manager.c manager.h\
-                session.c session.h\
+                tc_address.c tc_address.h\
+                tc_manager.c tc_manager.h\
+                tc_session.c tc_session.h\
                 main.c
 tcpcopy_LDADD=\
                ../core/libcore.a\

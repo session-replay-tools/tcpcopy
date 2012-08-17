@@ -3,7 +3,6 @@
 #include <tcpcopy.h>
 
 static uint32_t       localhost;
-static uint64_t       raw_packs = 0, valid_raw_packs = 0;
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
@@ -148,10 +147,12 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         }
     }
 
-    if (packet_valid) {
-        *p_valid_flag = 1;
-    } else {
-        *p_valid_flag = 0;
+    if (p_valid_flag != NULL) {
+        if (packet_valid) {
+            *p_valid_flag = 1;
+        } else {
+            *p_valid_flag = 0;
+        }
     }
 
     return SUCCESS;
@@ -163,7 +164,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 static int
 retrieve_raw_sockets(int sock)
 {
-    int      err, recv_len, p_valid_flag = 0;
+    int      err, recv_len;
     char     recv_buf[RECV_BUF_SIZE];
 
     while (true) {
@@ -181,24 +182,15 @@ retrieve_raw_sockets(int sock)
             break;
         }
 
-        raw_packs++;
         if (recv_len > RECV_BUF_SIZE) {
-            tc_log_info(LOG_ERR, 0, "recv_len:%d ,it is too long", recv_len);
+            tc_log_info(LOG_ERR, 0, "recv_len:%d,it is too long", recv_len);
             break;
         }
 
-        if (FAILURE == dispose_packet(recv_buf, recv_len, &p_valid_flag)) {
+        if (FAILURE == dispose_packet(recv_buf, recv_len, NULL)) {
             break;
         }
 
-        if (p_valid_flag) {
-            valid_raw_packs++;
-        }
-
-        if (raw_packs % 100000 == 0) {
-            tc_log_info(LOG_NOTICE, 0, "raw packets:%llu, valid :%llu",
-                    raw_packs, valid_raw_packs);
-        }
     }
 
     return 0;
@@ -369,7 +361,6 @@ send_packets_from_pcap(int first)
                     if (p_valid_flag) {
 
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
-                        valid_raw_packs++;
                         if (first) {
 
                             first_pack_time = pkt_hdr.ts;
@@ -406,7 +397,7 @@ dispose_event(int fd)
     } else {
         if (tc_socket_recv(fd, (char *) &msg, MSG_SERVER_SIZE) == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, 
-                        "Recv socket(%d) from server error, server may be close",
+                        "Recv socket(%d) from server error, may be closed",
                         fd);
             exit(EXIT_FAILURE);
         }
@@ -419,6 +410,7 @@ dispose_event(int fd)
         send_packets_from_pcap(0);
     }
 #endif
+
 }
 
 void 
@@ -426,10 +418,22 @@ tcp_copy_exit()
 {
     int i;
 
+    output_stat();
+
     tc_event_loop_finish(&event_loop);
+
     destroy_for_sessions();
 
-    send_close();
+    if (tcpcopy_rsc.raw_socket_in > 0) {
+        close(tcpcopy_rsc.raw_socket_in);
+        tcpcopy_rsc.raw_socket_in = -1;
+    }
+
+    if (tcpcopy_rsc.raw_socket_out > 0) {
+        close(tcpcopy_rsc.raw_socket_out);
+        tcpcopy_rsc.raw_socket_out = -1;
+    }
+
     address_close_sock();
 
 #if (TCPCOPY_OFFLINE)
@@ -437,6 +441,7 @@ tcp_copy_exit()
         pcap_close(pcap);                                                                               
     }   
 #endif
+
     tc_log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
@@ -452,6 +457,7 @@ tcp_copy_exit()
         free(clt_settings.transfer.mappings);
         clt_settings.transfer.mappings = NULL;
     }
+
     exit(EXIT_SUCCESS);
 
 }
@@ -476,7 +482,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 #endif
     uint16_t                 online_port, target_port;
     uint32_t                 target_ip;
+#if (!TCPCOPY_OFFLINE)
     tc_event_t              *raw_socket_event;
+#endif
     ip_port_pair_mapping_t  *pair, **mappings;
 
     /* keep it temporarily */
@@ -484,6 +492,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     /* Register a timer to check resource every minute */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
+    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
     /* Init session table*/
     init_for_sessions();
@@ -544,7 +553,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     if (pcap_file != NULL) {
 
         if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
-            tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
+            tc_log_info(LOG_ERR, 0, "open %s", ebuf);
             fprintf(stderr, "open %s\n", ebuf);
             return FAILURE;
 
