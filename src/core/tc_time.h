@@ -1,5 +1,5 @@
-#ifndef __TIME_H__
-#define __TIME_H__
+#ifndef __TC_TIME_H__
+#define __TC_TIME_H__
 
 #include <xcopy.h>
 
@@ -7,13 +7,15 @@
 
 #define tc_time() tc_current_time_sec
 
+extern volatile int        tc_update_time;
 extern volatile char      *tc_error_log_time;
 extern volatile long       tc_current_time_msec;
 extern volatile time_t     tc_current_time_sec;
 extern volatile struct tm  tc_current_tm;
 
-void tc_timer_set(int sec, int usec);
+int tc_time_init(long msec);
 void tc_time_update(void);
 void tc_localtime(time_t sec, struct tm *tm);
+void tc_time_sig_alarm(int sig);
 
-#endif /* __TIME_H__ */
+#endif /* __TC_TIME_H__ */

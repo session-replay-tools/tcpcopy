@@ -111,15 +111,13 @@ select_server_client_run(tc_event_loop_t *loop)
     fd_set  r_set;
     struct  timeval timeout; 
 
-    if (tc_update_time) {
-        tc_time_update();
-        tc_update_time = false;
 #if (TCPCOPY_OFFLINE)
+    if (tc_update_time) {
         if (offline_func) {
             offline_func(0);
         }
-#endif
     }
+#endif
 
     timeout.tv_sec = 1;
     timeout.tv_usec = 0;

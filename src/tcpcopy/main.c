@@ -20,22 +20,11 @@ xcopy_clt_settings clt_settings;
 tc_tcpcopy_rsc_t tcpcopy_rsc;
 tc_event_loop_t event_loop;
 
-bool tc_update_time = false;
-
-static void
-caught_alarm_signal(int sig)
-{
-    tc_update_time = true;
-
-    return;
-}
-
-
 static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
-    signal(SIGALRM, caught_alarm_signal);
+    signal(SIGALRM, tc_time_sig_alarm);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -329,9 +318,6 @@ set_details()
     rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
-    /* Set signal handler */    
-    set_signal_handler();
-
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
@@ -368,8 +354,6 @@ set_details()
         }    
     }    
 
-    tc_timer_set(0, 100000);
-
     return 0;
 }
 
@@ -385,6 +369,8 @@ settings_init()
 
     tcpcopy_rsc.raw_socket_in = TC_INVALID_SOCKET;
     tcpcopy_rsc.raw_socket_out = TC_INVALID_SOCKET;
+
+    set_signal_handler();
 }
 
 /*
@@ -395,11 +381,12 @@ main(int argc, char **argv)
 {
     int             ret;
 
-    /* first, init time */
-    tc_time_update();
-
-    /* Set defaults */
     settings_init();
+
+    if (tc_time_init(100) == TC_ERROR) {
+        return -1;
+    }
+
     read_args(argc, argv);
     /* Init log for outputing debug info */
     if (tc_log_init(clt_settings.log_path) == -1) {
