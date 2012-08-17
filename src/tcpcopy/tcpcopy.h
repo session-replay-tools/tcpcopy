@@ -66,7 +66,6 @@ extern xcopy_clt_settings clt_settings;
 #include <tc_manager.h>
 #include <tc_session.h>
 #include <tc_message_module.h>
-#include <tc_offline_module.h>
 #include <tc_packets_module.h>
 
 #endif /* __TCPCOPY_H__ */

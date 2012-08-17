@@ -74,11 +74,6 @@ tcp_copy_exit()
     tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
 
-#if (TCPCOPY_OFFLINE)
-    if (pcap != NULL) {
-        pcap_close(pcap);
-    }
-#endif
     tc_log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
@@ -113,9 +108,6 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
-#if (TCPCOPY_OFFLINE)
-    char                    *pcap_file, ebuf[PCAP_ERRBUF_SIZE];
-#endif
     uint16_t                 online_port;
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
@@ -128,9 +120,15 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     init_for_sessions();
 
     /* Init packets for processing */
-    if (tc_packets_init(event_loop) == TC_ERROR) {
-        return TC_OK;
+#if (TCPCOPY_OFFLINE)
+    if (tc_offline_init(event_loop, clt_settings.pcap_file) == TC_ERROR) {
+        return TC_ERROR;
     }
+#else
+    if (tc_packets_init(event_loop) == TC_ERROR) {
+        return TC_ERROR;
+    }
+#endif
 
     /* Add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
