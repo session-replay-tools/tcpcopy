@@ -17,7 +17,7 @@ struct msg_server_s {
     struct iphdr  ip_header;
     struct tcphdr tcp_header;
 
-#if (TCPCOPY_MYSQL_ADVANCED)    
+#if (TCPCOPY_MYSQL_ADVANCED)
     unsigned char payload[MAX_PAYLOAD_LEN];
 #endif
 };

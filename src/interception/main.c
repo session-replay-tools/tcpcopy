@@ -53,7 +53,7 @@ signal_handler(int sig)
     tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
     printf("set signal handler:%d\n", sig);
 
-    if (SIGSEGV == sig) {    
+    if (SIGSEGV == sig) {
         tc_log_info(LOG_ERR, 0, "SIGSEGV error");
         release_resources();
         /* Avoid dead loop*/
@@ -67,11 +67,7 @@ signal_handler(int sig)
 static void
 caught_alarm_signal(int sig)
 {
-    tc_time_update();
-
-    alarm(1);
-
-    return;
+    tc_alarm_update_time = 1;
 }
 
 static void
@@ -228,15 +224,12 @@ set_details()
         /* TODO why warning*/
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
-        }    
+        }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
         }
     }
-
-    alarm(1);
-
 }
 
 /* Set defaults */
@@ -265,10 +258,13 @@ main(int argc, char **argv)
 {
     int ret;
 
-    tc_time_update();
-
-    /* Init settings */ 
+    /* Init settings */
     settings_init();
+
+    if (tc_time_init(100) == TC_ERROR) {
+        return -1;
+    }
+
     /* Read args */
     read_args(argc, argv);
 
@@ -289,7 +285,7 @@ main(int argc, char **argv)
     if (interception_init(&s_event_loop, srv_settings.binded_ip,
                           srv_settings.port) == TC_ERROR)
     {
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     /* Run now */

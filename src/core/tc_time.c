@@ -1,6 +1,7 @@
 
 #include <xcopy.h>
 
+volatile int        tc_alarm_update_time;
 
 volatile char      *tc_error_log_time;
 volatile time_t     tc_current_time_sec;
@@ -8,6 +9,28 @@ volatile long       tc_current_time_msec;
 volatile struct tm  tc_current_tm;
 
 static char cache_err_log_time[TC_ERR_LOG_TIME_LEN];
+
+int
+tc_time_init(long msec)
+{
+    struct itimerval itv;
+
+    tc_alarm_update_time = 0;
+
+    itv.it_value.tv_sec  = msec / 1000;
+    itv.it_value.tv_usec = (msec % 1000) * 1000;
+    itv.it_interval.tv_sec = msec / 1000;
+    itv.it_interval.tv_usec = (msec % 1000) * 1000;
+
+    if (setitimer(ITIMER_REAL, &itv, NULL) == -1) {
+        tc_log_info(LOG_ERR, errno, "setitimer failed");
+        return TC_ERROR;
+    }
+
+    tc_time_update();
+
+    return TC_OK;
+}
 
 void
 tc_time_update()
@@ -52,7 +75,7 @@ tc_localtime(time_t sec, struct tm *tm)
 
     t = localtime(&sec);
     *tm = *t;
-#endif 
+#endif
 
     tm->tm_mon++;
     tm->tm_year += 1900;

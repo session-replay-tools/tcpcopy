@@ -2533,11 +2533,14 @@ is_packet_needed(const char *packet)
 
 /* Output statistics */
 void
-output_stat(time_t now, int run_time)
+output_stat()
 {
-    double    ratio;
+    int    run_time;
+    double ratio;
 
-    last_stat_time = now;
+    if (start_p_time == 0) {
+        return;
+    }
 
     tc_log_info(LOG_NOTICE, 0,  "active:%u,rel reqs:%llu,obs del:%llu",
             sessions_table->total, leave_cnt, obs_cnt);
@@ -2551,7 +2554,7 @@ output_stat(time_t now, int run_time)
     tc_log_info(LOG_NOTICE, 0,  "syn cnt:%llu,all clt packs:%llu, clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
 
-    clear_timeout_sessions();
+    run_time = tc_current_time_sec - start_p_time;
 
     if (run_time > 3) {
         if (0 == resp_cont_cnt) {
@@ -2564,6 +2567,21 @@ output_stat(time_t now, int run_time)
             }
         }
     }
+}
+
+void
+tc_interval_dispose(tc_event_timer_t *evt)
+{
+    /* output stat */
+    output_stat();
+
+    /* clear timeout sessions */
+    clear_timeout_sessions();
+
+    /* activate dead session */
+    activate_dead_sessions();
+
+    evt->msec = tc_current_time_msec + 5000;
 }
 
 /*

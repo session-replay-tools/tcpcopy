@@ -90,19 +90,19 @@ tc_msg_event_process(tc_event_t *rev)
 
     switch (msg.type) {
         case CLIENT_ADD:
-            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u", 
+            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                           ntohs(msg.client_port));
             router_add(msg.client_ip, msg.client_port, rev->fd);
             break;
         case CLIENT_DEL:
-            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u", 
+            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
                           ntohs(msg.client_port));
             router_del(msg.client_ip, msg.client_port);
             break;
     }
 }
 
-void 
+void
 tc_nl_event_process(tc_event_t *rev)
 {
     int             diff, i, pass_through_flag = 0;
@@ -131,7 +131,7 @@ tc_nl_event_process(tc_event_t *rev)
 
         if (pass_through_flag) {
             /* Pass through the firewall */
-            dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);   
+            dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
         } else {
             router_update(ip_hdr);
             now  = time(0);
@@ -142,7 +142,7 @@ tc_nl_event_process(tc_event_t *rev)
                 last_clean_time = now;
             }
             /* Drop the packet */
-            dispose_netlink_packet(rev->fd, NF_DROP, packet_id);     
+            dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }
     }
 }

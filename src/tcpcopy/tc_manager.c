@@ -43,7 +43,7 @@ check_resource_usage(tc_event_timer_t *evt)
 
     ret = getrusage(who, &usage);
     if (ret == -1) {
-        tc_log_info(LOG_ERR, errno, "getrusage"); 
+        tc_log_info(LOG_ERR, errno, "getrusage");
     }
 
     /* Total amount of user time used */
@@ -64,18 +64,20 @@ check_resource_usage(tc_event_timer_t *evt)
     evt->msec = tc_current_time_msec + 60000;
 }
 
-void 
+void
 tcp_copy_exit()
 {
     int i;
+
+    output_stat();
 
     tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
 
 #if (TCPCOPY_OFFLINE)
     if (pcap != NULL) {
-        pcap_close(pcap);                                                                               
-    }   
+        pcap_close(pcap);
+    }
 #endif
     tc_log_end();
 
@@ -120,13 +122,14 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     /* Register a timer to check resource every minute */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
+    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
     /* Init session table*/
     init_for_sessions();
 
     /* Init packets for processing */
     if (tc_packets_init(event_loop) == TC_ERROR) {
-        return TC_OK; 
+        return TC_OK;
     }
 
     /* Add connections to the tested server for exchanging info */

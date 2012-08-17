@@ -176,7 +176,6 @@ struct ethernet_hdr {
 /* Global functions */
 int daemonize();
 
-
 #define TC_OK     0
 #define TC_ERROR -1
 
