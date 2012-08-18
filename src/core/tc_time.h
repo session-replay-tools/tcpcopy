@@ -9,8 +9,6 @@
 #define tc_time_diff(s1, ms1, s2, ms2) \
     (((s2) * 1000 + (ms2)) - ((s1) * 1000 + (ms1)))
 
-extern volatile int        tc_alarm_update_time;
-
 extern volatile int        tc_update_time;
 extern volatile char      *tc_error_log_time;
 extern volatile long       tc_current_time_msec;
