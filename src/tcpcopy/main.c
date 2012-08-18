@@ -389,9 +389,8 @@ settings_init()
 int
 main(int argc, char **argv)
 {
-    int             ret;
+    int ret;
 
-    /* Set defaults */
     settings_init();
 
     if (tc_time_init(100) == TC_ERROR) {
@@ -399,7 +398,7 @@ main(int argc, char **argv)
     }
 
     read_args(argc, argv);
-    /* Init log for outputing debug info */
+
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
     }
@@ -415,7 +414,6 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* Initiate tcpcopy client*/
     ret = tcp_copy_init(&event_loop);
     if (ret == TC_ERROR) {
         exit(EXIT_FAILURE);

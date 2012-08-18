@@ -112,7 +112,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
-    /* Register a timer to check resource every minute */
+    /* Register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 

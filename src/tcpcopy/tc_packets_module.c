@@ -63,7 +63,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
 static void
 tc_process_raw_socket_packet(tc_event_t *rev)
 {
-    int  recv_len, p_valid_flag = 0;
+    int  recv_len;
     char recv_buf[RECV_BUF_SIZE];
 
     for ( ;; ) {
@@ -82,22 +82,10 @@ tc_process_raw_socket_packet(tc_event_t *rev)
             tc_log_info(LOG_ERR, 0, "recv len is 0");
             return;
         }
-#if 0
-        raw_packs++;
-#endif
-        if (dispose_packet(recv_buf, recv_len, &p_valid_flag) == TC_ERROR) {
+
+        if (dispose_packet(recv_buf, recv_len, NULL) == TC_ERROR) {
             return;
         }
-#if 0
-        if (p_valid_flag) {
-            valid_raw_packs++;
-        }
-
-        if (raw_packs % 100000 == 0) {
-            tc_log_info(LOG_NOTICE, 0, "raw packets:%llu, valid :%llu",
-                    raw_packs, valid_raw_packs);
-        }
-#endif
     }
 }
 
@@ -238,10 +226,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         }
     }
 
-    if (packet_valid) {
-        *p_valid_flag = 1;
-    } else {
-        *p_valid_flag = 0;
+    if (p_valid_flag) {
+        *p_valid_flag = (packet_valid == true ? 1 : 0);
     }
 
     return TC_OK;
@@ -276,6 +262,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     tc_log_info(LOG_NOTICE, 0, "send the first packets here");
     send_packets_from_pcap(1);
 
+    /* register a timer to perform offline */
     tc_event_timer_add(event_loop, 100, tc_process_offline_packet);
 
     return TC_OK;
@@ -420,9 +407,7 @@ send_packets_from_pcap(int first)
                     if (p_valid_flag) {
 
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
-#if 0
-                        valid_raw_packs++;
-#endif
+
                         if (first) {
 
                             first_pack_time = pkt_hdr.ts;

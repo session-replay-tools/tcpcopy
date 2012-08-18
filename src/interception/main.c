@@ -258,14 +258,12 @@ main(int argc, char **argv)
 {
     int ret;
 
-    /* Init settings */
     settings_init();
 
     if (tc_time_init(100) == TC_ERROR) {
         return -1;
     }
 
-    /* Read args */
     read_args(argc, argv);
 
     if (tc_log_init(srv_settings.log_path) == -1) {
