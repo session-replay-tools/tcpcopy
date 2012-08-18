@@ -104,9 +104,9 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 
         ret = actions->poll(loop, timeout);
 
-        if (tc_alarm_update_time) {
+        if (tc_update_time) {
             tc_time_update();
-            tc_alarm_update_time = 0;
+            tc_update_time = 0;
         }
 
         tc_event_timer_run(loop);

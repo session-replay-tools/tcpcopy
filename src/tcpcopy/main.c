@@ -20,21 +20,11 @@ xcopy_clt_settings clt_settings;
 int tc_raw_socket_out;
 tc_event_loop_t event_loop;
 
-
-static void
-caught_alarm_signal(int sig)
-{
-    tc_alarm_update_time = 1;
-
-    return;
-}
-
-
 static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
-    signal(SIGALRM, caught_alarm_signal);
+    signal(SIGALRM, tc_time_sig_alarm);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -328,9 +318,6 @@ set_details()
     rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
-    /* Set signal handler */
-    set_signal_handler();
-
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
@@ -364,8 +351,8 @@ set_details()
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
-        }
-    }
+        }    
+    }    
 
     return 0;
 }
@@ -381,6 +368,8 @@ settings_init()
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
+
+    set_signal_handler();
 }
 
 /*
