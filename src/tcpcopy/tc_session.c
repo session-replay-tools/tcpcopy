@@ -194,7 +194,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     s->req_ip_id = ntohs(ip_header->id);
     s->sm.unack_pack_omit_save_flag = 0;
 
-    ret = tc_raw_socket_send(tcpcopy_rsc.raw_socket_out, ip_header, tot_len,
+    ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
     if (ret == TC_ERROR) {
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
@@ -2563,7 +2563,7 @@ output_stat()
     if (run_time > 3) {
         if (0 == resp_cont_cnt) {
             tc_log_info(LOG_WARN, 0, "no responses after %d secends",
-                    run_time);
+                        run_time);
         }
         if (sessions_table->total > 0) {
             ratio = 100 * conn_cnt / sessions_table->total;

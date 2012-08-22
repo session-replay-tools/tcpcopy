@@ -14,5 +14,5 @@ lib*.a
 install-sh
 libtool
 intercept
-tcpcopy
+src/tcpcopy/tcpcopy
 stamp-h1

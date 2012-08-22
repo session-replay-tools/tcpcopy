@@ -103,10 +103,6 @@
 #define SESS_KEEPALIVE 1  /* Online is active while backend is closed */
 #define SESS_REUSE     2  /* When in ab test*/
 
-/* The results of operation*/
-#define SUCCESS   0
-#define FAILURE  -1
-
 #define DISP_STOP      1
 #define DISP_CONTINUE  0
 
@@ -180,8 +176,6 @@ struct ethernet_hdr {
 /* Global functions */
 int daemonize();
 
-extern bool tc_update_time;
-
 #define TC_OK     0
 #define TC_ERROR -1
 
@@ -197,8 +191,6 @@ typedef struct tcphdr tc_tcp_header_t;
 
 #include <tc_event.h>
 #include <tc_select_module.h>
-#include <select_server.h>
-#include <select_server_wrapper.h>
 #include <tc_log.h>
 #include <tc_msg.h>
 #include <tc_socket.h>

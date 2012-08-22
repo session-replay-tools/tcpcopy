@@ -24,8 +24,8 @@ if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
 fi
 
-AC_ARG_ENABLE(select-module, AS_HELP_STRING([--enable-select-module],[use select module]),
-    AC_DEFINE(TCPCOPY_USE_SELECT, 1, [Define if --enable-select-module]), )
+#AC_ARG_ENABLE(epoll-module, AS_HELP_STRING([--enable-epoll-module],[use epoll module]),
+#    AC_DEFINE(TCPCOPY_USE_EPOLL, 1, [Define if --enable-epoll-module]), )
 
 AC_ARG_ENABLE(sgt, AS_HELP_STRING([--enable-mysqlsgt],[mysql skip-grant-tables mode]),,sgt=no)
 if test "x$enable_mysqlsgt" = "xyes";then

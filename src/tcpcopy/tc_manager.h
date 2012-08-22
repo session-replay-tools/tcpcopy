@@ -4,16 +4,18 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-extern tc_event_loop_t event_loop;
+typedef struct {
+    uint32_t ip;
+    uint32_t port;
+    int      sock;
+} address_node_t;
+
+int address_find_sock(uint16_t local_port);
+int address_close_sock();
 
 int tcp_copy_init(tc_event_loop_t *event_loop);
 void tcp_copy_over(const int sig);
 void tcp_copy_exit();
-void dispose_event(int fd);
-void dispose_event_wrapper(tc_event_t *efd);
-#if (TCPCOPY_OFFLINE)
-void send_packets_from_pcap(int first);
-#endif
 
 #endif   /* ----- #ifndef _MANAGER_H_INC ----- */
 

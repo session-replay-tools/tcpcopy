@@ -17,25 +17,14 @@
 /* Global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
-tc_tcpcopy_rsc_t tcpcopy_rsc;
+int tc_raw_socket_out;
 tc_event_loop_t event_loop;
-
-bool tc_update_time = false;
-
-static void
-caught_alarm_signal(int sig)
-{
-    tc_update_time = true;
-
-    return;
-}
-
 
 static void
 set_signal_handler()
 {
     atexit(tcp_copy_exit);
-    signal(SIGALRM, caught_alarm_signal);
+    signal(SIGALRM, tc_time_sig_alarm);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -44,7 +33,7 @@ set_signal_handler()
 
 static void
 usage(void)
-{  
+{
     printf("TCPCopy " VERSION "\n");
     printf("-x <transfer,> what we copy and where send to\n"
            "               transfer format:\n"
@@ -57,7 +46,7 @@ usage(void)
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      input pcap file(only valid for offline)\n");
 #endif
-#if (TCPCOPY_MYSQL_ADVANCED)  
+#if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair>      user password pair for mysql\n"
            "               pair format:\n"
            "               user1@psw1:user2@psw2:...\n"
@@ -89,14 +78,14 @@ static int
 read_args(int argc, char **argv)
 {
     int  c;
-    
+
     while (-1 != (c = getopt(argc, argv,
          "x:" /* where we copy request from and to */
          "c:" /* localhost will be changed to this ip address */
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
 #endif
-#if (TCPCOPY_MYSQL_ADVANCED)  
+#if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
 #endif
          "n:" /* the replicated number of each request for multi-copying */
@@ -118,12 +107,12 @@ read_args(int argc, char **argv)
             case 'c':
                 clt_settings.lo_tf_ip = inet_addr(optarg);
                 break;
-#if (TCPCOPY_OFFLINE)  
+#if (TCPCOPY_OFFLINE)
             case 'i':
                 clt_settings.pcap_file= optarg;
                 break;
 #endif
-#if (TCPCOPY_MYSQL_ADVANCED)  
+#if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
                 clt_settings.user_pwd = optarg;
                 break;
@@ -215,7 +204,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 
 /*
  * One target format:
- * 192.168.0.1:80-192.168.0.2:8080 
+ * 192.168.0.1:80-192.168.0.2:8080
  * or
  * 80-192.168.0.2:8080
  */
@@ -246,7 +235,7 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     return 0;
 }
 
-/* 
+/*
  * Retrieve target addresses
  * Format
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
@@ -302,8 +291,8 @@ retrieve_target_addresses(char *raw_transfer,
 }
 
 static int
-sigignore(int sig) 
-{    
+sigignore(int sig)
+{
     struct sigaction sa;
 
     sa.sa_handler = SIG_IGN;
@@ -311,7 +300,7 @@ sigignore(int sig)
 
     if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
         return -1;
-    }       
+    }
 
     return 0;
 }
@@ -329,15 +318,12 @@ set_details()
     rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
-    /* Set signal handler */    
-    set_signal_handler();
-
     /* Set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
     {
         exit(EXIT_FAILURE);
-    } 
+    }
 
 #if (TCPCOPY_OFFLINE)
     if (NULL == clt_settings.pcap_file) {
@@ -347,7 +333,7 @@ set_details()
     }
 #endif
 
-#if (TCPCOPY_MYSQL_ADVANCED)  
+#if (TCPCOPY_MYSQL_ADVANCED)
     if (NULL != clt_settings.user_pwd) {
         retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
     } else {
@@ -361,14 +347,12 @@ set_details()
     if (clt_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
-        }    
+        }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
         }    
     }    
-
-    tc_timer_set(0, 100000);
 
     return 0;
 }
@@ -383,8 +367,9 @@ settings_init()
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
-    tcpcopy_rsc.raw_socket_in = TC_INVALID_SOCKET;
-    tcpcopy_rsc.raw_socket_out = TC_INVALID_SOCKET;
+    tc_raw_socket_out = TC_INVALID_SOCKET;
+
+    set_signal_handler();
 }
 
 /*
@@ -393,15 +378,16 @@ settings_init()
 int
 main(int argc, char **argv)
 {
-    int             ret;
+    int ret;
 
-    /* first, init time */
-    tc_time_update();
-
-    /* Set defaults */
     settings_init();
+
+    if (tc_time_init(100) == TC_ERROR) {
+        return -1;
+    }
+
     read_args(argc, argv);
-    /* Init log for outputing debug info */
+
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
     }
@@ -417,9 +403,8 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* Initiate tcpcopy client*/
     ret = tcp_copy_init(&event_loop);
-    if (SUCCESS != ret) {
+    if (ret == TC_ERROR) {
         exit(EXIT_FAILURE);
     }
 
