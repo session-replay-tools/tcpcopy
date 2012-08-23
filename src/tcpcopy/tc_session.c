@@ -217,7 +217,7 @@ fill_pro_common_header(struct iphdr *ip_header, struct tcphdr *tcp_header)
      */
     ip_header->tot_len  = htons(FAKE_IP_DATAGRAM_LEN);
     /* Don't Fragment */
-    ip_header->frag_off = htons(0x4000); 
+    ip_header->frag_off = htons(IP_DF); 
     /* 
      * Sets an upper limit on the number of routers through 
      * which a datagram can pass
