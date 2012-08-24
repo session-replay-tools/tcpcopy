@@ -119,17 +119,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     /* Init session table*/
     init_for_sessions();
 
-    /* Init packets for processing */
-#if (TCPCOPY_OFFLINE)
-    if (tc_offline_init(event_loop, clt_settings.pcap_file) == TC_ERROR) {
-        return TC_ERROR;
-    }
-#else
-    if (tc_packets_init(event_loop) == TC_ERROR) {
-        return TC_ERROR;
-    }
-#endif
-
     /* Add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -150,6 +139,18 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
                     ntohs(clt_settings.srv_port));
     }
+
+    /* Init packets for processing */
+#if (TCPCOPY_OFFLINE)
+    if (tc_offline_init(event_loop, clt_settings.pcap_file) == TC_ERROR) {
+        return TC_ERROR;
+    }
+#else
+    if (tc_packets_init(event_loop) == TC_ERROR) {
+        return TC_ERROR;
+    }
+#endif
+
 
     return TC_OK;
 }
