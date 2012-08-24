@@ -19,8 +19,6 @@
 
 xcopy_srv_settings srv_settings;
 
-bool tc_update_time = false;
-
 static void
 release_resources()
 {
@@ -63,14 +61,6 @@ signal_handler(int sig)
 }
 
 static void
-caught_alarm_signal(int sig)
-{
-    tc_update_time = true;
-
-    return;
-}
-
-static void
 set_signal_handler()
 {
     int i = 1;
@@ -82,7 +72,7 @@ set_signal_handler()
             if (i != SIGALRM) {
                 signal(i, signal_handler);
             } else {
-                signal(i, caught_alarm_signal);
+                signal(i, tc_time_sig_alarm);
             }
         }
     }
@@ -207,9 +197,6 @@ read_args(int argc, char **argv) {
 static void
 set_details()
 {
-    /* Set signal handler */
-    set_signal_handler();
-
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
         perror("failed to ignore SIGPIPE; sigaction");
@@ -230,9 +217,6 @@ set_details()
             exit(EXIT_FAILURE);
         }
     }
-
-    tc_timer_set(0, 100000);
-
 }
 
 /* Set defaults */
@@ -241,6 +225,8 @@ static void settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.binded_ip = NULL;
+
+    set_signal_handler();
 }
 
 static void output_for_debug()
@@ -259,11 +245,13 @@ static void output_for_debug()
 int
 main(int argc, char **argv)
 {
-
-    tc_time_update();
-
     /* Init settings */ 
     settings_init();
+
+    if (tc_time_init(100) == TC_ERROR) {
+        return -1;
+    }
+
     /* Read args */
     read_args(argc, argv);
 
