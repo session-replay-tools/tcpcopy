@@ -69,7 +69,7 @@ tc_localtime(time_t sec, struct tm *tm)
 
     t = localtime(&sec);
     *tm = *t;
-#endif 
+#endif
 
     tm->tm_mon++;
     tm->tm_year += 1900;

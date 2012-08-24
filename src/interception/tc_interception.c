@@ -1,14 +1,15 @@
 #include <xcopy.h>
 #include <intercept.h>
 
-static int    firewall_sock, msg_listen_sock;
 static time_t last_clean_time;
 
 static uint32_t      seq = 1;
 static unsigned char buffer[128];
 
+extern tc_event_loop_t s_event_loop;
+
 static int
-dispose_netlink_packet(int verdict, unsigned long packet_id)
+dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 {
     struct nlmsghdr        *nl_header = (struct nlmsghdr*)buffer;
     struct ipq_verdict_msg *ver_data;
@@ -38,7 +39,7 @@ dispose_netlink_packet(int verdict, unsigned long packet_id)
      * after every IPQM PACKET message is received.
      *
      */
-    if (sendto(firewall_sock, (void *)nl_header, nl_header->nlmsg_len, 0,
+    if (sendto(fd, (void *)nl_header, nl_header->nlmsg_len, 0,
                 (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
     {
         tc_log_info(LOG_ERR, errno, "unable to send mode message");
@@ -48,143 +49,159 @@ dispose_netlink_packet(int verdict, unsigned long packet_id)
     return 1;
 }
 
-static void
-interception_process(int fd)
+void
+tc_msg_event_accept(tc_event_t *rev)
 {
-    int                    diff, new_fd, i, pass_through_flag = 0;
-    char                   buffer[65535];
-    time_t                 now;
-    msg_client_t           msg;
-    struct iphdr          *ip_header;
-    unsigned long          packet_id;
+    int         fd;
+    tc_event_t *ev;
 
-    if (fd == msg_listen_sock) {
-        if ((new_fd = tc_socket_accept(msg_listen_sock)) == TC_INVALID_SOCKET) {
-            return;
-        }
+    if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
+        tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
+        return;
+    }
 
-        if (tc_socket_set_nodelay(new_fd) == TC_ERROR) {
-            return;
-        }
+    if (tc_socket_set_nodelay(fd) == TC_ERROR) {
+        tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
+        return;
+    }
 
-        select_server_add(new_fd);
+    ev = tc_event_create(fd, tc_msg_event_process, NULL);
+    if (ev == NULL) {
+        tc_log_info(LOG_ERR, 0, "Msg event create failed.");
+        return;
+    }
 
-    } else if (fd == firewall_sock) {
-        packet_id = 0;
+    if (tc_event_add(&s_event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        return;
+    }
+}
 
-        if (tc_nl_socket_recv(firewall_sock, buffer, 65535) == TC_ERROR) {
-            return;
-        }
+void
+tc_msg_event_process(tc_event_t *rev)
+{
+    msg_client_t msg;
 
-        ip_header = tc_nl_ip_header(buffer);
-        packet_id = tc_nl_packet_id(buffer);
+    if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+        tc_socket_close(rev->fd);
+        tc_event_del(&s_event_loop, rev, TC_EVENT_READ);
+        tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
+        return;
+    }
 
-        if (ip_header != NULL) {
-            /* Check if it is the valid user to pass through firewall */
-            for (i = 0; i < srv_settings.passed_ips.num; i++) {
-                if (srv_settings.passed_ips.ips[i] == ip_header->daddr) {
-                    pass_through_flag = 1;
-                    break;
-                }
-            }
-            if (pass_through_flag) {
-                /* Pass through the firewall */
-                dispose_netlink_packet(NF_ACCEPT, packet_id);   
-            } else {
-                router_update(ip_header);
-                now  = tc_current_time_sec;
-                diff = now - last_clean_time;
-                if (diff > CHECK_INTERVAL) {
-                    route_delete_obsolete(now);
-                    delay_table_delete_obsolete(now);
-                    last_clean_time = now;
-                }
-                 /* Drop the packet */
-                dispose_netlink_packet(NF_DROP, packet_id);     
-            }
-        }
-    } else {
-        if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
-            tc_socket_close(fd);
-            select_server_del(fd);
-            tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
-            return;
-        }
-
-        switch (msg.type) {
+    switch (msg.type) {
         case CLIENT_ADD:
-            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u", 
+            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                           ntohs(msg.client_port));
-            router_add(msg.client_ip, msg.client_port, fd);
+            router_add(msg.client_ip, msg.client_port, rev->fd);
             break;
         case CLIENT_DEL:
-            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u", 
+            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
                           ntohs(msg.client_port));
             router_del(msg.client_ip, msg.client_port);
             break;
+    }
+}
+
+void
+tc_nl_event_process(tc_event_t *rev)
+{
+    int             diff, i, pass_through_flag = 0;
+    char            buffer[65535];
+    time_t          now;
+    unsigned long   packet_id;
+    tc_ip_header_t *ip_hdr;
+
+    packet_id = 0;
+
+    if (tc_nl_socket_recv(rev->fd, buffer, 65535) == TC_ERROR) {
+        return;
+    }
+
+    ip_hdr = tc_nl_ip_header(buffer);
+    packet_id = tc_nl_packet_id(buffer);
+
+    if (ip_hdr != NULL) {
+        /* Check if it is the valid user to pass through firewall */
+        for (i = 0; i < srv_settings.passed_ips.num; i++) {
+            if (srv_settings.passed_ips.ips[i] == ip_hdr->daddr) {
+                pass_through_flag = 1;
+                break;
+            }
+        }
+
+        if (pass_through_flag) {
+            /* Pass through the firewall */
+            dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
+        } else {
+            router_update(ip_hdr);
+            now  = time(0);
+            diff = now - last_clean_time;
+            if (diff > CHECK_INTERVAL) {
+                route_delete_obsolete(now);
+                delay_table_delete_obsolete(now);
+                last_clean_time = now;
+            }
+            /* Drop the packet */
+            dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }
     }
 }
 
 /* Initiate for tcpcopy server */
 int
-interception_init(uint16_t port)
+interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
-    int fd;
+    int         fd;
+    tc_event_t *ev;
 
     delay_table_init(srv_settings.hash_size);
     router_init(srv_settings.hash_size << 1);
 
-    select_server_set_callback(interception_process);
-
+    /* Init the listening socket */
     if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
 
     } else {
-        if (tc_socket_listen(fd, srv_settings.binded_ip, port) == TC_ERROR) {
+        if (tc_socket_listen(fd, ip, port) == TC_ERROR) {
             return TC_ERROR;
         }
 
         tc_log_info(LOG_NOTICE, 0, "msg listen socket:%d", fd);
-        select_server_add(fd);
-        msg_listen_sock = fd;
+
+        ev = tc_event_create(fd, tc_msg_event_accept, NULL);
+        if (ev == NULL) {
+            return TC_ERROR;
+        }
+
+        if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+            return TC_ERROR;
+        }
     }
 
+    /* Init the netlink socket */
     if ((fd = tc_nl_socket_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
 
     } else {
         tc_log_info(LOG_NOTICE, 0, "firewall socket:%d", fd);
-        select_server_add(fd);
-        firewall_sock = fd;
+
+        ev = tc_event_create(fd, tc_nl_event_process, NULL);
+        if (ev == NULL) {
+            return TC_ERROR;
+        }
+
+        if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+            return TC_ERROR;
+        }
     }
 
     return TC_OK;
-}
-
-
-/* Main procedure for interception */
-void interception_run()
-{
-    select_server_run();
 }
 
 /* Clear resources for interception */
 void
 interception_over()
 {
-    if (firewall_sock != -1) {
-        close(firewall_sock);
-        firewall_sock = -1;
-        tc_log_info(LOG_NOTICE, 0, "firewall sock is closed");
-    }
-
-    if (msg_listen_sock != -1) {
-        close(msg_listen_sock);
-        msg_listen_sock = -1;
-        tc_log_info(LOG_NOTICE, 0, "msg listen sock is closed");
-    }
-
     router_destroy();
     delay_table_destroy();
 }

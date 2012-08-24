@@ -5,19 +5,11 @@ static long tc_event_timer_find(tc_event_loop_t *loop);
 static void tc_event_timer_run(tc_event_loop_t *loop);
 
 static tc_event_actions_t tc_event_actions = {
-#if (TCPCOPY_USE_SELECT)
     tc_select_create,
     tc_select_destroy,
     tc_select_add_event,
     tc_select_del_event,
     tc_select_polling 
-#else
-    select_server_create_fake,
-    select_server_destroy_fake,
-    select_server_add_wrapper,
-    select_server_del_wrapper,
-    select_server_run_wrapper
-#endif
 };
 
 

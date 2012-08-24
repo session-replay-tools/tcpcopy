@@ -18,12 +18,16 @@
 #include <intercept.h>
 
 xcopy_srv_settings srv_settings;
+tc_event_loop_t s_event_loop;
 
 static void
 release_resources()
 {
     tc_log_info(LOG_NOTICE, 0, "release_resources begin");
     interception_over();
+
+    tc_event_loop_finish(&s_event_loop);
+
     tc_log_info(LOG_NOTICE, 0, "release_resources end except log file");
     tc_log_end();
 }
@@ -49,7 +53,7 @@ signal_handler(int sig)
     tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
     printf("set signal handler:%d\n", sig);
 
-    if (SIGSEGV == sig) {    
+    if (SIGSEGV == sig) {
         tc_log_info(LOG_ERR, 0, "SIGSEGV error");
         release_resources();
         /* Avoid dead loop*/
@@ -211,7 +215,7 @@ set_details()
         /* TODO why warning*/
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
-        }    
+        }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
             exit(EXIT_FAILURE);
@@ -245,31 +249,38 @@ static void output_for_debug()
 int
 main(int argc, char **argv)
 {
-    /* Init settings */ 
+    int ret;
+
     settings_init();
 
     if (tc_time_init(100) == TC_ERROR) {
         return -1;
     }
 
-    /* Read args */
     read_args(argc, argv);
 
     if (tc_log_init(srv_settings.log_path) == -1) {
         return -1;
     }
 
+    ret = tc_event_loop_init(&s_event_loop, MAX_FD_NUM);
+    if (ret == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "event loop init failed");
+        return -1;
+    }
+
     /* Output debug info */
     output_for_debug();
-    /* Set details */
     set_details();
 
-    if (interception_init(srv_settings.port) == TC_ERROR) {
-        exit(EXIT_FAILURE);
+    if (interception_init(&s_event_loop, srv_settings.binded_ip,
+                          srv_settings.port) == TC_ERROR)
+    {
+        return -1;
     }
 
     /* Run now */
-    interception_run();
+    tc_event_process_cycle(&s_event_loop);
 
     return 0;
 }

@@ -6,6 +6,8 @@
 #define TC_ERR_LOG_TIME_LEN (sizeof("2012-07-31 12:35:00 +999") - 1)
 
 #define tc_time() tc_current_time_sec
+#define tc_time_diff(s1, ms1, s2, ms2) \
+    (((s2) * 1000 + (ms2)) - ((s1) * 1000 + (ms1)))
 
 extern volatile int        tc_update_time;
 extern volatile char      *tc_error_log_time;

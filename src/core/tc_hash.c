@@ -128,7 +128,7 @@ hash_add(hash_table *table, uint64_t key, void *data)
 bool
 hash_del(hash_table *table, uint64_t key)
 {
-    link_list   *l = get_link_list(table, key); 
+    link_list   *l = get_link_list(table, key);
     p_link_node ln = hash_find_node(table, key);
 
     if (ln != NULL) {
@@ -185,7 +185,7 @@ hash_deep_destroy(hash_table *table)
 
         l = table->lists[index];
         if (l != NULL) {
-            ln   = link_list_first(l);   
+            ln   = link_list_first(l);
             while (ln) {
                 tmp_ln = link_list_get_next(l, ln);
                 hn = (hash_node *)ln->data;
