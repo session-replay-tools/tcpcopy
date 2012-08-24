@@ -221,6 +221,12 @@ set_details()
             exit(EXIT_FAILURE);
         }
     }
+
+    if (tc_time_set_timer(1000) == TC_ERROR) {
+        tc_log_info(LOG_ERR, 0, "set timer error");
+        exit(EXIT_FAILURE);
+    }   
+
 }
 
 /* Set defaults */
@@ -253,9 +259,7 @@ main(int argc, char **argv)
 
     settings_init();
 
-    if (tc_time_init(100) == TC_ERROR) {
-        return -1;
-    }
+    tc_time_init();
 
     read_args(argc, argv);
 

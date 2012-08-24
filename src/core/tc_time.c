@@ -10,11 +10,9 @@ volatile struct tm  tc_current_tm;
 static char cache_err_log_time[TC_ERR_LOG_TIME_LEN];
 
 int
-tc_time_init(long msec)
+tc_time_set_timer(long msec)
 {
     struct itimerval value;
-
-    tc_update_time = 0;
 
     value.it_value.tv_sec = msec / 1000;
     value.it_value.tv_usec = (msec % 1000) * 1000;
@@ -26,9 +24,15 @@ tc_time_init(long msec)
         return TC_ERROR;
     }
 
-    tc_time_update();
-
     return TC_OK;
+}
+
+void 
+tc_time_init()
+{
+    tc_update_time = 0;
+
+    tc_time_update();
 }
 
 void
