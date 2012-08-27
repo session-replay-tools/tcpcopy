@@ -178,6 +178,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
             (unsigned short *)tcp_header, (int)(tot_len - size_ip));
+#if (NEED_CALCULATE_IP_CHECKSUM)
     /*
      * For linux 
      * The two fields that are always filled in are: the IP checksum 
@@ -186,6 +187,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
      */
     ip_header->check = 0;
     ip_header->check = csum((unsigned short *)ip_header, size_ip); 
+#endif
 
     tc_log_debug_trace(LOG_DEBUG, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
 
