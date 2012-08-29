@@ -378,6 +378,8 @@ destroy_for_sessions()
     link_list   *list;
     p_link_node  ln, tmp_ln;
 
+    tc_log_info(LOG_NOTICE, 0, "enter destroy_for_sessions");
+
     if (NULL != sessions_table) {
 
         /* Free session table */
@@ -452,6 +454,9 @@ destroy_for_sessions()
         sec_auth_pack_table = NULL;
     }
 #endif
+
+    tc_log_info(LOG_NOTICE, 0, "leave destroy_for_sessions");
+
 }
 
 static void
