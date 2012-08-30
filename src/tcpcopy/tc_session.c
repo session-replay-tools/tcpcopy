@@ -562,7 +562,7 @@ session_create(struct iphdr *ip_header, struct tcphdr *tcp_header)
     s->online_addr   = ip_header->daddr;
     s->orig_src_port = tcp_header->source;
     s->src_h_port    = ntohs(tcp_header->source);
-    s->online_port   = tcp_header->source;
+    s->online_port   = tcp_header->dest;
     test = get_test_pair(&(clt_settings.transfer), 
             s->online_addr, s->online_port);
     s->dst_addr      = test->target_ip;

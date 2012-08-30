@@ -66,6 +66,8 @@ get_test_pair(ip_port_pair_mappings_t *transfer, uint32_t ip, uint16_t port)
         pair = mappings[i];
         if (ip == pair->online_ip && port == pair->online_port) {
             return pair;
+        }else if(pair->online_ip == 0 && port == pair->online_port) {
+            return pair;
         }
     }
     return NULL;
