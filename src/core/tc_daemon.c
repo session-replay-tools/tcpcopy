@@ -12,7 +12,7 @@ daemonize()
         case 0:
             break;
         default:
-            return (-1);
+            _exit(EXIT_SUCCESS);
     }
     if (setsid() == -1) {
         return (-1);
