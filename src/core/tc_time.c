@@ -30,14 +30,7 @@ tc_time_set_timer(long msec)
 int
 tc_time_remove_timer()
 {
-    struct itimerval value;
-
-    value.it_value.tv_sec = 0;
-    value.it_value.tv_usec = 0;
-    value.it_interval.tv_sec = 0;
-    value.it_interval.tv_usec = 0;
-
-    if (setitimer(ITIMER_REAL, &value, NULL) == -1) {
+    if (setitimer(ITIMER_REAL, NULL, NULL) == -1) {
         tc_log_info(LOG_ERR, errno, "setitimer failed");   
         return TC_ERROR;
     }
