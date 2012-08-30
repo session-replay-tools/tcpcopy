@@ -2,34 +2,78 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-static address_node_t addr[65536];
+static hash_table *addr_table = NULL;
 
-int
-address_find_sock(uint16_t local_port)
+static void
+address_init()
 {
-    if (0 == addr[local_port].sock) {
-        tc_log_info(LOG_WARN, 0, "it can't find address socket:%u",
-                    ntohs(local_port));
-        return -1;
-    }
-    return addr[local_port].sock;
+    addr_table = hash_create(32);
+    strcpy(addr_table->name, "address-table");
+    tc_log_info(LOG_NOTICE, 0, "create %s, size:%u",
+            addr_table->name, addr_table->size);
 }
 
-/* Close sockets */
 int
-address_close_sock()
+address_find_sock(uint32_t ip, uint16_t port)
 {
-    int i;
+    uint64_t key = get_key(ip, port);
+    void    *fd  = hash_find(addr_table, key);
 
-    for (i = 0; i< 65536; i++) {
-        if (0 != addr[i].sock) {
-            tc_log_info(LOG_WARN, 0, "it close socket:%d", addr[i].sock);
-            close(addr[i].sock);
-            addr[i].sock = 0;
-        }
+    if (fd == NULL) {
+        tc_log_info(LOG_WARN, 0, "it can't find address socket,%u:%u",
+                    ntohl(ip), ntohs(port));
+        return -1;
+    }
+    return (int)(long) fd;
+}
+
+void
+address_add_sock(uint32_t ip, uint16_t port, int fd) 
+{
+    uint64_t key = get_key(ip, port);
+    hash_add(addr_table, key, (void *)(long)fd);
+}
+
+void 
+address_release()
+{   
+    int          i, fd;
+    hash_node   *hn;
+    link_list   *list;
+    p_link_node  ln, tmp_ln;
+
+    if (addr_table == NULL) {
+        return;
     }
 
-    return 0;
+    for (i = 0; i < addr_table->size; i++) {
+
+        list = addr_table->lists[i];
+        ln   = link_list_first(list);   
+        while (ln) {
+
+            tmp_ln = link_list_get_next(list, ln);
+            hn = (hash_node *)ln->data;
+            if (hn->data != NULL) {
+
+                fd  = (int)(long)hn->data;
+                hn->data = NULL;
+
+                if (0 != fd) {
+                    tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+                    close(fd);
+                }
+            }
+            ln = tmp_ln;
+        }
+        free(list);
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "destroy addr table");
+    hash_destroy(addr_table);
+    free(addr_table);
+    addr_table = NULL;
+
 }
 
 /* Check resource usage, such as memory usage and cpu usage */
@@ -123,6 +167,8 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     /* Init session table*/
     init_for_sessions();
 
+    address_init();
+
     /* Add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -136,12 +182,10 @@ tcp_copy_init(tc_event_loop_t *event_loop)
             return TC_ERROR;
         }
 
-        addr[online_port].ip = target_ip;
-        addr[online_port].port = clt_settings.srv_port;
-        addr[online_port].sock = fd;
+        address_add_sock(pair->online_ip, pair->online_port, fd);
 
-        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u",
-                    ntohs(clt_settings.srv_port));
+        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
+                    ntohl(target_ip), clt_settings.srv_port);
     }
 
     /* Init packets for processing */

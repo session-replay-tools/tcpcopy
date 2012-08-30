@@ -270,15 +270,16 @@ send_faked_passive_rst(session_t *s)
 }
 
 static bool
-send_router_info(uint32_t listening_port, uint32_t client_ip,
+send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         uint16_t client_port, uint16_t type)
 {
     int          fd;
     msg_client_t msg;
 
-    fd = address_find_sock(listening_port);
+    fd = address_find_sock(local_ip, local_port);
     if (fd == -1) {
-        tc_log_info(LOG_WARN, 0, "sock invalid:%u", ntohs(listening_port));
+        tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
+                ntohl(local_ip), ntohs(local_port));
         return false;
     }
 
@@ -305,7 +306,7 @@ session_rel_dynamic_mem(session_t *s)
 
         /* Send the last rst packet to backend */
         send_faked_passive_rst(s);
-        send_router_info(s->online_port, s->src_addr,
+        send_router_info(s->online_addr, s->online_port, s->src_addr,
                 htons(s->src_h_port), CLIENT_DEL);
         s->sm.sess_over = 1;
     }
@@ -1494,8 +1495,8 @@ fake_syn(session_t *s, struct iphdr *ip_header,
     }
 
     /* Send route info to backend */
-    result = send_router_info(tcp_header->dest, ip_header->saddr,
-            tcp_header->source, CLIENT_ADD);
+    result = send_router_info(ip_header->daddr, tcp_header->dest,
+            ip_header->saddr, tcp_header->source, CLIENT_ADD);
     if (!result) {
         return;
     }
@@ -2647,8 +2648,8 @@ process(char *packet, int pack_src)
                     tc_log_info(LOG_NOTICE, 0, "init for next sess from bak");
                     restore_buffered_next_session(s);
                 } else {
-                    send_router_info(s->online_port, ip_header->daddr,
-                            tcp_header->dest, CLIENT_DEL);
+                    send_router_info(s->online_addr, s->online_port,
+                            ip_header->daddr, tcp_header->dest, CLIENT_DEL);
                     session_rel_dynamic_mem(s);
                     if (!hash_del(sessions_table, s->hash_key)) {
                         tc_log_info(LOG_ERR, 0, "wrong del:%u", s->src_h_port);
@@ -2702,7 +2703,7 @@ process(char *packet, int pack_src)
                 }
             }
 
-            result = send_router_info(tcp_header->dest, 
+            result = send_router_info(ip_header->daddr, tcp_header->dest, 
                     ip_header->saddr, tcp_header->source, CLIENT_ADD);
             if (result) {
                 process_client_packet(s, ip_header, tcp_header);
@@ -2720,8 +2721,9 @@ process(char *packet, int pack_src)
                         tc_log_info(LOG_NOTICE, 0, "init for next from clt");
                         restore_buffered_next_session(s);
                     } else {
-                        send_router_info(s->online_port, ip_header->saddr,
-                            htons(s->src_h_port), CLIENT_DEL);
+                        send_router_info(s->online_addr, s->online_port,
+                                ip_header->saddr, htons(s->src_h_port),
+                                CLIENT_DEL);
                         session_rel_dynamic_mem(s);
                         if (!hash_del(sessions_table, s->hash_key)) {
                             tc_log_info(LOG_ERR, 0, "wrong del:%u",
