@@ -394,6 +394,7 @@ destroy_for_sessions()
                 if (hn->data != NULL) {
 
                     s = hn->data;
+                    hn->data = NULL;
                     /* Delete session */
                     session_rel_dynamic_mem(s);
                     if (!hash_del(sessions_table, s->hash_key)) {
@@ -1030,6 +1031,7 @@ clear_timeout_sessions()
                 }
                 result = check_session_obsolete(s, current, threshold_time);
                 if (OBSOLETE == result) {
+                    hn->data = NULL;
                     /* Release memory for session internals */
                     session_rel_dynamic_mem(s);
                     /* Remove session from table */
