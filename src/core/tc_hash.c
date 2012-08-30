@@ -13,7 +13,7 @@ hash_node_malloc(uint64_t key, void *data)
 
     hn->key  = key;
     hn->data = data;
-    hn->access_time = tc_current_time_sec;
+    hn->access_time = tc_time();
     hn->visit_cnt   = 0;
 
     return hn;
@@ -41,7 +41,7 @@ hash_find_node(hash_table *table, uint64_t key)
         hn = (hash_node *)ln->data;
         table->total_key_compared++;
         if (hn->key == key) {
-            hn->access_time = tc_current_time_sec;
+            hn->access_time = tc_time();
             hn->visit_cnt++;
             /* Put the lastest item to the head of the linked list */
             (void)link_list_remove(l, ln);
