@@ -30,14 +30,14 @@ tc_packets_init(tc_event_loop_t *event_loop)
     int         fd;
     tc_event_t *ev;
 
-    /* Init the raw socket to send */
+    /* Init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     } else {
         tc_raw_socket_out = fd;
     }
 
-    /* Init the raw socket to recv */
+    /* Init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
@@ -49,11 +49,8 @@ tc_packets_init(tc_event_loop_t *event_loop)
         return TC_ERROR;
     }
 
-    if (tc_event_add(event_loop, ev, TC_EVENT_READ)
-            == TC_EVENT_ERROR)
-    {
-        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.",
-                    fd);
+    if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.", fd);
         return TC_ERROR;
     }
 
