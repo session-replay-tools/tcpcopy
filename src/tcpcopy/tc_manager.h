@@ -15,7 +15,7 @@ int address_close_sock();
 
 int tcp_copy_init(tc_event_loop_t *event_loop);
 void tcp_copy_over(const int sig);
-void tcp_copy_exit();
+void tcp_copy_release_resources();
 
 #endif   /* ----- #ifndef _MANAGER_H_INC ----- */
 

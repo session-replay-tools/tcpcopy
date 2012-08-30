@@ -8,7 +8,7 @@ hash_node_malloc(uint64_t key, void *data)
 
     if (NULL == hn) {
         tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
-        exit(errno);
+        return NULL;
     }
 
     hn->key  = key;
@@ -62,14 +62,14 @@ hash_create(size_t size)
 
     if (NULL == ht) {
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash table");
-        exit(errno);
+        return NULL;
     }
 
     ht->size  = size;
     ht->lists = (link_list **) calloc(size, sizeof(link_list *));
     if (NULL == ht->lists) {
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash lists");
-        exit(errno);
+        return NULL;
     }
 
     for (i=0; i < size; i++) {
@@ -117,7 +117,13 @@ hash_add(hash_table *table, uint64_t key, void *data)
         return false;
     } else {
         tmp = hash_node_malloc(key, data);
+        if (tmp == NULL) {
+            return false;
+        }
         ln  = link_node_malloc(tmp);
+        if (ln == NULL) {
+            return false;
+        }
         l   = get_link_list(table, key);
         link_list_push(l, ln);
         table->total++;
