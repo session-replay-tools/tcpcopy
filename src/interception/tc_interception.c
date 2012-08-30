@@ -43,7 +43,7 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
                 (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
     {
         tc_log_info(LOG_ERR, errno, "unable to send mode message");
-        exit(0);
+        return 0;
     }
 
     return 1;

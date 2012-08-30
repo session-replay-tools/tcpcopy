@@ -136,10 +136,10 @@ read_args(int argc, char **argv)
                 break;
             case 'h':
                 usage();
-                exit(EXIT_SUCCESS);
+                return -1;
             case 'v':
                 printf ("tcpcopy version:%s\n", VERSION);
-                exit(EXIT_SUCCESS);
+                return -1;
             case 'd':
                 clt_settings.do_daemonize = 1;
                 break;
@@ -151,7 +151,7 @@ read_args(int argc, char **argv)
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
-                exit(EXIT_FAILURE);
+                return -1;
         }
     }
 
@@ -321,24 +321,26 @@ set_details()
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
     {
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
 #if (TCPCOPY_OFFLINE)
     if (NULL == clt_settings.pcap_file) {
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (NULL != clt_settings.user_pwd) {
-        retrieve_mysql_user_pwd_info(clt_settings.user_pwd);
+        if (retrieve_mysql_user_pwd_info(clt_settings.user_pwd) == -1) {
+            return -1;
+        }
     } else {
         tc_log_info(LOG_ERR, 0, "it must have -u argument");
         fprintf(stderr, "no -u argument\n");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 #endif
 
@@ -349,13 +351,13 @@ set_details()
         }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
-            exit(EXIT_FAILURE);
+            return -1;
         }    
     }    
 
     if (tc_time_set_timer(100) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
-        exit(EXIT_FAILURE);
+        return -1;
     }
 
     return 0;
@@ -388,7 +390,9 @@ main(int argc, char **argv)
 
     tc_time_init();
 
-    read_args(argc, argv);
+    if (read_args(argc, argv) == -1) {
+        return -1;
+    }
 
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
@@ -396,8 +400,11 @@ main(int argc, char **argv)
 
     /* Output debug info */
     output_for_debug(argc, argv);
+
     /* Set details for running */
-    set_details();
+    if (set_details() == -1) {
+        return -1;
+    }
 
     ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
     if (ret == TC_EVENT_ERROR) {

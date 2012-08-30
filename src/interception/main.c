@@ -175,7 +175,7 @@ read_args(int argc, char **argv) {
                 break;
             case 'h':
                 usage();
-                exit(EXIT_SUCCESS);
+                return -1;
             case 'l':
                 srv_settings.log_path = optarg;
                 break;
@@ -184,13 +184,13 @@ read_args(int argc, char **argv) {
                 break;
             case 'v':
                 printf ("intercept version:%s\n", VERSION);
-                exit(EXIT_SUCCESS);
+                return -1;
             case 'd':
                 srv_settings.do_daemonize = 1;
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
-                exit(EXIT_FAILURE);
+                return -1;
         }
 
     }
@@ -198,13 +198,13 @@ read_args(int argc, char **argv) {
     return 0;
 }
 
-static void
+static int  
 set_details()
 {
     /* Ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
         perror("failed to ignore SIGPIPE; sigaction");
-        exit(EXIT_FAILURE);
+        return -1;
     }
     /* Retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
@@ -218,15 +218,16 @@ set_details()
         }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
-            exit(EXIT_FAILURE);
+            return -1;
         }
     }
 
     if (tc_time_set_timer(1000) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
-        exit(EXIT_FAILURE);
+        return -1;
     }   
 
+    return 0;
 }
 
 /* Set defaults */
@@ -261,7 +262,9 @@ main(int argc, char **argv)
 
     tc_time_init();
 
-    read_args(argc, argv);
+    if (read_args(argc, argv) == -1) {
+        return -1;
+    }
 
     if (tc_log_init(srv_settings.log_path) == -1) {
         return -1;
@@ -275,7 +278,9 @@ main(int argc, char **argv)
 
     /* Output debug info */
     output_for_debug();
-    set_details();
+    if (set_details() == -1) {
+        return -1;
+    }
 
     if (interception_init(&s_event_loop, srv_settings.binded_ip,
                           srv_settings.port) == TC_ERROR)

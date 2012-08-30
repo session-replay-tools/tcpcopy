@@ -64,12 +64,11 @@ get_test_pair(ip_port_pair_mappings_t *transfer, uint32_t ip, uint16_t port)
     mappings = transfer->mappings;
     for (i = 0; i < transfer->num; i++) {
         pair = mappings[i];
-        if (ip == pair->target_ip && port == pair->target_port) {
-            break;
+        if (ip == pair->online_ip && port == pair->online_port) {
+            return pair;
         }
     }
-
-    return pair;
+    return NULL;
 }
 
 int

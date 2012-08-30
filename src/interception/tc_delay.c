@@ -15,7 +15,7 @@ copy_message(struct msg_server_s *msg)
     cmsg = (struct msg_server_s *)malloc(sizeof(struct msg_server_s));
     if (NULL == cmsg) {
         tc_log_info(LOG_ERR, errno, "malloc error");
-        exit(EXIT_FAILURE);
+        return NULL;
     }
     memcpy(cmsg, msg, sizeof(struct msg_server_s));
 
@@ -99,11 +99,13 @@ delay_table_add(uint64_t key, struct msg_server_s *msg)
         hash_add(table, key, msg_list);
     }
 
-    cmsg     = copy_message(msg);
-    ln       = link_node_malloc((void *)cmsg);
-    link_list_append(msg_list, ln);
+    cmsg = copy_message(msg);
+    if (cmsg != NULL) {
+        ln   = link_node_malloc((void *)cmsg);
+        link_list_append(msg_list, ln);
 
-    msg_item_cnt++;
+        msg_item_cnt++;
+    }
 
     return;
 }

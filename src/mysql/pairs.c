@@ -41,7 +41,7 @@ retrieve_user_pwd(char *user)
     return NULL;
 }
 
-void
+int 
 retrieve_mysql_user_pwd_info(char *pairs)
 {
     char       *p, *end, *q, *next, *pair_end;
@@ -58,7 +58,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
 
     if (len <= 1) {
         tc_log_info(LOG_WARN, 0, "use password error:%s:", pairs);
-        exit(1);
+        return -1;
     }
 
     do{
@@ -70,7 +70,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
                 pair_end = next - 1;
             } else {
                 tc_log_info(LOG_WARN, 0, "use password error:%s:", pairs);
-                exit(1);
+                return -1;
             }
         } else {
             pair_end = p + strlen(p) - 1;
@@ -78,7 +78,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
 
         if ((q-p) >= 256 || (pair_end - q) >= 256) {
             tc_log_info(LOG_WARN, 0, "too long for user or password");
-            exit(1);
+            return -1;
         }
 
         p_user_info = (mysql_user*)calloc(1, sizeof(mysql_user));
@@ -99,6 +99,8 @@ retrieve_mysql_user_pwd_info(char *pairs)
             break;
         }
     }while (p < end) ;
+
+    return 0;
 }
 
 
