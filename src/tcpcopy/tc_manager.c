@@ -71,8 +71,13 @@ tcp_copy_exit()
 
     output_stat();
 
-    tc_event_loop_finish(&event_loop);
     destroy_for_sessions();
+
+    tc_time_remove_timer();
+    tc_log_info(LOG_NOTICE, 0, "remove timer over");
+
+    tc_event_loop_finish(&event_loop);
+    tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
     tc_log_end();
 

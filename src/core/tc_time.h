@@ -16,6 +16,7 @@ extern volatile time_t     tc_current_time_sec;
 extern volatile struct tm  tc_current_tm;
 
 int  tc_time_set_timer(long msec);
+int  tc_time_remove_timer();
 void tc_time_init();
 void tc_time_update(void);
 void tc_localtime(time_t sec, struct tm *tm);

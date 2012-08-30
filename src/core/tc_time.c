@@ -27,6 +27,24 @@ tc_time_set_timer(long msec)
     return TC_OK;
 }
 
+int
+tc_time_remove_timer()
+{
+    struct itimerval value;
+
+    value.it_value.tv_sec = 0;
+    value.it_value.tv_usec = 0;
+    value.it_interval.tv_sec = 0;
+    value.it_interval.tv_usec = 0;
+
+    if (setitimer(ITIMER_REAL, &value, NULL) == -1) {
+        tc_log_info(LOG_ERR, errno, "setitimer failed");   
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+
 void 
 tc_time_init()
 {
@@ -85,3 +103,4 @@ tc_time_sig_alarm(int sig)
 {
     tc_update_time = 1;
 }
+
