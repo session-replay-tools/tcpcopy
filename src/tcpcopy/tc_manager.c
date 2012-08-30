@@ -65,16 +65,16 @@ check_resource_usage(tc_event_timer_t *evt)
 }
 
 void
-tcp_copy_exit()
+tcp_copy_release_resources()
 {
     int i;
 
     output_stat();
 
-    destroy_for_sessions();
-
     tc_time_remove_timer();
     tc_log_info(LOG_NOTICE, 0, "remove timer over");
+
+    destroy_for_sessions();
 
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
@@ -94,8 +94,6 @@ tcp_copy_exit()
         free(clt_settings.transfer.mappings);
         clt_settings.transfer.mappings = NULL;
     }
-
-    exit(EXIT_SUCCESS);
 }
 
 void
@@ -104,7 +102,8 @@ tcp_copy_over(const int sig)
     long int pid   = (long int)syscall(SYS_gettid);
 
     tc_log_info(LOG_WARN, 0, "sig %d received, pid=%ld", sig, pid);
-    exit(EXIT_SUCCESS);
+
+    event_loop.event_over = 1;
 }
 
 

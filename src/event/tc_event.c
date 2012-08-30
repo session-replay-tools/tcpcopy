@@ -104,6 +104,10 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 
         ret = actions->poll(loop, timeout);
 
+        if (loop->event_over) {
+            break;
+        }
+
         if (tc_update_time) {
             tc_time_update();
             tc_update_time = 0;

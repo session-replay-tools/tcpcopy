@@ -23,7 +23,6 @@ tc_event_loop_t event_loop;
 static void
 set_signal_handler()
 {
-    atexit(tcp_copy_exit);
     signal(SIGALRM, tc_time_sig_alarm);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
@@ -413,6 +412,8 @@ main(int argc, char **argv)
 
     /* Run now */
     tc_event_process_cycle(&event_loop);
+
+    tcp_copy_release_resources();
 
     return 0;
 }
