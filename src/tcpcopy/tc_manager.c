@@ -77,7 +77,6 @@ address_release()
             }
             ln = tmp_ln;
         }
-        free(list);
     }
 
     tc_log_info(LOG_NOTICE, 0, "destroy addr table");
