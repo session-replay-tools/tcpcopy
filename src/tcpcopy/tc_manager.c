@@ -16,8 +16,19 @@ address_init()
 int
 address_find_sock(uint32_t ip, uint16_t port)
 {
-    uint64_t key = get_key(ip, port);
-    void    *fd  = hash_find(addr_table, key);
+    void                    *fd;
+    uint64_t                 key;
+    ip_port_pair_mapping_t  *test;
+
+    test = get_test_pair(&(clt_settings.transfer), ip, port);
+    if (test == NULL) {
+        tc_log_info(LOG_WARN, 0, "it can't find test pair,%u:%u",
+                    ntohl(ip), ntohs(port));
+        return -1;
+    }
+
+    key = get_key(test->online_ip, test->online_port);
+    fd  = hash_find(addr_table, key);
 
     if (fd == NULL) {
         tc_log_info(LOG_WARN, 0, "it can't find address socket,%u:%u",
