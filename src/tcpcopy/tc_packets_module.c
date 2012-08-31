@@ -68,6 +68,9 @@ tc_process_raw_socket_packet(tc_event_t *rev)
         recv_len = recvfrom(rev->fd, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
 
         if (recv_len == -1) {
+            if (errno == EAGAIN) {
+                return TC_OK;
+            }
             tc_log_info(LOG_ERR, errno, "recvfrom");
             return TC_ERROR;
         }
