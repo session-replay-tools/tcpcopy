@@ -71,6 +71,7 @@ tc_process_raw_socket_packet(tc_event_t *rev)
             if (errno == EAGAIN) {
                 return TC_OK;
             }
+
             tc_log_info(LOG_ERR, errno, "recvfrom");
             return TC_ERROR;
         }
