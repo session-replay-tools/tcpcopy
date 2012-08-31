@@ -6,8 +6,6 @@ static time_t last_clean_time;
 static uint32_t      seq = 1;
 static unsigned char buffer[128];
 
-extern tc_event_loop_t s_event_loop;
-
 static int
 dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 {
@@ -71,7 +69,7 @@ tc_msg_event_accept(tc_event_t *rev)
         return;
     }
 
-    if (tc_event_add(&s_event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+    if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return;
     }
 }
@@ -83,7 +81,7 @@ tc_msg_event_process(tc_event_t *rev)
 
     if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_socket_close(rev->fd);
-        tc_event_del(&s_event_loop, rev, TC_EVENT_READ);
+        tc_event_del(rev->loop, rev, TC_EVENT_READ);
         tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
         return;
     }

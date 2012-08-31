@@ -62,6 +62,7 @@ int tc_event_add(tc_event_loop_t *loop, tc_event_t *ev, int events)
 {
     tc_event_actions_t *actions;
 
+    ev->loop = loop;
     actions = loop->actions;
 
     if (events == TC_EVENT_NONE) {
@@ -156,6 +157,10 @@ tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
 
 void tc_event_destroy(tc_event_t *ev)
 {
+    ev->loop = NULL;
+    ev->read_handler = NULL;
+    ev->write_handler = NULL;
+
     free(ev);
 }
 

@@ -45,6 +45,7 @@ struct tc_event_s {
     int                  fd;
     int                  events;
     int                  index;
+    tc_event_loop_t     *loop;
     tc_event_handler_pt  read_handler;
     tc_event_handler_pt  write_handler;
     tc_event_t          *next;
