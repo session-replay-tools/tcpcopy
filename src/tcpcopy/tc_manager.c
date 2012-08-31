@@ -133,6 +133,8 @@ tcp_copy_release_resources()
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
+    address_release();
+
     tc_log_end();
 
 #ifdef TCPCOPY_MYSQL_ADVANCED
