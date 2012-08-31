@@ -106,7 +106,7 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
         ret = actions->poll(loop, timeout);
 
         if (loop->event_over) {
-            break;
+            goto FINISH;
         }
 
         if (tc_update_time) {
@@ -124,15 +124,20 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
                 act_event = act_event->next)
         {
             if (act_event->events & TC_EVENT_READ) {
-                act_event->read_handler(act_event);
+                if (act_event->read_handler(act_event) == TC_ERR_EXIT) {
+                    goto FINISH;
+                }
             }
 
             if (act_event->events & TC_EVENT_WRITE) {
-                act_event->write_handler(act_event);
+                if (act_event->write_handler(act_event) == TC_ERR_EXIT) {
+                    goto FINISH;
+                }
             }
         }
     }
 
+FINISH:
     return TC_EVENT_OK;
 }
 

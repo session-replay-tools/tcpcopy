@@ -2,7 +2,7 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-static void tc_process_server_msg(tc_event_t *rev);
+static int tc_process_server_msg(tc_event_t *rev);
 
 int
 tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
@@ -34,7 +34,7 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
     return fd;
 }
 
-static void
+static int
 tc_process_server_msg(tc_event_t *rev)
 {
     msg_server_t msg;
@@ -44,10 +44,12 @@ tc_process_server_msg(tc_event_t *rev)
     {
         tc_log_info(LOG_ERR, 0, 
                     "Recv socket(%d)error, server may be close", rev->fd);
-        return;
+        return TC_ERR_EXIT;
     }
 
     process((char *) &msg, REMOTE);
+
+    return TC_OK;
 }
 
 

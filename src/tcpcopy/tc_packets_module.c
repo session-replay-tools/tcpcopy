@@ -8,7 +8,7 @@ static pcap_t        *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
-static void tc_process_raw_socket_packet(tc_event_t *rev);
+static int tc_process_raw_socket_packet(tc_event_t *rev);
 static bool process_packet(bool backup, char *packet, int length);
 static void replicate_packs(char *packet, int length, int replica_num);
 static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag);
@@ -57,7 +57,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
     return TC_OK;
 }
 
-static void
+static int
 tc_process_raw_socket_packet(tc_event_t *rev)
 {
     int  recv_len;
@@ -68,22 +68,21 @@ tc_process_raw_socket_packet(tc_event_t *rev)
         recv_len = recvfrom(rev->fd, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
 
         if (recv_len == -1) {
-            if (errno == EAGAIN) {
-                return;
-            }
             tc_log_info(LOG_ERR, errno, "recvfrom");
-            return;
+            return TC_ERROR;
         }
 
         if (recv_len == 0) {
             tc_log_info(LOG_ERR, 0, "recv len is 0");
-            return;
+            return TC_ERROR;
         }
 
         if (dispose_packet(recv_buf, recv_len, NULL) == TC_ERROR) {
-            return;
+            return TC_ERROR;
         }
     }
+
+    return TC_OK;
 }
 
 static bool
