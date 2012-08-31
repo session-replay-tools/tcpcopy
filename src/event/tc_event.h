@@ -30,7 +30,7 @@ typedef int (*ev_delete_event_pt) (tc_event_loop_t *loop, tc_event_t *ev,
         int events);
 typedef int (*ev_event_poll_pt) (tc_event_loop_t *loop, long timeout);
 
-typedef void (*tc_event_handler_pt) (tc_event_t *ev);
+typedef int (*tc_event_handler_pt) (tc_event_t *ev);
 typedef void (*tc_event_timer_handler_pt) (tc_event_timer_t *evt);
 
 typedef struct {
@@ -45,6 +45,7 @@ struct tc_event_s {
     int                  fd;
     int                  events;
     int                  index;
+    tc_event_loop_t     *loop;
     tc_event_handler_pt  read_handler;
     tc_event_handler_pt  write_handler;
     tc_event_t          *next;

@@ -18,7 +18,7 @@
 #include <intercept.h>
 
 xcopy_srv_settings srv_settings;
-tc_event_loop_t s_event_loop;
+static tc_event_loop_t s_event_loop;
 
 static void
 release_resources()

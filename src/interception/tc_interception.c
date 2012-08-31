@@ -6,7 +6,7 @@ static time_t last_clean_time;
 static uint32_t      seq = 1;
 static unsigned char buffer[128];
 
-extern tc_event_loop_t s_event_loop;
+static int tc_msg_event_process(tc_event_t *rev);
 
 static int
 dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
@@ -49,7 +49,7 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
     return 1;
 }
 
-void
+static int
 tc_msg_event_accept(tc_event_t *rev)
 {
     int         fd;
@@ -57,35 +57,37 @@ tc_msg_event_accept(tc_event_t *rev)
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
-        return;
+        return TC_ERROR;
     }
 
     if (tc_socket_set_nodelay(fd) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
-        return;
+        return TC_ERROR;
     }
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
         tc_log_info(LOG_ERR, 0, "Msg event create failed.");
-        return;
+        return TC_ERROR;
     }
 
-    if (tc_event_add(&s_event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
-        return;
+    if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        return TC_ERROR;
     }
+
+    return TC_OK;
 }
 
-void
+static int 
 tc_msg_event_process(tc_event_t *rev)
 {
     msg_client_t msg;
 
     if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_socket_close(rev->fd);
-        tc_event_del(&s_event_loop, rev, TC_EVENT_READ);
+        tc_event_del(rev->loop, rev, TC_EVENT_READ);
         tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-        return;
+        return TC_ERROR;
     }
 
     switch (msg.type) {
@@ -100,9 +102,11 @@ tc_msg_event_process(tc_event_t *rev)
             router_del(msg.client_ip, msg.client_port);
             break;
     }
+
+    return TC_OK;
 }
 
-void
+static int
 tc_nl_event_process(tc_event_t *rev)
 {
     int             diff, i, pass_through_flag = 0;
@@ -114,7 +118,7 @@ tc_nl_event_process(tc_event_t *rev)
     packet_id = 0;
 
     if (tc_nl_socket_recv(rev->fd, buffer, 65535) == TC_ERROR) {
-        return;
+        return TC_ERROR;
     }
 
     ip_hdr = tc_nl_ip_header(buffer);
@@ -145,6 +149,8 @@ tc_nl_event_process(tc_event_t *rev)
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }
     }
+
+    return TC_OK;
 }
 
 /* Initiate for tcpcopy server */
