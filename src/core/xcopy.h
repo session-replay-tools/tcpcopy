@@ -176,8 +176,9 @@ struct ethernet_hdr {
 /* Global functions */
 int daemonize();
 
-#define TC_OK     0
-#define TC_ERROR -1
+#define TC_OK        0
+#define TC_ERROR    -1
+#define TC_ERR_EXIT  1
 
 #define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
 #define tc_memzero(d, l) (memset(d, 0, l))

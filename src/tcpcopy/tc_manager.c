@@ -168,7 +168,6 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
-    uint16_t                 online_port;
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
@@ -186,7 +185,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
         pair = mappings[i];
-        online_port = pair->online_port;
         target_ip = pair->target_ip;
 
         fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
@@ -210,7 +208,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         return TC_ERROR;
     }
 #endif
-
 
     return TC_OK;
 }
