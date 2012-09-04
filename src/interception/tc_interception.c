@@ -1,7 +1,8 @@
 #include <xcopy.h>
 #include <intercept.h>
 
-static time_t last_clean_time;
+static pid_t         pid;
+static time_t        last_clean_time;
 
 static uint32_t      seq = 1;
 static unsigned char buffer[128];
@@ -22,7 +23,7 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
     nl_header->nlmsg_type  = IPQM_VERDICT;
     nl_header->nlmsg_len   = NLMSG_LENGTH(sizeof(struct ipq_verdict_msg));
     nl_header->nlmsg_flags = (NLM_F_REQUEST);
-    nl_header->nlmsg_pid   = getpid();
+    nl_header->nlmsg_pid   = pid;
     nl_header->nlmsg_seq   = seq++;
     ver_data = (struct ipq_verdict_msg *)NLMSG_DATA(nl_header);
     ver_data->value = verdict;
@@ -162,6 +163,8 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 
     delay_table_init(srv_settings.hash_size);
     router_init(srv_settings.hash_size << 1);
+
+    pid = getpid();
 
     /* Init the listening socket */
     if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
