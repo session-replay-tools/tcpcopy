@@ -13,7 +13,7 @@ static unsigned char   buffer[128];
 static char            pool[POOL_SIZE];
 static uint64_t        read_counter  = 0;
 static uint64_t        write_counter = 0; 
-static pthread_mutex_t mutex;
+static pthread_mutex_t pool_mutex;
 static pthread_cond_t  empty;
 static pthread_cond_t  full;
 
@@ -148,7 +148,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 #endif
 
     record_len = save_len;
-    pthread_mutex_lock (&mutex);
+    pthread_mutex_lock(&pool_mutex);
     next_w_cnt = write_counter + save_len + sizeof(int); 
     next_w_pos = next_w_cnt >> POOL_SHIFT;
 
@@ -162,7 +162,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     for (;;) {
         if (diff > POOL_SIZE) {
             tc_log_info(LOG_WARN, 0, "poll is full");
-            pthread_cond_wait(&empty, &mutex);
+            pthread_cond_wait(&empty, &pool_mutex);
         } else {
             break;
         }
@@ -179,34 +179,34 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     memcpy(p_content, ip_header, save_len);
 
     pthread_cond_signal(&full);
-    pthread_mutex_unlock (&mutex);
+    pthread_mutex_unlock(&pool_mutex);
 }
 
 static
-tc_ip_header_t *get_resp_ip_hdr_from_pool(char *resp)
+tc_ip_header_t *get_resp_ip_hdr_from_pool(char *resp, int *len)
 {
-    int      read_pos, len;
+    int      read_pos;
     char    *pos;
 
-    pthread_mutex_lock (&mutex);
+    pthread_mutex_lock(&pool_mutex);
 
     if (read_counter >= write_counter) {
-        pthread_cond_wait(&full, &mutex);
+        pthread_cond_wait(&full, &pool_mutex);
     }
 
     read_pos = read_counter >> POOL_SHIFT;
 
     pos = pool + read_pos;
-    len = *(int *)(pos);
+    *len = *(int *)(pos);
 
     pos = pos + sizeof(int);
 
-    memcpy(resp, pos, len);
+    memcpy(resp, pos, *len);
 
-    read_counter += (len + sizeof(int));
+    read_counter += (*len + sizeof(int));
 
     pthread_cond_signal(&empty);
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&pool_mutex);
 
     return (tc_ip_header_t *)resp;
 }
@@ -254,22 +254,21 @@ tc_nl_event_process(tc_event_t *rev)
 int
 interception_process_msg(void *tid)
 {
-    int             diff;
+    int             diff, len;
     char            resp[RESP_MAX_USEFUL_SIZE];
     time_t          now;
     tc_ip_header_t *ip_hdr;
 
     for(;;){
 
-        ip_hdr = get_resp_ip_hdr_from_pool(resp); 
+        ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
 
-        router_update(ip_hdr);
+        router_update(ip_hdr, len);
 
         now  = tc_time();
         diff = now - last_clean_time;
         if (diff > CHECK_INTERVAL) {
             route_delete_obsolete(now);
-            delay_table_delete_obsolete(now);
             last_clean_time = now;
         }
 
@@ -285,8 +284,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
     pthread_t   thread;
     tc_event_t *ev;
 
-    delay_table_init(srv_settings.hash_size);
-    router_init(srv_settings.hash_size << 1);
+    router_init(srv_settings.hash_size);
 
     pid = getpid();
 
@@ -328,7 +326,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
         }
     }
 
-    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&pool_mutex, NULL);
     pthread_cond_init(&full, NULL);
     pthread_cond_init(&empty, NULL);
     pthread_create(&thread, NULL, interception_process_msg, NULL);
@@ -341,6 +339,5 @@ void
 interception_over()
 {
     router_destroy();
-    delay_table_destroy();
 }
 
