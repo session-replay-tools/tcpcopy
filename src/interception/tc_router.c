@@ -88,7 +88,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
 {
     uint64_t key = get_key(ip, port);
 
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_lock(&mutex);
     hash_add(table, key, (void *)(long)fd);
     delay_table_send(key, fd);
     pthread_mutex_unlock(&mutex);
