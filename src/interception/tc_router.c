@@ -17,7 +17,6 @@ route_delete_obsolete(time_t cur_time)
 
     pthread_mutex_lock(&mutex);
 
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in route_delete_obsolete");
     for (i = 0; i < table->size; i++) {
 
         l  = table->lists[i];
@@ -77,7 +76,6 @@ router_del(uint32_t ip, uint16_t port)
     uint64_t key = get_key(ip, port);
 
     pthread_mutex_lock(&mutex);
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in router_del");
     hash_del(table, key);
     delay_table_del(key);
     pthread_mutex_unlock(&mutex);
@@ -91,7 +89,6 @@ router_add(uint32_t ip, uint16_t port, int fd)
     uint64_t key = get_key(ip, port);
 
     pthread_mutex_lock(&mutex);
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in router_add");
     hash_add(table, key, (void *)(long)fd);
     delay_table_send(key, fd);
     pthread_mutex_unlock(&mutex);
@@ -114,7 +111,6 @@ router_update(tc_ip_header_t *ip_header, int len)
 
     key = get_key(ip_header->daddr, tcp_header->dest);
     pthread_mutex_lock(&mutex);
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in router_update");
     fd  = hash_find(table, key);
     if ( NULL == fd ) {
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");

@@ -121,24 +121,25 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
     int                    *p_len, cur_w_pos, diff;
     char                   *p_content;
-    uint16_t                size_ip, size_tcp, save_len, record_len;
+    uint16_t                save_len, record_len;
 #if (TCPCOPY_MYSQL_ADVANCED) 
-    uint16_t                cont_len, tot_len;
+    uint16_t                size_ip, size_tcp, cont_len, tot_len;
+    tc_tcp_header_t        *tcp_header;
 #endif
     uint64_t                next_w_pos, next_w_cnt; 
-    tc_tcp_header_t        *tcp_header;
 
     if (ip_header->protocol != IPPROTO_TCP) {
         tc_log_info(LOG_WARN, 0, "this is not a tcp packet");
         return;
     }
 
+
+    save_len = RESP_MAX_USEFUL_SIZE;
+
+#if (TCPCOPY_MYSQL_ADVANCED) 
     size_ip = ip_header->ihl << 2;
     tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
     size_tcp = tcp_header->doff << 2;
-    save_len = size_ip + size_tcp;
-
-#if (TCPCOPY_MYSQL_ADVANCED) 
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = tot_len - size_ip - size_tcp;
     if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
@@ -148,7 +149,6 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 
     record_len = save_len;
     pthread_mutex_lock(&mutex);
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in put");
     next_w_cnt = write_counter + save_len + sizeof(int); 
     next_w_pos = next_w_cnt >> POOL_SHIFT;
 
@@ -161,7 +161,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     
     for (;;) {
         if (diff > POOL_SIZE) {
-            tc_log_info(LOG_WARN, 0, "poll is full");
+            tc_log_info(LOG_WARN, 0, "pool is full");
             pthread_cond_wait(&empty, &mutex);
         } else {
             break;
@@ -182,15 +182,14 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     pthread_mutex_unlock(&mutex);
 }
 
-static
-tc_ip_header_t *get_resp_ip_hdr_from_pool(char *resp, int *len)
+static tc_ip_header_t *
+get_resp_ip_hdr_from_pool(char *resp, int *len)
 {
     int      read_pos;
     char    *pos;
 
     pthread_mutex_lock(&mutex);
 
-    tc_log_info(LOG_DEBUG, 0, "pthread_mutex_lock in get");
     if (read_counter >= write_counter) {
         pthread_cond_wait(&full, &mutex);
     }
@@ -252,7 +251,7 @@ tc_nl_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
-int
+static void *
 interception_process_msg(void *tid)
 {
     int             diff, len;
@@ -262,8 +261,12 @@ interception_process_msg(void *tid)
 
     for(;;){
 
+        len = RESP_MAX_USEFUL_SIZE;
         ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
 
+        if (ip_hdr == NULL) {
+            tc_log_info(LOG_WARN, 0, "ip header is null");
+        }
         router_update(ip_hdr, len);
 
         now  = tc_time();
