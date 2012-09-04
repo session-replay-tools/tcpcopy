@@ -1,11 +1,21 @@
 #include <xcopy.h>
+#include <pthread.h>
 #include <intercept.h>
 
-static pid_t         pid;
-static time_t        last_clean_time;
+static pid_t           pid;
+static time_t          last_clean_time;
 
-static uint32_t      seq = 1;
-static unsigned char buffer[128];
+static uint32_t        seq = 1;
+static unsigned char   buffer[128];
+
+
+/* for pool */
+static char            pool[POOL_SIZE];
+static uint64_t        read_counter  = 0;
+static uint64_t        write_counter = 0; 
+static pthread_mutex_t mutex;
+static pthread_cond_t  empty;
+static pthread_cond_t  full;
 
 static int tc_msg_event_process(tc_event_t *rev);
 
@@ -107,12 +117,105 @@ tc_msg_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
+static
+void put_resp_header_to_pool(tc_ip_header_t *ip_header)
+{
+    int                    *p_len, cur_w_pos, diff;
+    char                   *p_content;
+    uint16_t                size_ip, size_tcp, save_len, record_len;
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    uint16_t                cont_len, tot_len;
+#endif
+    uint64_t                next_w_pos, next_w_cnt; 
+    tc_tcp_header_t        *tcp_header;
+
+    if (ip_header->protocol != IPPROTO_TCP) {
+        tc_log_info(LOG_WARN, 0, "this is not a tcp packet");
+        return;
+    }
+
+    size_ip = ip_header->ihl << 2;
+    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    size_tcp = tcp_header->doff << 2;
+    save_len = size_ip + size_tcp;
+
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    tot_len  = ntohs(ip_header->tot_len);
+    cont_len = tot_len - size_ip - size_tcp;
+    if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
+            save_len += cont_len;
+    }
+#endif
+
+    record_len = save_len;
+    pthread_mutex_lock (&mutex);
+    next_w_cnt = write_counter + save_len + sizeof(int); 
+    next_w_pos = next_w_cnt >> POOL_SHIFT;
+
+    if (next_w_pos > POOL_MAX_ADDR) {
+        next_w_cnt  = (next_w_cnt / POOL_SIZE + 1) << POOL_SHIFT;
+        record_len += (POOL_SIZE - next_w_pos);
+    }
+
+    diff = next_w_cnt - read_counter;
+    
+    for (;;) {
+        if (diff > POOL_SIZE) {
+            tc_log_info(LOG_WARN, 0, "poll is full");
+            pthread_cond_wait(&empty, &mutex);
+        } else {
+            break;
+        }
+        diff = next_w_cnt - read_counter;
+    }
+
+    cur_w_pos = write_counter >> POOL_SHIFT;
+    p_len     = (int *)(pool + cur_w_pos);
+    p_content = (char *)((unsigned char *)p_len + sizeof(int));
+    
+    write_counter = next_w_cnt;
+    
+    *p_len = record_len;
+    memcpy(p_content, ip_header, save_len);
+
+    pthread_cond_signal(&full);
+    pthread_mutex_unlock (&mutex);
+}
+
+static
+tc_ip_header_t *get_resp_ip_hdr_from_pool(char *resp)
+{
+    int      read_pos, len;
+    char    *pos;
+
+    pthread_mutex_lock (&mutex);
+
+    if (read_counter >= write_counter) {
+        pthread_cond_wait(&full, &mutex);
+    }
+
+    read_pos = read_counter >> POOL_SHIFT;
+
+    pos = pool + read_pos;
+    len = *(int *)(pos);
+
+    pos = pos + sizeof(int);
+
+    memcpy(resp, pos, len);
+
+    read_counter += (len + sizeof(int));
+
+    pthread_cond_signal(&empty);
+    pthread_mutex_unlock(&mutex);
+
+    return (tc_ip_header_t *)resp;
+}
+
 static int
 tc_nl_event_process(tc_event_t *rev)
 {
-    int             diff, i, pass_through_flag = 0;
+    int             i, pass_through_flag = 0;
     char            buffer[65535];
-    time_t          now;
     unsigned long   packet_id;
     tc_ip_header_t *ip_hdr;
 
@@ -138,14 +241,8 @@ tc_nl_event_process(tc_event_t *rev)
             /* Pass through the firewall */
             dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
         } else {
-            router_update(ip_hdr);
-            now  = time(0);
-            diff = now - last_clean_time;
-            if (diff > CHECK_INTERVAL) {
-                route_delete_obsolete(now);
-                delay_table_delete_obsolete(now);
-                last_clean_time = now;
-            }
+            /* Put response packet header to pool*/
+            put_resp_header_to_pool(ip_hdr);
             /* Drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }
@@ -154,11 +251,38 @@ tc_nl_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
+int
+interception_process_msg(void *tid)
+{
+    int             diff;
+    char            resp[RESP_MAX_USEFUL_SIZE];
+    time_t          now;
+    tc_ip_header_t *ip_hdr;
+
+    for(;;){
+
+        ip_hdr = get_resp_ip_hdr_from_pool(resp); 
+
+        router_update(ip_hdr);
+
+        now  = tc_time();
+        diff = now - last_clean_time;
+        if (diff > CHECK_INTERVAL) {
+            route_delete_obsolete(now);
+            delay_table_delete_obsolete(now);
+            last_clean_time = now;
+        }
+
+    }
+}
+
+
 /* Initiate for tcpcopy server */
 int
 interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
     int         fd;
+    pthread_t   thread;
     tc_event_t *ev;
 
     delay_table_init(srv_settings.hash_size);
@@ -203,6 +327,11 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
             return TC_ERROR;
         }
     }
+
+    pthread_mutex_init(&mutex, NULL);
+    pthread_cond_init(&full, NULL);
+    pthread_cond_init(&empty, NULL);
+    pthread_create(&thread, NULL, interception_process_msg, NULL);
 
     return TC_OK;
 }

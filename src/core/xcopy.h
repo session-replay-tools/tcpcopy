@@ -82,7 +82,6 @@
 /* Constants for netlink protocol */
 #define FIREWALL_GROUP  0
 
-
 /* In defence of occuping too much memory */
 #define MAX_MEMORY_SIZE 524288
 
@@ -124,6 +123,17 @@
 #define MAX_PASSWORD_LEN 256
 #define MAX_PAYLOAD_LEN  128
 #endif
+
+/* Constants for intercept pool */
+#define POOL_SIZE  67108864
+#define POOL_SHIFT 26
+#define RESP_HEADER_SIZE (sizeof(struct iphdr) + sizeof(struct tcphdr))
+#if (TCPCOPY_MYSQL_ADVANCED) 
+#define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
+#else
+#define RESP_MAX_USEFUL_SIZE RESP_HEADER_SIZE
+#endif
+#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE)
 
 /* Bool constants*/
 #if (HAVE_STDBOOL_H)
