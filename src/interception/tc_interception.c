@@ -133,7 +133,6 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
         return;
     }
 
-
     save_len = RESP_MAX_USEFUL_SIZE;
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
@@ -150,7 +149,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     record_len = save_len;
     pthread_mutex_lock(&mutex);
     next_w_cnt = write_counter + save_len + sizeof(int); 
-    next_w_pos = next_w_cnt >> POOL_SHIFT;
+    next_w_pos = next_w_cnt & POOL_MASK;
 
     if (next_w_pos > POOL_MAX_ADDR) {
         next_w_cnt  = (next_w_cnt / POOL_SIZE + 1) << POOL_SHIFT;
@@ -169,7 +168,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
         diff = next_w_cnt - read_counter;
     }
 
-    cur_w_pos = write_counter >> POOL_SHIFT;
+    cur_w_pos = write_counter & POOL_MASK;
     p_len     = (int *)(pool + cur_w_pos);
     p_content = (char *)((unsigned char *)p_len + sizeof(int));
     
@@ -194,7 +193,7 @@ get_resp_ip_hdr_from_pool(char *resp, int *len)
         pthread_cond_wait(&full, &mutex);
     }
 
-    read_pos = read_counter >> POOL_SHIFT;
+    read_pos = read_counter & POOL_MASK;
 
     pos = pool + read_pos;
     *len = *(int *)(pos);
