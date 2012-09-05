@@ -127,7 +127,7 @@
 /* Constants for intercept pool */
 #define POOL_SHIFT 26
 #define POOL_SIZE (1 << POOL_SHIFT) 
-#define POOL_MASK (POOL_SIZE - 1)
+#define POOL_MASK ((POOL_SIZE - 1)|0x0000000000000000)
 #define RESP_HEADER_SIZE (sizeof(struct iphdr) + sizeof(struct tcphdr))
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
