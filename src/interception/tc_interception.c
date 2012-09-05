@@ -119,14 +119,14 @@ tc_msg_event_process(tc_event_t *rev)
 static
 void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
-    int                    *p_len, cur_w_pos, diff;
+    int                    *p_len, cur_w_pos, diff, next_w_pos;
     char                   *p_content;
     uint16_t                size_ip, save_len, record_len;
 #if (TCPCOPY_MYSQL_ADVANCED) 
     uint16_t                size_tcp, cont_len, tot_len;
     unsigned char          *payload; 
 #endif
-    uint64_t                next_w_pos, next_w_cnt, mask; 
+    uint64_t                next_w_cnt, mask; 
     tc_tcp_header_t        *tcp_header;
 
     if (ip_header->protocol != IPPROTO_TCP) {
@@ -177,6 +177,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     write_counter = next_w_cnt;
     
     *p_len = record_len;
+    ip_header->ihl = (sizeof(tc_ip_header_t)) >> 2;
     memcpy(p_content, ip_header, sizeof(tc_ip_header_t));
     p_content = p_content + sizeof(tc_ip_header_t);
     memcpy(p_content, tcp_header, sizeof(tc_tcp_header_t));
@@ -266,13 +267,12 @@ static void *
 interception_process_msg(void *tid)
 {
     int             diff, len;
-    char            resp[RESP_MAX_USEFUL_SIZE];
+    char            resp[65536];
     time_t          now;
     tc_ip_header_t *ip_hdr;
 
     for(;;){
 
-        len = RESP_MAX_USEFUL_SIZE;
         ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
 
         if (ip_hdr == NULL) {

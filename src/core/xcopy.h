@@ -134,7 +134,7 @@
 #else
 #define RESP_MAX_USEFUL_SIZE RESP_HEADER_SIZE
 #endif
-#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE)
+#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
 
 /* Bool constants*/
 #if (HAVE_STDBOOL_H)
