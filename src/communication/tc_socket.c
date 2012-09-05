@@ -140,6 +140,7 @@ tc_nl_socket_init()
                     fd, rcvbuf);
         return TC_INVALID_SOCKET;
     }
+    tc_socket_set_nonblocking(fd);
 
     tc_memzero(&addr, sizeof(addr));
     tc_memzero(&buf, 128);
@@ -176,9 +177,17 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
     ssize_t recv_len;
 
     recv_len = recv(fd, buffer, len, 0);
-
     if (recv_len == -1) {
-        tc_log_info(LOG_ERR, errno, "Recv message from netlink socket error");
+        if (errno == EAGAIN) {
+            return TC_OK;
+        }
+
+        tc_log_info(LOG_ERR, errno, "nl recvfrom");
+        return TC_ERROR;
+    }
+
+    if (recv_len == 0) {
+        tc_log_info(LOG_ERR, 0, "recv len is 0");
         return TC_ERROR;
     }
 

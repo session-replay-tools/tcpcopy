@@ -16,6 +16,23 @@ static pthread_mutex_t mutex;
 static pthread_cond_t  empty;
 static pthread_cond_t  full;
 
+
+typedef struct tc_verdict_s{
+    int fd;
+    int verdict;
+    unsigned long packet_id;
+}tc_verdict_t;
+
+
+/* for netlink sending */
+static tc_verdict_t    nl_pool[NL_POOL_SIZE];
+static uint64_t        nl_read_counter  = 0;
+static uint64_t        nl_write_counter = 0; 
+static pthread_mutex_t nl_mutex;
+static pthread_cond_t  nl_empty;
+static pthread_cond_t  nl_full;
+
+
 static int tc_msg_event_process(tc_event_t *rev);
 
 static int
@@ -223,6 +240,70 @@ get_resp_ip_hdr_from_pool(char *resp, int *len)
     return (tc_ip_header_t *)resp;
 }
 
+static
+void put_nl_verdict_to_pool(int fd, int verdict, unsigned long packet_id)
+{
+    int                     index, diff;
+    uint64_t                mask;
+
+    mask = NL_POOL_MASK;
+    pthread_mutex_lock(&nl_mutex);
+
+    index = nl_write_counter & mask;
+
+    diff = nl_write_counter - nl_read_counter + 1;
+    
+    for (;;) {
+        if (diff > NL_POOL_SIZE) {
+            tc_log_info(LOG_WARN, 0, "nl pool is full");
+            pthread_cond_wait(&nl_empty, &nl_mutex);
+        } else {
+            break;
+        }
+        diff = nl_write_counter - nl_read_counter + 1;
+    }
+
+    
+    nl_pool[index].fd = fd;
+    nl_pool[index].verdict = verdict;
+    nl_pool[index].packet_id = packet_id;
+
+    nl_write_counter++;
+    
+    pthread_cond_signal(&nl_full);
+    pthread_mutex_unlock(&nl_mutex);
+}
+
+static tc_verdict_t*
+get_nl_verdict_from_pool(tc_verdict_t* verdict)
+{
+    int       index;
+    uint64_t  mask;
+
+    mask = NL_POOL_MASK;
+
+    pthread_mutex_lock(&nl_mutex);
+
+    if (nl_read_counter >= nl_write_counter) {
+        pthread_cond_wait(&nl_full, &nl_mutex);
+    }
+
+    index = nl_read_counter & mask;
+
+    verdict->fd = nl_pool[index].fd;
+    verdict->verdict = nl_pool[index].verdict;
+    verdict->packet_id = nl_pool[index].packet_id;
+
+
+    nl_read_counter++;
+
+    pthread_cond_signal(&nl_empty);
+    pthread_mutex_unlock(&nl_mutex);
+
+    return verdict;
+}
+
+
 static int
 tc_nl_event_process(tc_event_t *rev)
 {
@@ -251,17 +332,32 @@ tc_nl_event_process(tc_event_t *rev)
 
         if (pass_through_flag) {
             /* Pass through the firewall */
-            dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
+            put_nl_verdict_to_pool(rev->fd, NF_ACCEPT, packet_id);
         } else {
             /* Put response packet header to pool*/
             put_resp_header_to_pool(ip_hdr);
             /* Drop the packet */
-            dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
+            put_nl_verdict_to_pool(rev->fd, NF_DROP, packet_id);
         }
     }
 
     return TC_OK;
 }
+
+static void *
+interception_dispose_nl_verdict(void *tid)
+{
+
+    tc_verdict_t verdict;
+
+    for(;;){
+        get_nl_verdict_from_pool(&verdict); 
+        dispose_netlink_packet(verdict.fd, verdict.verdict, verdict.packet_id);
+    }
+
+    return NULL;
+}
+
 
 static void *
 interception_process_msg(void *tid)
@@ -288,6 +384,8 @@ interception_process_msg(void *tid)
         }
 
     }
+
+    return NULL;
 }
 
 
@@ -345,6 +443,12 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
     pthread_cond_init(&full, NULL);
     pthread_cond_init(&empty, NULL);
     pthread_create(&thread, NULL, interception_process_msg, NULL);
+
+    pthread_mutex_init(&nl_mutex, NULL);
+    pthread_cond_init(&nl_full, NULL);
+    pthread_cond_init(&nl_empty, NULL);
+    pthread_create(&thread, NULL, interception_process_msg, NULL);
+
 
     return TC_OK;
 }

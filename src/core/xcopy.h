@@ -136,6 +136,9 @@
 #endif
 #define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
 
+#define NL_POOL_SIZE 65536
+#define NL_POOL_MASK (NL_POOL_SIZE - 1)
+
 /* Bool constants*/
 #if (HAVE_STDBOOL_H)
 #include <stdbool.h>
