@@ -107,7 +107,7 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 }
 
 unsigned char *
-copy_ip_packet(struct iphdr *ip_header)
+copy_ip_packet(tc_ip_header_t *ip_header)
 {
     uint16_t       tot_len = ntohs(ip_header->tot_len);
     unsigned char *data    = (unsigned char *)malloc(tot_len);

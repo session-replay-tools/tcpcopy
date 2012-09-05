@@ -94,8 +94,8 @@ tc_log_info(int level, int err, const char *fmt, ...)
 }
 
 void
-tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
-        struct tcphdr *tcp_header)
+tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header)
 {
     char           *tmp_buf, src_ip[1024], dst_ip[1024];
     uint16_t        window;

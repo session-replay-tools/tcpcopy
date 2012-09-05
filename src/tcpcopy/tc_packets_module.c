@@ -111,12 +111,12 @@ replicate_packs(char *packet, int length, int replica_num)
     int             i;
     uint16_t        orig_port, addition, dest_port, rand_port;
     uint32_t        size_ip;
-    struct tcphdr  *tcp_header;
-    struct iphdr   *ip_header;
+    tc_tcp_header_t  *tcp_header;
+    tc_ip_header_t   *ip_header;
     
-    ip_header  = (struct iphdr*)packet;
+    ip_header  = (tc_ip_header_t*)packet;
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t*)((char *)ip_header + size_ip);
     rand_port  = clt_settings.rand_port_shifted;
     orig_port  = ntohs(tcp_header->source);
 
@@ -143,8 +143,8 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
     uint16_t        id, size_ip, size_tcp, tot_len, cont_len, 
                     pack_len = 0, head_len;
     uint32_t        seq;
-    struct tcphdr  *tcp_header;
-    struct iphdr   *ip_header;
+    tc_tcp_header_t  *tcp_header;
+    tc_ip_header_t   *ip_header;
 
     packet = recv_buf;
 
@@ -152,7 +152,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
         replica_num = clt_settings.replica_num;
         packet_num = 1;
-        ip_header   = (struct iphdr*)packet;
+        ip_header   = (tc_ip_header_t*)packet;
 
         if (localhost == ip_header->saddr) {
             if (0 != clt_settings.lo_tf_ip) {
@@ -175,7 +175,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
                 return TC_ERROR;
             }
 
-            tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
+            tcp_header  = (tc_tcp_header_t*)((char *)ip_header + size_ip);
             size_tcp    = tcp_header->doff << 2;
             cont_len    = tot_len - size_tcp - size_ip;
             head_len    = size_ip + size_tcp;

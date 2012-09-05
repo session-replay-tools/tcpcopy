@@ -80,13 +80,13 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
 /* Update router table */
 void
-router_update(struct iphdr *ip_header)
+router_update(tc_ip_header_t *ip_header)
 {
     void                   *fd;
     uint32_t                size_ip;
     uint64_t                key;
     msg_server_t            msg;
-    struct tcphdr          *tcp_header;
+    tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED) 
     uint32_t                size_tcp, cont_len, tot_len;
     unsigned char          *payload;
@@ -98,11 +98,11 @@ router_update(struct iphdr *ip_header)
     }
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     memset(&msg, 0, sizeof(struct msg_server_s));
-    memcpy((void *) &(msg.ip_header),  ip_header,  sizeof(struct iphdr));
-    memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(struct tcphdr));
+    memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
+    memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(tc_tcp_header_t));
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     tot_len  = ntohs(ip_header->tot_len);

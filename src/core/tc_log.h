@@ -17,8 +17,8 @@ int tc_log_init();
 void tc_log_end();
 
 void tc_log_info(int level, int err, const char *fmt, ...);
-void tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
-        struct tcphdr *tcp_header);
+void tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header);
 
 #if (TCPCOPY_DEBUG)
 

@@ -13,7 +13,7 @@ ip_port_pair_mapping_t *get_test_pair(ip_port_pair_mappings_t *target,
         uint32_t ip, uint16_t port);
 int check_pack_src(ip_port_pair_mappings_t *target, uint32_t ip, 
         uint16_t port, int src_flag);
-unsigned char *copy_ip_packet(struct iphdr *ip_header);
+unsigned char *copy_ip_packet(tc_ip_header_t *ip_header);
 unsigned short csum (unsigned short *packet, int pack_len);
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
