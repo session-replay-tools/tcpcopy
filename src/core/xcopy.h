@@ -131,7 +131,7 @@ typedef struct tcphdr tc_tcp_header_t;
 #if (INTERCEPT_THREAD)
 
 /* Constants for intercept pool */
-#define POOL_SHIFT 26
+#define POOL_SHIFT 24
 #define POOL_SIZE (1 << POOL_SHIFT) 
 #define POOL_MASK (POOL_SIZE - 1)
 #define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t))
