@@ -10,5 +10,4 @@ intercept_LDADD=\
                  ../core/libcore.a\
                  ../util/libutil.a\
                  ../event/libevent.a\
-                 ../communication/libcommunication.a\
-                 -lpthread
+                 ../communication/libcommunication.a

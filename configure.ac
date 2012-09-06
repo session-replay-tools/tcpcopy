@@ -42,6 +42,12 @@ if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
 fi
 
+AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[thread mode]),,thread=no)
+if test "x$enable_thread" = "xyes";then
+	AC_DEFINE(TCPCOPY_THREAD, 1, [Define if --enable-thread])
+fi
+
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h])
@@ -67,6 +73,11 @@ AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
+
+if test "x$enable_thread" = "xyes";then
+    LIBS="-lpthread"
+fi
+
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
 

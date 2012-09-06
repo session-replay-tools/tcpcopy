@@ -124,11 +124,17 @@
 #define MAX_PAYLOAD_LEN  128
 #endif
 
+typedef struct iphdr  tc_ip_header_t;
+typedef struct tcphdr tc_tcp_header_t;
+
+
+#if (MULTI_THREADS)
+
 /* Constants for intercept pool */
 #define POOL_SHIFT 26
 #define POOL_SIZE (1 << POOL_SHIFT) 
 #define POOL_MASK (POOL_SIZE - 1)
-#define RESP_HEADER_SIZE (sizeof(struct iphdr) + sizeof(struct tcphdr))
+#define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t))
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
 #else
@@ -138,6 +144,8 @@
 
 #define NL_POOL_SIZE 65536
 #define NL_POOL_MASK (NL_POOL_SIZE - 1)
+
+#endif
 
 /* Bool constants*/
 #if (HAVE_STDBOOL_H)
@@ -196,9 +204,6 @@ int daemonize();
 
 #define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
 #define tc_memzero(d, l) (memset(d, 0, l))
-
-typedef struct iphdr  tc_ip_header_t;
-typedef struct tcphdr tc_tcp_header_t;
 
 #include <tc_link_list.h>
 #include <tc_hash.h>
