@@ -75,7 +75,7 @@ if test "x$enable_offline" = "xyes";then
 fi
 
 if test "x$enable_thread" = "xyes";then
-    LIBS="-lpthread"
+    LIBS="$LIBS -lpthread "
 fi
 
 
