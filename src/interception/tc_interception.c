@@ -1,5 +1,5 @@
 #include <xcopy.h>
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 #include <pthread.h>
 #endif
 #include <intercept.h>
@@ -10,7 +10,7 @@ static time_t          last_clean_time;
 static uint32_t        seq = 1;
 static unsigned char   buffer[128];
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 /* for pool */
 static char            pool[POOL_SIZE];
 static uint64_t        read_counter  = 0;
@@ -152,7 +152,7 @@ tc_nl_check_cleaning()
 }
 
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 static
 void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
@@ -350,14 +350,14 @@ tc_nl_event_process(tc_event_t *rev)
         }
 
         if (pass_through_flag) {
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
             put_nl_verdict_to_pool(rev->fd, NF_ACCEPT, packet_id);
 #else
             /* Pass through the firewall */
             dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
 #endif
         } else {
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
             /* Put response packet header to pool*/
             put_resp_header_to_pool(ip_hdr);
             /* Drop the packet */
@@ -376,7 +376,7 @@ tc_nl_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 static void *
 interception_dispose_nl_verdict(void *tid)
 {
@@ -421,7 +421,7 @@ int
 interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
     int         fd;
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_t   thread;
 #endif
     tc_event_t *ev;
@@ -468,7 +468,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
         }
     }
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_init(&mutex, NULL);
     pthread_cond_init(&full, NULL);
     pthread_cond_init(&empty, NULL);

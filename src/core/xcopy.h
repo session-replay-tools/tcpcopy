@@ -128,7 +128,7 @@ typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
 
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 
 /* Constants for intercept pool */
 #define POOL_SHIFT 26

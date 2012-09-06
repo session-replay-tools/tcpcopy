@@ -1,11 +1,11 @@
 #include <xcopy.h>
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 #include <pthread.h>
 #endif
 #include <intercept.h>
 
 static hash_table *table;
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 static pthread_mutex_t mutex; 
 #endif
 
@@ -18,7 +18,7 @@ route_delete_obsolete(time_t cur_time)
     p_link_node  ln;
 
     tc_log_info(LOG_NOTICE, 0, "router size:%u", table->total);
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif
 
@@ -58,7 +58,7 @@ route_delete_obsolete(time_t cur_time)
 
     delay_table_delete_obsolete(cur_time);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_unlock(&mutex);
 #endif
 
@@ -69,7 +69,7 @@ route_delete_obsolete(time_t cur_time)
 void
 router_init(size_t size)
 {
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_init(&mutex, NULL);
 #endif
     delay_table_init(size);
@@ -84,14 +84,14 @@ router_del(uint32_t ip, uint16_t port)
 {
     uint64_t key = get_key(ip, port);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif
 
     hash_del(table, key);
     delay_table_del(key);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_unlock(&mutex);
 #endif
 
@@ -103,19 +103,19 @@ router_add(uint32_t ip, uint16_t port, int fd)
 {
     uint64_t key = get_key(ip, port);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif
 
     hash_add(table, key, (void *)(long)fd);
     delay_table_send(key, fd);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_unlock(&mutex);
 #endif
 }
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 /* Update router table */
 void
 router_update(tc_ip_header_t *ip_header, int len)
@@ -209,7 +209,7 @@ router_update(struct iphdr *ip_header)
 void
 router_destroy()
 {
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif
     if (table != NULL) {
@@ -219,7 +219,7 @@ router_destroy()
         table = NULL;
         delay_table_destroy();
     }
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
     pthread_mutex_unlock(&mutex);
 #endif
 }

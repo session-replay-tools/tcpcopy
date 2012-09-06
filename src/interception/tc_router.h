@@ -6,7 +6,7 @@
 void router_init(size_t size);
 void route_delete_obsolete(time_t cur_time);
 
-#if (MULTI_THREADS)
+#if (INTERCEPT_THREAD)
 void router_update(tc_ip_header_t *ip_header, int len);
 #else
 void router_update(tc_ip_header_t *ip_header);

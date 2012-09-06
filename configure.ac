@@ -44,7 +44,7 @@ fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[thread mode]),,thread=no)
 if test "x$enable_thread" = "xyes";then
-	AC_DEFINE(TCPCOPY_THREAD, 1, [Define if --enable-thread])
+	AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
 
