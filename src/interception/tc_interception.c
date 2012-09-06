@@ -447,7 +447,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
     pthread_mutex_init(&nl_mutex, NULL);
     pthread_cond_init(&nl_full, NULL);
     pthread_cond_init(&nl_empty, NULL);
-    pthread_create(&thread, NULL, interception_process_msg, NULL);
+    pthread_create(&thread, NULL, interception_dispose_nl_verdict, NULL);
 
 
     return TC_OK;
