@@ -251,6 +251,9 @@ static void output_for_debug()
 #if (TCPCOPY_MYSQL_NO_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_NO_SKIP mode for intercept");
 #endif
+#if (INTERCEPT_THREAD)
+    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_THREAD mode");
+#endif
 }
 
 int
