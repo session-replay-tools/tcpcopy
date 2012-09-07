@@ -6,7 +6,7 @@ hash_node_malloc(uint64_t key, void *data)
 {
     hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
 
-    if (NULL == hn) {
+    if (hn == NULL) {
         tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
         return NULL;
     }
@@ -24,7 +24,7 @@ get_slot(uint64_t key, uint32_t size)
 {
     uint32_t trim_key = key & (0xFFFFFFFF);
 
-    return trim_key%size;
+    return trim_key % size;
 }
 
 static p_link_node
@@ -43,7 +43,7 @@ hash_find_node(hash_table *table, uint64_t key)
         if (hn->key == key) {
             hn->access_time = tc_time();
             hn->visit_cnt++;
-            /* Put the lastest item to the head of the linked list */
+            /* put the lastest item to the head of the linked list */
             (void)link_list_remove(l, ln);
             link_list_push(l, ln);
             return ln;
@@ -60,14 +60,14 @@ hash_create(size_t size)
     size_t      i;
     hash_table *ht = (hash_table *)calloc(1, sizeof(hash_table));
 
-    if (NULL == ht) {
+    if (ht == NULL) {
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash table");
         return NULL;
     }
 
     ht->size  = size;
     ht->lists = (link_list **) calloc(size, sizeof(link_list *));
-    if (NULL == ht->lists) {
+    if (ht->lists == NULL) {
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash lists");
         return NULL;
     }
@@ -115,6 +115,7 @@ hash_add(hash_table *table, uint64_t key, void *data)
         hn = (hash_node *) ln->data;
         hn->data = data;
         return false;
+
     } else {
         tmp = hash_node_malloc(key, data);
         if (tmp == NULL) {

@@ -66,7 +66,7 @@ get_test_pair(ip_port_pair_mappings_t *transfer, uint32_t ip, uint16_t port)
         pair = mappings[i];
         if (ip == pair->online_ip && port == pair->online_port) {
             return pair;
-        }else if(pair->online_ip == 0 && port == pair->online_port) {
+        } else if (pair->online_ip == 0 && port == pair->online_port) {
             return pair;
         }
     }
@@ -87,7 +87,7 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 
         pair = mappings[i];
         if (CHECK_DEST == src_flag) {
-            /* We are interested in INPUT raw socket */
+            /* interested in INPUT raw socket */
             if (ip == pair->online_ip && port == pair->online_port) {
                 ret = LOCAL;
                 break;
@@ -107,12 +107,12 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 }
 
 unsigned char *
-copy_ip_packet(struct iphdr *ip_header)
+copy_ip_packet(tc_ip_header_t *ip_header)
 {
     uint16_t       tot_len = ntohs(ip_header->tot_len);
     unsigned char *data    = (unsigned char *)malloc(tot_len);
 
-    if (NULL != data) {    
+    if (data != NULL) {    
         memcpy(data, ip_header, tot_len);
     }    
 

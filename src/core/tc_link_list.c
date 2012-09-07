@@ -7,7 +7,7 @@ link_node_malloc(void *data)
     p_link_node p;
 
     p = (p_link_node)calloc(1, sizeof(link_node));
-    if (NULL == p) {
+    if (p == NULL) {
         return NULL;
     }
     p->data = data;
@@ -29,7 +29,7 @@ link_list_create()
 {
     link_list *l = (link_list *)calloc(1, sizeof(link_list));
 
-    if (NULL == l) {
+    if (l == NULL) {
         perror("calloc");
         return NULL;
     }
@@ -76,7 +76,7 @@ link_list_append(link_list *l, p_link_node p)
     l->size++;
 }
 
-/* Append by order*/
+/* append by order*/
 void
 link_list_append_by_order(link_list *l, p_link_node p)
 {
@@ -85,7 +85,7 @@ link_list_append_by_order(link_list *l, p_link_node p)
     if (l->size > 0) {
         node = l->head.prev;
         next = node->next;
-        /* Find the node which key is less than the key of p */
+        /* find the node which key is less than the key of p */
         while (node->key > p->key) {
             next = node;
             node = node ->prev;

@@ -10,7 +10,7 @@ get_key_from_user(char *user)
     size_t   len, i;
     uint64_t key = 0;
 
-    if (NULL == user) {
+    if (user == NULL) {
         return key;
     }
 
@@ -61,7 +61,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
         return -1;
     }
 
-    do{
+    do {
         next = strchr(p, ':');
         q = strchr(p, '@');
 
@@ -87,7 +87,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
         key = get_key_from_user(p_user_info->user);
         p_tmp_user_info = hash_find(user_pwd_table, key);
 
-        if (NULL == p_tmp_user_info) {
+        if (p_tmp_user_info == NULL) {
             hash_add(user_pwd_table, key, (void *)p_user_info);
         } else {
             p_tmp_user_info->next = p_user_info;
@@ -98,7 +98,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
         } else {
             break;
         }
-    }while (p < end) ;
+    } while (p < end) ;
 
     return 0;
 }

@@ -70,7 +70,7 @@ address_release()
                 fd  = (int)(long)hn->data;
                 hn->data = NULL;
 
-                if (0 != fd) {
+                if (fd != 0) {
                     tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
                     close(fd);
                 }
@@ -86,7 +86,7 @@ address_release()
 
 }
 
-/* Check resource usage, such as memory usage and cpu usage */
+/* check resource usage, such as memory usage and cpu usage */
 static void
 check_resource_usage(tc_event_timer_t *evt)
 {
@@ -100,14 +100,14 @@ check_resource_usage(tc_event_timer_t *evt)
         tc_log_info(LOG_ERR, errno, "getrusage");
     }
 
-    /* Total amount of user time used */
+    /* total amount of user time used */
     tc_log_info(LOG_NOTICE, 0, "user time used:%ld", usage.ru_utime.tv_sec);
 
-    /* Total amount of system time used */
+    /* total amount of system time used */
     tc_log_info(LOG_NOTICE, 0, "sys  time used:%ld", usage.ru_stime.tv_sec);
 
-    /* Maximum resident set size (in kilobytes) */
-    /* This is only valid since Linux 2.6.32 */
+    /* maximum resident set size (in kilobytes) */
+    /* only valid since Linux 2.6.32 */
     tc_log_info(LOG_NOTICE, 0, "max memory size:%ld", usage.ru_maxrss);
 
     if (usage.ru_maxrss > clt_settings.max_rss) {
@@ -163,7 +163,7 @@ tcp_copy_over(const int sig)
 }
 
 
-/* Initiate tcpcopy client */
+/* initiate tcpcopy client */
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
@@ -171,16 +171,16 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
-    /* Register some timer */
+    /* register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
-    /* Init session table*/
+    /* init session table*/
     init_for_sessions();
 
     address_init();
 
-    /* Add connections to the tested server for exchanging info */
+    /* add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
@@ -198,7 +198,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
                     ntohl(target_ip), clt_settings.srv_port);
     }
 
-    /* Init packets for processing */
+    /* init packets for processing */
 #if (TCPCOPY_OFFLINE)
     if (tc_offline_init(event_loop, clt_settings.pcap_file) == TC_ERROR) {
         return TC_ERROR;

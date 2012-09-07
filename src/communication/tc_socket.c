@@ -61,7 +61,7 @@ tc_raw_socket_out_init()
     } 
 
     /*
-     * Tell the IP layer not to prepend its own header.
+     * tell the IP layer not to prepend its own header.
      * It does not need setting for linux,but *BSD needs
      */
     if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
@@ -75,7 +75,7 @@ tc_raw_socket_out_init()
 }
 
 /*
- * Send the ip packet to the remote test server
+ * send the ip packet to the remote test server
  * (It will not go through ip fragmentation)
  */
 
@@ -284,7 +284,7 @@ tc_socket_listen(int fd, const char *bind_ip, uint16_t port)
     local_addr.sin_family = AF_INET;
 
     if (bind_ip) {
-        /* Set bind ip for security reasons */
+        /* set bind ip for security reasons */
         inet_aton(bind_ip, &local_addr.sin_addr);
     }
 

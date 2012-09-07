@@ -13,7 +13,7 @@ copy_message(struct msg_server_s *msg)
     struct msg_server_s *cmsg;
 
     cmsg = (struct msg_server_s *)malloc(sizeof(struct msg_server_s));
-    if (NULL == cmsg) {
+    if (cmsg == NULL) {
         tc_log_info(LOG_ERR, errno, "malloc error");
         return NULL;
     }
@@ -37,7 +37,7 @@ delay_table_delete_obsolete(time_t cur_time)
         while (true) {
 
             ln = link_list_tail(l);
-            if (NULL == ln) {
+            if (ln == NULL) {
                 break;
             }   
 
@@ -47,7 +47,7 @@ delay_table_delete_obsolete(time_t cur_time)
                 table->total--;
                 tail = link_list_pop_tail(l);
                 hn2  = (hash_node *)tail->data;
-                if (NULL != hn2) {   
+                if (hn2 != NULL) {   
                     if (hn2->data != NULL) {
                         msg_list = (link_list *)hn2->data;
                         msg_item_destr_cnt += link_list_clear(msg_list);
@@ -69,7 +69,7 @@ delay_table_delete_obsolete(time_t cur_time)
 }
 
 
-/* Init delay table */
+/* init delay table */
 void
 delay_table_init(size_t size)
 {
@@ -84,7 +84,7 @@ delay_table_init(size_t size)
     msg_ls_destr_cnt   = 0;
 }
 
-/* Add message to delay table*/
+/* add message to delay table*/
 void
 delay_table_add(uint64_t key, struct msg_server_s *msg)
 {
@@ -93,7 +93,7 @@ delay_table_add(uint64_t key, struct msg_server_s *msg)
     struct msg_server_s *cmsg;
 
     msg_list = (link_list *)hash_find(table, key);
-    if (NULL == msg_list) {
+    if (msg_list == NULL) {
         msg_ls_cnt++;
         msg_list = link_list_create();
         hash_add(table, key, msg_list);
@@ -111,7 +111,7 @@ delay_table_add(uint64_t key, struct msg_server_s *msg)
 }
 
 
-/* Send delayed message according to the key*/
+/* send delayed message according to the key*/
 void
 delay_table_send(uint64_t key, int fd)
 {
@@ -120,7 +120,7 @@ delay_table_send(uint64_t key, int fd)
     msg_server_t        *msg ;
 
     msg_list = (link_list *)hash_find(table, key);
-    if (NULL == msg_list) {
+    if (msg_list == NULL) {
         return; 
     }
 
@@ -137,7 +137,7 @@ delay_table_send(uint64_t key, int fd)
 
 }
 
-/* Delete delay table item according to the key */
+/* delete delay table item according to the key */
 void
 delay_table_del(uint64_t key)
 {
@@ -145,7 +145,7 @@ delay_table_del(uint64_t key)
     p_link_node   first;
 
     msg_list = (link_list *)hash_find(table, key);
-    if (NULL == msg_list) {
+    if (msg_list == NULL) {
         return; 
     }
 
@@ -161,7 +161,7 @@ delay_table_del(uint64_t key)
     msg_ls_free_cnt++;
 }
 
-/* Destroy delay table */
+/* destroy delay table */
 void
 delay_table_destroy()
 {
@@ -172,7 +172,8 @@ delay_table_destroy()
 
     if (table != NULL) {
 
-        tc_log_info(LOG_NOTICE, 0, "destroy delay table,total:%u", table->total);
+        tc_log_info(LOG_NOTICE, 0, "destroy delay table,total:%u",
+                table->total);
 
         for (i = 0; i < table->size; i++) {
             list = table->lists[i];

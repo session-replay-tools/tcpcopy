@@ -53,10 +53,10 @@ signal_handler(int sig)
     tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
     printf("set signal handler:%d\n", sig);
 
-    if (SIGSEGV == sig) {
+    if (sig == SIGSEGV) {
         tc_log_info(LOG_ERR, 0, "SIGSEGV error");
         release_resources();
-        /* Avoid dead loop*/
+        /* avoid dead loop*/
         signal(SIGSEGV, SIG_DFL);
         kill(getpid(), sig);
     } else {
@@ -70,7 +70,7 @@ set_signal_handler()
     int i = 1;
 
     atexit(release_resources);
-    /* Just to try */
+    /* just to try */
     for (; i<SIGTTOU; i++) {
         if (i != SIGPIPE && i != SIGKILL && i !=SIGSTOP ) {
             if (i != SIGALRM) {
@@ -83,7 +83,7 @@ set_signal_handler()
 
 }
 
-/* Retrieve ip addresses */
+/* retrieve ip addresses */
 static int
 retrieve_ip_addr()
 {
@@ -113,7 +113,7 @@ retrieve_ip_addr()
             break;
         }
 
-        if (NULL == split) {
+        if (split == NULL) {
             break;
         } else {
             p = split + 1;
@@ -201,16 +201,16 @@ read_args(int argc, char **argv) {
 static int  
 set_details()
 {
-    /* Ignore SIGPIPE signals */
+    /* ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
         perror("failed to ignore SIGPIPE; sigaction");
         return -1;
     }
-    /* Retrieve ip address */
+    /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
         retrieve_ip_addr();
     }
-    /* Daemonize */
+    /* daemonize */
     if (srv_settings.do_daemonize) {
         /* TODO why warning*/
         if (sigignore(SIGHUP) == -1) {
@@ -230,7 +230,7 @@ set_details()
     return 0;
 }
 
-/* Set defaults */
+/* set defaults */
 static void settings_init(void)
 {
     srv_settings.port = SERVER_PORT;
@@ -242,9 +242,9 @@ static void settings_init(void)
 
 static void output_for_debug()
 {
-    /* Print intercept version */
+    /* print intercept version */
     tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
-    /* Print intercept working mode */
+    /* print intercept working mode */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode for intercept");
 #endif
@@ -276,7 +276,7 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* Output debug info */
+    /* output debug info */
     output_for_debug();
     if (set_details() == -1) {
         return -1;
@@ -288,7 +288,7 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* Run now */
+    /* run now */
     tc_event_process_cycle(&s_event_loop);
 
     return 0;

@@ -174,7 +174,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     save_len = RESP_MAX_USEFUL_SIZE;
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     size_tcp = tcp_header->doff << 2;
@@ -341,7 +341,7 @@ tc_nl_event_process(tc_event_t *rev)
     packet_id = tc_nl_packet_id(buffer);
 
     if (ip_hdr != NULL) {
-        /* Check if it is the valid user to pass through firewall */
+        /* check if it is the valid user to pass through firewall */
         for (i = 0; i < srv_settings.passed_ips.num; i++) {
             if (srv_settings.passed_ips.ips[i] == ip_hdr->daddr) {
                 pass_through_flag = 1;
@@ -353,21 +353,21 @@ tc_nl_event_process(tc_event_t *rev)
 #if (INTERCEPT_THREAD)
             put_nl_verdict_to_pool(rev->fd, NF_ACCEPT, packet_id);
 #else
-            /* Pass through the firewall */
+            /* pass through the firewall */
             dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
 #endif
         } else {
 #if (INTERCEPT_THREAD)
-            /* Put response packet header to pool*/
+            /* put response packet header to pool*/
             put_resp_header_to_pool(ip_hdr);
-            /* Drop the packet */
+            /* drop the packet */
             put_nl_verdict_to_pool(rev->fd, NF_DROP, packet_id);
 #else
             router_update(ip_hdr);
 
             tc_nl_check_cleaning();
 
-            /* Drop the packet */
+            /* drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
 #endif
         }
@@ -383,7 +383,7 @@ interception_dispose_nl_verdict(void *tid)
 
     tc_verdict_t verdict;
 
-    for(;;){
+    for (;;) {
         get_nl_verdict_from_pool(&verdict); 
         dispose_netlink_packet(verdict.fd, verdict.verdict, verdict.packet_id);
     }
@@ -399,7 +399,7 @@ interception_process_msg(void *tid)
     char            resp[65536];
     tc_ip_header_t *ip_hdr;
 
-    for(;;){
+    for (;;) {
 
         ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
         if (ip_hdr == NULL) {
@@ -416,7 +416,7 @@ interception_process_msg(void *tid)
 }
 #endif
 
-/* Initiate for tcpcopy server */
+/* initiate for tcpcopy server */
 int
 interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
@@ -430,7 +430,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 
     pid = getpid();
 
-    /* Init the listening socket */
+    /* init the listening socket */
     if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
 
@@ -451,7 +451,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
         }
     }
 
-    /* Init the netlink socket */
+    /* init the netlink socket */
     if ((fd = tc_nl_socket_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
 
@@ -483,7 +483,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
     return TC_OK;
 }
 
-/* Clear resources for interception */
+/* clear resources for interception */
 void
 interception_over()
 {

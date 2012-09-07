@@ -21,7 +21,7 @@ new_hash(uint64_t *result, const char *password)
 
     for (; i < length; ++i) {
         if (' ' == password[i] || '\t' == password[i]) {
-            /* Skip spaces */
+            /* skip spaces */
             continue;
         }
 
@@ -37,7 +37,7 @@ new_hash(uint64_t *result, const char *password)
 }
 
 /*
- * Right from Monty's code
+ * right from Monty's code
  */
 void
 new_crypt(char *result, const char *password, char *message)
@@ -84,9 +84,9 @@ is_last_data_packet(unsigned char *payload)
     len = p[0] + (p[1] << 8) + (p[2] << 16);
 
     if (len < 9) {
-        /*Skip Packet Length*/
+        /* skip packet length */
         p = p + 3;
-        /*Skip Packet Number*/
+        /* skip packet number */
         p = p + 1;
         if (254 == p[0]) {
             return 1;
@@ -124,17 +124,17 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     unsigned char *p;
 
     p = payload;
-    /* Skip Packet Length */
+    /* skip packet length */
     p = p + 3;
-    /* Skip Packet Number */
+    /* skip packet number */
     p = p + 1;
-    /* Skip protocol_version */
+    /* skip protocol_version */
     p++;
     str = (char *)p;
     len = strlen(str);
-    /* Skip server_version */
+    /* skip server_version */
     p   = p + len + 1;
-    /* Skip thread_id */
+    /* skip thread_id */
     p  += 4;
     str = (char *)p;
     count = p - payload + 8;
@@ -144,19 +144,19 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
         return 0;
     }
     strncpy(scramble_buff, (char *)p, 8);   
-    /* Skip scramble_buff */
+    /* skip scramble_buff */
     p = p + 8 + 1;
-    /* Skip server_capabilities */
+    /* skip server_capabilities */
     p = p + 2;
-    /* Skip server_language */
+    /* skip server_language */
     p = p + 1;
-    /* Skip server_status */
+    /* skip server_status */
     p = p + 2;
-    /* Skip server capabilities (two upper bytes) */
+    /* skip server capabilities (two upper bytes) */
     p = p + 2;
-    /* Skip length of the scramble */
+    /* skip length of the scramble */
     p = p + 1;
-    /* Skip (filler)  always 0 */
+    /* skip (filler)  always 0 */
     p = p + 10;
     str = (char *)p;
     str_len = strlen(str) + 8;
@@ -170,7 +170,7 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
         }
         return 0;
     }
-    /* Copy the rest of scramble_buff */
+    /* copy the rest of scramble_buff */
     strncpy(scramble_buff + 8, str, strlen(str));
 
     return 1;
@@ -196,18 +196,18 @@ change_client_auth_content(unsigned char *payload, int length,
     memset(scramble_buff, 0, SCRAMBLE_LENGTH + 1);
 
     p = payload;
-    /* Skip mysql packet header */
-    /* Skip Packet Length */
+    /* skip mysql packet header */
+    /* skip packet length */
     p = p + 3;
-    /* Skip Packet Number */
+    /* skip packet number */
     p = p + 1;
-    /* Skip client_flags */
+    /* skip client_flags */
     p = p + 4;
-    /* Skip max_packet_size */
+    /* skip max_packet_size */
     p = p + 4;
-    /* Skip charset_number */
+    /* skip charset_number */
     p = p + 1;
-    /* Skip (filler) always 0x00... */
+    /* skip (filler) always 0x00... */
     p = p + 23;
     len = p - payload;
     if (len > length) {
@@ -216,7 +216,7 @@ change_client_auth_content(unsigned char *payload, int length,
     }
 
     str = (char *)p;
-    /* Retrieve user */
+    /* retrieve user */
     memset(user, 0, 256);
     strcpy(user, str);
 
@@ -228,10 +228,10 @@ change_client_auth_content(unsigned char *payload, int length,
         return 0;
     }
 
-    /* Skip user */
+    /* skip user */
     p = p + strlen(str) + 1;
 
-    /* Skip scramble_buff length */
+    /* skip scramble_buff length */
     p = p + 1;
     len = p - payload + SCRAMBLE_LENGTH;
     if (len > length) {
@@ -242,12 +242,12 @@ change_client_auth_content(unsigned char *payload, int length,
 
     scramble((char*)scramble_buff, message, pwd);
 
-    /* Change scramble_buff according the target server scramble */
+    /* change scramble_buff according the target server scramble */
     for (i = 0; i < SCRAMBLE_LENGTH; i++) {
         p[i] = scramble_buff[i];
     }
 
-    /* Save password */
+    /* save password */
     strcpy(password, pwd);
 
     return 1;
@@ -270,11 +270,11 @@ change_client_second_auth_content(unsigned char *payload,size_t length,
     unsigned char *p;
 
     p = payload;
-    /* Skip mysql packet header */
-    /* Skip Packet Length */
+    /* skip mysql packet header */
+    /* skip packet length */
     p = p + 3;
 
-    /* Skip Packet Number */
+    /* skip packet number */
     p = p + 1;
 
     len = p - payload + 8;
@@ -284,7 +284,7 @@ change_client_second_auth_content(unsigned char *payload,size_t length,
         return 0;
     }
 
-    /* Change scramble_buff according to the target server scramble */
+    /* change scramble_buff according to the target server scramble */
     for (i = 0; i < 8; i++) {
         p[i] = new_content[i];
     }

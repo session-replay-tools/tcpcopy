@@ -30,14 +30,14 @@ tc_packets_init(tc_event_loop_t *event_loop)
     int         fd;
     tc_event_t *ev;
 
-    /* Init the raw socket to send packets */
+    /* init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     } else {
         tc_raw_socket_out = fd;
     }
 
-    /* Init the raw socket to recv packets */
+    /* init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
@@ -104,19 +104,19 @@ process_packet(bool backup, char *packet, int length)
     }
 }
 
-/* Replicate packets for multiple-copying */
+/* replicate packets for multiple-copying */
 static void
 replicate_packs(char *packet, int length, int replica_num)
 {
-    int             i;
-    uint16_t        orig_port, addition, dest_port, rand_port;
-    uint32_t        size_ip;
-    struct tcphdr  *tcp_header;
-    struct iphdr   *ip_header;
+    int               i;
+    uint16_t          orig_port, addition, dest_port, rand_port;
+    uint32_t          size_ip;
+    tc_tcp_header_t  *tcp_header;
+    tc_ip_header_t   *ip_header;
     
-    ip_header  = (struct iphdr*)packet;
+    ip_header  = (tc_ip_header_t *)packet;
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
     rand_port  = clt_settings.rand_port_shifted;
     orig_port  = ntohs(tcp_header->source);
 
@@ -136,15 +136,15 @@ replicate_packs(char *packet, int length, int replica_num)
 static int
 dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 {
-    int             replica_num, i, last, packet_num, max_payload,
-                    index, payload_len;
-    char           *packet, tmp_buf[RECV_BUF_SIZE];
-    bool            packet_valid = false;
-    uint16_t        id, size_ip, size_tcp, tot_len, cont_len, 
-                    pack_len = 0, head_len;
-    uint32_t        seq;
-    struct tcphdr  *tcp_header;
-    struct iphdr   *ip_header;
+    int              replica_num, i, last, packet_num, max_payload,
+                     index, payload_len;
+    char            *packet, tmp_buf[RECV_BUF_SIZE];
+    bool             packet_valid = false;
+    uint16_t         id, size_ip, size_tcp, tot_len, cont_len, 
+                     pack_len = 0, head_len;
+    uint32_t         seq;
+    tc_ip_header_t  *ip_header;
+    tc_tcp_header_t *tcp_header;
 
     packet = recv_buf;
 
@@ -152,10 +152,10 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
         replica_num = clt_settings.replica_num;
         packet_num = 1;
-        ip_header   = (struct iphdr*)packet;
+        ip_header   = (tc_ip_header_t *)packet;
 
         if (localhost == ip_header->saddr) {
-            if (0 != clt_settings.lo_tf_ip) {
+            if (clt_settings.lo_tf_ip != 0) {
                 ip_header->saddr = clt_settings.lo_tf_ip;
             }
         }
@@ -166,7 +166,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
          */
         if (recv_len > clt_settings.mtu) {
 
-            /* Calculate number of packets */
+            /* calculate number of packets */
             size_ip     = ip_header->ihl << 2;
             tot_len     = ntohs(ip_header -> tot_len);
             if (tot_len != recv_len) {
@@ -175,7 +175,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
                 return TC_ERROR;
             }
 
-            tcp_header  = (struct tcphdr*)((char *)ip_header + size_ip);
+            tcp_header  = (tc_tcp_header_t *)((char *)ip_header + size_ip);
             size_tcp    = tcp_header->doff << 2;
             cont_len    = tot_len - size_tcp - size_ip;
             head_len    = size_ip + size_tcp;
@@ -201,9 +201,9 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
                 payload_len = pack_len - head_len;
                 ip_header->tot_len = htons(pack_len);
                 ip_header->id = id++;
-                /* Copy header here */
+                /* copy header here */
                 memcpy(tmp_buf, recv_buf, head_len);
-                /* Copy payload here */
+                /* copy payload here */
                 memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
                 index = index + payload_len;
                 if (replica_num > 1) {
@@ -240,7 +240,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     int  fd;
     char ebuf[PCAP_ERRBUF_SIZE];
 
-    /* Init the raw socket to send */
+    /* init the raw socket to send */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     } else {
@@ -382,7 +382,7 @@ send_packets_from_pcap(int first)
     unsigned char      *pkt_data, *ip_data;
     struct pcap_pkthdr  pkt_hdr;  
 
-    if (NULL == pcap || read_pcap_over) {
+    if (pcap == NULL || read_pcap_over) {
         return;
     }
 
@@ -431,3 +431,4 @@ send_packets_from_pcap(int first)
     }
 }
 #endif /* TCPCOPY_OFFLINE */
+

@@ -94,8 +94,8 @@ tc_log_info(int level, int err, const char *fmt, ...)
 }
 
 void
-tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
-        struct tcphdr *tcp_header)
+tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header)
 {
     char           *tmp_buf, src_ip[1024], dst_ip[1024];
     uint16_t        window;
@@ -115,7 +115,7 @@ tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
     seq = ntohl(tcp_header->seq);
     ack_seq = ntohl(tcp_header->ack_seq);
 
-    /* Strange here, not using ntohs */
+    /* strange here, not using ntohs */
     window = tcp_header->window;
 
     if (BACKEND_FLAG == flag) {
@@ -153,7 +153,7 @@ tc_log_trace(int level, int err, int flag, struct iphdr *ip_header,
                     ntohs(tcp_header->dest), pack_size,
                     seq, ack_seq);
 
-    } else{
+    } else {
         tc_log_info(level, err,
                     "strange %s:%u-->%s:%u,length %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,

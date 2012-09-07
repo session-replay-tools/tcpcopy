@@ -14,7 +14,7 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-/* Global variables for tcpcopy client */
+/* global variables for tcpcopy client */
 xcopy_clt_settings clt_settings;
 
 int tc_raw_socket_out;
@@ -161,12 +161,12 @@ read_args(int argc, char **argv)
 static void
 output_for_debug(int argc, char **argv)
 {
-    /* Print tcpcopy version */
+    /* print tcpcopy version */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
-    /* Print target */
+    /* print target */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
-    /* Print tcpcopy working mode */
+    /* print tcpcopy working mode */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode");
 #endif
@@ -202,7 +202,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 }
 
 /*
- * One target format:
+ * one target format:
  * 192.168.0.1:80-192.168.0.2:8080
  * or
  * 80-192.168.0.2:8080
@@ -235,8 +235,8 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
 }
 
 /*
- * Retrieve target addresses
- * Format
+ * retrieve target addresses
+ * format
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
 static int
@@ -311,13 +311,13 @@ set_details()
     unsigned int   seed;
     struct timeval tp;
 
-    /* Generate random port for avoiding port conflicts */
+    /* generate random port for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
     rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
-    /* Set ip port pair mapping according to settings */
+    /* set ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
     {
@@ -325,7 +325,7 @@ set_details()
     }
 
 #if (TCPCOPY_OFFLINE)
-    if (NULL == clt_settings.pcap_file) {
+    if (clt_settings.pcap_file == NULL) {
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
         return -1;
@@ -333,7 +333,7 @@ set_details()
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)
-    if (NULL != clt_settings.user_pwd) {
+    if (!= clt_settings.user_pwd != NULL) {
         if (retrieve_mysql_user_pwd_info(clt_settings.user_pwd) == -1) {
             return -1;
         }
@@ -344,7 +344,7 @@ set_details()
     }
 #endif
 
-    /* Daemonize */
+    /* daemonize */
     if (clt_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
@@ -363,11 +363,11 @@ set_details()
     return 0;
 }
 
-/* Set defaults */
+/* set defaults */
 static void
 settings_init()
 {
-    /* Init values */
+    /* init values */
     clt_settings.mtu = DEFAULT_MTU;
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
@@ -379,7 +379,7 @@ settings_init()
 }
 
 /*
- * Main entry point
+ * main entry point
  */
 int
 main(int argc, char **argv)
@@ -398,10 +398,10 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* Output debug info */
+    /* output debug info */
     output_for_debug(argc, argv);
 
-    /* Set details for running */
+    /* set details for running */
     if (set_details() == -1) {
         return -1;
     }
@@ -417,7 +417,7 @@ main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    /* Run now */
+    /* run now */
     tc_event_process_cycle(&event_loop);
 
     tcp_copy_release_resources();

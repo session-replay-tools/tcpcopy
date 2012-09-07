@@ -28,7 +28,7 @@ route_delete_obsolete(time_t cur_time)
         if (l->size > 0) {
             while (true) {
                 ln = link_list_tail(l); 
-                if (NULL == ln) {
+                if (ln == NULL) {
                     break;
                 }       
                 hn = (hash_node *)ln->data;
@@ -65,7 +65,7 @@ route_delete_obsolete(time_t cur_time)
 }
 
 
-/* Initiate router table */
+/* initiate router table */
 void
 router_init(size_t size)
 {
@@ -78,7 +78,7 @@ router_init(size_t size)
     tc_log_info(LOG_NOTICE, 0, "create %s, size:%u", table->name, table->size);
 }
 
-/* Delete item in router table */
+/* delete item in router table */
 void
 router_del(uint32_t ip, uint16_t port)
 {
@@ -97,7 +97,7 @@ router_del(uint32_t ip, uint16_t port)
 
 }
 
-/* Add item to the router table */
+/* add item to the router table */
     void
 router_add(uint32_t ip, uint16_t port, int fd)
 {
@@ -116,7 +116,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
 }
 
 #if (INTERCEPT_THREAD)
-/* Update router table */
+/* update router table */
 void
 router_update(tc_ip_header_t *ip_header, int len)
 {
@@ -124,10 +124,10 @@ router_update(tc_ip_header_t *ip_header, int len)
     uint32_t                size_ip;
     uint64_t                key;
     msg_server_t            msg;
-    struct tcphdr          *tcp_header;
+    tc_tcp_header_t        *tcp_header;
 
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
 
     memcpy(&msg, ip_header, len);
 
@@ -136,7 +136,7 @@ router_update(tc_ip_header_t *ip_header, int len)
     pthread_mutex_lock(&mutex);
 
     fd  = hash_find(table, key);
-    if ( NULL == fd ) {
+    if (fd == NULL) {
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         delay_table_add(key, &msg);
 
@@ -153,13 +153,13 @@ router_update(tc_ip_header_t *ip_header, int len)
 #else 
 
 void
-router_update(struct iphdr *ip_header)
+router_update(tc_ip_header_t *ip_header)
 {
     void                   *fd;
     uint32_t                size_ip;
     uint64_t                key;
     msg_server_t            msg;
-    struct tcphdr          *tcp_header;
+    tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
     uint32_t                size_tcp, cont_len, tot_len;
     unsigned char          *payload;
@@ -171,11 +171,11 @@ router_update(struct iphdr *ip_header)
     }
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (struct tcphdr*)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
 
     memset(&msg, 0, sizeof(struct msg_server_s));
-    memcpy((void *) &(msg.ip_header),  ip_header,  sizeof(struct iphdr));
-    memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(struct tcphdr));
+    memcpy((void *) &(msg.ip_header),  ip_header,  sizeof(tc_ip_header_t));
+    memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(tc_tcp_header_t));
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     tot_len  = ntohs(ip_header->tot_len);
@@ -185,7 +185,7 @@ router_update(struct iphdr *ip_header)
         payload = (unsigned char*)((char*)tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
             /*
-             * Only transfer payload if content length is less
+             * only transfer payload if content length is less
              * than MAX_PAYLOAD_LEN
              */
             memcpy((void *) &(msg.payload), payload, cont_len);
@@ -194,7 +194,7 @@ router_update(struct iphdr *ip_header)
 #endif
     key = get_key(ip_header->daddr, tcp_header->dest);
     fd  = hash_find(table, key);
-    if ( NULL == fd ) {
+    if (fd == NULL) {
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         delay_table_add(key, &msg);
         return ;
@@ -205,7 +205,7 @@ router_update(struct iphdr *ip_header)
 
 #endif
 
-/* Destroy router table */
+/* destroy router table */
 void
 router_destroy()
 {

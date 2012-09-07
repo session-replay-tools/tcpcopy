@@ -14,8 +14,8 @@ struct msg_client_s {
 };
 
 struct msg_server_s {
-    struct iphdr  ip_header;
-    struct tcphdr tcp_header;
+    tc_ip_header_t  ip_header;
+    tc_tcp_header_t tcp_header;
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     unsigned char payload[MAX_PAYLOAD_LEN];
