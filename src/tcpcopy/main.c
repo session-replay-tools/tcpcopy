@@ -333,7 +333,7 @@ set_details()
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)
-    if (!= clt_settings.user_pwd != NULL) {
+    if (clt_settings.user_pwd != NULL) {
         if (retrieve_mysql_user_pwd_info(clt_settings.user_pwd) == -1) {
             return -1;
         }

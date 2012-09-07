@@ -1193,7 +1193,7 @@ check_reserved_content_left(session_t *s)
 
     while (ln) {
         data = ln->data;
-        ip_header = (tc_ip_header_t *)((char*)data);
+        ip_header = (tc_ip_header_t *)((char *)data);
         cont_len  = get_pack_cont_len(ip_header, NULL);
         if (cont_len > 0) {
             return true;
@@ -1563,9 +1563,9 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
     if (cont_len > 0) {
 
         payload = (unsigned char*)((char*)tcp_header + size_tcp);
-        /* skip Packet Length */
+        /* skip packet length */
         payload = payload + 3;
-        /* skip Packet Number */
+        /* skip packet number */
         payload = payload + 1;
         /* get commmand */
         command = payload[0];
