@@ -86,6 +86,7 @@ tc_msg_event_process(tc_event_t *rev)
     if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_socket_close(rev->fd);
         tc_event_del(rev->loop, rev, TC_EVENT_READ);
+        tc_event_destroy(rev);
         tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
         return TC_ERROR;
     }
