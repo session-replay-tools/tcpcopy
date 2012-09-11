@@ -44,6 +44,7 @@ typedef struct {
 struct tc_event_s {
     int                  fd;
     int                  events;
+    int                  reg_evs;
     int                  index;
     tc_event_loop_t     *loop;
     tc_event_handler_pt  read_handler;
