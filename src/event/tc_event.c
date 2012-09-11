@@ -69,7 +69,19 @@ int tc_event_add(tc_event_loop_t *loop, tc_event_t *ev, int events)
         return TC_EVENT_OK;
     }
 
-    return actions->add(loop, ev, events);
+    if (actions->add(loop, ev, events) == TC_EVENT_ERROR) {
+        return TC_EVENT_ERROR;
+    }
+
+    if (events & TC_EVENT_READ) {
+        ev->reg_evs |= TC_EVENT_READ;
+    }
+
+    if (events & TC_EVENT_WRITE) {
+        ev->reg_evs |= TC_EVENT_WRITE;
+    }
+
+    return TC_EVENT_OK;
 }
 
 int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events)
@@ -82,7 +94,19 @@ int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events)
         return TC_EVENT_OK;
     }
 
-    return actions->del(loop, ev, events);
+    if (actions->del(loop, ev, events) == TC_EVENT_ERROR) {
+        return TC_EVENT_ERROR;
+    }
+
+    if (events & TC_EVENT_READ) {
+        ev->reg_evs &= ~TC_EVENT_READ;
+    }
+
+    if (events & TC_EVENT_WRITE) {
+        ev->reg_evs &= ~TC_EVENT_WRITE; 
+    }
+
+    return TC_EVENT_OK;
 }
 
 
@@ -90,7 +114,7 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 {
     int                  ret;
     long                 timeout;
-    tc_event_t          *act_event;
+    tc_event_t          *act_event, *act_next;
     tc_event_actions_t  *actions;
 
     actions = loop->actions;
@@ -120,9 +144,9 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
             continue;
         }
 
-        for (act_event = loop->active_events; act_event;
-                act_event = act_event->next)
-        {
+        for (act_event = loop->active_events; act_event; act_event = act_next) {
+            act_next = act_event->next;
+
             if (act_event->events & TC_EVENT_READ) {
                 if (act_event->read_handler(act_event) == TC_ERR_EXIT) {
                     goto FINISH;
@@ -133,6 +157,10 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
                 if (act_event->write_handler(act_event) == TC_ERR_EXIT) {
                     goto FINISH;
                 }
+            }
+
+            if (act_event->reg_evs == TC_EVENT_NONE) {
+                tc_event_destroy(act_event);
             }
         }
     }
@@ -151,6 +179,8 @@ tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
         return NULL;
     }
 
+    ev->events = 0;
+    ev->reg_evs = 0;
     ev->index = -1;
     ev->fd = fd;
     ev->next = NULL;
