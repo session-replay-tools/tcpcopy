@@ -35,14 +35,14 @@ address_find_sock(uint32_t ip, uint16_t port)
                     ntohl(ip), ntohs(port));
         return -1;
     }
-    return (int)(long) fd;
+    return (int) (long) fd;
 }
 
 void
 address_add_sock(uint32_t ip, uint16_t port, int fd) 
 {
     uint64_t key = get_key(ip, port);
-    hash_add(addr_table, key, (void *)(long)fd);
+    hash_add(addr_table, key, (void *) (long) fd);
 }
 
 void 
@@ -67,7 +67,7 @@ address_release()
             hn = (hash_node *)ln->data;
             if (hn->data != NULL) {
 
-                fd  = (int)(long)hn->data;
+                fd  = (int) (long) hn->data;
                 hn->data = NULL;
 
                 if (fd != 0) {

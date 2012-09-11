@@ -107,7 +107,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
     pthread_mutex_lock(&mutex);
 #endif
 
-    hash_add(table, key, (void *)(long)fd);
+    hash_add(table, key, (void *) (long) fd);
     delay_table_send(key, fd);
 
 #if (INTERCEPT_THREAD)
@@ -127,7 +127,7 @@ router_update(tc_ip_header_t *ip_header, int len)
     tc_tcp_header_t        *tcp_header;
 
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
 
     memcpy(&msg, ip_header, len);
 
@@ -171,10 +171,10 @@ router_update(tc_ip_header_t *ip_header)
     }
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     memset(&msg, 0, sizeof(struct msg_server_s));
-    memcpy((void *) &(msg.ip_header),  ip_header,  sizeof(tc_ip_header_t));
+    memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
     memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(tc_tcp_header_t));
 
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -182,7 +182,7 @@ router_update(tc_ip_header_t *ip_header)
     size_tcp = tcp_header->doff << 2;
     cont_len = tot_len - size_ip - size_tcp;
     if (cont_len > 0) {
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
             /*
              * only transfer payload if content length is less

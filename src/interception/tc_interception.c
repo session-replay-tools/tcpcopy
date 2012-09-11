@@ -115,9 +115,10 @@ tc_msg_event_process(tc_event_t *rev)
     msg_client_t msg;
 
     if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+        tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
         tc_socket_close(rev->fd);
         tc_event_del(rev->loop, rev, TC_EVENT_READ);
-        tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
+        tc_event_destroy(rev);
         return TC_ERROR;
     }
 
@@ -174,7 +175,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     save_len = RESP_MAX_USEFUL_SIZE;
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     size_tcp = tcp_header->doff << 2;
@@ -208,8 +209,8 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     }
 
     cur_w_pos = write_counter & POOL_MASK;
-    p_len     = (int *)(pool + cur_w_pos);
-    p_content = (char *)((unsigned char *)p_len + sizeof(int));
+    p_len     = (int *) (pool + cur_w_pos);
+    p_content = (char *) ((unsigned char *) p_len + sizeof(int));
     
     write_counter = next_w_cnt;
     
@@ -222,7 +223,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 #if (TCPCOPY_MYSQL_ADVANCED) 
     if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
         p_content = p_content + sizeof(tc_tcp_header_t);
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char*) ((char*) tcp_header + size_tcp);
         memcpy(p_content, payload, cont_len);
     }
 #endif
@@ -246,7 +247,7 @@ get_resp_ip_hdr_from_pool(char *resp, int *len)
     read_pos = read_counter & POOL_MASK;
 
     pos = pool + read_pos;
-    *len = *(int *)(pos);
+    *len = *(int *) (pos);
 
     pos = pos + sizeof(int);
 

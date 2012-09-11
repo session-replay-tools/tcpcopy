@@ -314,7 +314,7 @@ set_details()
     /* generate random port for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
-    rand_port = (int)((rand_r(&seed)/(RAND_MAX + 1.0))*512);
+    rand_port = (int) ((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
     /* set ip port pair mapping according to settings */

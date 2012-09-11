@@ -82,7 +82,7 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
 
     ip_header->tot_len = htons(tot_len - diff);
     tcp_header->seq    = htonl(s->vir_next_seq);
-    payload = (unsigned char*)((char*)tcp_header + size_tcp);
+    payload = (unsigned char *) ((char*) tcp_header + size_tcp);
     memmove(payload, payload + diff, cont_len - diff);
     tc_log_debug1(LOG_DEBUG, 0, "trim packet:%u", s->src_h_port);
 
@@ -98,7 +98,7 @@ get_pack_cont_len(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     size_ip   = ip_header->ihl << 2;
 
     if (tcp_header == NULL) {
-        tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+        tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     }
 
     tot_len   = ntohs(ip_header->tot_len);
@@ -127,9 +127,9 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         return;
     }
 
-    ip_header  = (tc_ip_header_t *)data;
+    ip_header  = (tc_ip_header_t *) data;
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)(data + size_ip);
+    tcp_header = (tc_tcp_header_t *) (data + size_ip);
 
     if (client) {
         s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
@@ -182,7 +182,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     /* It should be set zero for tcp checksum */
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
-            (unsigned short *)tcp_header, (int)(tot_len - size_ip));
+            (unsigned short *) tcp_header, (int) (tot_len - size_ip));
 #if (NEED_CALCULATE_IP_CHECKSUM)
     /*
      * For linux,
@@ -254,8 +254,9 @@ send_faked_passive_rst(session_t *s)
 
     memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
 
-    f_ip_header  = (tc_ip_header_t *)faked_rst_buf;
-    f_tcp_header = (tc_tcp_header_t *)(faked_rst_buf + IP_HEADER_LEN);
+    f_ip_header  = (tc_ip_header_t *) faked_rst_buf;
+    f_tcp_header = (tc_tcp_header_t *) (faked_rst_buf + IP_HEADER_LEN);
+
     fill_pro_common_header(f_ip_header, f_tcp_header);
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = s->src_addr;
@@ -634,9 +635,9 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.mysql_first_auth_sent) {
 
         tc_log_info(LOG_NOTICE, 0, "mysql login req from reserved");
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         ch_auth_success = change_client_auth_content(payload, 
-                (int)cont_len, s->mysql_password, s->mysql_scramble);
+                (int) cont_len, s->mysql_password, s->mysql_scramble);
 
         tc_log_trace(LOG_NOTICE, 0, CLIENT_FLAG, ip_header, tcp_header);
 
@@ -655,7 +656,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
             tc_log_info(LOG_NOTICE, 0, "free for fir auth:%llu", s->hash_key);
         }
 
-        value = (void *)copy_ip_packet(ip_header);
+        value = (void *) copy_ip_packet(ip_header);
         hash_add(fir_auth_pack_table, s->hash_key, value);
         tc_log_info(LOG_NOTICE, 0, "set value for fir auth:%llu", s->hash_key);
 
@@ -663,7 +664,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
 
         tc_log_info(LOG_NOTICE, 0, "sec login req from reserved");
 
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
 
         memset(encryption, 0, 16);
         memset(s->mysql_seed323, 0, SEED_323_LENGTH + 1);
@@ -683,7 +684,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
             free(value);
             tc_log_info(LOG_NOTICE, 0, "free for sec auth:%llu", s->hash_key);
         }
-        value = (void *)copy_ip_packet(ip_header);
+        value = (void *) copy_ip_packet(ip_header);
         hash_add(sec_auth_pack_table, s->hash_key, value);
         tc_log_info(LOG_WARN, 0, "set sec auth packet:%llu", s->hash_key);
 
@@ -772,9 +773,9 @@ send_reserved_packets(session_t *s)
     while (ln && (!need_pause)) {
 
         data = ln->data;
-        ip_header  = (tc_ip_header_t *)((char*)data);
+        ip_header  = (tc_ip_header_t*) ((char *) data);
         size_ip    = ip_header->ihl << 2;
-        tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+        tcp_header = (tc_tcp_header_t*) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);
 
         tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
@@ -1099,9 +1100,9 @@ retransmit_packets(session_t *s)
     while (ln && (!need_pause)) {
 
         data       = ln->data;
-        ip_header  = (tc_ip_header_t *)((char *)data);
+        ip_header  = (tc_ip_header_t *) ((char *) data);
         size_ip    = ip_header->ihl << 2;
-        tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+        tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);  
 
         if (!is_success) {
@@ -1156,9 +1157,9 @@ update_retransmission_packets(session_t *s)
     while (ln) {
 
         data       = ln->data;
-        ip_header  = (tc_ip_header_t *)((char*)data);
+        ip_header  = (tc_ip_header_t *) ((char *) data);
         size_ip    = ip_header->ihl << 2;
-        tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+        tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);  
 
         if (cur_seq < s->resp_last_ack_seq) {
@@ -1193,7 +1194,7 @@ check_reserved_content_left(session_t *s)
 
     while (ln) {
         data = ln->data;
-        ip_header = (tc_ip_header_t *)((char *)data);
+        ip_header = (tc_ip_header_t *) ((char *) data);
         cont_len  = get_pack_cont_len(ip_header, NULL);
         if (cont_len > 0) {
             return true;
@@ -1206,8 +1207,8 @@ check_reserved_content_left(session_t *s)
 
 #if (TCPCOPY_MYSQL_BASIC)
 static void
-mysql_prepare_for_new_session(session_t *s,
-        tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
+mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header)
 {
     uint16_t          size_ip, fir_cont_len, tmp_cont_len;
     uint32_t          total_cont_len, base_seq;
@@ -1232,12 +1233,12 @@ mysql_prepare_for_new_session(session_t *s,
     value = hash_find(fir_auth_pack_table, key);
     if (value != NULL) {
         /* use the private first auth user packet */
-        fir_auth_pack = (tc_ip_header_t *)value;
+        fir_auth_pack = (tc_ip_header_t *) value;
     }
 
     value = hash_find(sec_auth_pack_table, key);
     if (value != NULL) {
-        sec_auth_packet = (tc_ip_header_t *)value;
+        sec_auth_packet = (tc_ip_header_t *) value;
     }
 
 #endif
@@ -1247,10 +1248,11 @@ mysql_prepare_for_new_session(session_t *s,
         return;
     }
 
-    fir_ip_header  = (tc_ip_header_t *)fir_auth_pack;
+    fir_ip_header  = (tc_ip_header_t *) fir_auth_pack;
     fir_ip_header->saddr = ip_header->saddr;
     size_ip        = fir_ip_header->ihl << 2;
-    fir_tcp_header = (tc_tcp_header_t *)((char *)fir_ip_header + size_ip);
+    fir_tcp_header = (tc_tcp_header_t *) ((char *) fir_ip_header
+            + size_ip);
     fir_cont_len = get_pack_cont_len(fir_ip_header, fir_tcp_header);
     fir_tcp_header->source = tcp_header->source;
 
@@ -1262,10 +1264,11 @@ mysql_prepare_for_new_session(session_t *s,
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (sec_auth_packet) {
 
-        sec_ip_header = (tc_ip_header_t *)sec_auth_packet;
+        sec_ip_header = (tc_ip_header_t *) sec_auth_packet;
         sec_ip_header->saddr = ip_header->saddr;
         size_ip   = sec_ip_header->ihl << 2;
-        sec_tcp_header = (tc_tcp_header_t *)((char *)sec_ip_header + size_ip);
+        sec_tcp_header = (tc_tcp_header_t *) ((char *) sec_ip_header
+                + size_ip);
         sec_cont_len = get_pack_cont_len(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
         save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
@@ -1286,7 +1289,7 @@ mysql_prepare_for_new_session(session_t *s,
         /* calculate the total content length */
         ln = link_list_first(list); 
         while (ln) {
-            tmp_ip_header = (tc_ip_header_t *)(ln->data);
+            tmp_ip_header = (tc_ip_header_t *) (ln->data);
             tmp_cont_len = get_pack_cont_len(tmp_ip_header, NULL);
             total_cont_len += tmp_cont_len;
             ln = link_list_get_next(list, ln);
@@ -1317,9 +1320,9 @@ mysql_prepare_for_new_session(session_t *s,
         /* insert prepare statements */
         ln = link_list_first(list); 
         while (ln) {
-            tmp_ip_header  = (tc_ip_header_t *)(ln->data);
-            tmp_ip_header  = (tc_ip_header_t *)copy_ip_packet(tmp_ip_header);
-            tmp_tcp_header = (tc_tcp_header_t *)((char *)tmp_ip_header 
+            tmp_ip_header  = (tc_ip_header_t *) (ln->data);
+            tmp_ip_header  = (tc_ip_header_t *) copy_ip_packet(tmp_ip_header);
+            tmp_tcp_header = (tc_tcp_header_t *) ((char *) tmp_ip_header 
                     + size_ip); 
             tmp_cont_len   = get_pack_cont_len(tmp_ip_header, tmp_tcp_header);
             tmp_tcp_header->seq = htonl(base_seq);
@@ -1339,13 +1342,13 @@ static void
 send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-    unsigned char     f_s_buf[FAKE_IP_DATAGRAM_LEN];
-    tc_ip_header_t   *f_ip_header;
-    tc_tcp_header_t  *f_tcp_header;
+    unsigned char    f_s_buf[FAKE_IP_DATAGRAM_LEN];
+    tc_ip_header_t  *f_ip_header;
+    tc_tcp_header_t *f_tcp_header;
 
     memset(f_s_buf, 0, FAKE_IP_DATAGRAM_LEN);
-    f_ip_header  = (tc_ip_header_t *)f_s_buf;
-    f_tcp_header = (tc_tcp_header_t *)(f_s_buf + IP_HEADER_LEN);
+    f_ip_header  = (tc_ip_header_t *) f_s_buf;
+    f_tcp_header = (tc_tcp_header_t *) (f_s_buf + IP_HEADER_LEN);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
 
@@ -1382,16 +1385,16 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
  * send faked syn ack packet(the third handshake packet) to back 
  */
 static void 
-send_faked_third_handshake(session_t *s, 
-        tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
+send_faked_third_handshake(session_t *s, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header)
 {
     unsigned char     fake_ack_buf[FAKE_IP_DATAGRAM_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
 
     memset(fake_ack_buf, 0, FAKE_IP_DATAGRAM_LEN);
-    f_ip_header  = (tc_ip_header_t *)fake_ack_buf;
-    f_tcp_header = (tc_tcp_header_t *)(fake_ack_buf + IP_HEADER_LEN);
+    f_ip_header  = (tc_ip_header_t *) fake_ack_buf;
+    f_tcp_header = (tc_tcp_header_t *) (fake_ack_buf + IP_HEADER_LEN);
     fill_pro_common_header(f_ip_header, f_tcp_header);
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = s->src_addr;
@@ -1422,13 +1425,13 @@ static void
 send_faked_ack(session_t *s, tc_ip_header_t *ip_header, 
         tc_tcp_header_t *tcp_header, bool active)
 {
-    unsigned char     fake_ack_buf[FAKE_IP_DATAGRAM_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
+    unsigned char   fake_ack_buf[FAKE_IP_DATAGRAM_LEN];
 
     memset(fake_ack_buf, 0, FAKE_IP_DATAGRAM_LEN);
-    f_ip_header  = (tc_ip_header_t *)fake_ack_buf;
-    f_tcp_header = (tc_tcp_header_t *)(fake_ack_buf + IP_HEADER_LEN);
+    f_ip_header  = (tc_ip_header_t *) fake_ack_buf;
+    f_tcp_header = (tc_tcp_header_t *) (fake_ack_buf + IP_HEADER_LEN);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
 
@@ -1463,8 +1466,8 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "send faked rst:%u", s->src_h_port);
 
     memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
-    f_ip_header  = (tc_ip_header_t *)faked_rst_buf;
-    f_tcp_header = (tc_tcp_header_t *)(faked_rst_buf + IP_HEADER_LEN);
+    f_ip_header  = (tc_ip_header_t *) faked_rst_buf;
+    f_tcp_header = (tc_tcp_header_t *) (faked_rst_buf + IP_HEADER_LEN);
     fill_pro_common_header(f_ip_header, f_tcp_header);
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = ip_header->daddr;
@@ -1519,7 +1522,7 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
                 ntohs(tcp_header->source), s->src_h_port);
 #endif
 
-        hash_add(tf_port_table, new_key, (void *)(long)s->orig_src_port);
+        hash_add(tf_port_table, new_key, (void *) (long) s->orig_src_port);
         tcp_header->source = target_port;
         s->faked_src_port  = tcp_header->source;
         s->sm.port_transfered = 1;
@@ -1562,7 +1565,7 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
 
     if (cont_len > 0) {
 
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         /* skip packet length */
         payload = payload + 3;
         /* skip packet number */
@@ -1640,7 +1643,7 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     cont_len = tot_len - size_tcp - size_ip;
 
     if (cont_len > 0) {
-        payload = (unsigned char*)((char*)tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         /* skip packet length */
         payload = payload + 3;
         /* get packet number */
@@ -1825,7 +1828,7 @@ mysql_process_greet(session_t *s, tc_ip_header_t *ip_header,
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     s->sm.mysql_sec_auth_checked  = 0;
-    payload = (unsigned char*)((char*)tcp_header + sizeof(tc_tcp_header_t));
+    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
     memset(s->mysql_scramble, 0, SCRAMBLE_LENGTH + 1);
     ret = parse_handshake_init_cont(payload, cont_len, s->mysql_scramble);
     tc_log_info(LOG_WARN, 0, "scram:%s,p:%u", s->mysql_scramble, s->src_h_port);
@@ -1835,7 +1838,7 @@ mysql_process_greet(session_t *s, tc_ip_header_t *ip_header,
             tc_log_debug_trace(LOG_DEBUG, 0, BACKEND_FLAG,
                     ip_header, tcp_header);
             tc_log_info(LOG_WARN, 0, "port:%u,payload:%s",
-                        s->src_h_port, (char*)(payload + 11));
+                        s->src_h_port, (char *) (payload + 11));
         }
         s->sm.sess_over = 1;
         return DISP_STOP;
@@ -1856,7 +1859,7 @@ mysql_check_need_sec_auth(session_t *s, tc_ip_header_t *ip_header,
     tc_log_info(LOG_NOTICE, 0, "check if it needs second auth:%u",
                 s->src_h_port);
 
-    payload = (unsigned char*)((char*)tcp_header + sizeof(tc_tcp_header_t));
+    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
 
      /* check if it is the last data packet */
     if (is_last_data_packet(payload)) {
@@ -2059,7 +2062,7 @@ process_client_rst(session_t *s, tc_ip_header_t *ip_header,
             tcp_header->seq = htonl(s->vir_next_seq);
         }
         s->sm.unack_pack_omit_save_flag = 1;
-        wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+        wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
         s->sm.reset = 1;
     }
 }
@@ -2097,7 +2100,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
     }
 #endif
 
-    wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+    wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
 }
 
 static int
@@ -2120,7 +2123,7 @@ process_client_fin(session_t *s, tc_ip_header_t *ip_header,
         if (s->sm.candidate_response_waiting) {
             save_packet(s->unsend_packets, ip_header, tcp_header);
         } else {
-            wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+            wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             s->sm.status |= CLIENT_FIN;
             s->sm.src_closed = 1;
         }
@@ -2161,7 +2164,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
              * check if mysql protocol validation ends? 
              */
             size_tcp    = tcp_header->doff << 2;
-            payload     = (unsigned char*)((char*)tcp_header + size_tcp);
+            payload     = (unsigned char *) ((char *) tcp_header + size_tcp);
             /* skip packet length */
             payload     = payload + 3;
             pack_number = payload[0];
@@ -2189,7 +2192,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
 
         if (!s->sm.mysql_req_begin) {
             if (!fir_auth_u_p) {
-                fir_auth_u_p = (tc_ip_header_t *)copy_ip_packet(ip_header);
+                fir_auth_u_p = (tc_ip_header_t *) copy_ip_packet(ip_header);
                 tc_log_info(LOG_NOTICE, 0, "fir auth is set");
             }
 
@@ -2342,7 +2345,7 @@ is_continuous_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if (s->sm.candidate_response_waiting) {
         if (cur_seq > s->req_last_cont_sent_seq) {
-            wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+            wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             tc_log_debug0(LOG_DEBUG, 0, "it is a continuous req");
             return DISP_STOP;
         }
@@ -2360,11 +2363,11 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.candidate_response_waiting) {
         if (len > 0) {
             s->sm.candidate_response_waiting = 1;
-            wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+            wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             return;
         } else if (SYN_CONFIRM == s->sm.status) {
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
-                wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+                wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
                 return;
             }
         }
@@ -2528,11 +2531,11 @@ restore_buffered_next_session(session_t *s)
     tc_tcp_header_t  *tcp_header;
 
     ln     = link_list_first(s->unsend_packets);    
-    data   = (unsigned char*)ln->data;
+    data   = (unsigned char *) ln->data;
     link_list_remove(s->unsend_packets, ln);
-    ip_header  = (tc_ip_header_t *)((char*)data);
+    ip_header  = (tc_ip_header_t *) ((char *) data);
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     process_client_packet(s, ip_header,tcp_header);
 
@@ -2552,7 +2555,7 @@ is_packet_needed(const char *packet)
     tc_ip_header_t   *ip_header;
     tc_tcp_header_t  *tcp_header;
 
-    ip_header = (tc_ip_header_t *)packet;
+    ip_header = (tc_ip_header_t *) packet;
 
     /* check if it is a tcp packet(could be removed) */
     if (ip_header->protocol != IPPROTO_TCP) {
@@ -2566,7 +2569,7 @@ is_packet_needed(const char *packet)
         return is_needed;
     }
 
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     size_tcp   = tcp_header->doff << 2;
     if (size_tcp < 20) {
         tc_log_info(LOG_WARN, 0, "Invalid TCP header len: %d bytes,pack len:%d",
@@ -2676,9 +2679,9 @@ process(char *packet, int pack_src)
         start_p_time = tc_time();
     }
 
-    ip_header  = (tc_ip_header_t *)packet;
+    ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     if (pack_src == REMOTE) {
 
@@ -2689,7 +2692,7 @@ process(char *packet, int pack_src)
             /* give another chance for port changed*/
             ori_port = hash_find(tf_port_table, key);
             if (ori_port != NULL) {
-                key = get_key(ip_header->daddr, (uint16_t)(long)ori_port);
+                key = get_key(ip_header->daddr, (uint16_t) (long) ori_port);
                 s = hash_find(sessions_table, key);
             }
         }

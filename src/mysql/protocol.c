@@ -130,20 +130,20 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     p = p + 1;
     /* skip protocol_version */
     p++;
-    str = (char *)p;
+    str = (char *) p;
     len = strlen(str);
     /* skip server_version */
     p   = p + len + 1;
     /* skip thread_id */
     p  += 4;
-    str = (char *)p;
+    str = (char *) p;
     count = p - payload + 8;
     if (count > length) {
         tc_log_info(LOG_ERR, 0, "payload len is too short for init:%u,%u",
                 length, count);
         return 0;
     }
-    strncpy(scramble_buff, (char *)p, 8);   
+    strncpy(scramble_buff, (char *) p, 8);   
     /* skip scramble_buff */
     p = p + 8 + 1;
     /* skip server_capabilities */
@@ -158,7 +158,7 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     p = p + 1;
     /* skip (filler)  always 0 */
     p = p + 10;
-    str = (char *)p;
+    str = (char *) p;
     str_len = strlen(str) + 8;
     count = p - payload + strlen(str);
     if (str_len > SCRAMBLE_LENGTH|| count > length) {
@@ -215,7 +215,7 @@ change_client_auth_content(unsigned char *payload, int length,
         return 0;
     }
 
-    str = (char *)p;
+    str = (char *) p;
     /* retrieve user */
     memset(user, 0, 256);
     strcpy(user, str);

@@ -99,7 +99,7 @@ retrieve_ip_addr()
     while (true) {
         split = strchr(p, ',');
         if (split != NULL) {
-            len = (size_t)(split - p);
+            len = (size_t) (split - p);
         } else {
             len = strlen(p);
         }
@@ -165,10 +165,10 @@ read_args(int argc, char **argv) {
                 srv_settings.raw_ip_list = optarg;
                 break;
             case 'p':
-                srv_settings.port = (uint16_t)atoi(optarg);
+                srv_settings.port = (uint16_t) atoi(optarg);
                 break;
             case 's':
-                srv_settings.hash_size = (size_t)atoi(optarg);
+                srv_settings.hash_size = (size_t) atoi(optarg);
                 break;
             case 'b':
                 srv_settings.binded_ip = optarg;

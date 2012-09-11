@@ -114,9 +114,9 @@ replicate_packs(char *packet, int length, int replica_num)
     tc_tcp_header_t  *tcp_header;
     tc_ip_header_t   *ip_header;
     
-    ip_header  = (tc_ip_header_t *)packet;
+    ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     rand_port  = clt_settings.rand_port_shifted;
     orig_port  = ntohs(tcp_header->source);
 
@@ -148,7 +148,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
     packet = recv_buf;
 
-    if (is_packet_needed((const char *)packet)) {
+    if (is_packet_needed((const char *) packet)) {
 
         replica_num = clt_settings.replica_num;
         packet_num = 1;
@@ -175,7 +175,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
                 return TC_ERROR;
             }
 
-            tcp_header  = (tc_tcp_header_t *)((char *)ip_header + size_ip);
+            tcp_header  = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
             size_tcp    = tcp_header->doff << 2;
             cont_len    = tot_len - size_tcp - size_ip;
             head_len    = size_ip + size_tcp;
@@ -391,7 +391,7 @@ send_packets_from_pcap(int first)
     stop = check_read_stop();
     while (!stop) {
 
-        pkt_data = (u_char *)pcap_next(pcap, &pkt_hdr);
+        pkt_data = (u_char *) pcap_next(pcap, &pkt_hdr);
         if (pkt_data != NULL) {
 
             if (pkt_hdr.caplen < pkt_hdr.len) {

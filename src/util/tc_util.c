@@ -5,7 +5,7 @@
 inline uint64_t
 get_key(uint32_t ip, uint16_t port)
 {
-    uint64_t value = ((uint64_t)ip) << 16;
+    uint64_t value = ((uint64_t) ip ) << 16;
 
     value += port;
 
@@ -38,7 +38,7 @@ get_port_by_rand_addition(uint16_t orig_port)
         gettimeofday(&tp, NULL);
         seed = tp.tv_usec;
     }    
-    port_add = (uint16_t)(4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
+    port_add = (uint16_t) (4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
     port_add = port_add + 32768;
 
     return get_appropriate_port(ntohs(orig_port), port_add);
@@ -110,7 +110,7 @@ unsigned char *
 copy_ip_packet(tc_ip_header_t *ip_header)
 {
     uint16_t       tot_len = ntohs(ip_header->tot_len);
-    unsigned char *data    = (unsigned char *)malloc(tot_len);
+    unsigned char *data    = (unsigned char *) malloc(tot_len);
 
     if (data != NULL) {    
         memcpy(data, ip_header, tot_len);
@@ -129,7 +129,7 @@ csum(unsigned short *packet, int pack_len)
         pack_len -= 2; 
     } 
     if (pack_len > 0) {
-        sum += *(unsigned char *)packet; 
+        sum += *(unsigned char *) packet; 
     }
     while (sum >> 16) {
         sum = (sum & 0xffff) + (sum >> 16); 
@@ -147,8 +147,8 @@ tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
     unsigned short        res;
 
     memcpy(buf, iphdr + 12, 8); 
-    *(buf + 4) = htons((unsigned short)(*(iphdr + 9)));
-    *(buf + 5) = htons((unsigned short)pack_len);
+    *(buf + 4) = htons((unsigned short) (*(iphdr + 9)));
+    *(buf + 5) = htons((unsigned short) pack_len);
     memcpy(buf + 6, packet, pack_len);
     res = csum(buf, pack_len + 12);
 
