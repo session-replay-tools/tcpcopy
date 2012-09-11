@@ -90,7 +90,7 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 {
     int                  ret;
     long                 timeout;
-    tc_event_t          *act_event;
+    tc_event_t          *act_event, *act_next;
     tc_event_actions_t  *actions;
 
     actions = loop->actions;
@@ -120,9 +120,9 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
             continue;
         }
 
-        for (act_event = loop->active_events; act_event;
-                act_event = act_event->next)
-        {
+        for (act_event = loop->active_events; act_event; act_event = act_next) {
+            act_next = act_event->next;
+
             if (act_event->events & TC_EVENT_READ) {
                 if (act_event->read_handler(act_event) == TC_ERR_EXIT) {
                     goto FINISH;
