@@ -208,6 +208,8 @@ set_details()
     }
     /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "-x parameter:%s", 
+                srv_settings.raw_ip_list);
         retrieve_ip_addr();
     }
     /* daemonize */
