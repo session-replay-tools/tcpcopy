@@ -64,6 +64,7 @@ usage(void)
            "-t <num>       session timeout\n"
            "               if the target system is slow, set this larger\n");
     printf("-l <file>      log file path\n"
+           "-r <num>       percentage of sessions transfered(int,1~100)\n"
            "-p <num>       remote server listening port\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-h             print this help and exit\n"
@@ -91,6 +92,7 @@ read_args(int argc, char **argv)
          "f:" /* port shift factor for mutiple tcpcopy instances */
          "m:" /* max memory to use for tcpcopy client in megabytes */
          "p:" /* remote server listening port */
+         "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
          "t:" /* session timeout value */
          "l:" /* error log file path */
@@ -148,6 +150,9 @@ read_args(int argc, char **argv)
                 break;
             case 'P':
                 clt_settings.pid_file = optarg;
+                break;
+            case 'r':
+                clt_settings.percentage= atoi(optarg);
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
@@ -324,6 +329,10 @@ set_details()
         return -1;
     }
 
+    if (clt_settings.percentage < 0 && clt_settings.percentage >99) {
+        clt_settings.percentage = 0;
+    }
+
 #if (TCPCOPY_OFFLINE)
     if (clt_settings.pcap_file == NULL) {
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
@@ -371,6 +380,7 @@ settings_init()
     clt_settings.mtu = DEFAULT_MTU;
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
+    clt_settings.percentage = 0;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;

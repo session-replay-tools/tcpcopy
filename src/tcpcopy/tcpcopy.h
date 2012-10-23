@@ -27,6 +27,8 @@ typedef struct xcopy_clt_settings {
     unsigned int  max_rss:21;           /* Max memory size allowed for tcpcopy
                                            client(max size 2G) */
 
+    unsigned int  percentage:7;         /* Percentage of full flow 
+                                           that will be tranfered to backend */
     unsigned int  session_timeout:16;   /* Max value for session timeout
                                            If it reaches this value, the session
                                            will be removed */

@@ -2551,7 +2551,7 @@ bool
 is_packet_needed(const char *packet)
 {
     bool              is_needed = false;
-    uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len;
+    uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
     tc_ip_header_t   *ip_header;
     tc_tcp_header_t  *tcp_header;
 
@@ -2582,6 +2582,15 @@ is_packet_needed(const char *packet)
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
         header_len = size_tcp + size_ip;
         if (tot_len >= header_len) {
+
+            if (clt_settings.percentage) {
+                key = 0xFFFF & (tcp_header->source + ip_header->saddr);
+                key = ((key & 0xFF00) >> 8)+ (key & 0x00FF);
+                key = key % 100;
+                if (key >= clt_settings.percentage) {
+                    return is_needed;
+                }
+            }
             is_needed = true;
             cont_len  = tot_len - header_len;
             if (tcp_header->syn) {
