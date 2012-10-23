@@ -152,7 +152,7 @@ read_args(int argc, char **argv)
                 clt_settings.pid_file = optarg;
                 break;
             case 'r':
-                clt_settings.percentage= atoi(optarg);
+                clt_settings.percentage = atoi(optarg);
                 break;
             default:
                 fprintf(stderr, "Illegal argument \"%c\"\n", c);
