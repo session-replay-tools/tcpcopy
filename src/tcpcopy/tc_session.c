@@ -2585,7 +2585,7 @@ is_packet_needed(const char *packet)
 
             if (clt_settings.percentage) {
                 key = 0xFFFF & (tcp_header->source + ip_header->saddr);
-                key = ((key & 0xFF00) >> 8)+ (key & 0x00FF);
+                key = ((key & 0xFF00) >> 8) + (key & 0x00FF);
                 key = key % 100;
                 if (key >= clt_settings.percentage) {
                     return is_needed;
