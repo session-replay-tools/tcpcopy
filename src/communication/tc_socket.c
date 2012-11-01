@@ -93,13 +93,13 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
         dst_addr.sin_addr.s_addr = ip;
 
         /*
-         * The IP layer isn't involved at all. This has one negative effect 
-         * in result(although in performance it's better): 
+         * The output packet will take a special path of IP layer
+         * (raw_sendmsg->raw_send_hdrinc->NF_INET_LOCAL_OUT->...).
          * No IP fragmentation will take place if needed. 
          * This means that a raw packet larger than the MTU of the 
          * interface will probably be discarded. Instead ip_local_error(), 
          * which does general sk_buff cleaning,is called and an error EMSGSIZE 
-         * is returned. On the other hand, normal raw socket frag.
+         * is returned. 
          */
         send_len = sendto(fd, buf, len, 0, (struct sockaddr *) &dst_addr,
                           sizeof(dst_addr));
