@@ -1399,12 +1399,12 @@ send_faked_third_handshake(session_t *s, tc_ip_header_t *ip_header,
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = s->src_addr;
 
-    /* here recored online ip address */
+    /* here record online ip address */
     f_ip_header->daddr    = s->online_addr; 
 
     f_tcp_header->source  = tcp_header->dest;
 
-    /* here recored online port */
+    /* here record online port */
     f_tcp_header->dest    = s->online_port;
 
     f_tcp_header->ack     = 1;
