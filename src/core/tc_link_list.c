@@ -76,7 +76,7 @@ link_list_append(link_list *l, p_link_node p)
     l->size++;
 }
 
-/* append by order*/
+/* append by order */
 void
 link_list_append_by_order(link_list *l, p_link_node p)
 {

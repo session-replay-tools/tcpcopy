@@ -35,6 +35,8 @@ static uint64_t resp_cont_cnt        = 0;
 static uint64_t conn_cnt             = 0;
 /* total successful retransmission */
 static uint64_t retrans_succ_cnt     = 0;
+/* total retransmission */
+static uint64_t retrans_cnt          = 0;
 /* total reconnections for backend */
 static uint64_t recon_for_closed_cnt = 0;
 /* total reconnections for halfway interception */
@@ -107,6 +109,58 @@ get_pack_cont_len(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     cont_len  = tot_len - size_tcp - size_ip;
     
     return cont_len;
+}
+
+/*
+ * it is called by fast retransmit
+ */
+static void
+wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
+{
+    int               ret;
+    uint16_t          size_ip, tot_len, cont_len;
+    tc_ip_header_t   *ip_header;
+    tc_tcp_header_t  *tcp_header;
+
+    if (data == NULL) {
+        tc_log_info(LOG_ERR, 0, "error ip data is null");
+        return;
+    }
+
+    ip_header  = (tc_ip_header_t *) data;
+    size_ip    = ip_header->ihl << 2;
+    tcp_header = (tc_tcp_header_t *) (data + size_ip);
+
+    /* set the destination ip and port */
+    ip_header->daddr = s->dst_addr;
+    tcp_header->dest = s->dst_port;
+
+    if (tcp_header->ack) {
+        tcp_header->ack_seq = s->vir_ack_seq;
+    }
+
+    tot_len  = ntohs(ip_header->tot_len);
+    cont_len = get_pack_cont_len(ip_header, tcp_header);
+
+    if (cont_len > 0) {
+        s->sm.vir_new_retransmit = 1;
+        retrans_cnt++;
+    }
+
+    /* It should be set zero for tcp checksum */
+    tcp_header->check = 0;
+    tcp_header->check = tcpcsum((unsigned char *)ip_header,
+            (unsigned short *) tcp_header, (int) (tot_len - size_ip));
+
+    tc_log_debug_trace(LOG_NOTICE, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
+
+    ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
+                             ip_header->daddr);
+    if (ret == TC_ERROR) {
+        tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
+        tc_log_info(LOG_ERR, 0, "send to back error,tot_len is:%d,cont_len:%d",
+                    tot_len,cont_len);
+    }
 }
 
 
@@ -183,16 +237,6 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
-#if (NEED_CALCULATE_IP_CHECKSUM)
-    /*
-     * For linux,
-     * the two fields that are always filled in are: the IP checksum 
-     * (hopefully for us - it saves us the trouble) and the total length, 
-     * iph->tot_len, of the datagram 
-     */
-    ip_header->check = 0;
-    ip_header->check = csum((unsigned short *)ip_header, size_ip); 
-#endif
 
     tc_log_debug_trace(LOG_DEBUG, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
 
@@ -1075,13 +1119,14 @@ clear_timeout_sessions()
 
 /*
  * retransmit the packets to backend
+ * only support fast retransmit here
  */
 static int
-retransmit_packets(session_t *s)
+retransmit_packets(session_t *s, uint32_t expected_seq)
 {
     bool              need_pause = false, is_success = false;
     uint16_t          size_ip;
-    uint32_t          cur_seq, expected_seq;
+    uint32_t          cur_seq;
     link_list        *list;
     p_link_node       ln, tmp_ln;
     unsigned char    *data;
@@ -1093,7 +1138,6 @@ retransmit_packets(session_t *s)
         return true;
     }
 
-    expected_seq = s->vir_next_seq;
     list = s->unack_packets;
     ln = link_list_first(list); 
 
@@ -1106,8 +1150,13 @@ retransmit_packets(session_t *s)
         cur_seq    = ntohl(tcp_header->seq);  
 
         if (!is_success) {
-            if (cur_seq == s->resp_last_ack_seq) {
+            if (cur_seq == expected_seq) {
+                /* fast retransmit */
                 is_success = true;
+                s->sm.unack_pack_omit_save_flag = 1;
+                tc_log_debug1(LOG_DEBUG, 0, "retransmit:%u", s->src_h_port);
+                wrap_retransmit_ip_packet(s, data);
+                need_pause = true;  
             } else if (cur_seq < s->resp_last_ack_seq) {
                 tmp_ln = ln;
                 ln = link_list_get_next(list, ln);
@@ -1117,18 +1166,6 @@ retransmit_packets(session_t *s)
             } else {
                 tc_log_info(LOG_NOTICE, 0, "no retrans pack:%u", s->src_h_port);
                 need_pause = true;
-            }
-        }
-
-        if (is_success) {
-            /* retransmit until vir_next_seq*/
-            if (cur_seq < expected_seq) {
-                s->sm.unack_pack_omit_save_flag = 1;
-                tc_log_debug1(LOG_DEBUG, 0, "retransmit:%u", s->src_h_port);
-                wrap_send_ip_packet(s, data, true);
-                ln = link_list_get_next(list, ln);
-            } else {
-                need_pause = true;  
             }
         }
     }
@@ -1733,12 +1770,13 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 && ack == s->resp_last_ack_seq)
         {
             s->resp_last_same_ack_num++;
+            /* a packet loss when receving three acknowledgement duplicates */
             if (s->resp_last_same_ack_num > 1) {
                 /* retransmission needed */
                 tc_log_info(LOG_WARN, 0, "bak lost packs:%u", s->src_h_port);
 
                 if (!s->sm.vir_already_retransmit) {
-                    if (!retransmit_packets(s)) {
+                    if (!retransmit_packets(s, ack)) {
                         /* retransmit failure, send reset */
                         send_faked_rst(s, ip_header, tcp_header);
                     }
@@ -2631,6 +2669,7 @@ output_stat()
             packs_sent_cnt, con_packs_sent_cnt);
     tc_log_info(LOG_NOTICE, 0, "reconnect for closed :%llu,for no syn:%llu",
             recon_for_closed_cnt, recon_for_no_syn_cnt);
+    tc_log_info(LOG_NOTICE, 0, "retransmit:%llu", retrans_cnt);
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
