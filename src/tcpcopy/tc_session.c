@@ -135,10 +135,6 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     ip_header->daddr = s->dst_addr;
     tcp_header->dest = s->dst_port;
 
-    if (tcp_header->ack) {
-        tcp_header->ack_seq = s->vir_ack_seq;
-    }
-
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = get_pack_cont_len(ip_header, tcp_header);
 
@@ -152,7 +148,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
 
-    tc_log_debug_trace(LOG_NOTICE, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
+    tc_log_trace(LOG_NOTICE, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
 
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
@@ -188,11 +184,6 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     if (client) {
         s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
         s->sm.req_valid_last_ack_sent = 1;
-    }
-
-    if (!s->sm.unack_pack_omit_save_flag) {
-        ln = link_node_malloc(copy_ip_packet(ip_header));
-        link_list_append(s->unack_packets, ln);
     }
 
     /* set the destination ip and port*/
@@ -243,7 +234,13 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     packs_sent_cnt++;
 
     s->req_ip_id = ntohs(ip_header->id);
-    s->sm.unack_pack_omit_save_flag = 0;
+
+    if (!s->sm.unack_pack_omit_save_flag) {
+        ln = link_node_malloc(copy_ip_packet(ip_header));
+        link_list_append(s->unack_packets, ln);
+    } else {
+        s->sm.unack_pack_omit_save_flag = 0;
+    }
 
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
@@ -1120,6 +1117,8 @@ clear_timeout_sessions()
 /*
  * retransmit the packets to backend
  * only support fast retransmit here
+ * (assume the network between online and target server is very well,
+ * so other congestion situations are not detected here )
  */
 static int
 retransmit_packets(session_t *s, uint32_t expected_seq)
@@ -1153,8 +1152,8 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
             if (cur_seq == expected_seq) {
                 /* fast retransmit */
                 is_success = true;
-                s->sm.unack_pack_omit_save_flag = 1;
-                tc_log_debug1(LOG_DEBUG, 0, "retransmit:%u", s->src_h_port);
+                tc_log_info(LOG_NOTICE, 0, "fast retransmit:%u",
+                        s->src_h_port);
                 wrap_retransmit_ip_packet(s, data);
                 need_pause = true;  
             } else if (cur_seq < s->resp_last_ack_seq) {
@@ -1773,7 +1772,8 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
             /* a packet loss when receving three acknowledgement duplicates */
             if (s->resp_last_same_ack_num > 1) {
                 /* retransmission needed */
-                tc_log_info(LOG_WARN, 0, "bak lost packs:%u", s->src_h_port);
+                tc_log_info(LOG_WARN, 0, "bak lost packs:%u,same ack:%d", 
+                        s->src_h_port, s->resp_last_same_ack_num);
 
                 if (!s->sm.vir_already_retransmit) {
                     if (!retransmit_packets(s, ack)) {
