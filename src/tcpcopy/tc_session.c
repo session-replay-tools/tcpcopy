@@ -99,7 +99,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
 {
     int               ret, tcp_opt_len;
     uint16_t          size_ip, tot_len, cont_len;
-    unsigned char    *payload;
+    unsigned char    *payload, *tcp_opt;
     tc_ip_header_t   *ip_header;
     tc_tcp_header_t  *tcp_header;
 
@@ -119,14 +119,18 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
 
-    if (tcp_header->doff > 5) {
-        payload = (unsigned char *) ((char*) tcp_header 
-                + TCP_HDR_LEN(tcp_header));
-        tcp_opt_len = (tcp_header->doff - 5) << 2;
-        ip_header->tot_len = htons(tot_len - tcp_opt_len);
-        tcp_header->doff = 5;
-        tot_len  = ntohs(ip_header->tot_len);
-        memmove(payload - tcp_opt_len, payload, cont_len);
+    if (tcp_header->doff > TCP_HEADER_DOFF_MIN_VALUE) {
+        tcp_opt_len = (tcp_header->doff - TCP_HEADER_DOFF_MIN_VALUE) << 2;
+        if (cont_len > 0) {
+            tcp_opt = (unsigned char *) ((char*) tcp_header
+                    + (TCP_HEADER_DOFF_MIN_VALUE << 2));
+            payload = (unsigned char *) (tcp_opt + tcp_opt_len);
+            /* overide tcp options just for fast retransmit */
+            memmove(tcp_opt, payload, cont_len);
+        }
+        tot_len = tot_len - tcp_opt_len;
+        ip_header->tot_len = htons(tot_len);
+        tcp_header->doff = TCP_HEADER_DOFF_MIN_VALUE;
     }
 
     if (cont_len > 0) {
@@ -267,7 +271,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     /* TCP packet */
     ip_header->protocol = IPPROTO_TCP;
     /* the TCP header length(the number of 32-bit words in the header) */
-    tcp_header->doff    = 5;
+    tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     /* window size(you may feel strange here) */
     tcp_header->window  = 65535;
 }

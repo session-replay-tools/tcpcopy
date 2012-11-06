@@ -105,6 +105,9 @@
 #define DISP_STOP      1
 #define DISP_CONTINUE  0
 
+/* Constants for tcp */
+#define TCP_HEADER_DOFF_MIN_VALUE 5
+
 /* The result of obsolete checking*/
 #define OBSOLETE 1
 #define CANDIDATE_OBSOLETE -1
