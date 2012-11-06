@@ -128,8 +128,6 @@ typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
 
 
-#define TCPH_LEN_W_TIMESTAMP 8
-
 #if (INTERCEPT_THREAD)
 
 /* Constants for intercept pool */
