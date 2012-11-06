@@ -4,6 +4,12 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
+
+#define TCP_HDR_LEN(tcph) (tcph->doff << 2)
+#define IP_HDR_LEN(iph) (iph->ihl << 2)                                                                 
+#define TCP_PAYLOAD_LENGTH(iph, tcph) \
+        (ntohs(iph->tot_len) - IP_HDR_LEN(iph) - TCP_HDR_LEN(tcph))
+
 inline uint64_t get_key(uint32_t s_ip, uint16_t s_port);
 inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
