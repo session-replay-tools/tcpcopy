@@ -18,6 +18,8 @@ void output_stat();
 typedef struct sess_state_machine_s{
     /* The session status */
     uint32_t status:8;
+    /* Round trip time(ms) */
+    uint32_t rtt:16;
     /* The flag indicates if the session has retransmitted or not */
     uint32_t vir_already_retransmit:1;
     /* This is for successful retransmission statistics */

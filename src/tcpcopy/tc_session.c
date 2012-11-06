@@ -120,6 +120,8 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
 
     if (tcp_header->doff > 5) {
+        payload = (unsigned char *) ((char*) tcp_header 
+                + TCP_HDR_LEN(tcp_header));
         tcp_opt_len = (tcp_header->doff - 5) << 2;
         ip_header->tot_len = htons(tot_len - tcp_opt_len);
         tcp_header->doff = 5;
@@ -1300,7 +1302,7 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
         sec_cont_len = TCP_PAYLOAD_LENGTH(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
         save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
-        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u",s->src_h_port);
+        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u", s->src_h_port);
     } else {
         tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
     }
