@@ -60,9 +60,10 @@ usage(void)
            "               max value allowed is 1023:\n");
     printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
            "               default value is 512:\n"
-           "-M <num>       MTU sent to backend(default:1500)\n"
-           "-t <num>       session timeout\n"
-           "               if the target system is slow, set this larger\n");
+           "-M <num>       MTU sent to backend(default:1500)\n");
+    printf("-t <num>       session timeout(default:60 seconds)\n"
+           "               if the target system is slow or \n"
+           "               protocol is context based,set this larger\n");
     printf("-l <file>      log file path\n"
            "-r <num>       percentage of sessions transfered(int,1~100)\n"
            "-p <num>       remote server listening port\n");
