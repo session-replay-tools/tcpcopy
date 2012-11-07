@@ -2366,6 +2366,7 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
     } else if (cur_seq == s->vir_next_seq) {
 
         if (s->sm.is_waiting_previous_packet) {
+            s->sm.is_waiting_previous_packet = 0;
             /* Send the packet and reserved packets */
             wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
             send_reserved_packets(s);
