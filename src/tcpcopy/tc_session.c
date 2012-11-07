@@ -810,9 +810,9 @@ send_reserved_packets(session_t *s)
     while (ln && (!need_pause)) {
 
         data = ln->data;
-        ip_header  = (tc_ip_header_t*) ((char *) data);
+        ip_header  = (tc_ip_header_t *) ((char *) data);
         size_ip    = ip_header->ihl << 2;
-        tcp_header = (tc_tcp_header_t*) ((char *) ip_header + size_ip);
+        tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);
 
         tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
@@ -903,6 +903,12 @@ send_reserved_packets(session_t *s)
             if (s->sm.sess_candidate_erased) {
                 s->sm.sess_candidate_erased = 0;
             }
+
+            if (cont_len > 0) {
+                s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
+                s->req_cont_cur_ack_seq  = ntohl(tcp_header->ack_seq);
+            }
+
             wrap_send_ip_packet(s, data, true);
             total_cont_sent += cont_len;
         }
@@ -2504,7 +2510,6 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
         fake_syn(s, ip_header, tcp_header, false);
-        s->req_cont_cur_ack_seq  = ntohl(tcp_header->ack_seq);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
