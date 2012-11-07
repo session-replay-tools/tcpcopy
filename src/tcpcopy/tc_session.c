@@ -1703,7 +1703,8 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
 
 static int
 check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
-         tc_tcp_header_t *tcp_header, uint32_t seq, uint32_t ack)
+         tc_tcp_header_t *tcp_header, uint32_t seq, 
+         uint32_t ack, uint16_t cont_len)
 {
     bool slide_window_empty = false;
 
@@ -1738,7 +1739,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
             }
         }
 
-        /* when the slide window in test server is full*/
+        /* when the slide window in test server is full */
         if (tcp_header->window == 0) {
             tc_log_info(LOG_NOTICE, 0, "slide window zero:%u", s->src_h_port);
             /* Although slide window is full, it may require retransmission */
@@ -1765,6 +1766,12 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
             return DISP_CONTINUE;
         }
 
+        if (cont_len > 0) {
+            /* no retransmission check when packet has payload */
+            s->resp_last_same_ack_num = 0;
+            return DISP_CONTINUE;
+        }
+
         /* check if it needs retransmission */
         if (!tcp_header->fin && seq == s->resp_last_seq
                 && ack == s->resp_last_ack_seq)
@@ -1772,6 +1779,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
             s->resp_last_same_ack_num++;
             /* a packet loss when receving three acknowledgement duplicates */
             if (s->resp_last_same_ack_num > 2) {
+
                 /* retransmission needed */
                 tc_log_info(LOG_WARN, 0, "bak lost packs:%u,same ack:%d", 
                         s->src_h_port, s->resp_last_same_ack_num);
@@ -1967,7 +1975,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     }
 
     /* need to check ack */
-    if (check_backend_ack(s, ip_header, tcp_header, seq, ack) 
+    if (check_backend_ack(s, ip_header, tcp_header, seq, ack, cont_len) 
             == DISP_STOP) {
         s->resp_last_ack_seq = ack;
         s->resp_last_seq     = seq;
