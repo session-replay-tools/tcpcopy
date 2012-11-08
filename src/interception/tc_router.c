@@ -5,6 +5,8 @@
 #include <intercept.h>
 
 static hash_table *table;
+static uint64_t    fd_null_cnt = 0;
+
 #if (INTERCEPT_THREAD)
 static pthread_mutex_t mutex; 
 #endif
@@ -67,13 +69,14 @@ route_delete_obsolete(time_t cur_time)
 
 /* initiate router table */
 void
-router_init(size_t size)
+router_init(size_t size, int timeout)
 {
 #if (INTERCEPT_THREAD)
     pthread_mutex_init(&mutex, NULL);
 #endif
     delay_table_init(size);
     table = hash_create(size << 1);
+    hash_set_timeout(table, timeout);
     strcpy(table->name, "router-table");
     tc_log_info(LOG_NOTICE, 0, "create %s, size:%u", table->name, table->size);
 }
@@ -139,6 +142,7 @@ router_update(tc_ip_header_t *ip_header, int len)
     fd  = hash_find(table, key);
     if (fd == NULL) {
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
+        fd_null_cnt++;
         delay_table_add(key, &msg);
 
         pthread_mutex_unlock(&mutex);
@@ -197,6 +201,7 @@ router_update(tc_ip_header_t *ip_header)
     fd  = hash_find(table, key);
     if (fd == NULL) {
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
+        fd_null_cnt++;
         delay_table_add(key, &msg);
         return ;
     }
@@ -215,6 +220,7 @@ router_destroy()
 #endif
     if (table != NULL) {
         tc_log_info(LOG_NOTICE, 0, "destroy router table");
+        tc_log_info(LOG_NOTICE, 0, "fd null counter:%llu", fd_null_cnt);
         hash_destroy(table);
         free(table);
         table = NULL;

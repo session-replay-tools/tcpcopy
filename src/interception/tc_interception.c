@@ -432,7 +432,7 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 #endif
     tc_event_t *ev;
 
-    router_init(srv_settings.hash_size);
+    router_init(srv_settings.hash_size, srv_settings.timeout);
 
     pid = getpid();
 

@@ -3,7 +3,7 @@
 
 #include <xcopy.h> 
 
-void router_init(size_t size);
+void router_init(size_t size, int timeout);
 void route_delete_obsolete(time_t cur_time);
 
 #if (INTERCEPT_THREAD)

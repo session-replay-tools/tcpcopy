@@ -136,7 +136,8 @@ usage(void)
            "               ip1,ip2,...\n"
            "-p             tcp port number to listen on\n"
            "-s             hash table size for intercept\n"
-           "-l <file>      log file path\n"
+           "-l <file>      log file path\n");
+    printf("-t <num>       timeout for router item (default 120 sec)\n"
            "-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip>        server binded ip address for listening\n"
            "-v             intercept version\n"
@@ -151,6 +152,7 @@ read_args(int argc, char **argv) {
     while (-1 != (c = getopt(argc, argv,
          "x:" /* ip list passed through ip firewall */
          "p:" /* TCP port number to listen on */
+         "t:" /* timeout for router item */
          "s:" /* Hash table size for intercept */
          "b:" /* binded ip address */
          "h"  /* print this help and exit */
@@ -166,6 +168,9 @@ read_args(int argc, char **argv) {
                 break;
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
+                break;
+            case 't':
+                srv_settings.timeout = (size_t) atoi(optarg);
                 break;
             case 's':
                 srv_settings.hash_size = (size_t) atoi(optarg);
@@ -206,11 +211,16 @@ set_details()
         perror("failed to ignore SIGPIPE; sigaction");
         return -1;
     }
+
     /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "-x parameter:%s", 
                 srv_settings.raw_ip_list);
         retrieve_ip_addr();
+    }
+
+    if (srv_settings.timeout == 0) {
+        srv_settings.timeout = DEFAULT_TIMEOUT;
     }
     /* daemonize */
     if (srv_settings.do_daemonize) {

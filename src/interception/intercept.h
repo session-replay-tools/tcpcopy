@@ -13,6 +13,7 @@ typedef struct xcopy_srv_settings {
     char             *pid_file;         /* Pid file */
     char             *binded_ip;        /* Binded ip for security */
     char             *log_path;         /* Error log path */
+    int               timeout;
     size_t            hash_size;        /* Hash size for kinds of table */
     uint16_t          port;             /* TCP port number to listen on */
     unsigned int      do_daemonize:1;   /* Daemon flag */
