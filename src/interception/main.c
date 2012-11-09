@@ -134,14 +134,14 @@ usage(void)
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
            "               ip1,ip2,...\n"
-           "-p             set the tcp port number to listen on. The default number is 36524.\n"
-           "-s             set the hash table size for intercept. The default value is 65536.\n"
+           "-p <num>       set the tcp port number to listen on. The default number is 36524.\n"
+           "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
     printf("-t <num>       set the router item timeout limit. The default value is 120 sec\n"
            "-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip>        server binded ip address for listening\n"
            "-v             intercept version\n"
-           "-h             help\n"
+           "-h             print this help and exit\n"
            "-d             run as a daemon\n");
 }
 
