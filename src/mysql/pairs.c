@@ -62,7 +62,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
     }
 
     do {
-        next = strchr(p, ':');
+        next = strchr(p, ',');
         q = strchr(p, '@');
 
         if ( next != NULL) {

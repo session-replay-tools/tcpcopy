@@ -58,11 +58,16 @@ usage(void)
            "               use of TCPCopy when it is configured to run at enable-offline mode)\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
-    printf("-u <pair>      user password pair for mysql\n"
-           "               pair format: user1@psw1:user2@psw2:...\n"
-           "               attension:\n"
-           "               users and the relative priviledge of the target server should be the \n"
-           "               same as that of online server\n");
+    printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
+           "               pass the user authentication of the target mysql server. The format\n"
+           "               of <pair,> could be: 'user1@psw1,user2@psw2,...'. The user name and \n"
+           "               her/his password are segmented by '@', and the users are segmented \n"
+           "               by ','. It should be noted that the user name of the target mysql\n");
+    printf("               server should be the same as that of the online source mysql server\n"
+           "               and meanwhile their privileges should be the same, whereas the \n"
+           "               password of the target mysql server could be different from that\n"
+           "               of the source mysql server which could protect the password of \n"
+           "               the source server.");
 #endif
     printf("-n <num>       use <num> to set the replication times when you want to get a \n"
            "               copied data stream that is several times as large as the online data.\n"

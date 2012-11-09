@@ -683,7 +683,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
             tc_log_info(LOG_WARN, 0, "it is strange here,possibility");
             tc_log_info(LOG_WARN, 0, "1)user password pair not equal");
             tc_log_info(LOG_WARN, 0, "2)half-intercepted");
-            return FAILURE;
+            return TC_ERROR;
         }
 
         s->sm.mysql_first_auth_sent = 1;
@@ -727,7 +727,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
 
     }
 
-    return SUCCESS;
+    return TC_OK;
 }
 #endif
 
@@ -854,7 +854,7 @@ send_reserved_packets(session_t *s)
                 break;
             }
 #if (TCPCOPY_MYSQL_ADVANCED) 
-            if (mysql_dispose_auth(s, ip_header, tcp_header) == FAILURE) {
+            if (mysql_dispose_auth(s, ip_header, tcp_header) == TC_ERROR) {
                 break;
             }
 #endif
@@ -2205,7 +2205,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
         is_need_omit = false;
 #if (TCPCOPY_MYSQL_ADVANCED)
         if (s->sm.resp_greet_received) {
-            if (mysql_dispose_auth(s, ip_header, tcp_header) == FAILURE) {
+            if (mysql_dispose_auth(s, ip_header, tcp_header) == TC_ERROR) {
                 return DISP_STOP;
             }
         }
