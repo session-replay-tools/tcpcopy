@@ -364,7 +364,7 @@ tc_nl_event_process(tc_event_t *rev)
 
             tot_resp_packs++;
 #if (INTERCEPT_THREAD)
-            /* put response packet header to pool*/
+            /* put response packet header to pool */
             put_resp_header_to_pool(ip_hdr);
             /* drop the packet */
             put_nl_verdict_to_pool(rev->fd, NF_DROP, packet_id);

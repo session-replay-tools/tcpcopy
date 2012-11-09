@@ -153,7 +153,7 @@ read_args(int argc, char **argv) {
          "x:" /* ip list passed through ip firewall */
          "p:" /* TCP port number to listen on */
          "t:" /* router item timeout */
-         "s:" /* Hash table size for intercept */
+         "s:" /* hash table size for intercept */
          "b:" /* binded ip address */
          "h"  /* print this help and exit */
          "l:" /* error log file path */
@@ -224,7 +224,6 @@ set_details()
     }
     /* daemonize */
     if (srv_settings.do_daemonize) {
-        /* TODO why warning*/
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
         }

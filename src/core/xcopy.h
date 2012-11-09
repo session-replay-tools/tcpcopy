@@ -58,14 +58,14 @@
 
 #endif
 
-/* Set raw socket receiving buffer size */
+/* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
-/* Max payload size per continuous send */
+/* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
-/* Default mtu for output raw socket */
+/* default mtu for output raw socket */
 #define DEFAULT_MTU   1500
-/* Default listening port for intercept program */
+/* default listening port for intercept program */
 #define SERVER_PORT   36524
 
 
@@ -73,23 +73,23 @@
 #define CHECK_INTERVAL  15
 #define DEFAULT_SESSION_TIMEOUT 60
 
-/* Max fd number for select */
+/* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 
 #define MAX_ALLOWED_IP_NUM 32
 
-/* Constants for netlink protocol */
+/* constants for netlink protocol */
 #define FIREWALL_GROUP  0
 
-/* In defence of occuping too much memory */
+/* in defence of occuping too much memory */
 #define MAX_MEMORY_SIZE 524288
 
-/* The route flags */
+/* route flags */
 #define  CLIENT_ADD   1
 #define  CLIENT_DEL   2
 
-/* Where is the packet from (source flag) */
+/* where is packet from (source flag) */
 #define UNKNOWN 0
 #define REMOTE  1
 #define LOCAL   2
@@ -97,23 +97,23 @@
 #define CHECK_DEST 1
 #define CHECK_SRC  2
 
-/* Session constants from the client perspective */
+/* session constants from the client perspective */
 #define SESS_CREATE    0
-#define SESS_KEEPALIVE 1  /* Online is active while backend is closed */
-#define SESS_REUSE     2  /* When in ab test*/
+#define SESS_KEEPALIVE 1  /* online active while backend is closed */
+#define SESS_REUSE     2  /* when in ab test*/
 
 #define DISP_STOP      1
 #define DISP_CONTINUE  0
 
-/* Constants for tcp */
+/* constants for tcp */
 #define TCP_HEADER_DOFF_MIN_VALUE 5
 
-/* The result of obsolete checking*/
+/* results of obsolete checking*/
 #define OBSOLETE 1
 #define CANDIDATE_OBSOLETE -1
 #define NOT_YET_OBSOLETE 0
 
-/* Mysql constants */
+/* mysql constants */
 #if (TCPCOPY_MYSQL_BASIC)
 #define COM_STMT_PREPARE 22
 #define COM_QUERY 3
@@ -133,7 +133,7 @@ typedef struct tcphdr tc_tcp_header_t;
 
 #if (INTERCEPT_THREAD)
 
-/* Constants for intercept pool */
+/* constants for intercept pool */
 #define POOL_SHIFT 24
 #define POOL_SIZE (1 << POOL_SHIFT) 
 #define POOL_MASK (POOL_SIZE - 1)
@@ -150,7 +150,7 @@ typedef struct tcphdr tc_tcp_header_t;
 
 #endif
 
-/* Bool constants*/
+/* bool constants*/
 #if (HAVE_STDBOOL_H)
 #include <stdbool.h>
 #else
@@ -189,7 +189,7 @@ enum packet_classification{
 
 /*  
  *  Ethernet II header
- *  Static header size: 14 bytes          
+ *  static header size: 14 bytes          
  */ 
 struct ethernet_hdr {
     uint8_t ether_dhost[ETHER_ADDR_LEN];
@@ -198,7 +198,7 @@ struct ethernet_hdr {
 };
 #endif /* TCPCOPY_OFFLINE */
 
-/* Global functions */
+/* global functions */
 int daemonize();
 
 #define TC_OK        0

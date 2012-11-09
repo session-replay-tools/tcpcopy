@@ -7,7 +7,7 @@
 #define FAKE_IP_DATAGRAM_LEN 40
 #define IP_HEADER_LEN 20
 
-/* Global functions */
+/* global functions */
 void init_for_sessions();
 void destroy_for_sessions();
 bool process(char *packet, int pack_src);
@@ -16,38 +16,38 @@ void tc_interval_dispose(tc_event_timer_t *evt);
 void output_stat();
 
 typedef struct sess_state_machine_s{
-    /* The session status */
+    /* session status */
     uint32_t status:8;
-    /* Round trip time(ms) */
+    /* round trip time(ms) */
     uint32_t rtt:16;
-    /* The flag indicates if the session has retransmitted or not */
+    /* already retransmission flag */
     uint32_t vir_already_retransmit:1;
-    /* This is for successful retransmission statistics */
+    /* just for successful retransmission statistics */
     uint32_t vir_new_retransmit:1;
-    /* This is the simultaneous closing flag */
+    /* simultaneous closing flag */
     uint32_t simul_closing:1;
-    /* Reset flag either from client or from backend */
+    /* reset flag either from client or from backend */
     uint32_t reset:1;
-    /* Seq added because of fin */
+    /* seq added flag because of fin */
     uint32_t fin_add_seq:1;
-    /* Session over flag */
+    /* session over flag */
     uint32_t sess_over:1;
-    /* Src or client closed flag */
+    /* src or client closed flag */
     uint32_t src_closed:1;
-    /* Dst or backend closed flag */
+    /* dst or backend closed flag */
     uint32_t dst_closed:1;
-    /* Slide window full flag */
+    /* slide window full flag */
     uint32_t last_window_full:1;
-    /* Candidate response waiting flag */
+    /* candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
     /* delay sent flag because of flow control */
     uint32_t delay_sent_flag:1;
-    /* Waiting previous packet flag */
+    /* waiting previous packet flag */
     uint32_t is_waiting_previous_packet:1;
     /* This indicates if the session intercepted the syn packets from client
      * or it has faked the syn packets */
     uint32_t req_syn_ok:1;
-    /* This is to avoid using the first handshake ack seq */
+    /* flag that avoids using the first handshake ack seq */
     uint32_t req_valid_last_ack_sent:1;
     /*
      * This indicates if we intercepted the packets halfway 
@@ -56,24 +56,24 @@ typedef struct sess_state_machine_s{
     uint32_t req_halfway_intercepted:1;
     /* This indicates if the syn packets from backend is received */
     uint32_t resp_syn_received:1;
-    /* Session candidate erased flag */
+    /* session candidate erased flag */
     uint32_t sess_candidate_erased:1;
-    /* Session reused flag */
+    /* session reused flag */
     uint32_t sess_more:1;
-    /* Port transfered flag */
+    /* port transfered flag */
     uint32_t port_transfered:1;
-    /* If set, it will not save the packet to unack list */
+    /* if set, it will not save the packet to unack list */
     uint32_t unack_pack_omit_save_flag:1;
     /* This indicates if server sends response first */
     uint32_t resp_greet_received:1;
     /* This indicates if it needs to wait server response first */
     uint32_t need_resp_greet:1;
-    /* Reset packet sent flag */
+    /* seset packet sent flag */
     uint32_t reset_sent:1;
 #if (TCPCOPY_MYSQL_BASIC)
-    /* The second auth checked flag */
+    /* the second auth checked flag */
     uint32_t mysql_sec_auth_checked:1;
-    /* Request begin flag for mysql */
+    /* request begin flag for mysql */
     uint32_t mysql_req_begin:1;
     /* This indicates if it needs second auth */
     uint32_t mysql_sec_auth:1;
@@ -90,73 +90,72 @@ typedef struct sess_state_machine_s{
 }sess_state_machine_t;
 
 typedef struct session_s{
-    /* The hash key for this session */
+    /* hash key for this session */
     uint64_t hash_key;
 
 #if (TCPCOPY_MYSQL_BASIC)
-    /* The seq diff between virtual sequence and client sequence */
+    /* seq diff between virtual sequence and client sequence */
     uint32_t mysql_vir_req_seq_diff;
 #endif
 
-    /* Src or client ip address(network byte order) */
+    /* src or client ip address(network byte order) */
     uint32_t src_addr;
-    /* Dst or backend ip address(network byte order) */
+    /* dst or backend ip address(network byte order) */
     uint32_t dst_addr;
-    /* Online ip address(network byte order) */
+    /* online ip address(network byte order) */
     uint32_t online_addr;
-    /* Orginal src or client port(network byte order,never changed) */
+    /* orginal src or client port(network byte order,never changed) */
     uint16_t orig_src_port;
-    /* Src or client port(host byte order,it may be changed) */
+    /* src or client port(host byte order,it may be changed) */
     uint16_t src_h_port;
-    /* Dst or backend port(network byte order) */
+    /* dst or backend port(network byte order) */
     uint16_t dst_port;
-    /* Online port(network byte order) */
+    /* online port(network byte order) */
     uint16_t online_port;
-    /* Faked src or client port(network byte order) */
+    /* faked src or client port(network byte order) */
     uint16_t faked_src_port;
 
     /* These values will be sent to backend just for cheating */
     /* Virtual acknowledgement sequence that sends to backend */
-    /* (host by order)*/
+    /* (host byte order) */
     uint32_t vir_ack_seq;
-    /* Virtual next expected sequence (host byte order) */
+    /* virtual next expected sequence (host byte order) */
     uint32_t vir_next_seq;
 
-    /* Response variables */
-    /* Last acknowledgement seq from backend response (host byte order) */
+    /* response variables */
+    /* kast acknowledgement seq from backend response (host byte order) */
     uint32_t resp_last_ack_seq;
-    /* Last seq from backend response (host byte order) */
+    /* last seq from backend response (host byte order) */
     uint32_t resp_last_seq;
 
-    /* Captured variables */
-    /* These variables only refer to online values*/
+    /* captured variables */
+    /* only refer to online values */
     /***********************begin************************/
-    /*TODO Some variables may be unioned*/
-    /* Last syn sequence of client packet */
+    /* last syn sequence of client packet */
     uint32_t req_last_syn_seq;
-    /* Last sequence of client content packet which has been sent */
+    /* last sequence of client content packet which has been sent */
     uint32_t req_last_cont_sent_seq;
-    /* Last ack sequence of client packet which is sent to bakend */
+    /* last ack sequence of client packet which is sent to bakend */
     uint32_t req_last_ack_sent_seq;
-    /* Last client content packet's ack sequence which is captured */
+    /* last client content packet's ack sequence which is captured */
     uint32_t req_cont_last_ack_seq;
-    /* Current client content packet's ack seq which is captured */
+    /* current client content packet's ack seq which is captured */
     uint32_t req_cont_cur_ack_seq;
     /***********************end***************************/
 
-    /* Record time */
-    /* Last update time */
+    /* record time */
+    /* last update time */
     time_t   last_update_time;
-    /* Session create time */
+    /* session create time */
     time_t   create_time;
-    /* The time of last receiving backend content */
+    /* time of last receiving backend content */
     time_t   resp_last_recv_cont_time;
-    /* The time of sending the last content packet */
+    /* time of sending the last content packet */
     time_t   req_last_send_cont_time;
-    /* Kinds of states of session */
+    /* kinds of states of session */
     sess_state_machine_t sm; 
 
-    /* The id from client ip header */
+    /* id from client ip header */
     uint32_t req_ip_id:16;
     /*
      * The number of the response packets last received 
@@ -165,7 +164,7 @@ typedef struct session_s{
      */
     uint32_t resp_last_same_ack_num:8;
 #if (TCPCOPY_MYSQL_BASIC)
-    /* Mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
+    /* mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
     uint32_t mysql_excute_times:8;
 #endif
  
@@ -173,7 +172,7 @@ typedef struct session_s{
     link_list *next_sess_packs;
     link_list *unack_packets;
 #if (TCPCOPY_MYSQL_BASIC)
-    /* Mysql special packets for reconnection */
+    /* mysql special packets for reconnection */
     link_list *mysql_special_packets;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)

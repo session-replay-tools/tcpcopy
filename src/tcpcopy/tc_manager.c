@@ -175,7 +175,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
-    /* init session table*/
+    /* init session table */
     init_for_sessions();
 
     address_init();

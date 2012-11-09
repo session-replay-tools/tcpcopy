@@ -182,7 +182,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         s->sm.req_valid_last_ack_sent = 1;
     }
 
-    /* set the destination ip and port*/
+    /* set the destination ip and port */
     ip_header->daddr = s->dst_addr;
     tcp_header->dest = s->dst_port;
 
@@ -213,7 +213,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
         s->vir_next_seq = s->vir_next_seq + cont_len;
         if (s->sm.unack_pack_omit_save_flag) {
-            /*It means that this packet is a retransmission packet */
+            /*It must be a retransmission packet */
             s->sm.vir_new_retransmit = 1;
         } else {
             con_packs_sent_cnt++;
@@ -261,7 +261,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
      * Default:FAKE_IP_DATAGRAM_LEN
      */
     ip_header->tot_len  = htons(FAKE_IP_DATAGRAM_LEN);
-    /* don't Fragment */
+    /* don't fragment */
     ip_header->frag_off = htons(IP_DF); 
     /* 
      * sets an upper limit on the number of routers through 
@@ -710,7 +710,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
 
         tc_log_info(LOG_NOTICE, 0, "change second req:%u", s->src_h_port);
 
-        /* Change sec auth content from client auth packets */
+        /* change sec auth content from client auth packets */
         change_client_second_auth_content(payload, cont_len, encryption);
         s->sm.mysql_sec_auth = 0;
 
@@ -1117,8 +1117,8 @@ clear_timeout_sessions()
 
 
 /*
- * retransmit the packets to backend
- * only support fast retransmit here
+ * retransmit the packets to backend.
+ * only support fast retransmission here
  * (assume the network between online and target server is very well,
  * so other congestion situations are not detected here )
  */
@@ -1152,7 +1152,7 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
 
         if (!is_success) {
             if (cur_seq == expected_seq) {
-                /* fast retransmit */
+                /* fast retransmission */
                 is_success = true;
                 tc_log_info(LOG_NOTICE, 0, "fast retransmit:%u",
                         s->src_h_port);
@@ -1886,7 +1886,7 @@ mysql_process_greet(session_t *s, tc_ip_header_t *ip_header,
     ret = parse_handshake_init_cont(payload, cont_len, s->mysql_scramble);
     tc_log_info(LOG_WARN, 0, "scram:%s,p:%u", s->mysql_scramble, s->src_h_port);
     if (!ret) {
-        /* Try to print error info*/
+        /* try to print error info */
         if (cont_len > 11) {
             tc_log_debug_trace(LOG_DEBUG, 0, BACKEND_FLAG,
                     ip_header, tcp_header);
@@ -2135,7 +2135,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 
 #if (TCPCOPY_MYSQL_BASIC)
-    /* remove old mysql info*/
+    /* remove old mysql info */
     list = (link_list *)hash_find(mysql_table, s->src_h_port);
     if (list) {
         ln = link_list_first(list); 
@@ -2630,7 +2630,7 @@ is_packet_needed(const char *packet)
         return is_needed;
     }
 
-    /* Here we filter the packets we do care about */
+    /* filter the packets we do care about */
     if (LOCAL == check_pack_src(&(clt_settings.transfer), 
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
         header_len = size_tcp + size_ip;
@@ -2752,7 +2752,7 @@ process(char *packet, int pack_src)
         key = get_key(ip_header->daddr, tcp_header->dest);
         s = hash_find(sessions_table, key);
         if (s == NULL) {
-            /* give another chance for port changed*/
+            /* give another chance for port changed */
             ori_port = hash_find(tf_port_table, key);
             if (ori_port != NULL) {
                 key = get_key(ip_header->daddr, (uint16_t) (long) ori_port);
@@ -2789,7 +2789,7 @@ process(char *packet, int pack_src)
 
         /* when the packet comes from client */
         if (clt_settings.factor) {
-            /* change client source port*/
+            /* change client source port */
             tcp_header->source = get_port_from_shift(tcp_header->source,
                     clt_settings.rand_port_shifted, clt_settings.factor);
         }

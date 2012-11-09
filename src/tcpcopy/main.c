@@ -343,7 +343,7 @@ set_details()
     unsigned int   seed;
     struct timeval tp;
 
-    /* generate random port for avoiding port conflicts */
+    /* generate random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
     rand_port = (int) ((rand_r(&seed)/(RAND_MAX + 1.0))*512);
