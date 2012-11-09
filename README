@@ -87,6 +87,6 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) See tcpcopy -h or intercept -h for more help 
+    4) See "tcpcopy -h" or "intercept -h" for more help 
     5) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
 
