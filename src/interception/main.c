@@ -1,5 +1,5 @@
 /*
- *  TCPCopy - an online replication tool
+ *  TCPCopy - An online replication tool for TCP based applications
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.  See
@@ -134,10 +134,10 @@ usage(void)
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
            "               ip1,ip2,...\n"
-           "-p             tcp port number to listen on\n"
-           "-s             hash table size for intercept\n"
-           "-l <file>      log file path\n");
-    printf("-t <num>       timeout for router item (default 120 sec)\n"
+           "-p             set the tcp port number to listen on. The default number is 36524.\n"
+           "-s             set the hash table size for intercept. The default value is 65536.\n"
+           "-l <file>      save log information in <file>\n");
+    printf("-t <num>       set the router item timeout limit. The default value is 120 sec\n"
            "-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip>        server binded ip address for listening\n"
            "-v             intercept version\n"
@@ -152,7 +152,7 @@ read_args(int argc, char **argv) {
     while (-1 != (c = getopt(argc, argv,
          "x:" /* ip list passed through ip firewall */
          "p:" /* TCP port number to listen on */
-         "t:" /* timeout for router item */
+         "t:" /* router item timeout */
          "s:" /* Hash table size for intercept */
          "b:" /* binded ip address */
          "h"  /* print this help and exit */

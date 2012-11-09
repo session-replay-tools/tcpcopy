@@ -34,39 +34,65 @@ static void
 usage(void)
 {
     printf("TCPCopy " VERSION "\n");
-    printf("-x <transfer,> what we copy and where send to\n"
-           "               transfer format:\n"
-           "               online_ip:online_port-target_ip:target_port,...\n"
-           "               or :\n"
-           "               online_port-target_ip:target_port,...\n");
-    printf("-c <ip>        localhost will be changed to this ip address\n"
-           "               when sending to another machine\n"
-           "               default value is online ip\n");
+    printf("-x <transfer,> use <transfer,> to specify the IPs and ports of the source and target\n"
+           "               servers. Suppose 'sourceIP' and 'sourcePort' are the IP and port \n"
+           "               number of the source server you want to copy from, 'targetIP' and \n"
+           "               'targetPort' are the IP and port number of the target server you want\n"
+           "               to send requests to, the format of <transfer,> could be as follows:\n"
+           "               'sourceIP:sourcePort-targetIP:targetPort,...'. Most of the time,\n");
+    printf("               sourceIP could be omitted and thus <transfer,> could also be:\n"
+           "               'sourcePort-targetIP:targetPort,...'. As seen, the IP address and the\n"
+           "               port number are segmented by ':' (colon), the sourcePort and the\n");
+    printf("               targetIP are segmented by '-', and two 'transfer's are segmented by\n"
+           "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
+           "               copy requests from TCP port '80' on current server to the target port\n"
+           "               '18080' of the target IP '192.168.0.2'.\n");
+    printf("-c <ip>        change the localhost client IP to this IP address when sending to the\n"
+           "               target server. For example,\n"
+           "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
+           "               requests from port '8080' of current online server to the target port\n"
+           "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
+           "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
-    printf("-i <file>      input pcap file(only valid for offline)\n");
+    printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for offline\n"
+           "               use of TCPCopy when it is configured to run at enable-offline mode)\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair>      user password pair for mysql\n"
-           "               pair format:\n"
-           "               user1@psw1:user2@psw2:...\n"
+           "               pair format: user1@psw1:user2@psw2:...\n"
            "               attension:\n"
-           "               users of the target test should be the same as\n"
-           "               that of online\n");
+           "               users and the relative priviledge of the target server should be the \n"
+           "               same as that of online server\n");
 #endif
-    printf("-n <num>       the number of replication for multi-copying\n"
-           "               the less,the better\n"
-           "               max value allowed is 1023:\n"
-           "-f <num>       port shift factor for mutiple tcpcopy instances\n"
-           "               max value allowed is 1023:\n");
-    printf("-m <num>       max memory to use for tcpcopy in megabytes\n"
-           "               default value is 512:\n"
-           "-M <num>       MTU sent to backend(default:1500)\n");
-    printf("-t <num>       session timeout(default:60 seconds)\n"
-           "               if the target system is slow or \n"
-           "               protocol is context based,set this larger\n");
-    printf("-l <file>      log file path\n"
-           "-r <num>       percentage of sessions transfered(int,1~100)\n"
-           "-p <num>       remote server listening port\n");
+    printf("-n <num>       use <num> to set the replication times when you want to get a \n"
+           "               copied data stream that is several times as large as the online data.\n"
+           "               The maximum value allowed is 1023. As multiple copying is based on \n"
+           "               port number modification, the ports may conflict with each other,\n");
+    printf("               in particular in intranet applications where there are few source IPs\n"
+           "               and most connections are short. Thus, TCPCopy would perform better \n"
+           "               when less copies are specified. For example, \n"
+           "               './tcpcopy -x 80-192.168.0.2:8080 -n 3' would copy data flows from \n");
+    printf("               port 80 on the current server, generate data stream that is three\n"
+           "               times as large as the source data, and send these requests to the\n"
+           "               target port 8080 on '192.168.0.2'.\n");
+    printf("-f <num>       use this parameter to control the port number modification process\n"
+           "               and reduce port conflications when multiple TCPCopy instances are\n"
+           "               running. The value of <num> should be different for different TCPCopy\n"
+           "               instances. The maximum value allowed is 1023.\n");
+    printf("-m <num>       set the maximum memory allowed to use for TCPCopy in megabytes, \n"
+           "               to prevent TCPCopy occupying too much memory and influencing the\n"
+           "               online system. When the memory exceeds this limit, TCPCopy would quit\n"
+           "               automatically. The parameter is effective only when the kernel \n"
+           "               version is 2.6.32 or above. The default value is 512.");
+    printf("-M <num>       MTU value sent to backend(default 1500)\n");
+    printf("-t <num>       set the session timeout limit. If TCPCopy does not receive response\n"
+           "               from the target server within the timeout limit, the session would \n"
+           "               be dropped by TCPCopy. When the response from the target server is\n"
+           "               slow or the application protocol is context based, the value should \n"
+           "               be set larger. The default value is 60 seconds\n");
+    printf("-l <file>      save the log information in <file>\n"
+           "-r <num>       set the percentage of sessions transfered(integer,1~100)\n"
+           "-p <num>       set the target server listening port. The default value is 36524.\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-h             print this help and exit\n"
            "-v             version\n"
@@ -81,21 +107,21 @@ read_args(int argc, char **argv)
     int  c;
 
     while (-1 != (c = getopt(argc, argv,
-         "x:" /* where we copy request from and to */
-         "c:" /* localhost will be changed to this ip address */
+         "x:" /* <transfer,> */
+         "c:" /* the localhost client ip will be changed to this ip address */
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
 #endif
-         "n:" /* the replicated number of each request for multi-copying */
-         "f:" /* port shift factor for mutiple tcpcopy instances */
-         "m:" /* max memory to use for tcpcopy client in megabytes */
+         "n:" /* set the replication times */
+         "f:" /* use this parameter to reduce port conflications */
+         "m:" /* set the maximum memory allowed to use for TCPCopy */
          "p:" /* remote server listening port */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
-         "t:" /* session timeout value */
+         "t:" /* set the session timeout limit */
          "l:" /* error log file path */
          "P:" /* save PID in file */
          "h"  /* help, licence info */
