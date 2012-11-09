@@ -33,66 +33,59 @@ Usage:
 
     2) Run:
        a) on the source host (root privilege is required):
-          tcpcopy version <0.5
-          ./tcpcopy local_ip1[:local_ip2:...] local_port remote_ip remote_port
-          tcpcopy version >=0.5
-          ./tcpcopy -x local_port-remote_ip:remote_port 
+          ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
  
        b) on the target host (root privilege is required):
           modprobe ip_queue # if not running
           iptables -I OUTPUT -p tcp --sport port -j QUEUE # if not set
-          ./interception (version <0.5) 
-          or
-          ./intercept (>=0.5)
+          ./intercept 
 
 Example:
-    Suppose there are two online hosts, 1.2.3.13 and 1.2.3.14. And 1.2.3.148 is the target host (similar to the online hosts). Port 12321 is used both as local port and remote port. We use tcpcopy to test if 1.2.3.148 can process 2X requests than a host can serve.
+    Suppose there are two online hosts, 1.2.3.25 and 1.2.3.26. And 1.2.3.161 is the target host. Port 11311 is used as local server port and port 11511 is used as remote target server port. We use tcpcopy to test if 1.2.3.161 can process 2X requests than a host can serve.
 
-    Here we use tcpcopy version 0.4 to perform the above test task.
+    Here we use tcpcopy to perform the above test task.
     
-    1) on the target host (1.2.3.148)
-       # modprobe ip_queue # if not run up
-       # iptables -I OUTPUT -p tcp --sport 12321 -j QUEUE # if not set
-       # ./interception
+    1) on the target host (1.2.3.161)
+       # modprobe ip_queue 
+       # iptables -I OUTPUT -p tcp --sport 11511 -j QUEUE 
+       # ./intercept
 
-    2) online host (1.2.3.13)
-       # ./tcpcopy 1.2.3.13 12321 1.2.3.148 12321
+    2) online host (1.2.3.25)
+       # ./tcpcopy -x 11311-1.2.3.161:11511
 
-    3) online host(1.2.3.14)
-       # ./tcpcopy 1.2.3.14 12321 1.2.3.148 12321
+    3) online host(1.2.3.26)
+       # ./tcpcopy -x 11311-1.2.3.161:11511
 
     CPU load and memory usage is as follows:
-       1.2.3.13:
-           11124 adrun 15 0 193m 146m 744 S 18.6 7.3 495:31.56 asyn_server
-           11281 root 15 0 65144 40m 1076 S 12.3 2.0 0:47.89 tcpcopy
-       1.2.3.14:
-           16855 adrun 15 0 98.7m 55m 744 S 21.6 2.7 487:49.51 asyn_server
-           16429 root 15 0 41156 17m 1076 S 14.0 0.9 0:33.63 tcpcopy
-       1.2.3.148:
-           25609 root 15 0 76892 59m 764 S 49.6 2.9 63:03.14 asyn_server
-           20184 root 15 0 5624 4232 292 S 17.0 0.2 0:52.82 interception
-
+       1.2.3.25:
+           21158 appuser   15   0  271m 226m  756 S 24.2  0.9  16410:57 asyn_server
+           9168  root      15   0 18436  12m  380 S  8.9  0.1  40:59.15 tcpcopy
+       1.2.3.26:
+           16708 appuser   15   0  268m 225m  756 S 25.8  0.9  17066:19 asyn_server
+           11662 root      15   0 17048  10m  372 S  9.3  0.0  53:51.49 tcpcopy
+       1.2.3.161:
+           27954 root      15   0  284m  57m  828 S 58.6  1.4 409:18.94 asyn_server
+           1476  root      15   0 14784  11m  308 S  7.7  0.3  49:36.93 intercept
     Access log analysis:
-       1.2.3.13:
-           $ grep 'Tue 11:08' access_0913_11.log | wc -l
-             89316,  1489 reqs/sec
-       1.2.3.14:
-           $ grep 'Tue 11:08' access_0913_11.log | wc -l
-             89309,  1488 reqs/sec
-       1.2.3.148:
-           $ grep 'Tue 11:08' access_0913_11.log | wc -l
-             178175, 2969 reqs/sec
+       1.2.3.25:
+           $ wc -l access_1109_09.log
+             7867867,  2185 reqs/sec
+       1.2.3.26:
+           $ wc -l access_1109_09.log
+             7843259,  2178 reqs/sec
+       1.2.3.161:
+           $ wc -l access_1109_09.log
+             15705229, 4362 reqs/sec
        request loss ratio:
-           (89316 + 89309 - 178175) / (89316 + 89309) = 0.25%
+           (7867867 + 7843259 - 15705229) / (7867867 + 7843259) = 0.0375%
 
     Clearly, the target host can process 2X of requests a source host can serve.
-    How is the CPU load? Well, tcpcopy on online host 1.2.3.13 used 12.3%, host 1.2.3.14 used 14%, while interception on the target host consumed about 17%. We can see that the CPU load is low here, and so is the memory usage.
+    How is the CPU load? Well, tcpcopy on online host 1.2.3.25 used 8.9%, host 1.2.3.26 used 9.3%, while intercept on the target host consumed about 7.7%. We can see that the CPU load is low here, and so is the memory usage.
 
 
 Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
-    3) tcpcopy is single-threaded now.
-    4) Root privilege is required.
-    5) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
+    3) Root privilege is required.
+    4) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
 
