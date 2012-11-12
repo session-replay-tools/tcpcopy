@@ -38,7 +38,7 @@ route_delete_obsolete(time_t cur_time)
                 if (0 == hn->visit_cnt) {
                     /* 
                      * If we have not received the second handshake packet 
-                     * for more than 3 seconds,then we clear out router info 
+                     * for more than 3 seconds, we clear out router info 
                      */
                     timeout = 3;
                 }

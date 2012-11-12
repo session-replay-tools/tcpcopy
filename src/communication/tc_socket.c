@@ -62,7 +62,7 @@ tc_raw_socket_out_init()
 
     /*
      * tell the IP layer not to prepend its own header.
-     * It does not need setting for linux,but *BSD needs
+     * It does not need setting for linux, but *BSD needs
      */
     if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
         tc_log_info(LOG_ERR, errno,
@@ -98,8 +98,8 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
          * No IP fragmentation will take place if needed. 
          * This means that a raw packet larger than the MTU of the 
          * interface will probably be discarded. Instead ip_local_error(), 
-         * which does general sk_buff cleaning,is called and an error EMSGSIZE 
-         * is returned. 
+         * which does general sk_buff cleaning, is called and an 
+         * error EMSGSIZE is returned. 
          */
         send_len = sendto(fd, buf, len, 0, (struct sockaddr *) &dst_addr,
                           sizeof(dst_addr));

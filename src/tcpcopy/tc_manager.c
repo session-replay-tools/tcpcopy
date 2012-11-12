@@ -111,7 +111,7 @@ check_resource_usage(tc_event_timer_t *evt)
     tc_log_info(LOG_NOTICE, 0, "max memory size:%ld", usage.ru_maxrss);
 
     if (usage.ru_maxrss > clt_settings.max_rss) {
-        tc_log_info(LOG_WARN, 0, "occupies too much memory,limit:%ld",
+        tc_log_info(LOG_WARN, 0, "occupies too much memory, limit:%ld",
                  clt_settings.max_rss);
     }
 
@@ -163,7 +163,7 @@ tcp_copy_over(const int sig)
 }
 
 
-/* initiate tcpcopy client */
+/* initiate TCPCopy client */
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {

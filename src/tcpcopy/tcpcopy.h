@@ -24,13 +24,13 @@ typedef struct xcopy_clt_settings {
     unsigned int  factor:8;             /* Port shift factor */
     unsigned int  mtu:16;               /* MTU sent to backend */
     unsigned int  do_daemonize:1;       /* Daemon flag */
-    unsigned int  max_rss:21;           /* Max memory size allowed for tcpcopy
+    unsigned int  max_rss:21;           /* Max memory size allowed for TCPCopy 
                                            client(max size 2G) */
 
-    unsigned int  percentage:7;         /* Percentage of full flow 
-                                           that will be tranfered to backend */
-    unsigned int  session_timeout:16;   /* Max value for session timeout
-                                           If it reaches this value, the session
+    unsigned int  percentage:7;         /* Percentage of the full flow that 
+                                           will be tranfered to the backend */
+    unsigned int  session_timeout:16;   /* Max value for session timeout.
+                                           If reaching this value, the session
                                            will be removed */
 
     char         *raw_transfer;         /* Online_ip online_port target_ip

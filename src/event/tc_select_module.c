@@ -149,7 +149,7 @@ int tc_select_polling(tc_event_loop_t *loop, long to)
     }
 
     for (i = 0; i < io->last; i++) {
-        /* clear the active events, then reset */
+        /* clear the active events, and reset */
         evs[i]->events = TC_EVENT_NONE;
 
         if (evs[i]->read_handler) {

@@ -161,7 +161,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         }
 
         /* 
-         * If packet length larger than MTU, then we split it. 
+         * If the packet length is larger than MTU, we split it. 
          * This is to solve the ip fragmentation problem
          */
         if (recv_len > clt_settings.mtu) {
@@ -262,7 +262,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     tc_log_info(LOG_NOTICE, 0, "send the first packets here");
     send_packets_from_pcap(1);
 
-    /* register a timer to perform offline */
+    /* register a timer for offline */
     tc_event_timer_add(event_loop, 100, tc_process_offline_packet);
 
     return TC_OK;
@@ -294,7 +294,7 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
-    tc_log_debug2(LOG_DEBUG, 0, "diff,old:%llu,new:%llu", 
+    tc_log_debug2(LOG_DEBUG, 0, "diff, old:%llu,new:%llu", 
             history_diff, cur_diff);
     if (history_diff <= cur_diff) {
         return false;
@@ -424,7 +424,7 @@ send_packets_from_pcap(int first)
             stop = check_read_stop();
         } else {
 
-            tc_log_info(LOG_WARN, 0, "stop,null from pcap_next");
+            tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
             stop = true;
             read_pcap_over = true;
         }

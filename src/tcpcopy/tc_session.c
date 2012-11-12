@@ -46,7 +46,7 @@ static time_t   start_p_time         = 0;
 #if (TCPCOPY_MYSQL_BASIC)
 /* global sequence omission */
 static uint32_t g_seq_omit           = 0;
-/* the global first auth user packet */
+/* the global first authentication user packet */
 static tc_ip_header_t *fir_auth_u_p  = NULL;
 #endif
 
@@ -139,7 +139,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
         retrans_cnt++;
     }
 
-    /* It should be set zero for tcp checksum */
+    /* It should be set to zero for tcp checksum */
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
@@ -220,7 +220,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         }
     }
 
-    /* It should be set zero for tcp checksum */
+    /* It should be set to zero for tcp checksum */
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *)ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
@@ -243,7 +243,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     if (ret == TC_ERROR) {
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
         tc_log_info(LOG_ERR, 0, "send to back error,tot_len is:%d,cont_len:%d",
-                    tot_len,cont_len);
+                    tot_len, cont_len);
     }
 }
 
@@ -564,7 +564,7 @@ session_init(session_t *s, int flag)
 
 #if (TCPCOPY_MYSQL_BASIC)
     s->sm.mysql_first_excution = 1;
-    s->mysql_excute_times = 0;
+    s->mysql_execute_times = 0;
 #endif
 }
 
@@ -710,7 +710,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
 
         tc_log_info(LOG_NOTICE, 0, "change second req:%u", s->src_h_port);
 
-        /* change sec auth content from client auth packets */
+        /* change sec authentication content from client auth packets */
         change_client_second_auth_content(payload, cont_len, encryption);
         s->sm.mysql_sec_auth = 0;
 
@@ -734,9 +734,9 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
 
 /* 
  * This happens when server's response comes first(mysql etc)
- * Only support one greet packet here
+ * Only support one greeting packet here
  * If packet's syn and ack are not according to the tcp protocol,
- * then it may be mistaken to be the greet packet
+ * it may be mistaken to be a greeting packet
  */
 static inline bool
 is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
@@ -750,7 +750,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
         seq = ntohl(tcp_header->seq);
 
         /* 
-         * For mysql,waiting is implied by the following
+         * For mysql, waiting is implied by the following
          * when backend is closed
          * (TODO should be optimized)
          */
@@ -1010,7 +1010,7 @@ check_session_obsolete(session_t *s, time_t cur, time_t threshold_time)
     /* if not receiving response for a long time */
     if (s->resp_last_recv_cont_time < threshold_time) {
         obs_cnt++;
-        tc_log_debug2(LOG_DEBUG, 0, "timeout,unsend number:%u,p:%u",
+        tc_log_debug2(LOG_DEBUG, 0, "timeout, unsend number:%u,p:%u",
                 s->unsend_packets->size, s->src_h_port);
         return OBSOLETE;
     }
@@ -1096,7 +1096,8 @@ clear_timeout_sessions()
 
                 s = hn->data;
                 if (s->sm.sess_over) {
-                    tc_log_info(LOG_WARN, 0, "wrong,del:%u", s->src_h_port);
+                    tc_log_info(LOG_WARN, 0, "wrong, del:%u", 
+                            s->src_h_port);
                 }
                 result = check_session_obsolete(s, current, threshold_time);
                 if (OBSOLETE == result) {
@@ -1622,10 +1623,10 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
                 s->sm.mysql_prepare_stat = 1;
             } else {
                 if (command == COM_QUERY && s->sm.mysql_prepare_stat) {
-                    if (s->mysql_excute_times > 0) {
+                    if (s->mysql_execute_times > 0) {
                         s->sm.mysql_first_excution = 0;
                     }
-                    s->mysql_excute_times++;
+                    s->mysql_execute_times++;
                 }
                 if (!s->sm.mysql_first_excution) {
                     return false;
@@ -1657,8 +1658,8 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
 
 
 /*
- * check if the packet is the right packet for starting a new session 
- * by mysql tcpcopy
+ * check if the packet is the correct packet for starting a new session 
+ * by MYSQLCopy
  */
 static bool
 check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
@@ -1690,7 +1691,7 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
         payload = payload + 3;
         /* get packet number */
         pack_number = payload[0];
-        /* if it is the second authenticate_user,then skip it */
+        /* if it is the second authenticate_user, skip it */
         if (pack_number != 0) {
             return false;
         }
@@ -1850,8 +1851,8 @@ process_back_fin(session_t *s, tc_ip_header_t *ip_header,
 
     if (!s->sm.src_closed) {
         /* 
-         * add seq here in order to keep the rst packet's ack right 
-         * because we send two packets here and are all dependent 
+         * add seq here in order to keep the rst packet's ack correct
+         * because it sends two packets here and are all dependent 
          * on this packet
          */
         tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
@@ -2221,7 +2222,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
             /* skip packet length */
             payload     = payload + 3;
             pack_number = payload[0];
-            /* if it is the second authenticate_user,then skip it */
+            /* if it is the second authenticate_user, skip it */
             if (pack_number == 3) {
                 is_need_omit = true;
                 s->sm.mysql_req_begin = 1;
@@ -2275,7 +2276,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
 /* 
  * When the connection to the backend is closed, we 
  * reestablish the connection and 
- * we reserve all comming packets for later disposure
+ * reserve all coming packets for later disposure
  */
 static void
 proc_clt_cont_when_bak_closed(session_t *s, tc_ip_header_t *ip_header,
@@ -2316,7 +2317,7 @@ check_pack_save_or_not(session_t *s, tc_ip_header_t *ip_header,
 
     /*
      * If the ack seq of the last content packet is not equal to 
-     * it of the current content packet, then we consider 
+     * it of the current content packet, we consider 
      * the current packet to be the packet of the new request.
      * Although it is not always rigtht, it works well with the help of 
      * activate_dead_sessions function
@@ -2436,7 +2437,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
  * TODO 
  * 1)It have not consider TCP Keepalive
  * 2)TCP is always allowed to send 1 byte of data 
- *   beyond the end of a closed window which confuses tcpcopy.
+ *   beyond the end of a closed window which confuses TCPCopy.
  * 
  */
 void
@@ -2448,7 +2449,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 
     tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
-    /* change source port for multiple copying,etc */
+    /* change source port for multiple copying, etc */
     if (s->sm.port_transfered != 0) {
         tcp_header->source = s->faked_src_port;
     }
@@ -2466,7 +2467,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 
     /* if the packet is the next session's packet */
     if (s->sm.sess_more) {
-        /* TODO not always right because of this */
+        /* TODO not always correct because of this */
         save_packet(s->next_sess_packs, ip_header, tcp_header);
         tc_log_debug1(LOG_DEBUG, 0, "buffer for next session:%u",
                 s->src_h_port);
@@ -2482,7 +2483,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     s->online_addr  = ip_header->daddr;
     s->online_port  = tcp_header->dest;
 
-    /* Syn packet has been sent to back,but not recv back's syn */
+    /* Syn packet has been sent to back, but not recv back's syn */
     if (s->sm.status == SYN_SENT) {
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
@@ -2653,7 +2654,7 @@ is_packet_needed(const char *packet)
             }
             clt_packs_cnt++;
         } else {
-            tc_log_info(LOG_WARN, 0, "bad tot_len: %d bytes,header len:%d",
+            tc_log_info(LOG_WARN, 0, "bad tot_len:%d bytes, header len:%d",
                     tot_len, header_len);
         }
     }

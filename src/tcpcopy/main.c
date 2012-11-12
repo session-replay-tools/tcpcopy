@@ -7,14 +7,14 @@
  *  See the LICENSE file for full text.
  *
  *  Authors:
- *      bin wang <wangbin579@gmail.com>
- *      bo  wang <wangbo@corp.netease.com>
+ *      Bin Wang <wangbin579@gmail.com>
+ *      Bo  Wang <wangbo@corp.netease.com>
  */
 
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-/* global variables for tcpcopy client */
+/* global variables for TCPCopy client */
 xcopy_clt_settings clt_settings;
 
 int tc_raw_socket_out;
@@ -123,14 +123,14 @@ read_args(int argc, char **argv)
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
          "m:" /* set the maximum memory allowed to use for TCPCopy */
-         "p:" /* remote server listening port */
+         "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
          "t:" /* set the session timeout limit */
-         "l:" /* error log file path */
+         "l:" /* error log file */
          "P:" /* save PID in file */
          "h"  /* help, licence info */
-         "v"  /* verbose */
+         "v"  /* version */
          "d"  /* daemon mode */
         ))) {
         switch (c) {
@@ -172,7 +172,7 @@ read_args(int argc, char **argv)
                 usage();
                 return -1;
             case 'v':
-                printf ("tcpcopy version:%s\n", VERSION);
+                printf ("TCPCopy version:%s\n", VERSION);
                 return -1;
             case 'd':
                 clt_settings.do_daemonize = 1;
@@ -198,12 +198,12 @@ read_args(int argc, char **argv)
 static void
 output_for_debug(int argc, char **argv)
 {
-    /* print tcpcopy version */
-    tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
-    /* print target */
+    /* print out version info */
+    tc_log_info(LOG_NOTICE, 0, "TCPCopy version:%s", VERSION);
+    /* print out target info */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
-    /* print tcpcopy working mode */
+    /* print out working mode info */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode");
 #endif
@@ -222,7 +222,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
     uint16_t tmp_port;
 
     if ((seq = strchr(addr, ':')) == NULL) {
-        tc_log_info(LOG_NOTICE, 0, "set global port for tcpcopy");
+        tc_log_info(LOG_NOTICE, 0, "set global port for TCPCopy");
         *ip = 0;
         port_s = addr;
     } else {
@@ -239,10 +239,9 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 }
 
 /*
- * one target format:
- * 192.168.0.1:80-192.168.0.2:8080
- * or
- * 80-192.168.0.2:8080
+ * two kinds of target formats:
+ * 1) 192.168.0.1:80-192.168.0.2:8080
+ * 2) 80-192.168.0.2:8080
  */
 static int
 parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
@@ -348,13 +347,13 @@ set_details()
     unsigned int   seed;
     struct timeval tp;
 
-    /* generate random port number for avoiding port conflicts */
+    /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
     rand_port = (int) ((rand_r(&seed)/(RAND_MAX + 1.0))*512);
     clt_settings.rand_port_shifted = rand_port;
 
-    /* set ip port pair mapping according to settings */
+    /* set the ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
                               &clt_settings.transfer) == -1)
     {
@@ -404,7 +403,7 @@ set_details()
     return 0;
 }
 
-/* set defaults */
+/* set default values for TCPCopy client */
 static void
 settings_init()
 {

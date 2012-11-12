@@ -36,7 +36,7 @@
 
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
- * then tcpcopy works only for mysql which sets
+ * tcpcopy works only for mysql which sets
  * skip-grant-tables
  */
 #if (TCPCOPY_MYSQL_SKIP)
@@ -45,7 +45,7 @@
 
 /* 
  * If you define TCPCOPY_MYSQL_NO_SKIP nonzero,
- * then tcpcopy works only for mysql without setting 
+ * tcpcopy works only for mysql without setting 
  * skip-grant-tables
  */
 #if (TCPCOPY_MYSQL_NO_SKIP)

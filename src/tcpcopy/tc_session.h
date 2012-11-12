@@ -104,9 +104,9 @@ typedef struct session_s{
     uint32_t dst_addr;
     /* online ip address(network byte order) */
     uint32_t online_addr;
-    /* orginal src or client port(network byte order,never changed) */
+    /* orginal src or client port(network byte order, never changed) */
     uint16_t orig_src_port;
-    /* src or client port(host byte order,it may be changed) */
+    /* src or client port(host byte order and  it may be changed) */
     uint16_t src_h_port;
     /* dst or backend port(network byte order) */
     uint16_t dst_port;
@@ -164,8 +164,8 @@ typedef struct session_s{
      */
     uint32_t resp_last_same_ack_num:8;
 #if (TCPCOPY_MYSQL_BASIC)
-    /* mysql excuted times for COM_QUERY(in COM_STMT_PREPARE situation) */
-    uint32_t mysql_excute_times:8;
+    /* mysql executed times for COM_QUERY(in COM_STMT_PREPARE situation) */
+    uint32_t mysql_execute_times:8;
 #endif
  
     link_list *unsend_packets;

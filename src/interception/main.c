@@ -133,7 +133,7 @@ usage(void)
     printf("intercept " VERSION "\n");
     printf("-x <passlist,> passed ip list through firewall\n"
            "               format:\n"
-           "               ip1,ip2,...\n"
+           "               ip1, ip2, ...\n"
            "-p <num>       set the tcp port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
@@ -241,7 +241,7 @@ set_details()
     return 0;
 }
 
-/* set defaults */
+/* set default values for intercept */
 static void settings_init(void)
 {
     srv_settings.port = SERVER_PORT;
@@ -253,9 +253,9 @@ static void settings_init(void)
 
 static void output_for_debug()
 {
-    /* print intercept version */
+    /* print out intercept version */
     tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
-    /* print intercept working mode */
+    /* print out intercept working mode */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode for intercept");
 #endif
