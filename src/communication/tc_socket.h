@@ -1,6 +1,9 @@
 #ifndef __TC_SOCKET_H__
 #define __TC_SOCKET_H__
 
+#if (INTERCEPT_NFQUEUE)
+#include <libnetfilter_queue/libnetfilter_queue.h>
+#endif
 #include <xcopy.h>
 
 #define TC_INVALID_SOCKET -1
@@ -22,6 +25,11 @@ int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);
 
 int tc_nl_socket_init();
 int tc_nl_socket_recv(int fd, char *buffer, size_t len);
+
+#if (INTERCEPT_NFQUEUE)
+int tc_nfq_socket_init(struct nfq_handle **h, nfq_callback *cb);
+int tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv);
+#endif
 
 int tc_socket_init();
 int tc_socket_set_nonblocking(int fd);

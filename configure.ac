@@ -47,6 +47,10 @@ if test "x$enable_thread" = "xyes";then
 	AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
+AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[nfqueue mode]),,nfqueue=no)
+if test "x$enable_nfqueue" = "xyes";then
+	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+fi
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -78,6 +82,9 @@ if test "x$enable_thread" = "xyes";then
     LIBS="$LIBS -lpthread "
 fi
 
+if test "x$enable_nfqueue" = "xyes";then
+    LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
+fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
 
