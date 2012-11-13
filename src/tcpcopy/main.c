@@ -88,7 +88,7 @@ usage(void)
            "               to prevent TCPCopy occupying too much memory and influencing the\n"
            "               online system. When the memory exceeds this limit, TCPCopy would quit\n"
            "               automatically. The parameter is effective only when the kernel \n"
-           "               version is 2.6.32 or above. The default value is 512.");
+           "               version is 2.6.32 or above. The default value is 512.\n");
     printf("-M <num>       MTU value sent to backend(default 1500)\n");
     printf("-t <num>       set the session timeout limit. If TCPCopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
