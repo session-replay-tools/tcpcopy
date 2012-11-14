@@ -143,6 +143,7 @@ router_update(tc_ip_header_t *ip_header, int len)
     if (fd == NULL) {
         if (!tcp_header->syn) {
             tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
+            tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header); 
         }
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         fd_null_cnt++;
@@ -205,6 +206,7 @@ router_update(tc_ip_header_t *ip_header)
     if (fd == NULL) {
         if (!tcp_header->syn) {
             tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
+            tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
         }
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         fd_null_cnt++;
