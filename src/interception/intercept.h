@@ -9,16 +9,19 @@ typedef struct passed_ip_addr_s {
 
 
 typedef struct xcopy_srv_settings {
-    char              *raw_ip_list;      /* Raw ip list */
-    char              *pid_file;         /* Pid file */
-    char              *binded_ip;        /* Binded ip for security */
-    char              *log_path;         /* Error log path */
-    struct nfq_handle *nfq_handler;      /* NFQUEUE handler*/
-    int                timeout;
-    size_t             hash_size;        /* Hash size for kinds of table */
-    uint16_t           port;             /* TCP port number to listen on */
-    unsigned int       do_daemonize:1;   /* Daemon flag */
-    passed_ip_addr_t   passed_ips;       /* Passed ip list */
+    char                *raw_ip_list;    /* Raw ip list */
+    char                *pid_file;       /* Pid file */
+    char                *binded_ip;      /* Binded ip for security */
+    char                *log_path;       /* Error log path */
+#if (INTERCEPT_NFQUEUE)   
+    struct nfq_handle   *nfq_handler;    /* NFQUEUE handler*/
+    struct nfq_q_handle *nfq_q_handler;  /* NFQUEUE handler*/
+#endif
+    int                  timeout;
+    size_t               hash_size;      /* Hash size for kinds of table */
+    uint16_t             port;           /* TCP port number to listen on */
+    unsigned int         do_daemonize:1; /* Daemon flag */
+    passed_ip_addr_t     passed_ips;     /* Passed ip list */
 }xcopy_srv_settings;
 
 extern xcopy_srv_settings srv_settings;

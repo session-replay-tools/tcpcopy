@@ -209,10 +209,10 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
 
 #if (INTERCEPT_NFQUEUE)
 int 
-tc_nfq_socket_init(struct nfq_handle **h,  nfq_callback *cb)
+tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
+        nfq_callback *cb)
 {
-    int                   fd;
-    struct nfq_q_handle  *qh;
+    int fd;
 
     tc_log_info(LOG_NOTICE, 0, "opening library handle");
     *h = nfq_open();
@@ -221,7 +221,7 @@ tc_nfq_socket_init(struct nfq_handle **h,  nfq_callback *cb)
         return TC_INVALID_SOCKET;
     }
 
-    tc_log_info(LOG_NOTICE, 0,0,
+    tc_log_info(LOG_NOTICE, 0,
             "unbinding existing nf_queue handler for AF_INET (if any)");
     if (nfq_unbind_pf((*h), AF_INET) < 0) {
         tc_log_info(LOG_ERR, 0, "error during nfq_unbind_pf()");
@@ -236,19 +236,21 @@ tc_nfq_socket_init(struct nfq_handle **h,  nfq_callback *cb)
     }
 
     tc_log_info(LOG_NOTICE, 0, "binding this socket to queue '0'");
-    qh = nfq_create_queue((*h),  0, cb, NULL);
-    if (!qh) {
+    *qh = nfq_create_queue((*h),  0, cb, NULL);
+    if (!(*qh)) {
         tc_log_info(LOG_ERR, 0, "error during nfq_create_queue()");
         return TC_INVALID_SOCKET;
     }
 
     tc_log_info(LOG_NOTICE, 0, "setting copy_packet mode");
-    if (nfq_set_mode(qh, NFQNL_COPY_PACKET, 0xffff) < 0) {
+    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, 0xffff) < 0) {
         tc_log_info(LOG_ERR, 0, "can't set packet_copy mode");
         return TC_INVALID_SOCKET;
     }
 
-    fd = nfq_fd(h);
+    fd = nfq_fd(*h);
+
+    nfnl_rcvbufsiz(nfq_nfnlh(*h), 4096*4096);
 
     return fd;
 }

@@ -27,7 +27,8 @@ int tc_nl_socket_init();
 int tc_nl_socket_recv(int fd, char *buffer, size_t len);
 
 #if (INTERCEPT_NFQUEUE)
-int tc_nfq_socket_init(struct nfq_handle **h, nfq_callback *cb);
+int tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
+        nfq_callback *cb);
 int tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv);
 #endif
 
