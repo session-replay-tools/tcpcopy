@@ -235,7 +235,7 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
         return TC_INVALID_SOCKET;
     }
 
-    tc_log_info(LOG_NOTICE, 0, "binding this socket to queue '0'");
+    tc_log_info(LOG_NOTICE, 0, "binding this socket to queue");
     *qh = nfq_create_queue((*h),  0, cb, NULL);
     if (!(*qh)) {
         tc_log_info(LOG_ERR, 0, "error during nfq_create_queue()");
