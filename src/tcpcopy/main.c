@@ -67,7 +67,7 @@ usage(void)
            "               and meanwhile their privileges should be the same, whereas the \n"
            "               password of the target mysql server could be different from that\n"
            "               of the source mysql server which could protect the password of \n"
-           "               the source server.");
+           "               the source server.\n");
 #endif
     printf("-n <num>       use <num> to set the replication times when you want to get a \n"
            "               copied data stream that is several times as large as the online data.\n"
