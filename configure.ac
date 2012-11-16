@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(tcpcopy, 0.6.3, wangbin579@gmail.com)
+AC_INIT(tcpcopy, 0.6.5, wangbin579@gmail.com)
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 
 
-AM_INIT_AUTOMAKE(tcpcopy,0.6.3)
+AM_INIT_AUTOMAKE(tcpcopy,0.6.5)
 
 
 # Checks for programs.
@@ -19,7 +19,7 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
 
-AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile with debug support]),,debug=no)
+AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile tcpcopy with debug support(saved in a log file)]),,debug=no)
 if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
 fi
@@ -27,27 +27,27 @@ fi
 #AC_ARG_ENABLE(epoll-module, AS_HELP_STRING([--enable-epoll-module],[use epoll module]),
 #    AC_DEFINE(TCPCOPY_USE_EPOLL, 1, [Define if --enable-epoll-module]), )
 
-AC_ARG_ENABLE(sgt, AS_HELP_STRING([--enable-mysqlsgt],[mysql skip-grant-tables mode]),,sgt=no)
+AC_ARG_ENABLE(sgt, AS_HELP_STRING([--enable-mysqlsgt],[run tcpcopy at mysql skip-grant-tables mode]),,sgt=no)
 if test "x$enable_mysqlsgt" = "xyes";then
 	AC_DEFINE(TCPCOPY_MYSQL_SKIP, 1, [Define if --enable-mysqlsgt])
 fi
 
-AC_ARG_ENABLE(mysql, AS_HELP_STRING([--enable-mysql],[mysql mode]),,mysql=no)
+AC_ARG_ENABLE(mysql, AS_HELP_STRING([--enable-mysql],[run tcpcopy at mysql mode]),,mysql=no)
 if test "x$enable_mysql" = "xyes";then
 	AC_DEFINE(TCPCOPY_MYSQL_NO_SKIP, 1, [Define if --enable-mysql])
 fi
 
-AC_ARG_ENABLE(offline, AS_HELP_STRING([--enable-offline],[offline mode]),,offline=no)
+AC_ARG_ENABLE(offline, AS_HELP_STRING([--enable-offline],[run tcpcopy at offline mode]),,offline=no)
 if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
 fi
 
-AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[thread mode]),,thread=no)
+AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode]),,thread=no)
 if test "x$enable_thread" = "xyes";then
 	AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
-AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[nfqueue mode]),,nfqueue=no)
+AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
 fi
