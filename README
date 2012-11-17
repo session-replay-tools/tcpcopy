@@ -32,13 +32,14 @@ Usage:
        e) make install
 
     2) Run:
-       a) on the source host (root privilege is required):
-          ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
- 
-       b) on the target host (root privilege is required):
+       a) on the target host (root privilege is required):
           modprobe ip_queue # if not running
           iptables -I OUTPUT -p tcp --sport port -j QUEUE # if not set
           ./intercept 
+
+       b) on the source host (root privilege is required):
+          ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
+ 
 
 Example:
     Suppose there are two online hosts, 1.2.3.25 and 1.2.3.26. And 1.2.3.161 is the target host. Port 11311 is used as local server port and port 11511 is used as remote target server port. We use tcpcopy to test if 1.2.3.161 can process 2X requests than a host can serve.
