@@ -1,10 +1,10 @@
 Name:
     tcpcopy
-    It is an online TCP duplication tool and can be used for testing (using netlink and raw sockets).
+    It is an online TCP duplication tool and can be used for performance testing, regression testing, live tesing, etc.
 
 
 Description:
-    It can help you find bugs without deploying your server software on your production servers.It can also be used to do smoke testing against your products.
+    It can help you find bugs without deploying your server software on your production servers. It can also be used to do smoke testing against your products.
     For example, when you want to migrate your web server from Apache to Nginx, tcpcopy can help you test it. Apache is running online, while tcpcopy can copy the TCP flows from Apache to Nginx. To Nginx, the TCP flows are just forwarding to it. This will not affect Apache at all except cost a little network bandwidth and CPU load.
 
 
@@ -15,7 +15,7 @@ Scenarios:
     2) Hot backup
        It is very suitable for backup tasks if connections are short-lived. The request loss ratio is quite low (e.g. 0.00001).
 
-    3) Online testing
+    3) live testing
        Prove the new system is stable and find bugs that only occur in the real world.
 
     4) Benchmark
@@ -88,6 +88,6 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) See "tcpcopy -h" or "intercept -h" for more help 
+    4) See "tcpcopy -h" or "intercept -h" for more help.
     5) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
 
