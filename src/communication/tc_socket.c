@@ -207,6 +207,84 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
     return TC_OK;
 }
 
+#if (INTERCEPT_NFQUEUE)
+int 
+tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
+        nfq_callback *cb)
+{
+    int fd;
+
+    tc_log_info(LOG_NOTICE, 0, "opening library handle");
+    *h = nfq_open();
+    if (!(*h)) {
+        tc_log_info(LOG_ERR, 0, "error during nfq_open()");
+        return TC_INVALID_SOCKET;
+    }
+
+    tc_log_info(LOG_NOTICE, 0,
+            "unbinding existing nf_queue handler for AF_INET (if any)");
+    if (nfq_unbind_pf((*h), AF_INET) < 0) {
+        tc_log_info(LOG_ERR, 0, "error during nfq_unbind_pf()");
+        return TC_INVALID_SOCKET;
+    }
+
+    tc_log_info(LOG_NOTICE, 0,
+            "binding nfnetlink_queue as nf_queue handler for AF_INET");
+    if (nfq_bind_pf((*h), AF_INET) < 0) {
+        tc_log_info(LOG_ERR, 0, "error during nfq_bind_pf()");
+        return TC_INVALID_SOCKET;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "binding this socket to queue");
+    *qh = nfq_create_queue((*h),  0, cb, NULL);
+    if (!(*qh)) {
+        tc_log_info(LOG_ERR, 0, "error during nfq_create_queue()");
+        return TC_INVALID_SOCKET;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "setting copy_packet mode");
+    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, 0xffff) < 0) {
+        tc_log_info(LOG_ERR, 0, "can't set packet_copy mode");
+        return TC_INVALID_SOCKET;
+    }
+
+    fd = nfq_fd(*h);
+
+    nfnl_rcvbufsiz(nfq_nfnlh(*h), 4096*4096);
+
+    return fd;
+}
+
+int
+tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv)
+{
+    ssize_t recv_len;
+
+    recv_len = recv(fd, buffer, len, 0);
+    if (recv_len < 0) {
+        if (errno == EAGAIN) {
+            return TC_OK;
+        }
+        if (errno == ENOBUFS) {
+            tc_log_info(LOG_WARN, errno, "losing packets!");
+            return TC_OK;
+        }
+
+        tc_log_info(LOG_ERR, errno, "nfq recvfrom");
+        return TC_ERROR;
+    }
+
+    if (recv_len == 0) {
+        tc_log_info(LOG_ERR, 0, "nfq recv len is 0");
+        return TC_ERROR;
+    }
+
+    *rv = (int)recv_len;
+
+    return TC_OK;
+}
+#endif
+
 int
 tc_socket_init()
 {

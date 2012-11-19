@@ -141,6 +141,10 @@ router_update(tc_ip_header_t *ip_header, int len)
 
     fd  = hash_find(table, key);
     if (fd == NULL) {
+        if (!tcp_header->syn) {
+            tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
+            tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header); 
+        }
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         fd_null_cnt++;
         delay_table_add(key, &msg);
@@ -151,6 +155,8 @@ router_update(tc_ip_header_t *ip_header, int len)
     }
 
     pthread_mutex_unlock(&mutex);
+
+    tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
 }
@@ -200,12 +206,17 @@ router_update(tc_ip_header_t *ip_header)
     key = get_key(ip_header->daddr, tcp_header->dest);
     fd  = hash_find(table, key);
     if (fd == NULL) {
+        if (!tcp_header->syn) {
+            tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
+            tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+        }
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
         fd_null_cnt++;
         delay_table_add(key, &msg);
         return ;
     }
 
+    tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
 }
 
