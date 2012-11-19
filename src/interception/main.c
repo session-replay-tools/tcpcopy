@@ -137,8 +137,9 @@ usage(void)
            "-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
-    printf("-t <num>       set the router item timeout limit. It should be set larger when\n"
-           "               connections are idle for a long time. The default value is 120 sec\n"
+    printf("-t <num>       set the router item timeout limit. The default value is 120 sec.\n"
+           "               It should be set larger when connections are idle longer than \n"
+           "               the default value\n"
            "-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n"
            "-v             intercept version\n"
