@@ -97,7 +97,7 @@ usage(void)
            "               slow or the application protocol is context based, the value should \n"
            "               be set larger. The default value is 60 seconds\n");
     printf("-l <file>      save the log information in <file>\n"
-           "-r <num>       set the percentage of sessions transfered(integer,1~100)\n"
+           "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-h             print this help and exit\n"
