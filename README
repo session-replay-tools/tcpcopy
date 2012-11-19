@@ -5,7 +5,7 @@ Name:
 
 Description:
     It can help you find bugs without deploying your server software on your production servers. It can also be used to do smoke testing against your products.
-    For example, when you want to migrate your web server from Apache to Nginx, tcpcopy can help you test it. Apache is running online, while tcpcopy can copy the TCP flows from Apache to Nginx. To Nginx, the TCP flows are just forwarding to it. This will not affect Apache at all except cost a little network bandwidth and CPU load.
+    For example, when you want to migrate from Apache to Nginx, tcpcopy can help you test it. Apache is running online, while tcpcopy can copy the TCP flows from Apache to Nginx. To Nginx, the TCP flows are just forwarding to it. This will not affect Apache at all except cost a little network bandwidth and CPU load.
 
 
 Scenarios:
