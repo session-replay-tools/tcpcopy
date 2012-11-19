@@ -47,15 +47,16 @@ usage(void)
            "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
            "               copy requests from TCP port '80' on current server to the target port\n"
            "               '18080' of the target IP '192.168.0.2'.\n");
-    printf("-c <ip>        change the localhost client IP to this IP address when sending to the\n"
+    printf("-c <ip_addr>   change the localhost client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
            "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
-    printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for offline\n"
-           "               use of TCPCopy when it is configured to run at enable-offline mode)\n");
+    printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for the\n"
+                           "offline version of TCPCopy when it is configured to run at\n"
+                           "enable-offline mode)\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -89,7 +90,7 @@ usage(void)
            "               online system. When the memory exceeds this limit, TCPCopy would quit\n"
            "               automatically. The parameter is effective only when the kernel \n"
            "               version is 2.6.32 or above. The default value is 512.\n");
-    printf("-M <num>       MTU value sent to backend(default 1500)\n");
+    printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-t <num>       set the session timeout limit. If TCPCopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by TCPCopy. When the response from the target server is\n"

@@ -133,7 +133,7 @@ usage(void)
     printf("intercept " VERSION "\n");
     printf("-x <passlist,> passed IP list through firewall\n"
            "               Format:\n"
-           "               ip1, ip2 ...\n"
+           "               ip_addr1, ip_addr2 ...\n"
            "-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
