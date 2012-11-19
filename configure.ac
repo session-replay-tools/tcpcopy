@@ -50,9 +50,7 @@ fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
 if test "x$enable_thread" = "xyes";then
-    if test "x$enable_nfqueue" = "xno";then
-	    AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
-    fi
+    AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
 # Checks for header files.
@@ -87,7 +85,6 @@ fi
 
 if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
-
 fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
