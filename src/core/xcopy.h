@@ -34,6 +34,10 @@
 #include <pcap.h>
 #endif
 
+#if (INTERCEPT_NFQUEUE)
+#undef INTERCEPT_THREAD
+#endif
+
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
  * tcpcopy works only for mysql which sets
