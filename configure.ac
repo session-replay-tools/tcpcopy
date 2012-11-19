@@ -42,14 +42,17 @@ if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
 fi
 
-AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode]),,thread=no)
-if test "x$enable_thread" = "xyes";then
-	AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
-fi
 
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+fi
+
+AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
+if test "x$enable_thread" = "xyes";then
+    if test "x$enable_nfqueue" = "xno";then
+	    AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
+    fi
 fi
 
 # Checks for header files.
@@ -84,6 +87,7 @@ fi
 
 if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
+
 fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
