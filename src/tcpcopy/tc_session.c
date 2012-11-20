@@ -1545,9 +1545,9 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
     uint16_t  target_port;
     uint64_t  new_key;
 
-    tc_log_debug1(LOG_DEBUG, 0, "fake syn:%u", s->src_h_port);
 
     if (is_hard) {
+        tc_log_debug1(LOG_DEBUG, 0, "fake syn:%u", s->src_h_port);
         while (true) {
             target_port = get_port_by_rand_addition(tcp_header->source);
             s->src_h_port = target_port;
@@ -1569,7 +1569,10 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
         tcp_header->source = target_port;
         s->faked_src_port  = tcp_header->source;
         s->sm.port_transfered = 1;
+    } else {
+        tc_log_debug1(LOG_DEBUG, 0, "fake syn with easy:%u", s->src_h_port);
     }
+        
 
     /* send route info to backend */
     result = send_router_info(ip_header->daddr, tcp_header->dest,
