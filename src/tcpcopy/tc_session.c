@@ -2438,7 +2438,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
 /*
  * processing client packets
  * TODO 
- * 1)It have not consider TCP Keepalive
+ * 1)TCP Keepalive feature needs to be checked
  * 2)TCP is always allowed to send 1 byte of data 
  *   beyond the end of a closed window which confuses TCPCopy.
  * 
