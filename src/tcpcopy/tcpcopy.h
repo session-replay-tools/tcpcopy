@@ -24,8 +24,7 @@ typedef struct xcopy_clt_settings {
     unsigned int  factor:8;             /* port shift factor */
     unsigned int  mtu:16;               /* MTU sent to backend */
     unsigned int  do_daemonize:1;       /* daemon flag */
-    unsigned int  max_rss:21;           /* max memory size allowed for TCPCopy 
-                                           client(max size 2G) */
+    unsigned int  max_rss:21;           /* max memory allowed for tcpcopy */
 
     unsigned int  percentage:7;         /* percentage of the full flow that 
                                            will be tranfered to the backend */
