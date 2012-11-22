@@ -20,35 +20,35 @@ typedef struct {
 
 
 typedef struct xcopy_clt_settings {
-    unsigned int  replica_num:10;       /* Replicated number of each request */
-    unsigned int  factor:8;             /* Port shift factor */
+    unsigned int  replica_num:10;       /* replicated number of each request */
+    unsigned int  factor:8;             /* port shift factor */
     unsigned int  mtu:16;               /* MTU sent to backend */
-    unsigned int  do_daemonize:1;       /* Daemon flag */
-    unsigned int  max_rss:21;           /* Max memory size allowed for TCPCopy 
+    unsigned int  do_daemonize:1;       /* daemon flag */
+    unsigned int  max_rss:21;           /* max memory size allowed for TCPCopy 
                                            client(max size 2G) */
 
-    unsigned int  percentage:7;         /* Percentage of the full flow that 
+    unsigned int  percentage:7;         /* percentage of the full flow that 
                                            will be tranfered to the backend */
-    unsigned int  session_timeout:16;   /* Max value for session timeout.
+    unsigned int  session_timeout:16;   /* max value for session timeout.
                                            If reaching this value, the session
                                            will be removed */
 
-    char         *raw_transfer;         /* Online_ip online_port target_ip
+    char         *raw_transfer;         /* online_ip online_port target_ip
                                            target_port string */
 
-    char         *pid_file;             /* Pid file */
-    char         *log_path;             /* Error log path */
+    char         *pid_file;             /* pid file */
+    char         *log_path;             /* error log path */
 #if (TCPCOPY_OFFLINE)
-    char         *pcap_file;            /* Pcap file */
+    char         *pcap_file;            /* pcap file */
 #endif
-    uint16_t      rand_port_shifted;    /* Random port shifted */
-    uint16_t      srv_port;             /* Server listening port */
-    uint32_t      lo_tf_ip;             /* Ip address from localhost to
+    uint16_t      rand_port_shifted;    /* random port shifted */
+    uint16_t      srv_port;             /* server listening port */
+    uint32_t      lo_tf_ip;             /* ip address from localhost to
                                            (localhost transfered ip) */
 #ifdef TCPCOPY_MYSQL_ADVANCED
-    char         *user_pwd;             /* User password string for mysql */
+    char         *user_pwd;             /* user password string for mysql */
 #endif
-    ip_port_pair_mappings_t transfer;   /* Transfered online_ip online_port
+    ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
                                            target_ip target_port */
     int           multiplex_io;
 } xcopy_clt_settings;
