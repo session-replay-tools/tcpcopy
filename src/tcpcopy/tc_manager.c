@@ -2,6 +2,7 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
+#if (!TCPCOPY_DR)
 static hash_table *addr_table = NULL;
 
 static void
@@ -85,6 +86,7 @@ address_release()
     addr_table = NULL;
 
 }
+#endif
 
 /* check resource usage, such as memory usage and cpu usage */
 static void
@@ -133,7 +135,9 @@ tcp_copy_release_resources()
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
+#if (!TCPCOPY_DR)
     address_release();
+#endif
 
     tc_log_end();
 
@@ -178,8 +182,27 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     /* init session table */
     init_for_sessions();
 
-    address_init();
 
+#if (TCPCOPY_DR)
+    /* 
+     * add connections to the real servers for sending router info 
+     * and receiving response packet
+     */
+    for (i = 0; i < clt_settings.real_servers.num; i++) {
+
+        target_ip = clt_settings.real_servers.ips[i];
+
+        fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+        if (fd == TC_INVALID_SOCKET) {
+            return TC_ERROR;
+        }
+        clt_settings.real_servers.fds[i] = fd;
+
+        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
+                    ntohl(target_ip), clt_settings.srv_port);
+    }
+#else
+    address_init();
     /* add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -197,6 +220,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
                     ntohl(target_ip), clt_settings.srv_port);
     }
+#endif
 
     /* init packets for processing */
 #if (TCPCOPY_OFFLINE)
