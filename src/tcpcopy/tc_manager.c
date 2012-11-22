@@ -173,7 +173,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
     uint32_t                 target_ip;
+#if (!TCPCOPY_DR)
     ip_port_pair_mapping_t  *pair, **mappings;
+#endif
 
     /* register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
