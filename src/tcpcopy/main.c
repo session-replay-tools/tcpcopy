@@ -169,6 +169,14 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
+#if (TCPCOPY_PF_RING)
+            case 'D':
+                clt_settings.device = strdup(optarg);
+                break;
+            case 'F':
+                clt_settings.pf_filter= strdup(optarg);
+                break;
+#endif
             case 'h':
                 usage();
                 return -1;

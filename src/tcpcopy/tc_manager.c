@@ -141,6 +141,10 @@ tcp_copy_release_resources()
     release_mysql_user_pwd_info();
 #endif
 
+#if (TCPCOPY_PF_RING)
+    pfring_close(clt_settings.pd);
+#endif
+
     if (clt_settings.transfer.mappings != NULL) {
 
         for (i = 0; i < clt_settings.transfer.num; i++) {

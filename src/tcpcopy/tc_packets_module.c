@@ -38,6 +38,11 @@ tc_packets_init(tc_event_loop_t *event_loop)
     }
 
 #if (TCPCOPY_PF_RING)
+    fd = tc_pfring_socket_in_init(&clt_settings.pd, clt_settings.device,
+            clt_settings.pf_filter);
+    if (fd == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    }
 #else
     /* init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
@@ -47,7 +52,11 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
     tc_socket_set_nonblocking(fd);
 
+#if (TCPCOPY_PF_RING)
+    ev = tc_event_create(fd, tc_process_pfring_socket_packet, NULL);
+#else
     ev = tc_event_create(fd, tc_process_raw_socket_packet, NULL);
+#endif
     if (ev == NULL) {
         return TC_ERROR;
     }
@@ -125,7 +134,7 @@ tc_process_pf_socket_packet(tc_event_t *rev)
 
         ip_header = recv_buf + ETHERNET_HDR_LEN;
         recv_len = recv_len - ETHERNET_HDR_LEN;
-        
+
         if (dispose_packet(ip_header, recv_len, NULL) == TC_ERROR) {
             return TC_ERROR;
         }
@@ -134,7 +143,6 @@ tc_process_pf_socket_packet(tc_event_t *rev)
     return TC_OK;
 }
 #endif
-
 
 static bool
 process_packet(bool backup, char *packet, int length)

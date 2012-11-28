@@ -5,21 +5,20 @@
 int
 tc_pfring_socket_in_init(pfring **pd, char *device, char *pf_filter)
 {
-    int        rc;
+    int        rc, fd;
     uint32_t   flags = 0;
-    socklen_t  opt_len;
 
     if (device == NULL) {
         device = DEFAULT_DEVICE; 
     }
-    *pd = pfring_open(device, snaplen, flags);
+    *pd = pfring_open(device, RECV_BUF_SIZE + ETHERNET_HDR_LEN, flags);
     if (*pd == NULL) {
-        tc_log_info(LOG_ERR, errno, "pfring error,device:%s", divice);
+        tc_log_info(LOG_ERR, errno, "pfring error,device:%s", device);
         return TC_INVALID_SOCKET;
     }
 
     if (pf_filter != NULL) {
-        rc = pfring_set_bpf_filter(pd, bpfFilter);
+        rc = pfring_set_bpf_filter(*pd, pf_filter);
         if (rc != 0) {
             tc_log_info(LOG_WARN, 0, "pfring_set_bpf_filter(%s) returned:%d",
                     pf_filter, rc);
@@ -28,24 +27,24 @@ tc_pfring_socket_in_init(pfring **pd, char *device, char *pf_filter)
         }
     }
 
-    if ((rc = pfring_set_direction(pd, direction)) != 0) {
+    if ((rc = pfring_set_direction(*pd, rx_only_direction)) != 0) {
         tc_log_info(LOG_ERR, errno, "pfring_set_direction returned %d", rc);
     }
 
-    if ((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0) {
+    if ((rc = pfring_set_socket_mode(*pd, recv_only_mode)) != 0) {
         tc_log_info(LOG_ERR, errno, "pfring_set_socket_mode returned %d", rc);
     }
 
-    if (pfring_enable_ring(pd) != 0) {
+    if (pfring_enable_ring(*pd) != 0) {
         tc_log_info(LOG_ERR, 0, "unable to enable ring");
         pfring_close(*pd);
         *pd = NULL;
         return TC_INVALID_SOCKET;
     }
 
-    pfring_loop(*pd, dummyProcesssPacket, (u_char*)NULL, 0);
+    fd = pfring_get_selectable_fd(*pd);  
 
-    return *pd;
+    return fd;
 }
 
 #endif
