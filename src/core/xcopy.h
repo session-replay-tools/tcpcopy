@@ -33,6 +33,9 @@
 #if (TCPCOPY_OFFLINE)
 #include <pcap.h>
 #endif
+#if (TCPCOPY_PF_RING)
+#include <pfring.h>
+#endif
 
 #if (INTERCEPT_NFQUEUE)
 #undef INTERCEPT_THREAD
@@ -181,7 +184,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PF_RING)
 #define ETHER_ADDR_LEN 0x6
 
 #ifndef ETHERTYPE_VLAN
@@ -190,6 +193,8 @@ enum packet_classification{
 
 #define CISCO_HDLC_LEN 4
 #define SLL_HDR_LEN 16
+#define ETHERNET_HDR_LEN (sizeof(struct ethernet_hdr))
+#define DEFAULT_DEVICE     "eth0"
 
 /*  
  *  Ethernet II header
@@ -200,7 +205,7 @@ struct ethernet_hdr {
     uint8_t ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
-#endif /* TCPCOPY_OFFLINE */
+#endif 
 
 /* global functions */
 int daemonize();

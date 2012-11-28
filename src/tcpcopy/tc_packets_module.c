@@ -37,10 +37,13 @@ tc_packets_init(tc_event_loop_t *event_loop)
         tc_raw_socket_out = fd;
     }
 
+#if (TCPCOPY_PF_RING)
+#else
     /* init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
+#endif
 
     tc_socket_set_nonblocking(fd);
 
@@ -88,6 +91,50 @@ tc_process_raw_socket_packet(tc_event_t *rev)
 
     return TC_OK;
 }
+
+#if (TCPCOPY_PF_RING)
+static int
+tc_process_pf_socket_packet(tc_event_t *rev)
+{
+    int  recv_len;
+    char recv_buf[RECV_BUF_SIZE + ETHERNET_HDR_LEN], *ip_header;
+    struct ethernet_hdr *ether;
+
+    for ( ;; ) {
+
+        recv_len = recvfrom(rev->fd, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
+
+        if (recv_len == -1) {
+            if (errno == EAGAIN) {
+                return TC_OK;
+            }
+
+            tc_log_info(LOG_ERR, errno, "recvfrom");
+            return TC_ERROR;
+        }
+
+        if (recv_len == 0 ||recv_len <= ETHERNET_HDR_LEN) {
+            tc_log_info(LOG_ERR, 0, "recv len is 0 or less than 16");
+            return TC_ERROR;
+        }
+
+        ether = recv_buf;
+        if (ntohs(ether->type) != 0x800) {
+            return OK;
+        }
+
+        ip_header = recv_buf + ETHERNET_HDR_LEN;
+        recv_len = recv_len - ETHERNET_HDR_LEN;
+        
+        if (dispose_packet(ip_header, recv_len, NULL) == TC_ERROR) {
+            return TC_ERROR;
+        }
+    }
+
+    return TC_OK;
+}
+#endif
+
 
 static bool
 process_packet(bool backup, char *packet, int length)

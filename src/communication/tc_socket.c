@@ -1,6 +1,54 @@
  
 #include <xcopy.h>
 
+#if (TCPCOPY_PF_RING)
+int
+tc_pfring_socket_in_init(pfring **pd, char *device, char *pf_filter)
+{
+    int        rc;
+    uint32_t   flags = 0;
+    socklen_t  opt_len;
+
+    if (device == NULL) {
+        device = DEFAULT_DEVICE; 
+    }
+    *pd = pfring_open(device, snaplen, flags);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, errno, "pfring error,device:%s", divice);
+        return TC_INVALID_SOCKET;
+    }
+
+    if (pf_filter != NULL) {
+        rc = pfring_set_bpf_filter(pd, bpfFilter);
+        if (rc != 0) {
+            tc_log_info(LOG_WARN, 0, "pfring_set_bpf_filter(%s) returned:%d",
+                    pf_filter, rc);
+        } else {
+            tc_log_info(LOG_NOTICE, 0, "successfully set BPF filter");
+        }
+    }
+
+    if ((rc = pfring_set_direction(pd, direction)) != 0) {
+        tc_log_info(LOG_ERR, errno, "pfring_set_direction returned %d", rc);
+    }
+
+    if ((rc = pfring_set_socket_mode(pd, recv_only_mode)) != 0) {
+        tc_log_info(LOG_ERR, errno, "pfring_set_socket_mode returned %d", rc);
+    }
+
+    if (pfring_enable_ring(pd) != 0) {
+        tc_log_info(LOG_ERR, 0, "unable to enable ring");
+        pfring_close(*pd);
+        *pd = NULL;
+        return TC_INVALID_SOCKET;
+    }
+
+    pfring_loop(*pd, dummyProcesssPacket, (u_char*)NULL, 0);
+
+    return *pd;
+}
+
+#endif
 
 int
 tc_raw_socket_in_init()
