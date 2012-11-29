@@ -18,8 +18,8 @@
 #define tc_socket_close(fd) close(fd)
 #define tc_socket_accept(fd) accept(fd, NULL, NULL) 
 
-#if (TCPCOPY_PF_RING)
-int tc_pfring_socket_in_init(pfring **pd, char *device, char *pf_filter);
+#if (TCPCOPY_PCAP)
+int tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter);
 #endif
 int tc_raw_socket_in_init();
 

@@ -40,10 +40,12 @@ typedef struct xcopy_clt_settings {
 #if (TCPCOPY_OFFLINE)
     char         *pcap_file;            /* pcap file */
 #endif
-#if (TCPCOPY_PF_RING)
+#if (TCPCOPY_PCAP)
     char         *device;
-    char         *pf_filter;
-    pfring       *pd;
+    char         *filter;
+#endif
+#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
+    pcap_t       *pcap;
 #endif
     uint16_t      rand_port_shifted;    /* random port shifted */
     uint16_t      srv_port;             /* server listening port */

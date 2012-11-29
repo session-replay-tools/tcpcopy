@@ -47,9 +47,9 @@ if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
 fi
 
-AC_ARG_ENABLE(pfring, AS_HELP_STRING([--enable-pfring],[ run tcpcopy client(i.e. tcpcopy) at pfring mode]),,pfring=no)
-if test "x$enable_pfring" = "xyes";then
-	AC_DEFINE(TCPCOPY_PF_RING, 1, [Define if --enable-pfring])
+AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
+if test "x$enable_pcap" = "xyes";then
+	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
 fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
@@ -83,16 +83,17 @@ if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
 
+if test "x$enable_pcap" = "xyes";then
+    LIBS="-lpcap"
+fi
+
+
 if test "x$enable_thread" = "xyes";then
     LIBS="$LIBS -lpthread "
 fi
 
 if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
-fi
-
-if test "x$enable_pfring" = "xyes";then
-    LIBS="$LIBS -lpfring"
 fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"

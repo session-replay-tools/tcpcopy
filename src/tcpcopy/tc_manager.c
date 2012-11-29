@@ -141,8 +141,8 @@ tcp_copy_release_resources()
     release_mysql_user_pwd_info();
 #endif
 
-#if (TCPCOPY_PF_RING)
-    pfring_close(clt_settings.pd);
+#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
+    pcap_close(clt_settings.pcap);
 #endif
 
     if (clt_settings.transfer.mappings != NULL) {

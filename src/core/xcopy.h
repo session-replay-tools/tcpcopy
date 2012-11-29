@@ -30,11 +30,8 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #include <pcap.h>
-#endif
-#if (TCPCOPY_PF_RING)
-#include <pfring.h>
 #endif
 
 #if (INTERCEPT_NFQUEUE)
@@ -67,6 +64,7 @@
 
 /* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
+#define PCAP_RECV_BUF_SIZE 8192
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
@@ -184,7 +182,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE || TCPCOPY_PF_RING)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #define ETHER_ADDR_LEN 0x6
 
 #ifndef ETHERTYPE_VLAN
