@@ -355,6 +355,7 @@ set_details()
     int            rand_port;
     unsigned int   seed;
     struct timeval tp;
+    
 
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -392,6 +393,7 @@ set_details()
         return -1;
     }
 #endif
+
 
     /* daemonize */
     if (clt_settings.do_daemonize) {

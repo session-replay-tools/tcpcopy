@@ -95,7 +95,7 @@ tc_process_pcap_socket_packet(tc_event_t *rev)
             return TC_ERROR;
         }
 
-        if (recv_len == 0 ||recv_len <= ETHERNET_HDR_LEN) {
+        if (recv_len == 0 ||recv_len < ETHERNET_HDR_LEN) {
             tc_log_info(LOG_ERR, 0, "recv len is 0 or less than 16");
             return TC_ERROR;
         }

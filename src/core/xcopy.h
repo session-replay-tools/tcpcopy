@@ -82,6 +82,8 @@
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 
+#define MAX_FILTER_PORTS 32
+
 #define MAX_ALLOWED_IP_NUM 32
 
 /* constants for netlink protocol */
