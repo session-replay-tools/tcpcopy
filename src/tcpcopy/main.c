@@ -59,7 +59,7 @@ usage(void)
            "               enable-offline mode)\n");
 #endif
 #if (TCPCOPY_PCAP)
-    printf("-D <device,>   The name of the interface to Listen on.  This is usually a driver\n"
+    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
            "               name followed by a unit number,for example eth0 for the first\n"
            "               Ethernet interface.\n");
 #endif
@@ -123,11 +123,11 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
 #endif
+#if (TCPCOPY_PCAP)
+         "i:" /* <device,>*/
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
-#endif
-#if (TCPCOPY_PCAP)
-         "D:" /* <device,>*/
 #endif
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
@@ -154,6 +154,11 @@ read_args(int argc, char **argv)
                 clt_settings.pcap_file= optarg;
                 break;
 #endif
+#if (TCPCOPY_PCAP)
+            case 'i':
+                clt_settings.raw_device = optarg;
+                break;
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
                 clt_settings.user_pwd = optarg;
@@ -177,12 +182,7 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
-#if (TCPCOPY_PCAP)
-            case 'D':
-                clt_settings.raw_device = strdup(optarg);
-                break;
-#endif
-            case 'h':
+           case 'h':
                 usage();
                 return -1;
             case 'v':
