@@ -55,8 +55,13 @@ usage(void)
            "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for the\n"
-                           "offline version of TCPCopy when it is configured to run at\n"
-                           "enable-offline mode)\n");
+           "               offline version of TCPCopy when it is configured to run at\n"
+           "               enable-offline mode)\n");
+#endif
+#if (TCPCOPY_PCAP)
+    printf("-D <device,>   The name of the interface to Listen on.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -120,6 +125,9 @@ read_args(int argc, char **argv)
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
+#endif
+#if (TCPCOPY_PCAP)
+         "D:" /* <device,>*/
 #endif
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
