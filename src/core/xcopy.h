@@ -38,6 +38,14 @@
 #undef INTERCEPT_THREAD
 #endif
 
+#if (TCPCOPY_PCAP)
+#undef TCPCOPY_OFFLINE
+#endif
+
+#if (TCPCOPY_OFFLINE)
+#undef TCPCOPY_PCAP
+#endif
+
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
  * tcpcopy works only for mysql which sets
@@ -83,6 +91,8 @@
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 
 #define MAX_FILTER_PORTS 32
+#define MAX_DEVICE_NUM 32
+#define MAX_DEVICE_NAME_LEN 32
 
 #define MAX_ALLOWED_IP_NUM 32
 
@@ -194,7 +204,7 @@ enum packet_classification{
 #define CISCO_HDLC_LEN 4
 #define SLL_HDR_LEN 16
 #define ETHERNET_HDR_LEN (sizeof(struct ethernet_hdr))
-#define DEFAULT_DEVICE     "eth0"
+#define DEFAULT_DEVICE     "any"
 
 /*  
  *  Ethernet II header

@@ -141,7 +141,16 @@ tcp_copy_release_resources()
     release_mysql_user_pwd_info();
 #endif
 
-#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
+#if (TCPCOPY_PCAP)
+    for (i = 0; i < clt_settings.devices.device_num; i++) {
+        if (clt_settings.devices.device[i].pcap != NULL) {
+            pcap_close(clt_settings.devices.device[i].pcap);
+            clt_settings.devices.device[i].pcap = NULL;
+        }
+    }
+#endif
+
+#if (TCPCOPY_OFFLINE)
     pcap_close(clt_settings.pcap);
 #endif
 
@@ -171,9 +180,9 @@ tcp_copy_over(const int sig)
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
-    int                      i, j, fd;
+    int                      i, fd;
 #if (TCPCOPY_PCAP)
-    int                      filter_port_num;
+    int                      j, filter_port_num = 0;
     char                    *pt;
     uint16_t                 filter_port[MAX_FILTER_PORTS];
 #endif
@@ -229,13 +238,14 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         return TC_ERROR;
     }
     pt = clt_settings.filter;
-    strcpy(pt, "tcp port ");
+    strcpy(pt, "tcp dst port ");
     pt = pt + strlen(pt);
     for (i = 0; i < filter_port_num -1; i++) {
         sprintf(pt, "%d or ", ntohs(filter_port[i]));
         pt = pt + strlen(pt);
     }
-    sprintf(pt, "%d", ntohs(filter_port[i]);
+    sprintf(pt, "%d", ntohs(filter_port[i]));
+    tc_log_info(LOG_NOTICE, 0, "filter = %s", clt_settings.filter);
 #endif
 
     /* init packets for processing */

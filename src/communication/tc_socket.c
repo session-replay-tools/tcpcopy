@@ -11,7 +11,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
     bpf_u_int32 net, netmask;      
 
     if (device == NULL) {
-        device = DEFAULT_DEVICE; 
+        return TC_INVALID_SOCKET;
     }
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 

@@ -27,11 +27,46 @@ static unsigned char * get_ip_data(unsigned char *packet, const int pkt_len,
 static void send_packets_from_pcap(int first);
 #endif
 
+
+#if (TCPCOPY_PCAP)
+static int 
+tc_device_set(tc_event_loop_t *event_loop, device_t *device) 
+{
+    int         fd;
+    tc_event_t *ev;
+
+    fd = tc_pcap_socket_in_init(&(device->pcap), device->name,
+            clt_settings.filter);
+    if (fd == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    }
+    ev = tc_event_create(fd, tc_process_pcap_socket_packet, NULL);
+    if (ev == NULL) {
+        return TC_ERROR;
+    }
+
+    if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "add socket(%d) to event loop failed.", fd);
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+#endif
+
 int
 tc_packets_init(tc_event_loop_t *event_loop)
 {
     int         fd;
+#if (TCPCOPY_PCAP)
+    int         i = 0;
+    bool        work;
+    char        ebuf[PCAP_ERRBUF_SIZE];
+    devices_t  *devices;
+    pcap_if_t  *alldevs, *d;
+#else
     tc_event_t *ev;
+#endif
 
     /* init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
@@ -41,33 +76,60 @@ tc_packets_init(tc_event_loop_t *event_loop)
     }
 
 #if (TCPCOPY_PCAP)
-    fd = tc_pcap_socket_in_init(&clt_settings.pcap, clt_settings.device,
-            clt_settings.filter);
-    if (fd == TC_INVALID_SOCKET) {
+    devices = &(clt_settings.devices);
+    if (clt_settings.raw_device == NULL) {
+        if (pcap_findalldevs(&alldevs, ebuf) == -1) {
+            tc_log_info(LOG_ERR, 0, "error in pcap_findalldevs:%s", ebuf);
+            return TC_ERROR;
+        }
+        for (d = alldevs; d; d = d->next)
+        {
+            if (strcmp(d->name, DEFAULT_DEVICE) == 0) {
+                continue;
+            }
+
+            if (i >= MAX_DEVICE_NUM) {
+                tc_log_info(LOG_ERR, 0, "It has too many devices");
+                return TC_ERROR;
+            }
+
+            strcpy(devices->device[i++].name, d->name);
+        }
+        devices->device_num = i;
+    }
+
+    for (i = 0; i < devices->device_num; i++) {
+        if (tc_device_set(event_loop, &(devices->device[i]))
+                == TC_ERROR) 
+        {
+            tc_log_info(LOG_WARN, 0, "device could not work:%s", d->name);
+        } else {
+            work = true;
+        }
+    }
+
+    if (work == false) {
+        tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
         return TC_ERROR;
     }
+
 #else
     /* init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
     tc_socket_set_nonblocking(fd);
-#endif
 
-
-#if (TCPCOPY_PCAP)
-    ev = tc_event_create(fd, tc_process_pcap_socket_packet, NULL);
-#else
     ev = tc_event_create(fd, tc_process_raw_socket_packet, NULL);
-#endif
     if (ev == NULL) {
         return TC_ERROR;
     }
 
     if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
-        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.", fd);
+        tc_log_info(LOG_ERR, 0, "add socket(%d) to event loop failed.", fd);
         return TC_ERROR;
     }
+#endif
 
     return TC_OK;
 }
