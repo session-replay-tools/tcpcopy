@@ -433,7 +433,11 @@ set_details()
 #if (TCPCOPY_PCAP)
     if (clt_settings.raw_device != NULL) {
         tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
-        retrieve_devices();
+        if (strcmp(clt_settings.raw_device, DEFAULT_DEVICE) == 0) {
+            clt_settings.raw_device = NULL; 
+        } else {
+            retrieve_devices();
+        }
     }
 #endif
 

@@ -148,7 +148,7 @@ tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
 
     } else if (UNKNOWN_FLAG == flag) {
         tc_log_info(level, err,
-                    "unkown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
+                    "unknown packet:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
                     ntohs(tcp_header->dest), pack_size,
                     seq, ack_seq);
