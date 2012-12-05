@@ -90,7 +90,7 @@ Note:
     3) Root privilege is required.
     4) To know more about TCPCopy, refer to the following document
        (https://github.com/downloads/wangbin579/tcpcopy/TCPCopy_0.6.5_Manual.pdf)
-    5) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx:A comparison under real online application"
+    5) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx: A comparison under real online application"
        (https://github.com/wangbin579/tcpcopy/downloads)
     6) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
 
