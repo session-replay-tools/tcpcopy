@@ -24,8 +24,14 @@ Scenarios:
 
 Usage:
     1) Install
-       a) download the source code from github:
-          https://github.com/downloads/wangbin579/tcpcopy/tcpcopy-0.6.5.tar.gz
+       a) obtain the source code with the following steps
+            a1) download tcpcopy-x.x.x.tar.gz at https://github.com/wangbin579/tcpcopy/downloads 
+            a2) tar -zxvf tcpcopy-x.x.x.tar.gz
+            a3) cd tcpcopy-x.x.x
+          You could also download it in the following method if you are a git user
+            a1) git clone http://github.com/wangbin579/tcpcopy
+            a2) cd tcpcopy
+            a3) sh autogen.sh
        b) ./configure
        c) make
        d) make install
