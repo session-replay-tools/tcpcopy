@@ -25,11 +25,10 @@ Scenarios:
 Usage:
     1) Install
        a) download the source code from github:
-          git clone http://github.com/wangbin579/tcpcopy
-       b) sh autogen.sh
-       c) ./configure
-       d) make
-       e) make install
+          https://github.com/downloads/wangbin579/tcpcopy/tcpcopy-0.6.5.tar.gz
+       b) ./configure
+       c) make
+       d) make install
 
     2) Run:
        a) on the target host (root privilege is required):
