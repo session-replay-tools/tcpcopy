@@ -218,6 +218,12 @@ change_client_auth_content(unsigned char *payload, int length,
     str = (char *) p;
     /* retrieve user */
     memset(user, 0, 256);
+
+    len = strlen(str);
+    if (len >= 256) {
+        tc_log_info(LOG_ERR, 0, "user len is too long:%s,%u", str, len);
+        return 0;
+    }
     strcpy(user, str);
 
     pwd = retrieve_user_pwd(user);
@@ -229,7 +235,7 @@ change_client_auth_content(unsigned char *payload, int length,
     }
 
     /* skip user */
-    p = p + strlen(str) + 1;
+    p = p + len + 1;
 
     /* skip scramble_buff length */
     p = p + 1;
