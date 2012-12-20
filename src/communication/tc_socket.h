@@ -23,10 +23,11 @@ int tc_raw_socket_in_init();
 int tc_raw_socket_out_init();
 int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);
 
+#if (!INTERCEPT_NFQUEUE)
 int tc_nl_socket_init();
 int tc_nl_socket_recv(int fd, char *buffer, size_t len);
 
-#if (INTERCEPT_NFQUEUE)
+#else
 int tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
         nfq_callback *cb);
 int tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv);

@@ -115,6 +115,7 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
     return TC_OK;
 }
 
+#if (!INTERCEPT_NFQUEUE)
 int
 tc_nl_socket_init()
 {
@@ -207,7 +208,8 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
     return TC_OK;
 }
 
-#if (INTERCEPT_NFQUEUE)
+#else
+
 int 
 tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
         nfq_callback *cb)

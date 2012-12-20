@@ -9,9 +9,11 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#if (!INTERCEPT_NFQUEUE)
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv4/ip_queue.h>
+#endif
 #include <arpa/inet.h>
 #include <fcntl.h>
 #include <sys/syscall.h>
