@@ -13,6 +13,9 @@
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/netfilter_ipv4/ip_queue.h>
+#else
+#include <linux/netfilter.h> 
+#include <libnetfilter_queue/libnetfilter_queue.h>
 #endif
 #include <arpa/inet.h>
 #include <fcntl.h>

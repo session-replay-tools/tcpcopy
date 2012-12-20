@@ -1,8 +1,4 @@
 #include <xcopy.h>
-#if (INTERCEPT_NFQUEUE)
-#include <linux/netfilter.h> 
-#include <libnetfilter_queue/libnetfilter_queue.h>
-#endif
 #if (INTERCEPT_THREAD)
 #include <pthread.h>
 #endif
