@@ -57,6 +57,12 @@ if test "x$enable_thread" = "xyes";then
     AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
+AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode(such as lvs)]),,dr=no)
+if test "x$enable_dr" = "xyes";then
+    AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
+fi
+
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h])

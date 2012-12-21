@@ -314,6 +314,38 @@ send_faked_passive_rst(session_t *s)
     wrap_send_ip_packet(s, faked_rst_buf, true);
 }
 
+#if (TCPCOPY_DR)
+static bool
+send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
+        uint16_t client_port, uint16_t type)
+{
+    int            i, fd;
+    bool           result = false;
+    msg_client_t   msg;
+
+    for (i = 0; i < clt_settings.real_servers.num; i++) {
+        fd = clt_settings.real_servers.fds[i];
+        if (fd == -1) {
+            tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
+                    ntohl(local_ip), ntohs(local_port));
+            continue;
+        }
+
+        msg.client_ip = client_ip;
+        msg.client_port = client_port;
+        msg.type = type;
+
+        if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+            tc_log_info(LOG_ERR, 0, "msg client send error:%u", ntohs(client_port));
+            continue;
+        }
+        result = true;
+    }
+
+    return result;
+}
+ 
+#else
 static bool
 send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         uint16_t client_port, uint16_t type)
@@ -339,7 +371,7 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
 
     return true;
 }
-
+#endif
 
 static void
 session_rel_dynamic_mem(session_t *s)
