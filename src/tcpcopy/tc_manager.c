@@ -141,6 +141,19 @@ tcp_copy_release_resources()
     release_mysql_user_pwd_info();
 #endif
 
+#if (TCPCOPY_PCAP)
+    for (i = 0; i < clt_settings.devices.device_num; i++) {
+        if (clt_settings.devices.device[i].pcap != NULL) {
+            pcap_close(clt_settings.devices.device[i].pcap);
+            clt_settings.devices.device[i].pcap = NULL;
+        }
+    }
+#endif
+
+#if (TCPCOPY_OFFLINE)
+    pcap_close(clt_settings.pcap);
+#endif
+
     if (clt_settings.transfer.mappings != NULL) {
 
         for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -168,6 +181,11 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
+#if (TCPCOPY_PCAP)
+    int                      j, filter_port_num = 0;
+    char                    *pt;
+    uint16_t                 filter_port[MAX_FILTER_PORTS];
+#endif
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
@@ -180,12 +198,28 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     address_init();
 
+#if (TCPCOPY_PCAP)
+    memset((void *)filter_port, 0, MAX_FILTER_PORTS<<1);
+#endif
+
     /* add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
         pair = mappings[i];
         target_ip = pair->target_ip;
+
+#if (TCPCOPY_PCAP)
+        for (j = 0; j < MAX_FILTER_PORTS; j++) {
+            if (filter_port[j] == 0) {
+                filter_port[j] = pair->online_port;
+                filter_port_num++;
+                break;
+            }else if (filter_port[j] == pair->online_port) {
+                break;
+            }
+        }
+#endif
 
         fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
         if (fd == TC_INVALID_SOCKET) {
@@ -197,6 +231,22 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
                     ntohl(target_ip), clt_settings.srv_port);
     }
+
+#if (TCPCOPY_PCAP)
+    if (filter_port_num == 0) {
+        tc_log_info(LOG_ERR, 0, "filter_port_num is zero");
+        return TC_ERROR;
+    }
+    pt = clt_settings.filter;
+    strcpy(pt, "tcp dst port ");
+    pt = pt + strlen(pt);
+    for (i = 0; i < filter_port_num -1; i++) {
+        sprintf(pt, "%d or ", ntohs(filter_port[i]));
+        pt = pt + strlen(pt);
+    }
+    sprintf(pt, "%d", ntohs(filter_port[i]));
+    tc_log_info(LOG_NOTICE, 0, "filter = %s", clt_settings.filter);
+#endif
 
     /* init packets for processing */
 #if (TCPCOPY_OFFLINE)

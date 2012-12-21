@@ -4,11 +4,14 @@
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
-static pcap_t        *pcap = NULL;
 static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
 #endif
 
+#if (TCPCOPY_PCAP)
+static int tc_process_pcap_socket_packet(tc_event_t *rev);
+#else
 static int tc_process_raw_socket_packet(tc_event_t *rev);
+#endif
 static bool process_packet(bool backup, char *packet, int length);
 static void replicate_packs(char *packet, int length, int replica_num);
 static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag);
@@ -24,11 +27,46 @@ static unsigned char * get_ip_data(unsigned char *packet, const int pkt_len,
 static void send_packets_from_pcap(int first);
 #endif
 
+
+#if (TCPCOPY_PCAP)
+static int 
+tc_device_set(tc_event_loop_t *event_loop, device_t *device) 
+{
+    int         fd;
+    tc_event_t *ev;
+
+    fd = tc_pcap_socket_in_init(&(device->pcap), device->name,
+            clt_settings.filter);
+    if (fd == TC_INVALID_SOCKET) {
+        return TC_ERROR;
+    }
+    ev = tc_event_create(fd, tc_process_pcap_socket_packet, NULL);
+    if (ev == NULL) {
+        return TC_ERROR;
+    }
+
+    if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "add socket(%d) to event loop failed.", fd);
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+#endif
+
 int
 tc_packets_init(tc_event_loop_t *event_loop)
 {
     int         fd;
+#if (TCPCOPY_PCAP)
+    int         i = 0;
+    bool        work;
+    char        ebuf[PCAP_ERRBUF_SIZE];
+    devices_t  *devices;
+    pcap_if_t  *alldevs, *d;
+#else
     tc_event_t *ev;
+#endif
 
     /* init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
@@ -37,11 +75,49 @@ tc_packets_init(tc_event_loop_t *event_loop)
         tc_raw_socket_out = fd;
     }
 
+#if (TCPCOPY_PCAP)
+    devices = &(clt_settings.devices);
+    if (clt_settings.raw_device == NULL) {
+        if (pcap_findalldevs(&alldevs, ebuf) == -1) {
+            tc_log_info(LOG_ERR, 0, "error in pcap_findalldevs:%s", ebuf);
+            return TC_ERROR;
+        }
+        for (d = alldevs; d; d = d->next)
+        {
+            if (strcmp(d->name, DEFAULT_DEVICE) == 0) {
+                continue;
+            }
+
+            if (i >= MAX_DEVICE_NUM) {
+                tc_log_info(LOG_ERR, 0, "It has too many devices");
+                return TC_ERROR;
+            }
+
+            strcpy(devices->device[i++].name, d->name);
+        }
+        devices->device_num = i;
+    }
+
+    for (i = 0; i < devices->device_num; i++) {
+        if (tc_device_set(event_loop, &(devices->device[i]))
+                == TC_ERROR) 
+        {
+            tc_log_info(LOG_WARN, 0, "device could not work:%s", d->name);
+        } else {
+            work = true;
+        }
+    }
+
+    if (work == false) {
+        tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
+        return TC_ERROR;
+    }
+
+#else
     /* init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
-
     tc_socket_set_nonblocking(fd);
 
     ev = tc_event_create(fd, tc_process_raw_socket_packet, NULL);
@@ -50,13 +126,59 @@ tc_packets_init(tc_event_loop_t *event_loop)
     }
 
     if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
-        tc_log_info(LOG_ERR, 0, "add raw socket(%d) to event loop failed.", fd);
+        tc_log_info(LOG_ERR, 0, "add socket(%d) to event loop failed.", fd);
         return TC_ERROR;
+    }
+#endif
+
+    return TC_OK;
+}
+
+
+
+#if (TCPCOPY_PCAP)
+static int
+tc_process_pcap_socket_packet(tc_event_t *rev)
+{
+    int  recv_len;
+    char recv_buf[PCAP_RECV_BUF_SIZE], *ip_header;
+    struct ethernet_hdr *ether;
+
+    for ( ;; ) {
+
+        recv_len = recvfrom(rev->fd, recv_buf, PCAP_RECV_BUF_SIZE, 0, NULL, NULL);
+
+        if (recv_len == -1) {
+            if (errno == EAGAIN) {
+                return TC_OK;
+            }
+
+            tc_log_info(LOG_ERR, errno, "recvfrom");
+            return TC_ERROR;
+        }
+
+        if (recv_len == 0 ||recv_len < ETHERNET_HDR_LEN) {
+            tc_log_info(LOG_ERR, 0, "recv len is 0 or less than 16");
+            return TC_ERROR;
+        }
+
+        ether = (struct ethernet_hdr *)recv_buf;
+        if (ntohs(ether->ether_type) != 0x800) {
+            return TC_OK;
+        }
+
+        ip_header = recv_buf + ETHERNET_HDR_LEN;
+        recv_len = recv_len - ETHERNET_HDR_LEN;
+
+        if (dispose_packet(ip_header, recv_len, NULL) == TC_ERROR) {
+            return TC_ERROR;
+        }
     }
 
     return TC_OK;
 }
 
+#else
 static int
 tc_process_raw_socket_packet(tc_event_t *rev)
 {
@@ -88,6 +210,7 @@ tc_process_raw_socket_packet(tc_event_t *rev)
 
     return TC_OK;
 }
+#endif
 
 static bool
 process_packet(bool backup, char *packet, int length)
@@ -251,7 +374,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
         return TC_ERROR;
     }
 
-    if ((pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
+    if ((clt_settings.pcap = pcap_open_offline(pcap_file, ebuf)) == NULL) {
         tc_log_info(LOG_ERR, 0, "open %s" , ebuf);
         fprintf(stderr, "open %s\n", ebuf);
         return TC_ERROR;
@@ -352,6 +475,7 @@ get_ip_data(unsigned char *packet, const int pkt_len, int *p_l2_len)
 {
     int      l2_len;
     u_char  *ptr;
+    pcap_t  *pcap = clt_settings.pcap;
 
     l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
     *p_l2_len = l2_len;
@@ -379,8 +503,11 @@ send_packets_from_pcap(int first)
 {
     int                 l2_len, ip_pack_len, p_valid_flag = 0;
     bool                stop;
+    pcap_t             *pcap;
     unsigned char      *pkt_data, *ip_data;
     struct pcap_pkthdr  pkt_hdr;  
+
+    pcap = clt_settings.pcap;
 
     if (pcap == NULL || read_pcap_over) {
         return;

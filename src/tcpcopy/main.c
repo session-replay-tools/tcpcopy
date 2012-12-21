@@ -169,6 +169,11 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
+#if (TCPCOPY_PCAP)
+            case 'D':
+                clt_settings.raw_device = strdup(optarg);
+                break;
+#endif
             case 'h':
                 usage();
                 return -1;
@@ -326,6 +331,50 @@ retrieve_target_addresses(char *raw_transfer,
     return 0;
 }
 
+#if (TCPCOPY_PCAP)
+/* retrieve devices */
+static int
+retrieve_devices()
+{
+    int          count = 0;
+    size_t       len;
+    devices_t   *devices;
+    const char  *split, *p;
+
+    p = clt_settings.raw_device;
+    devices = &(clt_settings.devices);
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            len = (size_t) (split - p);
+        } else {
+            len = strlen(p);
+        }
+
+        strncpy(devices->device[count].name, p, len);
+
+        if (count == MAX_DEVICE_NUM) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for devices");
+            break;
+        }
+
+        count++;
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+    }
+
+    devices->device_num = count;
+
+    return 1;
+}
+#endif
+
+
 static int
 sigignore(int sig)
 {
@@ -347,6 +396,7 @@ set_details()
     int            rand_port;
     unsigned int   seed;
     struct timeval tp;
+    
 
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -372,6 +422,13 @@ set_details()
         return -1;
     }
 #endif
+#if (TCPCOPY_PCAP)
+    if (clt_settings.raw_device != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
+        retrieve_devices();
+    }
+#endif
+
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (clt_settings.user_pwd != NULL) {
@@ -384,6 +441,7 @@ set_details()
         return -1;
     }
 #endif
+
 
     /* daemonize */
     if (clt_settings.do_daemonize) {

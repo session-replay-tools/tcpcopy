@@ -35,12 +35,20 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #include <pcap.h>
 #endif
 
 #if (INTERCEPT_NFQUEUE)
 #undef INTERCEPT_THREAD
+#endif
+
+#if (TCPCOPY_PCAP)
+#undef TCPCOPY_OFFLINE
+#endif
+
+#if (TCPCOPY_OFFLINE)
+#undef TCPCOPY_PCAP
 #endif
 
 /* 
@@ -69,6 +77,7 @@
 
 /* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
+#define PCAP_RECV_BUF_SIZE 8192
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
@@ -85,6 +94,10 @@
 /* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
+
+#define MAX_FILTER_PORTS 32
+#define MAX_DEVICE_NUM 32
+#define MAX_DEVICE_NAME_LEN 32
 
 #define MAX_ALLOWED_IP_NUM 32
 
@@ -186,7 +199,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #define ETHER_ADDR_LEN 0x6
 
 #ifndef ETHERTYPE_VLAN
@@ -195,6 +208,8 @@ enum packet_classification{
 
 #define CISCO_HDLC_LEN 4
 #define SLL_HDR_LEN 16
+#define ETHERNET_HDR_LEN (sizeof(struct ethernet_hdr))
+#define DEFAULT_DEVICE     "any"
 
 /*  
  *  Ethernet II header
@@ -205,7 +220,7 @@ struct ethernet_hdr {
     uint8_t ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
-#endif /* TCPCOPY_OFFLINE */
+#endif 
 
 /* global functions */
 int daemonize();

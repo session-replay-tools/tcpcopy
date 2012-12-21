@@ -18,6 +18,15 @@ typedef struct {
     ip_port_pair_mapping_t **mappings;
 } ip_port_pair_mappings_t;
 
+typedef struct device_s{
+    char    name[MAX_DEVICE_NAME_LEN];
+    pcap_t *pcap;
+}device_t;
+
+typedef struct devices_s{
+    int             device_num;
+    device_t        device[MAX_DEVICE_NUM];
+}devices_t;
 
 typedef struct xcopy_clt_settings {
     unsigned int  replica_num:10;       /* replicated number of each request */
@@ -39,6 +48,14 @@ typedef struct xcopy_clt_settings {
     char         *log_path;             /* error log path */
 #if (TCPCOPY_OFFLINE)
     char         *pcap_file;            /* pcap file */
+#endif
+#if (TCPCOPY_PCAP)
+    char         *raw_device;
+    devices_t     devices;
+    char          filter[512];
+#endif
+#if (TCPCOPY_OFFLINE)
+    pcap_t       *pcap;
 #endif
     uint16_t      rand_port_shifted;    /* random port shifted */
     uint16_t      srv_port;             /* server listening port */
