@@ -55,8 +55,13 @@ usage(void)
            "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for the\n"
-                           "offline version of TCPCopy when it is configured to run at\n"
-                           "enable-offline mode)\n");
+           "               offline version of TCPCopy when it is configured to run at\n"
+           "               enable-offline mode)\n");
+#endif
+#if (TCPCOPY_PCAP)
+    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -118,6 +123,9 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
 #endif
+#if (TCPCOPY_PCAP)
+         "i:" /* <device,>*/
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
 #endif
@@ -146,6 +154,11 @@ read_args(int argc, char **argv)
                 clt_settings.pcap_file= optarg;
                 break;
 #endif
+#if (TCPCOPY_PCAP)
+            case 'i':
+                clt_settings.raw_device = optarg;
+                break;
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
                 clt_settings.user_pwd = optarg;
@@ -169,7 +182,7 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
-            case 'h':
+           case 'h':
                 usage();
                 return -1;
             case 'v':
@@ -326,6 +339,50 @@ retrieve_target_addresses(char *raw_transfer,
     return 0;
 }
 
+#if (TCPCOPY_PCAP)
+/* retrieve devices */
+static int
+retrieve_devices()
+{
+    int          count = 0;
+    size_t       len;
+    devices_t   *devices;
+    const char  *split, *p;
+
+    p = clt_settings.raw_device;
+    devices = &(clt_settings.devices);
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            len = (size_t) (split - p);
+        } else {
+            len = strlen(p);
+        }
+
+        strncpy(devices->device[count].name, p, len);
+
+        if (count == MAX_DEVICE_NUM) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for devices");
+            break;
+        }
+
+        count++;
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+    }
+
+    devices->device_num = count;
+
+    return 1;
+}
+#endif
+
+
 static int
 sigignore(int sig)
 {
@@ -347,6 +404,7 @@ set_details()
     int            rand_port;
     unsigned int   seed;
     struct timeval tp;
+    
 
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -372,6 +430,17 @@ set_details()
         return -1;
     }
 #endif
+#if (TCPCOPY_PCAP)
+    if (clt_settings.raw_device != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
+        if (strcmp(clt_settings.raw_device, DEFAULT_DEVICE) == 0) {
+            clt_settings.raw_device = NULL; 
+        } else {
+            retrieve_devices();
+        }
+    }
+#endif
+
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (clt_settings.user_pwd != NULL) {
@@ -384,6 +453,7 @@ set_details()
         return -1;
     }
 #endif
+
 
     /* daemonize */
     if (clt_settings.do_daemonize) {

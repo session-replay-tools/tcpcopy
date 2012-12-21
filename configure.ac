@@ -42,10 +42,14 @@ if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
 fi
 
-
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+fi
+
+AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
+if test "x$enable_pcap" = "xyes";then
+	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
 fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
@@ -78,6 +82,11 @@ AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
+
+if test "x$enable_pcap" = "xyes";then
+    LIBS="-lpcap"
+fi
+
 
 if test "x$enable_thread" = "xyes";then
     LIBS="$LIBS -lpthread "

@@ -1,6 +1,62 @@
  
 #include <xcopy.h>
 
+#if (TCPCOPY_PCAP)
+int
+tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
+{
+    int         fd;
+    char        ebuf[PCAP_ERRBUF_SIZE]; 
+    struct      bpf_program fp;
+    bpf_u_int32 net, netmask;      
+
+    if (device == NULL) {
+        return TC_INVALID_SOCKET;
+    }
+    tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
+
+    *ebuf = '\0';
+    *pd = pcap_open_live(device, PCAP_RECV_BUF_SIZE, 0, 1000, ebuf);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, 0, "pcap error:%s", ebuf);
+        return TC_INVALID_SOCKET;
+    }else if (*ebuf) {
+        tc_log_info(LOG_WARN, 0, "pcap warn:%s", ebuf);
+    }
+
+    if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
+        net = 0;
+        netmask = 0;
+        tc_log_info(LOG_WARN, 0, "lookupnet:%s", ebuf);
+    }
+
+    if (pcap_compile(*pd, &fp, pcap_filter, 0, netmask) == -1) {
+        tc_log_info(LOG_ERR, 0, "couldn't parse filter %s: %s", 
+                pcap_filter, pcap_geterr(*pd));
+        return TC_INVALID_SOCKET;
+    }
+    if (pcap_setfilter(*pd, &fp) == -1) {
+        tc_log_info(LOG_ERR, 0, "couldn't install filter %s: %s",
+                pcap_filter, pcap_geterr(*pd));
+        return TC_INVALID_SOCKET;
+    }
+
+    if (pcap_get_selectable_fd(*pd) == -1) {
+        tc_log_info(LOG_ERR, 0, "pcap_get_selectable_fd fails"); 
+        return TC_INVALID_SOCKET;
+    }
+
+    if (pcap_setnonblock(*pd, 1, ebuf) == -1) {
+        tc_log_info(LOG_ERR, 0, "pcap_setnonblock failed: %s", ebuf);
+        return TC_INVALID_SOCKET;
+    }
+
+    fd = pcap_get_selectable_fd(*pd);
+
+    return fd;
+}
+
+#endif
 
 int
 tc_raw_socket_in_init()
