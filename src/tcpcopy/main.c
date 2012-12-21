@@ -55,8 +55,13 @@ usage(void)
            "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for the\n"
-                           "offline version of TCPCopy when it is configured to run at\n"
-                           "enable-offline mode)\n");
+           "               offline version of TCPCopy when it is configured to run at\n"
+           "               enable-offline mode)\n");
+#endif
+#if (TCPCOPY_PCAP)
+    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -118,6 +123,9 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
 #endif
+#if (TCPCOPY_PCAP)
+         "i:" /* <device,>*/
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql*/
 #endif
@@ -146,6 +154,11 @@ read_args(int argc, char **argv)
                 clt_settings.pcap_file= optarg;
                 break;
 #endif
+#if (TCPCOPY_PCAP)
+            case 'i':
+                clt_settings.raw_device = optarg;
+                break;
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
                 clt_settings.user_pwd = optarg;
@@ -169,12 +182,7 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
-#if (TCPCOPY_PCAP)
-            case 'D':
-                clt_settings.raw_device = strdup(optarg);
-                break;
-#endif
-            case 'h':
+           case 'h':
                 usage();
                 return -1;
             case 'v':
@@ -425,7 +433,11 @@ set_details()
 #if (TCPCOPY_PCAP)
     if (clt_settings.raw_device != NULL) {
         tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
-        retrieve_devices();
+        if (strcmp(clt_settings.raw_device, DEFAULT_DEVICE) == 0) {
+            clt_settings.raw_device = NULL; 
+        } else {
+            retrieve_devices();
+        }
     }
 #endif
 
