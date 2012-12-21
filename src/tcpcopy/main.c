@@ -136,6 +136,9 @@ read_args(int argc, char **argv)
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
          "t:" /* set the session timeout limit */
+#if (TCPCOPY_DR)
+         "s:" /* real server ip addresses behind lvs */
+#endif
          "l:" /* error log file */
          "P:" /* save PID in file */
          "h"  /* help, licence info */
@@ -179,6 +182,11 @@ read_args(int argc, char **argv)
             case 'M':
                 clt_settings.mtu = atoi(optarg);
                 break;
+#if (TCPCOPY_DR)
+            case 's':
+                clt_settings.raw_rs_ip_list= optarg;
+                break;
+#endif
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
@@ -398,6 +406,51 @@ sigignore(int sig)
     return 0;
 }
 
+#if (TCPCOPY_DR)
+static int retrieve_real_servers() 
+{
+    int          count = 0;
+    char         tmp[32];
+    size_t       len;
+    uint32_t     address;
+    const char  *split, *p;
+
+    memset(tmp, 0, 32);
+    p = clt_settings.raw_rs_ip_list;
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            len = (size_t) (split - p);
+        } else {
+            len = strlen(p);
+        }
+
+        strncpy(tmp, p, len);
+        address = inet_addr(tmp);
+        clt_settings.real_servers.ips[count++] = address;
+
+        if (count == MAX_REAL_SERVERS) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for real servers");
+            break;
+        }
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+
+        memset(tmp, 0, 32);
+    }
+
+    clt_settings.real_servers.num = count;
+
+    return 1;
+
+}
+#endif
+
 static int
 set_details()
 {
@@ -454,6 +507,17 @@ set_details()
     }
 #endif
 
+#if (TCPCOPY_DR)
+    /* retrieve real server ip addresses  */
+    if (clt_settings.raw_rs_ip_list != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "-s parameter:%s", 
+                clt_settings.raw_rs_ip_list);
+        retrieve_real_servers();
+    } else {
+        tc_log_info(LOG_WARN, 0, "no real server ip addresses");
+        return -1;
+    }
+#endif
 
     /* daemonize */
     if (clt_settings.do_daemonize) {

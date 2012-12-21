@@ -28,6 +28,12 @@ typedef struct devices_s{
     device_t        device[MAX_DEVICE_NUM];
 }devices_t;
 
+typedef struct real_ip_addr_s {
+    uint32_t    ips[MAX_REAL_SERVERS];
+    uint32_t    fds[MAX_REAL_SERVERS];
+    int         num;
+} real_ip_addr_t;
+
 typedef struct xcopy_clt_settings {
     unsigned int  replica_num:10;       /* replicated number of each request */
     unsigned int  factor:8;             /* port shift factor */
@@ -63,6 +69,10 @@ typedef struct xcopy_clt_settings {
                                            (localhost transfered ip) */
 #ifdef TCPCOPY_MYSQL_ADVANCED
     char         *user_pwd;             /* user password string for mysql */
+#endif
+#if (TCPCOPY_DR)
+    char             *raw_rs_ip_list;   /* raw ip list */
+    real_ip_addr_t      real_servers;   /* the real servers behind lvs */
 #endif
     ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
                                            target_ip target_port */
