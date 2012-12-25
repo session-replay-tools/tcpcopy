@@ -942,6 +942,8 @@ send_reserved_packets(session_t *s)
             if (s->sm.rtt_cal == RTT_CAL) {
                 resp_diff = tc_milliscond_time() - s->resq_unack_time;
                 if (resp_diff < s->rtt) {
+                    tc_log_info(LOG_NOTICE, 0, "rtt:%ld,resp diff:%ld",
+                            s->rtt, resp_diff);
                     break;
                 }
                 s->resq_unack_time = 0;
@@ -958,17 +960,11 @@ send_reserved_packets(session_t *s)
             if (cont_len > 0) {
                 s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
                 s->req_cont_cur_ack_seq  = ntohl(tcp_header->ack_seq);
+                total_cont_sent += cont_len;
             }
 
             wrap_send_ip_packet(s, data, true);
 
-#if (TCPCOPY_PAPER)
-            if (cont_len == 0) {
-                break;
-            }
-#endif
-
-            total_cont_sent += cont_len;
         }
 
         tmp_ln = ln;
@@ -976,8 +972,13 @@ send_reserved_packets(session_t *s)
         link_list_remove(list, tmp_ln);
         free(data);
         free(tmp_ln);
-
         omit_transfer = false;
+#if (TCPCOPY_PAPER)
+        if (cont_len == 0) {
+            break;
+        }
+#endif
+ 
     }
 
     return count;
@@ -2609,6 +2610,14 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
+
+#if (TCPCOPY_PAPER)
+    if (s->unsend_packets->size > 0) {
+        save_packet(s->unsend_packets, ip_header, tcp_header);
+        send_reserved_packets(s);
+        return;
+    }
+#endif
 
     /* retrieve the content length of tcp payload */
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
