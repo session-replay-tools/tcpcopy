@@ -569,6 +569,10 @@ main(int argc, char **argv)
     if (read_args(argc, argv) == -1) {
         return -1;
     }
+    
+    if (clt_settings.log_path == NULL) {
+        clt_settings.log_path = "tcpcopy.log";
+    }
 
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;

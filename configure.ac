@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(tcpcopy, 0.6.5, wangbin579@gmail.com)
+AC_INIT(tcpcopy, 0.6.6, wangbin579@gmail.com)
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 
 
-AM_INIT_AUTOMAKE(tcpcopy,0.6.5)
+AM_INIT_AUTOMAKE(tcpcopy,0.6.6)
 
 
 # Checks for programs.
@@ -62,6 +62,15 @@ if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
 fi
 
+AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single],[run tcpcopy at non-distributed mode]),,single=no)
+if test "x$enable_single" = "xyes";then
+    AC_DEFINE(TCPCOPY_SINGLE, 1, [Define if --enable-single])
+fi
+
+AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode(only valid for high latency web applications)]),,paper=no)
+if test "x$enable_paper" = "xyes";then
+    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
+fi
 
 # Checks for header files.
 AC_HEADER_STDC

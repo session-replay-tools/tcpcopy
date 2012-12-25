@@ -67,6 +67,12 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
+#if (TCPCOPY_SINGLE)  
+    if (srv_settings.router_fd > 0) {
+        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
+        srv_settings.router_fd = fd;
+    }
+#endif
 
     return TC_OK;
 }
@@ -325,7 +331,7 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
         } else {
 
             tot_resp_packs++;
-            router_update(ip_hdr);
+            router_update(srv_settings.router_fd, ip_hdr);
 
             tc_check_cleaning();
 
@@ -446,7 +452,7 @@ tc_nl_event_process(tc_event_t *rev)
             /* drop the packet */
             put_nl_verdict_to_pool(rev->fd, NF_DROP, packet_id);
 #else
-            router_update(ip_hdr);
+            router_update(srv_settings.router_fd, ip_hdr);
 
             tc_check_cleaning();
 
@@ -492,7 +498,7 @@ interception_process_msg(void *tid)
             tc_log_info(LOG_WARN, 0, "ip header is null");
         }
 
-        router_update(ip_hdr, len);
+        router_update(srv_settings.router_fd, ip_hdr, len);
 
         tc_check_cleaning();
 

@@ -153,6 +153,12 @@
 #define MAX_PAYLOAD_LEN  128
 #endif
 
+#if (TCPCOPY_PAPER) 
+#define RTT_INIT 0
+#define RTT_FIRST_RECORED 1
+#define RTT_CAL 2
+#endif
+
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
 

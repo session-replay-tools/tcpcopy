@@ -384,8 +384,10 @@ session_rel_dynamic_mem(session_t *s)
 
         /* send the last rst packet to backend */
         send_faked_passive_rst(s);
+#if (!TCPCOPY_SINGLE)
         send_router_info(s->online_addr, s->online_port, s->src_addr,
                 htons(s->src_h_port), CLIENT_DEL);
+#endif
         s->sm.sess_over = 1;
     }
 
@@ -816,6 +818,9 @@ send_reserved_packets(session_t *s)
     int               count = 0, total_cont_sent = 0; 
     bool              need_pause = false, cand_pause = false,
                       omit_transfer = false; 
+#if (TCPCOPY_PAPER)
+    long              resp_diff;
+#endif
     uint16_t          size_ip, cont_len;
     uint32_t          cur_ack, cur_seq, diff;
     link_list        *list;
@@ -922,12 +927,26 @@ send_reserved_packets(session_t *s)
             }
         } else if (cont_len == 0) {
 
+#if (!TCPCOPY_PAPER)
             /* waiting the response pack or the sec handshake pack */
             if (s->sm.candidate_response_waiting
                     || SYN_CONFIRM != s->sm.status)
             {
                 omit_transfer = true;
             }
+#else
+            if (s->sm.candidate_response_waiting) {
+                break;
+            }
+            
+            if (s->sm.rtt_cal == RTT_CAL) {
+                resp_diff = tc_milliscond_time() - s->resq_unack_time;
+                if (resp_diff < s->rtt) {
+                    break;
+                }
+                s->resq_unack_time = 0;
+            }
+#endif
         }
         if (!omit_transfer) {
 
@@ -942,6 +961,13 @@ send_reserved_packets(session_t *s)
             }
 
             wrap_send_ip_packet(s, data, true);
+
+#if (TCPCOPY_PAPER)
+            if (cont_len == 0) {
+                break;
+            }
+#endif
+
             total_cont_sent += cont_len;
         }
 
@@ -1605,13 +1631,14 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_log_debug1(LOG_DEBUG, 0, "fake syn with easy:%u", s->src_h_port);
     }
         
-
+#if (!TCPCOPY_SINGLE)
     /* send route info to backend */
     result = send_router_info(ip_header->daddr, tcp_header->dest,
             ip_header->saddr, tcp_header->source, CLIENT_ADD);
     if (!result) {
         return;
     }
+#endif
 
     send_faked_syn(s, ip_header, tcp_header);
 
@@ -2101,8 +2128,15 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
 
 #endif
 
+
+#if (!TCPCOPY_PAPER)
         /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
+#else
+        if (s->resq_unack_time == 0) {
+            s->resq_unack_time = tc_milliscond_time();
+        }
+#endif
 
 #if (TCPCOPY_MYSQL_BASIC)
         if (s->sm.candidate_response_waiting || is_greet)
@@ -2168,6 +2202,10 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
 
     s->sm.req_syn_ok = 1;
 
+#if (TCPCOPY_PAPER)
+    s->sm.rtt_cal = RTT_FIRST_RECORED;
+    s->rtt = tc_milliscond_time();
+#endif
     tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 
 #if (TCPCOPY_MYSQL_BASIC)
@@ -2456,6 +2494,14 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
             wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             return;
         } else if (SYN_CONFIRM == s->sm.status) {
+#if (TCPCOPY_PAPER)
+            if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
+                s->rtt = tc_milliscond_time() - s->rtt;
+                s->sm.rtt_cal = RTT_CAL;
+            } else if (s->sm.rtt_cal != RTT_CAL) {
+                s->rtt = 0;
+            }
+#endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
                 return;
@@ -2463,7 +2509,15 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
         }
     }
 
+#if (!TCPCOPY_PAPER)
     tc_log_debug1(LOG_DEBUG, 0, "drop packet:%u", s->src_h_port);
+#else
+    /* this is for adding response latency(only valid for high latency) */
+    save_packet(s->unsend_packets, ip_header, tcp_header);
+    if (!s->sm.candidate_response_waiting) {
+        send_reserved_packets(s);
+    }
+#endif
 }
 
 
@@ -2807,8 +2861,10 @@ process(char *packet, int pack_src)
                     tc_log_info(LOG_NOTICE, 0, "init for next sess from bak");
                     restore_buffered_next_session(s);
                 } else {
+#if (!TCPCOPY_SINGLE)
                     send_router_info(s->online_addr, s->online_port,
                             ip_header->daddr, tcp_header->dest, CLIENT_DEL);
+#endif
                     session_rel_dynamic_mem(s);
                     if (!hash_del(sessions_table, s->hash_key)) {
                         tc_log_info(LOG_ERR, 0, "wrong del:%u", s->src_h_port);
@@ -2863,11 +2919,15 @@ process(char *packet, int pack_src)
                 }
             }
 
+#if (!TCPCOPY_SINGLE)
             result = send_router_info(ip_header->daddr, tcp_header->dest, 
                     ip_header->saddr, tcp_header->source, CLIENT_ADD);
             if (result) {
                 process_client_packet(s, ip_header, tcp_header);
             }
+#else
+            process_client_packet(s, ip_header, tcp_header);
+#endif
 
         } else {
 
@@ -2881,9 +2941,11 @@ process(char *packet, int pack_src)
                         tc_log_info(LOG_NOTICE, 0, "init for next from clt");
                         restore_buffered_next_session(s);
                     } else {
+#if (!TCPCOPY_SINGLE)
                         send_router_info(s->online_addr, s->online_port,
                                 ip_header->saddr, htons(s->src_h_port),
                                 CLIENT_DEL);
+#endif
                         session_rel_dynamic_mem(s);
                         if (!hash_del(sessions_table, s->hash_key)) {
                             tc_log_info(LOG_ERR, 0, "wrong del:%u",
