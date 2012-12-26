@@ -2065,6 +2065,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_log_trace(LOG_NOTICE, 0, BACKEND_FLAG, ip_header, tcp_header);
         /* try to solve backend's obstacle */
         send_faked_rst(s, ip_header, tcp_header);
+        s->sm.sess_over = 1;
         return;
     }
 
