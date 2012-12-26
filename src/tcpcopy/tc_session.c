@@ -132,6 +132,10 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
         ip_header->tot_len = htons(tot_len);
         tcp_header->doff = TCP_HEADER_DOFF_MIN_VALUE;
     }
+    
+    if (tcp_header->ack) {
+        tcp_header->ack_seq = s->vir_ack_seq;
+    }
 
     if (cont_len > 0) {
         s->sm.vir_new_retransmit = 1;
@@ -276,7 +280,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     /* the TCP header length(the number of 32-bit words in the header) */
     tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     /* window size(you may feel strange here) */
-    /* tcp_header->window  = 65535; */
+    tcp_header->window  = 65535; 
 }
 
 
