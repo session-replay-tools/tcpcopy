@@ -120,7 +120,7 @@ typedef struct session_s{
 #if (TCPCOPY_PAPER)
     /* round trip time */
     long     rtt;
-    long     resq_unack_time;
+    long     resp_unack_time;
 #endif
 
     /* These values will be sent to backend just for cheating */

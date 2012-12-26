@@ -232,8 +232,11 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     s->req_ip_id = ntohs(ip_header->id);
 
     if (!s->sm.unack_pack_omit_save_flag) {
-        ln = link_node_malloc(copy_ip_packet(ip_header));
-        link_list_append(s->unack_packets, ln);
+
+        if (cont_len > 0) {
+            ln = link_node_malloc(copy_ip_packet(ip_header));
+            link_list_append(s->unack_packets, ln);
+        }
     } else {
         s->sm.unack_pack_omit_save_flag = 0;
     }
@@ -273,7 +276,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     /* the TCP header length(the number of 32-bit words in the header) */
     tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     /* window size(you may feel strange here) */
-    tcp_header->window  = 65535;
+    /* tcp_header->window  = 65535; */
 }
 
 
@@ -903,6 +906,9 @@ send_reserved_packets(session_t *s)
             }
             cand_pause = true;
             s->sm.candidate_response_waiting = 1;
+#if (TCPCOPY_PAPER) 
+            s->resp_unack_time = 0;
+#endif
         } else if (tcp_header->rst) {
 
             if (s->sm.candidate_response_waiting) {
@@ -936,17 +942,21 @@ send_reserved_packets(session_t *s)
             }
 #else
             if (s->sm.candidate_response_waiting) {
+                s->resp_unack_time = 0;
                 break;
             }
             
             if (s->sm.rtt_cal == RTT_CAL) {
-                resp_diff = tc_milliscond_time() - s->resq_unack_time;
-                if (resp_diff < s->rtt) {
-                    tc_log_info(LOG_NOTICE, 0, "rtt:%ld,resp diff:%ld",
-                            s->rtt, resp_diff);
+                if (s->resp_unack_time) {
+                    resp_diff = tc_milliscond_time() - s->resp_unack_time;
+                    if (resp_diff < s->rtt) {
+                        tc_log_info(LOG_NOTICE, 0, "rtt:%ld,resp diff:%ld",
+                                s->rtt, resp_diff);
+                        break;
+                    }
+                } else {
                     break;
                 }
-                s->resq_unack_time = 0;
             }
 #endif
         }
@@ -1818,6 +1828,9 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 s->resp_last_seq     = seq;
                 s->sm.last_window_full  = 1;
                 update_retransmission_packets(s);
+            }
+            if (cont_len > 0) {
+                send_faked_ack(s, ip_header, tcp_header, true);
                 return DISP_STOP;
             }
 
@@ -2088,6 +2101,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_log_trace(LOG_NOTICE, 0, BACKEND_FLAG, ip_header, tcp_header);
         /* try to solve backend's obstacle */
         send_faked_rst(s, ip_header, tcp_header);
+        s->sm.sess_over = 1;
         return;
     }
 
@@ -2134,8 +2148,11 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
 #else
-        if (s->resq_unack_time == 0) {
-            s->resq_unack_time = tc_milliscond_time();
+        if (s->resp_unack_time == 0) {
+            s->resp_unack_time = tc_milliscond_time();
+        }
+        if (!s->sm.candidate_response_waiting) {
+            send_reserved_packets(s);
         }
 #endif
 
@@ -2492,6 +2509,9 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.candidate_response_waiting) {
         if (len > 0) {
             s->sm.candidate_response_waiting = 1;
+#if (TCPCOPY_PAPER)
+            s->resp_unack_time = 0;
+#endif
             wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             return;
         } else if (SYN_CONFIRM == s->sm.status) {
@@ -2545,7 +2565,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     }
 
     s->src_h_port = ntohs(tcp_header->source);
-    tcp_header->window  = 65535;
+    /* tcp_header->window  = 65535; */
 
 #if (TCPCOPY_MYSQL_BASIC)
     /* subtract client packet's seq for mysql */
@@ -2613,6 +2633,8 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 
 #if (TCPCOPY_PAPER)
     if (s->unsend_packets->size > 0) {
+        tc_log_debug2(LOG_DEBUG, 0, "paper unsend size:%u,p:%u",
+                s->unsend_packets->size, s->src_h_port);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         send_reserved_packets(s);
         return;
