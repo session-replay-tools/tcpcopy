@@ -133,6 +133,10 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
         tcp_header->doff = TCP_HEADER_DOFF_MIN_VALUE;
     }
 
+    if (tcp_header->ack) {
+        tcp_header->ack_seq = s->vir_ack_seq;
+    }
+
     if (cont_len > 0) {
         s->sm.vir_new_retransmit = 1;
         s->resp_last_same_ack_num = 0;
@@ -200,6 +204,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         }
         s->vir_next_seq = s->vir_next_seq + 1;
     }
+
     if (tcp_header->ack) {
         tcp_header->ack_seq = s->vir_ack_seq;
     }
