@@ -2626,7 +2626,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     /* if not receiving syn packet */ 
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
-        fake_syn(s, ip_header, tcp_header, false);
+        fake_syn(s, ip_header, tcp_header, true);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
