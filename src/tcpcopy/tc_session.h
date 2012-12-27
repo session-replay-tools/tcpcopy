@@ -71,7 +71,9 @@ typedef struct sess_state_machine_s{
     /* seset packet sent flag */
     uint32_t reset_sent:1;
 #if (TCPCOPY_PAPER)
-    uint32_t rtt_cal:2;
+    uint16_t rtt_cal;
+    uint16_t online_rtt_cal;
+    uint16_t target_rtt_cal;
 #endif
 #if (TCPCOPY_MYSQL_BASIC)
     /* the second auth checked flag */
@@ -119,8 +121,14 @@ typedef struct session_s{
     uint16_t faked_src_port;
 #if (TCPCOPY_PAPER)
     /* round trip time */
+    uint16_t max_rtt;
+    uint16_t min_rtt;
+    uint16_t resp_unack_time;
     long     rtt;
-    long     resp_unack_time;
+    /* RTT + online response time */
+    long     online_diff;
+    /* target response time */
+    long     target_diff;
 #endif
 
     /* These values will be sent to backend just for cheating */

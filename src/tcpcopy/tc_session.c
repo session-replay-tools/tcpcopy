@@ -133,10 +133,6 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
         tcp_header->doff = TCP_HEADER_DOFF_MIN_VALUE;
     }
     
-    if (tcp_header->ack) {
-        tcp_header->ack_seq = s->vir_ack_seq;
-    }
-
     if (cont_len > 0) {
         s->sm.vir_new_retransmit = 1;
         s->resp_last_same_ack_num = 0;
@@ -212,6 +208,10 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
 
+#if (TCPCOPY_PAPER) 
+        s->sm.target_rtt_cal = RTT_FIRST_RECORED;
+        s->target_diff= tc_milliscond_time();
+#endif
         s->sm.status = SEND_REQ;
         s->req_last_send_cont_time = tc_time();
         s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
@@ -816,6 +816,48 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 }
 
 
+#if (TCPCOPY_PAPER)
+static void set_dynamic_rtt(session_t *s)
+{
+    int rtt = s->online_diff - s->target_diff;
+
+    if (rtt > 0) {
+        if (rtt > s->max_rtt) {
+            tc_log_info(LOG_WARN, 0, "rtt is too big:%u,syn rtt:%u",
+                    rtt, s->max_rtt);
+            rtt = s->max_rtt;
+        } else if (rtt < s->min_rtt) {
+            tc_log_info(LOG_WARN, 0, "rtt is too small:%u,syn rtt:%u",
+                    rtt, s->max_rtt);
+            rtt = s->min_rtt;
+        }
+    } else {
+        tc_log_info(LOG_WARN, 0, "rtt is too negative:%u,syn rtt:%u",
+                    rtt, s->max_rtt);
+        rtt = s->max_rtt/2;
+    }
+
+    s->rtt = rtt;
+    
+}
+
+static void calculate_rtt(session_t *s, uint16_t *rtt_cal, long* rtt) 
+{
+    if (*rtt_cal == RTT_FIRST_RECORED) {
+        *rtt_cal = RTT_CAL;
+        *rtt = (tc_milliscond_time() - *rtt);
+    } else if (*rtt_cal == RTT_INIT) {
+        *rtt_cal = RTT_FIRST_RECORED;
+        *rtt = tc_milliscond_time();
+    } else {
+        *rtt_cal = RTT_INIT;
+        *rtt = 0;
+    }
+
+}
+#endif
+
+
 /*
  * send reserved packets to backend
  */
@@ -905,6 +947,9 @@ send_reserved_packets(session_t *s)
             cur_ack = ntohl(tcp_header->ack_seq);
             if (cand_pause) {
                 if (cur_ack != s->req_last_ack_sent_seq) {
+#if (TCPCOPY_PAPER) 
+                    calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
+#endif
                     break;
                 }
             }
@@ -912,6 +957,7 @@ send_reserved_packets(session_t *s)
             s->sm.candidate_response_waiting = 1;
 #if (TCPCOPY_PAPER) 
             s->resp_unack_time = 0;
+            calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
 #endif
         } else if (tcp_header->rst) {
 
@@ -945,6 +991,9 @@ send_reserved_packets(session_t *s)
                 omit_transfer = true;
             }
 #else
+            if (s->sm.online_rtt_cal == RTT_FIRST_RECORED) {
+                calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
+            }
             if (s->sm.candidate_response_waiting) {
                 s->resp_unack_time = 0;
                 break;
@@ -953,6 +1002,7 @@ send_reserved_packets(session_t *s)
             if (s->sm.rtt_cal == RTT_CAL) {
                 if (s->resp_unack_time) {
                     resp_diff = tc_milliscond_time() - s->resp_unack_time;
+                    set_dynamic_rtt(s);
                     if (resp_diff < s->rtt) {
                         tc_log_info(LOG_NOTICE, 0, "rtt:%ld,resp diff:%ld",
                                 s->rtt, resp_diff);
@@ -1889,6 +1939,12 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 return DISP_STOP;
             }
         }
+    } else {
+#if (TCPCOPY_PAPER) 
+        if (s->sm.candidate_response_waiting && cont_len > 0) {
+            calculate_rtt(s, &s->sm.target_rtt_cal, &s->target_diff);
+        }
+#endif
     }
 
     return DISP_CONTINUE;
@@ -2156,6 +2212,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
         }
+        
         if (!s->sm.candidate_response_waiting) {
             send_reserved_packets(s);
         }
@@ -2226,8 +2283,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
     s->sm.req_syn_ok = 1;
 
 #if (TCPCOPY_PAPER)
-    s->sm.rtt_cal = RTT_FIRST_RECORED;
-    s->rtt = tc_milliscond_time();
+    calculate_rtt(s, &s->sm.rtt_cal, &s->rtt);
 #endif
     tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 
@@ -2505,7 +2561,6 @@ is_continuous_packet(session_t *s, tc_ip_header_t *ip_header,
     return DISP_CONTINUE;
 }
 
-
 /* process client packet info after the main processing */
 static void
 process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
@@ -2521,12 +2576,9 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
             return;
         } else if (SYN_CONFIRM == s->sm.status) {
 #if (TCPCOPY_PAPER)
-            if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
-                s->rtt = (tc_milliscond_time() - s->rtt)/2;
-                s->sm.rtt_cal = RTT_CAL;
-            } else if (s->sm.rtt_cal != RTT_CAL) {
-                s->rtt = 0;
-            }
+            calculate_rtt(s, &s->sm.rtt_cal, &s->rtt);
+            s->max_rtt = s->rtt;
+            s->min_rtt = s->rtt/3;
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
