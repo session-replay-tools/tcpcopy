@@ -133,10 +133,6 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
         tcp_header->doff = TCP_HEADER_DOFF_MIN_VALUE;
     }
 
-    if (tcp_header->ack) {
-        tcp_header->ack_seq = s->vir_ack_seq;
-    }
-
     if (cont_len > 0) {
         s->sm.vir_new_retransmit = 1;
         s->resp_last_same_ack_num = 0;
@@ -2552,7 +2548,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     /* if not receiving syn packet */ 
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
-        fake_syn(s, ip_header, tcp_header, false);
+        fake_syn(s, ip_header, tcp_header, true);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
