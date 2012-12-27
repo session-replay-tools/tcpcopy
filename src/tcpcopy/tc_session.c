@@ -2029,6 +2029,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if ( tcp_header->rst) {
         s->sm.reset_sent = 1;
+        s->sm.sess_over= 1;
         tc_log_debug1(LOG_DEBUG, 0, "reset from back:%u", s->src_h_port);
         return;
     }
@@ -2521,7 +2522,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
         } else if (SYN_CONFIRM == s->sm.status) {
 #if (TCPCOPY_PAPER)
             if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
-                s->rtt = tc_milliscond_time() - s->rtt;
+                s->rtt = (tc_milliscond_time() - s->rtt)/2;
                 s->sm.rtt_cal = RTT_CAL;
             } else if (s->sm.rtt_cal != RTT_CAL) {
                 s->rtt = 0;
