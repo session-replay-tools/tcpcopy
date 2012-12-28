@@ -541,7 +541,7 @@ set_details()
     }    
 
 #if (TCPCOPY_OFFLINE)
-    if (tc_time_set_timer(5) == TC_ERROR) {
+    if (tc_time_set_timer(2) == TC_ERROR) {
 #else
     if (tc_time_set_timer(100) == TC_ERROR) {
 #endif
