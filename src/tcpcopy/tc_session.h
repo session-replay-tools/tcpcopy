@@ -5,6 +5,7 @@
 #include <tcpcopy.h>
 
 #define FAKE_IP_DATAGRAM_LEN 40
+#define FAKE_SYN_IP_DATAGRAM_LEN 44
 #define IP_HEADER_LEN 20
 
 /* global functions */

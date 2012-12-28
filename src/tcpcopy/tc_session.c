@@ -1418,15 +1418,27 @@ static void
 send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-    unsigned char    f_s_buf[FAKE_IP_DATAGRAM_LEN];
+    unsigned char    f_s_buf[FAKE_SYN_IP_DATAGRAM_LEN];
+    unsigned char   *opt;
+    u_short          mss;
     tc_ip_header_t  *f_ip_header;
     tc_tcp_header_t *f_tcp_header;
 
-    memset(f_s_buf, 0, FAKE_IP_DATAGRAM_LEN);
+    memset(f_s_buf, 0, FAKE_SYN_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) f_s_buf;
     f_tcp_header = (tc_tcp_header_t *) (f_s_buf + IP_HEADER_LEN);
+    opt = f_s_buf + IP_HEADER_LEN + sizeof(tc_tcp_header_t);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
+    f_ip_header->tot_len  = htons(FAKE_SYN_IP_DATAGRAM_LEN);
+    f_tcp_header->doff    = (FAKE_SYN_IP_DATAGRAM_LEN - IP_HEADER_LEN) / 4;
+    /* For an Ethernet this implies an MSS of up to 1460 bytes.*/
+    mss = clt_settings.mtu - IP_HEADER_LEN - sizeof(tc_tcp_header_t);
+    mss = htons(mss);
+    /* TCPOPT_MAXSEG flag */
+    opt[0] = 2;
+    opt[1] = 4;
+    bcopy((void *)&mss, (void *)(opt + 2), sizeof(mss));
 
     s->req_ip_id = ntohs(ip_header->id);
     /* 
@@ -2548,7 +2560,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     /* if not receiving syn packet */ 
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
-        fake_syn(s, ip_header, tcp_header, true);
+        fake_syn(s, ip_header, tcp_header, false);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }
