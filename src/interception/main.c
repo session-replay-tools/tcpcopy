@@ -283,7 +283,7 @@ main(int argc, char **argv)
     }
 
     if (srv_settings.log_path == NULL) {
-        srv_settings.log_path = "intercept.log";
+        srv_settings.log_path = "error_intercept.log";  
     }
 
     if (tc_log_init(srv_settings.log_path) == -1) {

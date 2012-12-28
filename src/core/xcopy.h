@@ -83,6 +83,7 @@
 
 /* default mtu for output raw socket */
 #define DEFAULT_MTU   1500
+#define DEFAULT_MSS   1460
 /* default listening port for intercept program */
 #define SERVER_PORT   36524
 

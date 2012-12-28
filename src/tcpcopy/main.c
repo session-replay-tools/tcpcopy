@@ -96,6 +96,12 @@ usage(void)
            "               automatically. The parameter is effective only when the kernel \n"
            "               version is 2.6.32 or above. The default value is 512.\n");
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
+    printf("-S <num>       MSS value sent back(default 1460)\n");
+#if (TCPCOPY_DR)
+    printf("-s <iplist,> real server ip addresses behind lvs\n"
+           "               Format:\n"
+           "               ip_addr1, ip_addr2 ...\n");
+#endif
     printf("-t <num>       set the session timeout limit. If TCPCopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by TCPCopy. When the response from the target server is\n"
@@ -135,6 +141,7 @@ read_args(int argc, char **argv)
          "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
+         "S:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
 #if (TCPCOPY_DR)
          "s:" /* real server ip addresses behind lvs */
@@ -181,6 +188,9 @@ read_args(int argc, char **argv)
                 break;
             case 'M':
                 clt_settings.mtu = atoi(optarg);
+                break;
+            case 'S':
+                clt_settings.mss = atoi(optarg);
                 break;
 #if (TCPCOPY_DR)
             case 's':
@@ -510,7 +520,7 @@ set_details()
 #if (TCPCOPY_DR)
     /* retrieve real server ip addresses  */
     if (clt_settings.raw_rs_ip_list != NULL) {
-        tc_log_info(LOG_NOTICE, 0, "-s parameter:%s", 
+        tc_log_info(LOG_NOTICE, 0, "s parameter:%s", 
                 clt_settings.raw_rs_ip_list);
         retrieve_real_servers();
     } else {
@@ -530,7 +540,11 @@ set_details()
         }    
     }    
 
-    if (tc_time_set_timer(2) == TC_ERROR) {
+#if (TCPCOPY_OFFLINE)
+    if (tc_time_set_timer(5) == TC_ERROR) {
+#else
+    if (tc_time_set_timer(100) == TC_ERROR) {
+#endif
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     }
@@ -544,6 +558,7 @@ settings_init()
 {
     /* init values */
     clt_settings.mtu = DEFAULT_MTU;
+    clt_settings.mss = DEFAULT_MSS;
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
@@ -573,6 +588,10 @@ main(int argc, char **argv)
     if (clt_settings.log_path == NULL) {
         clt_settings.log_path = "tcpcopy.log";
     }
+
+    if (clt_settings.log_path == NULL) {
+        clt_settings.log_path = "error_tcpcopy.log";
+    }   
 
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
