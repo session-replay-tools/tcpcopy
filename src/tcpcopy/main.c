@@ -530,7 +530,11 @@ set_details()
         }    
     }    
 
+#if (TCPCOPY_OFFLINE)
+    if (tc_time_set_timer(5) == TC_ERROR) {
+#else
     if (tc_time_set_timer(100) == TC_ERROR) {
+#endif
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     }
