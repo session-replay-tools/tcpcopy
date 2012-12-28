@@ -123,7 +123,7 @@ typedef struct session_s{
     /* round trip time */
     uint16_t max_rtt;
     uint16_t min_rtt;
-    uint16_t resp_unack_time;
+    long     resp_unack_time;
     long     rtt;
     /* RTT + online response time */
     long     online_diff;

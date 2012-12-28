@@ -386,7 +386,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     send_packets_from_pcap(1);
 
     /* register a timer for offline */
-    tc_event_timer_add(event_loop, 100, tc_process_offline_packet);
+    tc_event_timer_add(event_loop, 1, tc_process_offline_packet);
 
     return TC_OK;
 }
@@ -394,8 +394,9 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
 static void
 tc_process_offline_packet(tc_event_timer_t *evt)
 {
+    tc_log_info(LOG_NOTICE, 0, "timer is coming" );
     send_packets_from_pcap(0);
-    evt->msec = tc_current_time_msec + 100;
+    evt->msec = tc_current_time_msec + 1;
 }
 
 static uint64_t

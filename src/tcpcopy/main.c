@@ -530,7 +530,7 @@ set_details()
         }    
     }    
 
-    if (tc_time_set_timer(100) == TC_ERROR) {
+    if (tc_time_set_timer(2) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     }

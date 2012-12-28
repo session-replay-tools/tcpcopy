@@ -208,10 +208,6 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
 
-#if (TCPCOPY_PAPER) 
-        s->sm.target_rtt_cal = RTT_FIRST_RECORED;
-        s->target_diff= tc_milliscond_time();
-#endif
         s->sm.status = SEND_REQ;
         s->req_last_send_cont_time = tc_time();
         s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
@@ -815,32 +811,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
     return false;
 }
 
-
 #if (TCPCOPY_PAPER)
-static void set_dynamic_rtt(session_t *s)
-{
-    int rtt = s->online_diff - s->target_diff;
-
-    if (rtt > 0) {
-        if (rtt > s->max_rtt) {
-            tc_log_info(LOG_WARN, 0, "rtt is too big:%u,syn rtt:%u",
-                    rtt, s->max_rtt);
-            rtt = s->max_rtt;
-        } else if (rtt < s->min_rtt) {
-            tc_log_info(LOG_WARN, 0, "rtt is too small:%u,syn rtt:%u",
-                    rtt, s->max_rtt);
-            rtt = s->min_rtt;
-        }
-    } else {
-        tc_log_info(LOG_WARN, 0, "rtt is too negative:%u,syn rtt:%u",
-                    rtt, s->max_rtt);
-        rtt = s->max_rtt/2;
-    }
-
-    s->rtt = rtt;
-    
-}
-
 static void calculate_rtt(session_t *s, uint16_t *rtt_cal, long* rtt) 
 {
     if (*rtt_cal == RTT_FIRST_RECORED) {
@@ -867,9 +838,6 @@ send_reserved_packets(session_t *s)
     int               count = 0, total_cont_sent = 0; 
     bool              need_pause = false, cand_pause = false,
                       omit_transfer = false; 
-#if (TCPCOPY_PAPER)
-    long              resp_diff;
-#endif
     uint16_t          size_ip, cont_len;
     uint32_t          cur_ack, cur_seq, diff;
     link_list        *list;
@@ -947,9 +915,6 @@ send_reserved_packets(session_t *s)
             cur_ack = ntohl(tcp_header->ack_seq);
             if (cand_pause) {
                 if (cur_ack != s->req_last_ack_sent_seq) {
-#if (TCPCOPY_PAPER) 
-                    calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
-#endif
                     break;
                 }
             }
@@ -957,7 +922,6 @@ send_reserved_packets(session_t *s)
             s->sm.candidate_response_waiting = 1;
 #if (TCPCOPY_PAPER) 
             s->resp_unack_time = 0;
-            calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
 #endif
         } else if (tcp_header->rst) {
 
@@ -991,9 +955,6 @@ send_reserved_packets(session_t *s)
                 omit_transfer = true;
             }
 #else
-            if (s->sm.online_rtt_cal == RTT_FIRST_RECORED) {
-                calculate_rtt(s, &s->sm.online_rtt_cal, &s->online_diff);
-            }
             if (s->sm.candidate_response_waiting) {
                 s->resp_unack_time = 0;
                 break;
@@ -1001,11 +962,11 @@ send_reserved_packets(session_t *s)
             
             if (s->sm.rtt_cal == RTT_CAL) {
                 if (s->resp_unack_time) {
-                    resp_diff = tc_milliscond_time() - s->resp_unack_time;
-                    set_dynamic_rtt(s);
-                    if (resp_diff < s->rtt) {
-                        tc_log_info(LOG_NOTICE, 0, "rtt:%ld,resp diff:%ld",
-                                s->rtt, resp_diff);
+                    if ((tc_milliscond_time() - s->resp_unack_time) < s->rtt) {
+                        tc_log_info(LOG_NOTICE, 0, 
+                                "rtt:%ld,cur:%ld,resp:%ld,p:%u",
+                                s->rtt, tc_milliscond_time(), 
+                                s->resp_unack_time, s->src_h_port);
                         break;
                     }
                 } else {
@@ -1939,12 +1900,6 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 return DISP_STOP;
             }
         }
-    } else {
-#if (TCPCOPY_PAPER) 
-        if (s->sm.candidate_response_waiting && cont_len > 0) {
-            calculate_rtt(s, &s->sm.target_rtt_cal, &s->target_diff);
-        }
-#endif
     }
 
     return DISP_CONTINUE;
@@ -2578,7 +2533,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
 #if (TCPCOPY_PAPER)
             calculate_rtt(s, &s->sm.rtt_cal, &s->rtt);
             s->max_rtt = s->rtt;
-            s->min_rtt = s->rtt/3;
+            s->min_rtt = s->rtt;
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
