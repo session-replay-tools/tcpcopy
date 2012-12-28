@@ -574,6 +574,10 @@ main(int argc, char **argv)
         return -1;
     }
 
+    if (clt_settings.log_path == NULL) {
+        clt_settings.log_path = "error_tcpcopy.log";
+    }   
+
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
     }
