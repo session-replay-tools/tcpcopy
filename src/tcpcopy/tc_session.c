@@ -1433,7 +1433,7 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     f_ip_header->tot_len  = htons(FAKE_SYN_IP_DATAGRAM_LEN);
     f_tcp_header->doff    = (FAKE_SYN_IP_DATAGRAM_LEN - IP_HEADER_LEN) / 4;
     /* For an Ethernet this implies an MSS of up to 1460 bytes.*/
-    mss = clt_settings.mtu - IP_HEADER_LEN - sizeof(tc_tcp_header_t);
+    mss = clt_settings.mss;
     mss = htons(mss);
     /* TCPOPT_MAXSEG flag */
     opt[0] = 2;

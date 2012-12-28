@@ -42,6 +42,7 @@ typedef struct xcopy_clt_settings {
     unsigned int  replica_num:10;       /* replicated number of each request */
     unsigned int  factor:8;             /* port shift factor */
     unsigned int  mtu:16;               /* MTU sent to backend */
+    unsigned int  mss:16;               /* MSS sent to backend */
     unsigned int  do_daemonize:1;       /* daemon flag */
     unsigned int  max_rss:21;           /* max memory allowed for tcpcopy */
 
