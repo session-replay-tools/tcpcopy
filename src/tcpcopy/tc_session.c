@@ -203,6 +203,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
 
     if (tcp_header->ack) {
         tcp_header->ack_seq = s->vir_ack_seq;
+        s->resp_unack_time = 0;
     }
 
     tot_len  = ntohs(ip_header->tot_len);
@@ -219,10 +220,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         } else {
             con_packs_sent_cnt++;
         }
-    } else {
-        s->resp_unack_time = 0;
-        s->continuous_resp_cont_packs = 0;
-    }
+    } 
 
     /* It should be set to zero for tcp checksum */
     tcp_header->check = 0;
@@ -874,6 +872,9 @@ send_reserved_packets(session_t *s)
     int               count = 0, total_cont_sent = 0; 
     bool              need_pause = false, cand_pause = false,
                       omit_transfer = false; 
+#if (TCPCOPY_PAPER)
+    long              delay;
+#endif
     uint16_t          size_ip, cont_len;
     uint32_t          cur_ack, cur_seq, diff;
     link_list        *list;
@@ -945,8 +946,10 @@ send_reserved_packets(session_t *s)
             }
 #if (TCPCOPY_PAPER) 
             if (s->sm.send_reserved_from_bak_payload) {
-                if (need_break(s)) {
-                    tc_log_debug1(LOG_DEBUG, 0, "break:%u", s->src_h_port);
+                delay = tc_milliscond_time() - s->response_content_time;
+                if (delay < s->rtt) {
+                    tc_log_debug1(LOG_DEBUG, 0, "break sending req:%u",
+                            s->src_h_port);
                     break;
                 }
             }
@@ -1004,6 +1007,8 @@ send_reserved_packets(session_t *s)
                 calculate_rtt(s);
             }
             if (need_break(s)) {
+                tc_log_debug1(LOG_DEBUG, 0, "break send ack:%u",
+                        s->src_h_port);
                 break;
             }
 #endif
@@ -2209,6 +2214,8 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
 #else
+        s->response_content_time = tc_milliscond_time();
+
         if (s->first_resp_unack_time == 0) {
             s->first_resp_unack_time = tc_milliscond_time();
         }
@@ -2220,7 +2227,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
                 send_faked_ack(s, ip_header, tcp_header, true);
             }
         }
-        s->continuous_resp_cont_packs++;
 
         if (!s->sm.candidate_response_waiting) {
             send_reserved_packets(s);
@@ -2247,8 +2253,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             }
     } else {
         /* no content in packet */
-
-        s->continuous_resp_cont_packs = 0;
 
         if (s->sm.delay_sent_flag) {
             tc_log_debug1(LOG_DEBUG, 0, "send delayed cont:%u", s->src_h_port);

@@ -124,7 +124,7 @@ typedef struct session_s{
     long     rtt;
     long     resp_unack_time;
     long     first_resp_unack_time;
-    long     continuous_resp_cont_packs;
+    long     response_content_time;
 #endif
 
     /* These values will be sent to backend just for cheating */
