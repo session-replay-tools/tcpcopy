@@ -2118,6 +2118,10 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
 
+        if (tcp_header->window == 0) {
+            /* busy now, don't transmit any more content */
+            return;
+        }
 #if (TCPCOPY_MYSQL_BASIC)
         if (s->sm.candidate_response_waiting || is_greet)
 #else
