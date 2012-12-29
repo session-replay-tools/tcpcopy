@@ -115,7 +115,6 @@ typedef struct session_s{
     uint16_t online_port;
     /* faked src or client port(network byte order) */
     uint16_t faked_src_port;
-    uint16_t target_last_window;
 
     /* These values will be sent to backend just for cheating */
     /* Virtual acknowledgement sequence that sends to backend */
