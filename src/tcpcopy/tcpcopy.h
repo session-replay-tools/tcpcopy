@@ -67,6 +67,7 @@ typedef struct xcopy_clt_settings {
 #endif
 #if (TCPCOPY_OFFLINE)
     pcap_t       *pcap;
+    long          pcap_time;
 #endif
     uint16_t      rand_port_shifted;    /* random port shifted */
     uint16_t      srv_port;             /* server listening port */

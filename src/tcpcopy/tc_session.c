@@ -219,6 +219,9 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
         } else {
             con_packs_sent_cnt++;
         }
+    } else {
+        s->resp_unack_time = 0;
+        s->continuous_resp_cont_packs = 0;
     }
 
     /* It should be set to zero for tcp checksum */
@@ -815,12 +818,17 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 #if (TCPCOPY_PAPER)
 static void calculate_rtt(session_t *s) 
 {
+    tc_log_debug2(LOG_DEBUG, 0, "pcap time:%u,p:%u",
+                clt_settings.pcap_time, s->src_h_port);
+
     if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
         s->sm.rtt_cal = RTT_CAL;
-        s->rtt = (tc_milliscond_time() - s->rtt);
+        s->rtt = (clt_settings.pcap_time - s->rtt);
+        tc_log_debug2(LOG_DEBUG, 0, "rtt:%u,p:%u",
+                s->rtt, s->src_h_port);
     } else if (s->sm.rtt_cal == RTT_INIT) {
         s->sm.rtt_cal = RTT_FIRST_RECORED;
-        s->rtt = tc_milliscond_time();
+        s->rtt = clt_settings.pcap_time;
     } else {
         s->sm.rtt_cal = RTT_INIT;
         s->rtt = 0;
@@ -832,17 +840,17 @@ static int
 need_break(session_t *s) 
 {
     if (s->sm.candidate_response_waiting) {
-        s->resp_unack_time = 0;
+        s->first_resp_unack_time = 0;
         return 1;
     }
 
     if (s->sm.rtt_cal == RTT_CAL) {
-        if (s->resp_unack_time) {
-            if ((tc_milliscond_time() - s->resp_unack_time) < s->rtt) {
+        if (s->first_resp_unack_time) {
+            if ((tc_milliscond_time() - s->first_resp_unack_time) < s->rtt) {
                 tc_log_info(LOG_NOTICE, 0, 
                         "rtt:%ld,cur:%ld,resp:%ld,p:%u",
                         s->rtt, tc_milliscond_time(), 
-                        s->resp_unack_time, s->src_h_port);
+                        s->first_resp_unack_time, s->src_h_port);
                 return 1;
             }
         } else {
@@ -958,7 +966,7 @@ send_reserved_packets(session_t *s)
             s->sm.candidate_response_waiting = 1;
             s->sm.send_reserved_from_bak_payload = 0;
 #if (TCPCOPY_PAPER) 
-            s->resp_unack_time = 0;
+            s->first_resp_unack_time = 0;
 #endif
         } else if (tcp_header->rst) {
 
@@ -992,6 +1000,9 @@ send_reserved_packets(session_t *s)
                 omit_transfer = true;
             }
 #else
+            if (SYN_CONFIRM == s->sm.status) {
+                calculate_rtt(s);
+            }
             if (need_break(s)) {
                 break;
             }
@@ -2198,10 +2209,19 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
 #else
+        if (s->first_resp_unack_time == 0) {
+            s->first_resp_unack_time = tc_milliscond_time();
+        }
+
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
+        } else {
+            if ((tc_milliscond_time() - s->resp_unack_time) > s->rtt) {
+                send_faked_ack(s, ip_header, tcp_header, true);
+            }
         }
-        
+        s->continuous_resp_cont_packs++;
+
         if (!s->sm.candidate_response_waiting) {
             send_reserved_packets(s);
         }
@@ -2227,6 +2247,8 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             }
     } else {
         /* no content in packet */
+
+        s->continuous_resp_cont_packs = 0;
 
         if (s->sm.delay_sent_flag) {
             tc_log_debug1(LOG_DEBUG, 0, "send delayed cont:%u", s->src_h_port);
@@ -2565,7 +2587,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
             s->sm.candidate_response_waiting = 1;
             s->sm.send_reserved_from_bak_payload = 0;
 #if (TCPCOPY_PAPER)
-            s->resp_unack_time = 0;
+            s->first_resp_unack_time = 0;
 #endif
             wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             return;
@@ -2671,7 +2693,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     /* if not receiving syn packet */ 
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
-        fake_syn(s, ip_header, tcp_header, true);
+        fake_syn(s, ip_header, tcp_header, false);
         save_packet(s->unsend_packets, ip_header, tcp_header);
         return;
     }

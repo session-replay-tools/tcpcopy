@@ -123,6 +123,8 @@ typedef struct session_s{
     /* round trip time */
     long     rtt;
     long     resp_unack_time;
+    long     first_resp_unack_time;
+    long     continuous_resp_cont_packs;
 #endif
 
     /* These values will be sent to backend just for cheating */
