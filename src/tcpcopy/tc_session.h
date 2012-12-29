@@ -41,6 +41,7 @@ typedef struct sess_state_machine_s{
     uint32_t last_window_full:1;
     /* candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
+    uint32_t send_reserved_from_bak_payload:1;
     /* delay sent flag because of flow control */
     uint32_t delay_sent_flag:1;
     /* waiting previous packet flag */
@@ -72,9 +73,7 @@ typedef struct sess_state_machine_s{
     /* seset packet sent flag */
     uint32_t reset_sent:1;
 #if (TCPCOPY_PAPER)
-    uint16_t rtt_cal;
-    uint16_t online_rtt_cal;
-    uint16_t target_rtt_cal;
+    uint32_t rtt_cal:2;
 #endif
 #if (TCPCOPY_MYSQL_BASIC)
     /* the second auth checked flag */
@@ -122,14 +121,8 @@ typedef struct session_s{
     uint16_t faked_src_port;
 #if (TCPCOPY_PAPER)
     /* round trip time */
-    uint16_t max_rtt;
-    uint16_t min_rtt;
-    long     resp_unack_time;
     long     rtt;
-    /* RTT + online response time */
-    long     online_diff;
-    /* target response time */
-    long     target_diff;
+    long     resp_unack_time;
 #endif
 
     /* These values will be sent to backend just for cheating */

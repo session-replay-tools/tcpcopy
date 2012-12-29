@@ -813,20 +813,47 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 }
 
 #if (TCPCOPY_PAPER)
-static void calculate_rtt(session_t *s, uint16_t *rtt_cal, long* rtt) 
+static void calculate_rtt(session_t *s) 
 {
-    if (*rtt_cal == RTT_FIRST_RECORED) {
-        *rtt_cal = RTT_CAL;
-        *rtt = (tc_milliscond_time() - *rtt);
-    } else if (*rtt_cal == RTT_INIT) {
-        *rtt_cal = RTT_FIRST_RECORED;
-        *rtt = tc_milliscond_time();
+    if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
+        s->sm.rtt_cal = RTT_CAL;
+        s->rtt = (tc_milliscond_time() - s->rtt);
+    } else if (s->sm.rtt_cal == RTT_INIT) {
+        s->sm.rtt_cal = RTT_FIRST_RECORED;
+        s->rtt = tc_milliscond_time();
     } else {
-        *rtt_cal = RTT_INIT;
-        *rtt = 0;
+        s->sm.rtt_cal = RTT_INIT;
+        s->rtt = 0;
     }
 
 }
+
+static int 
+need_break(session_t *s) 
+{
+    if (s->sm.candidate_response_waiting) {
+        s->resp_unack_time = 0;
+        return 1;
+    }
+
+    if (s->sm.rtt_cal == RTT_CAL) {
+        if (s->resp_unack_time) {
+            if ((tc_milliscond_time() - s->resp_unack_time) < s->rtt) {
+                tc_log_info(LOG_NOTICE, 0, 
+                        "rtt:%ld,cur:%ld,resp:%ld,p:%u",
+                        s->rtt, tc_milliscond_time(), 
+                        s->resp_unack_time, s->src_h_port);
+                return 1;
+            }
+        } else {
+            return 1;
+        }
+    }
+
+    return 0;
+
+}
+
 #endif
 
 
@@ -908,6 +935,14 @@ send_reserved_packets(session_t *s)
                 s->sm.delay_sent_flag = 1;
                 break;
             }
+#if (TCPCOPY_PAPER) 
+            if (s->sm.send_reserved_from_bak_payload) {
+                if (need_break(s)) {
+                    tc_log_debug1(LOG_DEBUG, 0, "break:%u", s->src_h_port);
+                    break;
+                }
+            }
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED) 
             if (mysql_dispose_auth(s, ip_header, tcp_header) == TC_ERROR) {
                 break;
@@ -921,6 +956,7 @@ send_reserved_packets(session_t *s)
             }
             cand_pause = true;
             s->sm.candidate_response_waiting = 1;
+            s->sm.send_reserved_from_bak_payload = 0;
 #if (TCPCOPY_PAPER) 
             s->resp_unack_time = 0;
 #endif
@@ -956,23 +992,8 @@ send_reserved_packets(session_t *s)
                 omit_transfer = true;
             }
 #else
-            if (s->sm.candidate_response_waiting) {
-                s->resp_unack_time = 0;
+            if (need_break(s)) {
                 break;
-            }
-            
-            if (s->sm.rtt_cal == RTT_CAL) {
-                if (s->resp_unack_time) {
-                    if ((tc_milliscond_time() - s->resp_unack_time) < s->rtt) {
-                        tc_log_info(LOG_NOTICE, 0, 
-                                "rtt:%ld,cur:%ld,resp:%ld,p:%u",
-                                s->rtt, tc_milliscond_time(), 
-                                s->resp_unack_time, s->src_h_port);
-                        break;
-                    }
-                } else {
-                    break;
-                }
             }
 #endif
         }
@@ -2200,6 +2221,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
                 s->sm.candidate_response_waiting = 0;
                 s->sm.status = RECV_RESP;
                 s->sm.delay_sent_flag = 0;
+                s->sm.send_reserved_from_bak_payload = 1;
                 send_reserved_packets(s);
                 return;
             }
@@ -2255,7 +2277,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
     s->sm.req_syn_ok = 1;
 
 #if (TCPCOPY_PAPER)
-    calculate_rtt(s, &s->sm.rtt_cal, &s->rtt);
+    calculate_rtt(s);
 #endif
     tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 
@@ -2541,6 +2563,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.candidate_response_waiting) {
         if (len > 0) {
             s->sm.candidate_response_waiting = 1;
+            s->sm.send_reserved_from_bak_payload = 0;
 #if (TCPCOPY_PAPER)
             s->resp_unack_time = 0;
 #endif
@@ -2548,9 +2571,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
             return;
         } else if (SYN_CONFIRM == s->sm.status) {
 #if (TCPCOPY_PAPER)
-            calculate_rtt(s, &s->sm.rtt_cal, &s->rtt);
-            s->max_rtt = s->rtt;
-            s->min_rtt = s->rtt;
+            calculate_rtt(s);
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
