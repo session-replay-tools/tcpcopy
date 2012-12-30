@@ -74,11 +74,11 @@ typedef struct xcopy_clt_settings {
     uint32_t      lo_tf_ip;             /* ip address from localhost to
                                            (localhost transfered ip) */
 #ifdef TCPCOPY_MYSQL_ADVANCED
-    char         *user_pwd;             /* user password string for mysql */
+    char             *user_pwd;         /* user password string for mysql */
 #endif
 #if (TCPCOPY_DR)
     char             *raw_rs_ip_list;   /* raw ip list */
-    real_ip_addr_t      real_servers;   /* the real servers behind lvs */
+    real_ip_addr_t    real_servers;     /* the real servers behind lvs */
 #endif
     ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
                                            target_ip target_port */

@@ -98,5 +98,5 @@ Note:
        (https://github.com/downloads/wangbin579/tcpcopy/TCPCopy_0.6.5_Manual.pdf)
     5) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
        (https://github.com/wangbin579/tcpcopy/downloads)
-    6) Check error.log if you encounter some problems and feel free to report it to us(wangbin579@gmail.com).
+    6) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
 

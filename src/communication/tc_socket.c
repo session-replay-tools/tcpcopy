@@ -13,6 +13,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
     if (device == NULL) {
         return TC_INVALID_SOCKET;
     }
+
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 
     *ebuf = '\0';
@@ -20,7 +21,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
     if (*pd == NULL) {
         tc_log_info(LOG_ERR, 0, "pcap error:%s", ebuf);
         return TC_INVALID_SOCKET;
-    }else if (*ebuf) {
+    } else if (*ebuf) {
         tc_log_info(LOG_WARN, 0, "pcap warn:%s", ebuf);
     }
 
@@ -35,6 +36,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
                 pcap_filter, pcap_geterr(*pd));
         return TC_INVALID_SOCKET;
     }
+
     if (pcap_setfilter(*pd, &fp) == -1) {
         tc_log_info(LOG_ERR, 0, "couldn't install filter %s: %s",
                 pcap_filter, pcap_geterr(*pd));

@@ -241,7 +241,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
                 filter_port[j] = pair->online_port;
                 filter_port_num++;
                 break;
-            }else if (filter_port[j] == pair->online_port) {
+            } else if (filter_port[j] == pair->online_port) {
                 break;
             }
         }

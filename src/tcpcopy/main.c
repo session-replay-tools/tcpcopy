@@ -200,7 +200,7 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
-           case 'h':
+            case 'h':
                 usage();
                 return -1;
             case 'v':
@@ -467,7 +467,6 @@ set_details()
     int            rand_port;
     unsigned int   seed;
     struct timeval tp;
-    
 
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -493,6 +492,7 @@ set_details()
         return -1;
     }
 #endif
+
 #if (TCPCOPY_PCAP)
     if (clt_settings.raw_device != NULL) {
         tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
@@ -503,7 +503,6 @@ set_details()
         }
     }
 #endif
-
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (clt_settings.user_pwd != NULL) {
