@@ -417,8 +417,6 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
-    tc_log_debug2(LOG_DEBUG, 0, "diff, old:%llu,new:%llu", 
-            history_diff, cur_diff);
     if (history_diff <= cur_diff) {
         return false;
     }
