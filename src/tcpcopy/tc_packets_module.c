@@ -386,7 +386,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     send_packets_from_pcap(1);
 
     /* register a timer for offline */
-    tc_event_timer_add(event_loop, 2, tc_process_offline_packet);
+    tc_event_timer_add(event_loop, TIMER_INTERVAL, tc_process_offline_packet);
 
     return TC_OK;
 }
@@ -395,7 +395,7 @@ static void
 tc_process_offline_packet(tc_event_timer_t *evt)
 {
     send_packets_from_pcap(0);
-    evt->msec = tc_current_time_msec + 2;
+    evt->msec = tc_current_time_msec + TIMER_INTERVAL;
 }
 
 static uint64_t
@@ -417,8 +417,6 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
-    tc_log_debug2(LOG_DEBUG, 0, "diff, old:%llu,new:%llu", 
-            history_diff, cur_diff);
     if (history_diff <= cur_diff) {
         return false;
     }

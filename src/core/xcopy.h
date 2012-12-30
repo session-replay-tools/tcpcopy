@@ -233,6 +233,10 @@ struct ethernet_hdr {
 };
 #endif 
 
+#if (TCPCOPY_OFFLINE)
+#define TIMER_INTERVAL 2
+#endif
+
 /* global functions */
 int daemonize();
 

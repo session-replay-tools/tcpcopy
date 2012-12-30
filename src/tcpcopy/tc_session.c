@@ -2254,12 +2254,17 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     } else {
         /* no content in packet */
 
+        if (tcp_header->window == 0) {
+            return;
+        }
+
         if (s->sm.delay_sent_flag) {
             tc_log_debug1(LOG_DEBUG, 0, "send delayed cont:%u", s->src_h_port);
             s->sm.delay_sent_flag = 0;
             send_reserved_packets(s);
             return;
         }
+
         if (s->sm.src_closed && !s->sm.dst_closed) {
             send_faked_rst(s, ip_header, tcp_header);
             s->sm.sess_over = 1;
