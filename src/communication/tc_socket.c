@@ -20,7 +20,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
     if (*pd == NULL) {
         tc_log_info(LOG_ERR, 0, "pcap error:%s", ebuf);
         return TC_INVALID_SOCKET;
-    }else if (*ebuf) {
+    } else if (*ebuf) {
         tc_log_info(LOG_WARN, 0, "pcap warn:%s", ebuf);
     }
 
