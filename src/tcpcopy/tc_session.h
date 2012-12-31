@@ -19,10 +19,6 @@ void output_stat();
 typedef struct sess_state_machine_s{
     /* session status */
     uint32_t status:8;
-    /* round trip time(ms) */
-    uint32_t rtt:16;
-    uint32_t min_rtt:16;
-    uint32_t base_rtt:16;
     /* already retransmission flag */
     uint32_t vir_already_retransmit:1;
     /* just for successful retransmission statistics */
@@ -124,6 +120,8 @@ typedef struct session_s{
 #if (TCPCOPY_PAPER)
     /* round trip time */
     long     rtt;
+    long     min_rtt;
+    long     base_rtt;
     long     resp_unack_time;
     long     first_resp_unack_time;
     long     response_content_time;
