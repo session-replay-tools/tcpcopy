@@ -824,13 +824,14 @@ static void calculate_rtt(session_t *s)
         s->rtt = (clt_settings.pcap_time - s->rtt);
         tc_log_debug2(LOG_DEBUG, 0, "rtt:%u,p:%u",
                 s->rtt, s->src_h_port);
+
     } else if (s->sm.rtt_cal == RTT_INIT) {
         s->sm.rtt_cal = RTT_FIRST_RECORED;
         s->rtt = clt_settings.pcap_time;
-    } else {
-        s->sm.rtt_cal = RTT_INIT;
-        s->rtt = 0;
-    }
+        tc_log_debug2(LOG_DEBUG, 0, "record rtt base:%u,p:%u",
+                s->rtt, s->src_h_port);
+
+    } 
 
 }
 
@@ -903,7 +904,7 @@ send_reserved_packets(session_t *s)
         if (s->rtt < s->min_rtt) {
             s->rtt = s->min_rtt;
         }
-    } else if (s->unsend_packets->size < 4) {
+    } else if (s->base_rtt && s->unsend_packets->size < 4) {
         s->rtt = s->base_rtt;
     }
 #endif
@@ -1017,7 +1018,11 @@ send_reserved_packets(session_t *s)
             }
 #else
             if (SYN_CONFIRM == s->sm.status) {
-                calculate_rtt(s);
+                if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
+                    calculate_rtt(s);
+                    s->min_rtt = s->rtt / 3;
+                    s->base_rtt = s->rtt;
+                }
             }
             if (need_break(s)) {
                 tc_log_debug1(LOG_DEBUG, 0, "break send ack:%u",
