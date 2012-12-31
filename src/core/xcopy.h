@@ -204,6 +204,7 @@ enum session_status{
 
 enum packet_classification{
     CLIENT_FLAG,
+    RESERVED_CLIENT_FLAG,
     BACKEND_FLAG,
     FAKED_CLIENT_FLAG,
     TO_BAKEND_FLAG,

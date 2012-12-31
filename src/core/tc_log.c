@@ -139,6 +139,13 @@ tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
                     ntohs(tcp_header->dest), pack_size, seq,
                     ack_seq, window);
 
+    } else if (RESERVED_CLIENT_FLAG == flag) {
+        tc_log_info(level, err,
+                    "reserved clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    src_ip, ntohs(tcp_header->source), dst_ip,
+                    ntohs(tcp_header->dest), pack_size, seq,
+                    ack_seq, window);
+
     } else if (FAKED_CLIENT_FLAG == flag) {
         tc_log_info(level, err,
                     "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",

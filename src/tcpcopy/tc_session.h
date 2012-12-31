@@ -21,6 +21,8 @@ typedef struct sess_state_machine_s{
     uint32_t status:8;
     /* round trip time(ms) */
     uint32_t rtt:16;
+    uint32_t min_rtt:16;
+    uint32_t base_rtt:16;
     /* already retransmission flag */
     uint32_t vir_already_retransmit:1;
     /* just for successful retransmission statistics */

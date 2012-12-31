@@ -896,6 +896,18 @@ send_reserved_packets(session_t *s)
         return count;
     }
 
+#if (TCPCOPY_PAPER)
+    if (s->unsend_packets->size > 32) {
+        s->sm.rtt = s->sm.rtt / 2;
+
+        if (s->sm.rtt < s->sm.min_rtt) {
+            s->sm.rtt = s->sm.min_rtt;
+        }
+    } else if (s->unsend_packets->size < 4) {
+        s->sm.rtt = s->sm.base_rtt;
+    }
+#endif
+
     ln = link_list_first(list); 
 
     while (ln && (!need_pause)) {
@@ -906,7 +918,8 @@ send_reserved_packets(session_t *s)
         tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);
 
-        tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
+        tc_log_debug_trace(LOG_DEBUG, 0, RESERVED_CLIENT_FLAG,
+                ip_header, tcp_header);
 
         if (cur_seq > s->vir_next_seq) {
 
@@ -2282,8 +2295,9 @@ process_client_rst(session_t *s, tc_ip_header_t *ip_header,
 
     tc_log_debug1(LOG_DEBUG, 0, "reset from client:%u", s->src_h_port);
 
-    if (s->sm.candidate_response_waiting) {
+    if (s->sm.candidate_response_waiting || s->unsend_packets->size > 0) {
         save_packet(s->unsend_packets, ip_header, tcp_header);
+        send_reserved_packets(s);
     } else {
         seq = ntohl(tcp_header->seq);   
         if (seq < s->vir_next_seq) {
@@ -2603,6 +2617,8 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
         } else if (SYN_CONFIRM == s->sm.status) {
 #if (TCPCOPY_PAPER)
             calculate_rtt(s);
+            s->sm.min_rtt = s->sm.rtt / 3;
+            s->sm.base_rtt = s->sm.rtt;
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
