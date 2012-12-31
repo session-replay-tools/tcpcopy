@@ -844,7 +844,7 @@ need_break(session_t *s)
     }
 
     if (s->sm.rtt_cal == RTT_CAL) {
-        if (s->first_resp_unack_time) {
+        if (s->first_resp_unack_time || s->sm.status == SYN_CONFIRM) {
             if ((tc_milliscond_time() - s->first_resp_unack_time) < s->rtt) {
                 tc_log_info(LOG_NOTICE, 0, 
                         "rtt:%ld,cur:%ld,resp:%ld,p:%u",
@@ -1987,6 +1987,10 @@ process_back_syn(session_t *s, tc_ip_header_t *ip_header,
     s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + 1);
     s->sm.dst_closed  = 0;
     s->sm.reset_sent  = 0;
+
+    if (s->first_resp_unack_time == 0) {
+        s->first_resp_unack_time = tc_milliscond_time();
+    }
 
     if (s->sm.req_halfway_intercepted) {
         send_faked_third_handshake(s, ip_header, tcp_header);
