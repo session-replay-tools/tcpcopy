@@ -960,11 +960,13 @@ send_reserved_packets(session_t *s)
             }
 #if (TCPCOPY_PAPER) 
             if (s->sm.send_reserved_from_bak_payload) {
-                delay = tc_milliscond_time() - s->response_content_time;
-                if (delay < s->rtt) {
-                    tc_log_debug1(LOG_DEBUG, 0, "break sending req:%u",
-                            s->src_h_port);
-                    break;
+                if (!(s->sm.status & CLIENT_FIN)) {
+                    delay = tc_milliscond_time() - s->response_content_time;
+                    if (delay < s->rtt) {
+                        tc_log_debug1(LOG_DEBUG, 0, "break sending req:%u",
+                                s->src_h_port);
+                        break;
+                    }
                 }
             }
 #endif
@@ -1056,7 +1058,11 @@ send_reserved_packets(session_t *s)
         omit_transfer = false;
 #if (TCPCOPY_PAPER)
         if (cont_len == 0) {
-            break;
+            if (!(s->sm.status & CLIENT_FIN)) {
+                break;
+            } else {
+                s->sm.send_reserved_from_bak_payload = 0;
+            }
         }
 #endif
  
@@ -1658,7 +1664,9 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
 
-    tc_log_debug1(LOG_DEBUG, 0, "send faked rst:%u", s->src_h_port);
+    tc_log_debug2(LOG_DEBUG, 0, "unsend:%u,send faked rst:%u",
+            s->unsend_packets->size, s->src_h_port);
+   
 
     memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) faked_rst_buf;
