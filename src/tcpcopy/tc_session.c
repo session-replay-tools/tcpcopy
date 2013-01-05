@@ -406,6 +406,10 @@ session_rel_dynamic_mem(session_t *s)
     }
 
     if (s->unsend_packets != NULL) {
+        if (s->unsend_packets->size > 0) {
+            tc_log_debug2(LOG_DEBUG, 0, "unsend size when released:%u,p:%u",
+                    s->unsend_packets->size, s->src_h_port);
+        }
         link_list_clear(s->unsend_packets);
         free(s->unsend_packets);
         s->unsend_packets = NULL;
@@ -898,7 +902,7 @@ send_reserved_packets(session_t *s)
     }
 
 #if (TCPCOPY_PAPER)
-    if (s->unsend_packets->size > 32) {
+    if (s->unsend_packets->size > 8) {
         s->rtt = s->rtt / 2;
 
         if (s->rtt < s->min_rtt) {
