@@ -237,7 +237,12 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
 
         if (cont_len > 0) {
             ln = link_node_malloc(copy_ip_packet(ip_header));
+#if (!TCPCOPY_PAPER)
             link_list_append(s->unack_packets, ln);
+#else
+            ln->key = ntohl(tcp_header->seq);
+            link_list_append_by_order(s->unack_packets, ln);
+#endif
         }
     } else {
         s->sm.unack_pack_omit_save_flag = 0;
@@ -926,6 +931,7 @@ send_reserved_packets(session_t *s)
         tc_log_debug_trace(LOG_DEBUG, 0, RESERVED_CLIENT_FLAG,
                 ip_header, tcp_header);
 
+#if (!TCPCOPY_PAPER)
         if (cur_seq > s->vir_next_seq) {
 
             /* We need to wait for previous packet */
@@ -948,6 +954,7 @@ send_reserved_packets(session_t *s)
                 tcp_header->seq = htonl(s->vir_next_seq);
             }
         }
+#endif
 
         if (s->sm.status < SEND_REQ
                 && is_wait_greet(s, ip_header, tcp_header))
@@ -1273,7 +1280,7 @@ clear_timeout_sessions()
  * (assume the network between online and target server is very well,
  * so other congestion situations are not detected here )
  */
-static int
+static bool 
 retransmit_packets(session_t *s, uint32_t expected_seq)
 {
     bool              need_pause = false, is_success = false;
@@ -1963,11 +1970,18 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                         s->src_h_port, s->resp_last_same_ack_num);
 
                 if (!s->sm.vir_already_retransmit) {
+#if (!TCPCOPY_PAPER)
                     if (!retransmit_packets(s, ack)) {
                         /* retransmit failure, send reset */
                         send_faked_rst(s, ip_header, tcp_header);
                     }
                     s->sm.vir_already_retransmit = 1;
+#else
+                    /* It may not receive the lost packet */
+                    if (retransmit_packets(s, ack)) {
+                        s->sm.vir_already_retransmit = 1;
+                    }
+#endif
                 } else {
                     tc_log_info(LOG_WARN, 0, "omit retransmit:%u",
                             s->src_h_port);
@@ -2573,9 +2587,13 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
     if (cur_seq > s->vir_next_seq) {
 
         tc_log_debug1(LOG_DEBUG, 0, "lost and need prev:%u", s->src_h_port);
+#if (!TCPCOPY_PAPER)
         save_packet(s->unsend_packets, ip_header, tcp_header);
         send_reserved_packets(s);
         return DISP_STOP;
+#else
+        return DISP_CONTINUE;
+#endif
     } else if (cur_seq == s->vir_next_seq) {
 
         if (s->sm.is_waiting_previous_packet) {
@@ -2591,9 +2609,20 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
 
         retransmit_seq = s->vir_next_seq - cont_len;
         if (cur_seq <= retransmit_seq) {
+#if (!TCPCOPY_PAPER)
             /* retransmission packet from client */
             tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
                     s->src_h_port);
+#else
+            if (link_list_exist(s->unack_packets, cur_seq)) {
+                tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
+                        s->src_h_port);
+            } else {
+                tc_log_debug1(LOG_DEBUG, 0, "previous packet from clt:%u",
+                        s->src_h_port);
+                return DISP_CONTINUE;
+            }
+#endif
         } else {
             diff = s->vir_next_seq - cur_seq;
             if (trim_packet(s, ip_header, tcp_header, diff)) {
