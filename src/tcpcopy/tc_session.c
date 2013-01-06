@@ -2637,6 +2637,7 @@ static int
 is_continuous_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
+#if (!TCPCOPY_PAPER)
     uint32_t cur_seq = ntohl(tcp_header->seq);
 
     if (s->sm.candidate_response_waiting) {
@@ -2646,6 +2647,14 @@ is_continuous_packet(session_t *s, tc_ip_header_t *ip_header,
             return DISP_STOP;
         }
     }
+#else
+    if (s->sm.candidate_response_waiting) {
+        wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
+        tc_log_debug0(LOG_DEBUG, 0, "it is a continuous req");
+        return DISP_STOP;
+    }
+
+#endif
 
     return DISP_CONTINUE;
 }
