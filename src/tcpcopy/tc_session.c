@@ -2615,6 +2615,11 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
                     s->src_h_port);
 #else
             if (link_list_exist(s->unack_packets, cur_seq)) {
+                if (s->resp_last_ack_seq < cur_seq) {
+                    tc_log_debug1(LOG_DEBUG, 0, "maybe a previous packet:%u",
+                        s->src_h_port);
+                    return DISP_CONTINUE;
+                }
                 tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
                         s->src_h_port);
             } else {
