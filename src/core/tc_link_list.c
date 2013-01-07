@@ -101,6 +101,7 @@ link_list_append_by_order(link_list *l, p_link_node p)
 }
 
 #if (TCPCOPY_PAPER)
+/* TODO removed later */
 bool
 link_list_exist(link_list *l, uint32_t key)
 {

@@ -121,6 +121,7 @@ typedef struct session_s{
     /* round trip time */
     long     rtt;
     long     min_rtt;
+    long     max_rtt;
     long     base_rtt;
     long     resp_unack_time;
     long     first_resp_unack_time;

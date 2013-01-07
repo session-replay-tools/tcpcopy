@@ -1284,7 +1284,12 @@ static bool
 retransmit_packets(session_t *s, uint32_t expected_seq)
 {
     bool              need_pause = false, is_success = false;
+#if (TCPCOPY_PAPER)
+    int               diff;
+    uint16_t          size_ip, cont_len;
+#else 
     uint16_t          size_ip;
+#endif
     uint32_t          cur_seq;
     link_list        *list;
     p_link_node       ln, tmp_ln;
@@ -1317,11 +1322,25 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
                 wrap_retransmit_ip_packet(s, data);
                 need_pause = true;  
             } else if (cur_seq < s->resp_last_ack_seq) {
-                tmp_ln = ln;
-                ln = link_list_get_next(list, ln);
-                link_list_remove(list, tmp_ln);
-                free(data);
-                free(tmp_ln);
+#if (TCPCOPY_PAPER)
+                cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
+                diff = s->resp_last_ack_seq - cur_seq;
+                if (cont_len > diff) {
+                    /* fast retransmission */
+                    is_success = true;
+                    tc_log_info(LOG_NOTICE, 0, "special fast retransmit:%u",
+                            s->src_h_port);
+                    wrap_retransmit_ip_packet(s, data);
+                    need_pause = true;  
+
+                } else {
+#endif
+                    tmp_ln = ln;
+                    ln = link_list_get_next(list, ln);
+                    link_list_remove(list, tmp_ln);
+                    free(data);
+                    free(tmp_ln);
+                }
             } else {
                 tc_log_info(LOG_NOTICE, 0, "no retrans pack:%u", s->src_h_port);
                 need_pause = true;
@@ -1339,6 +1358,10 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
 static void
 update_retransmission_packets(session_t *s)
 {
+#if (TCPCOPY_PAPER)
+    int               diff;
+    uint16_t          cont_len;
+#endif
     uint16_t          size_ip;
     uint32_t          cur_seq;
     link_list        *list;
@@ -1359,6 +1382,16 @@ update_retransmission_packets(session_t *s)
         cur_seq    = ntohl(tcp_header->seq);  
 
         if (cur_seq < s->resp_last_ack_seq) {
+#if (TCPCOPY_PAPER)
+            cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
+            diff = s->resp_last_ack_seq - cur_seq;
+            if (cont_len > diff) {
+                tc_log_info(LOG_NOTICE, 0, "special reserver unack:%u",
+                        s->src_h_port);
+                break;
+            }
+#endif
+
             tmp_ln = ln;
             ln = link_list_get_next(list, ln);
             link_list_remove(list, tmp_ln);
@@ -2271,7 +2304,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
         } else {
-            if ((tc_milliscond_time() - s->resp_unack_time) > s->rtt) {
+            if ((tc_milliscond_time() - s->resp_unack_time) > s->max_rtt) {
                 send_faked_ack(s, ip_header, tcp_header, true);
             }
         }
@@ -2609,25 +2642,17 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
 
         retransmit_seq = s->vir_next_seq - cont_len;
         if (cur_seq <= retransmit_seq) {
-#if (!TCPCOPY_PAPER)
+#if (TCPCOPY_PAPER)
+            if (s->resp_last_ack_seq <= cur_seq) {
+                tc_log_debug1(LOG_DEBUG, 0, "maybe a previous packet:%u",
+                        s->src_h_port);
+                return DISP_CONTINUE;
+
+            }
+#endif
             /* retransmission packet from client */
             tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
                     s->src_h_port);
-#else
-            if (link_list_exist(s->unack_packets, cur_seq)) {
-                if (s->resp_last_ack_seq < cur_seq) {
-                    tc_log_debug1(LOG_DEBUG, 0, "maybe a previous packet:%u",
-                        s->src_h_port);
-                    return DISP_CONTINUE;
-                }
-                tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
-                        s->src_h_port);
-            } else {
-                tc_log_debug1(LOG_DEBUG, 0, "previous packet from clt:%u",
-                        s->src_h_port);
-                return DISP_CONTINUE;
-            }
-#endif
         } else {
             diff = s->vir_next_seq - cur_seq;
             if (trim_packet(s, ip_header, tcp_header, diff)) {
@@ -2683,6 +2708,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
             calculate_rtt(s);
             s->min_rtt = s->rtt / 3;
             s->base_rtt = s->rtt;
+            s->max_rtt = s->rtt + s->min_rtt;
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
