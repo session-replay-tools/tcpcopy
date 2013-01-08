@@ -827,18 +827,28 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 #if (TCPCOPY_PAPER)
 static void calculate_rtt(session_t *s) 
 {
+#if (TCPCOPY_OFFLINE)
     tc_log_debug2(LOG_DEBUG, 0, "pcap time:%u,p:%u",
                 clt_settings.pcap_time, s->src_h_port);
+#endif
 
     if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
         s->sm.rtt_cal = RTT_CAL;
+#if (TCPCOPY_OFFLINE)
         s->rtt = (clt_settings.pcap_time - s->rtt);
+#else
+        s->rtt = tc_milliscond_time() - s->rtt;
+#endif
         tc_log_debug2(LOG_DEBUG, 0, "rtt:%u,p:%u",
                 s->rtt, s->src_h_port);
 
     } else if (s->sm.rtt_cal == RTT_INIT) {
         s->sm.rtt_cal = RTT_FIRST_RECORED;
+#if (TCPCOPY_OFFLINE)
         s->rtt = clt_settings.pcap_time;
+#else
+        s->rtt = tc_milliscond_time();
+#endif
         tc_log_debug2(LOG_DEBUG, 0, "record rtt base:%u,p:%u",
                 s->rtt, s->src_h_port);
 
