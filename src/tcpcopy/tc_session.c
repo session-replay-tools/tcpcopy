@@ -898,7 +898,11 @@ send_reserved_packets(session_t *s)
     long              delay;
 #endif
     uint16_t          size_ip, cont_len;
+#if (TCPCOPY_PAPER)
+    uint32_t          cur_ack, cur_seq;
+#else
     uint32_t          cur_ack, cur_seq, diff;
+#endif
     link_list        *list;
     p_link_node       ln, tmp_ln;
     unsigned char    *data;
