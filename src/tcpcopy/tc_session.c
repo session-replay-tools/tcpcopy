@@ -203,7 +203,9 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
 
     if (tcp_header->ack) {
         tcp_header->ack_seq = s->vir_ack_seq;
+#if (TCPCOPY_PAPER)
         s->resp_unack_time = 0;
+#endif
     }
 
     tot_len  = ntohs(ip_header->tot_len);
@@ -1345,7 +1347,9 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
                     link_list_remove(list, tmp_ln);
                     free(data);
                     free(tmp_ln);
+#if (TCPCOPY_PAPER)
                 }
+#endif
             } else {
                 tc_log_info(LOG_NOTICE, 0, "no retrans pack:%u", s->src_h_port);
                 need_pause = true;
@@ -2052,9 +2056,11 @@ process_back_syn(session_t *s, tc_ip_header_t *ip_header,
     s->sm.dst_closed  = 0;
     s->sm.reset_sent  = 0;
 
+#if (TCPCOPY_PAPER)
     if (s->first_resp_unack_time == 0) {
         s->first_resp_unack_time = tc_milliscond_time();
     }
+#endif
 
     if (s->sm.req_halfway_intercepted) {
         send_faked_third_handshake(s, ip_header, tcp_header);
