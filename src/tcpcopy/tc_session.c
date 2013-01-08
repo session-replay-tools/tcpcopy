@@ -867,8 +867,8 @@ need_break(session_t *s)
     if (s->sm.rtt_cal == RTT_CAL) {
         if (s->first_resp_unack_time || s->sm.status == SYN_CONFIRM) {
             if ((tc_milliscond_time() - s->first_resp_unack_time) < s->rtt) {
-                tc_log_info(LOG_NOTICE, 0, 
-                        "rtt:%ld,cur:%ld,resp:%ld,p:%u",
+                tc_log_debug4(LOG_NOTICE, 0, 
+                        "rtt:%ld, cur:%ld, resp:%ld, p:%u",
                         s->rtt, tc_milliscond_time(), 
                         s->first_resp_unack_time, s->src_h_port);
                 return 1;
@@ -1948,7 +1948,9 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
 
     /* if ack from test server is more than what we expect */
     if (ack > s->vir_next_seq) {
+#if (!TCPCOPY_PAPER)
         tc_log_info(LOG_NOTICE, 0, "ack more than vir next seq");
+#endif
         if (!s->sm.resp_syn_received) {
             s->sm.sess_over = 1;
             return DISP_STOP;
