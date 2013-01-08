@@ -908,14 +908,12 @@ send_reserved_packets(session_t *s)
 
 #if (TCPCOPY_PAPER)
     if (s->unsend_packets->size > 8) {
-        s->rtt = s->rtt / 2;
+        s->rtt = s->rtt >> 1;
 
         if (s->rtt < s->min_rtt) {
             s->rtt = s->min_rtt;
         }
-    } else if (s->base_rtt && s->unsend_packets->size < 4) {
-        s->rtt = s->base_rtt;
-    }
+    } 
 #endif
 
     ln = link_list_first(list); 
@@ -970,7 +968,10 @@ send_reserved_packets(session_t *s)
                 break;
             }
 #if (TCPCOPY_PAPER) 
-            if (s->sm.send_reserved_from_bak_payload) {
+            if (s->sm.recv_client_close) {
+                tc_log_debug1(LOG_DEBUG, 0, "sending req when clt close:%u",
+                                s->src_h_port);
+            } else if (s->sm.send_reserved_from_bak_payload) {
                 if (!(s->sm.status & CLIENT_FIN)) {
                     delay = tc_milliscond_time() - s->response_content_time;
                     if (delay < s->rtt) {
@@ -1037,7 +1038,10 @@ send_reserved_packets(session_t *s)
                     s->base_rtt = s->rtt;
                 }
             }
-            if (need_break(s)) {
+                
+            if (s->sm.send_reserved_from_bak_payload == 0 ) {
+                omit_transfer = true;
+            } else if (need_break(s)) {
                 tc_log_debug1(LOG_DEBUG, 0, "break send ack:%u",
                         s->src_h_port);
                 break;
@@ -2157,6 +2161,9 @@ void
 process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
+#if (TCPCOPY_PAPER)
+    long      base_rtt;
+#endif
     time_t    current;
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
     uint32_t  ack, seq;
@@ -2304,6 +2311,10 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
         } else {
+            base_rtt = s->max_rtt;
+            if (s->unsend_packets->size > 8) {
+                base_rtt = s->rtt;
+            }
             if ((tc_milliscond_time() - s->resp_unack_time) > s->max_rtt) {
                 send_faked_ack(s, ip_header, tcp_header, true);
             }
@@ -2424,7 +2435,7 @@ process_client_fin(session_t *s, tc_ip_header_t *ip_header,
 
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
-    s->sm.status |= CLIENT_FIN;
+    s->sm.recv_client_close = 1;
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
         tc_log_debug1(LOG_DEBUG, 0, "fin has content:%u", s->src_h_port);
