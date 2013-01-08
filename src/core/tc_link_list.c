@@ -100,34 +100,6 @@ link_list_append_by_order(link_list *l, p_link_node p)
     }
 }
 
-#if (TCPCOPY_PAPER)
-/* TODO removed later */
-bool
-link_list_exist(link_list *l, uint32_t key)
-{
-    p_link_node node, first_node, next;
-
-    if (l->size > 0) {
-        first_node = l->head.next;
-        if (first_node->key > key) {
-            return true; 
-        }
-        node = l->head.prev;
-        next = node->next;
-        /* find the node which key is less than the key of p */
-        while (node->key > key) {
-            next = node;
-            node = node->prev;
-        }
-
-        if (node->key == key) {
-            return true;
-        }
-    } 
-
-    return false;
-}
-#endif
 
 inline void
 link_list_push(link_list *l, p_link_node p)

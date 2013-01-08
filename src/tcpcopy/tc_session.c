@@ -1034,8 +1034,9 @@ send_reserved_packets(session_t *s)
             if (SYN_CONFIRM == s->sm.status) {
                 if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
                     calculate_rtt(s);
-                    s->min_rtt = s->rtt / 3;
-                    s->base_rtt = s->rtt;
+                    s->min_rtt = s->rtt >> 2;
+                    s->max_rtt = s->rtt + s->min_rtt;
+                    s->base_rtt = s->rtt; 
                 }
             }
                 
@@ -2717,9 +2718,9 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
         } else if (SYN_CONFIRM == s->sm.status) {
 #if (TCPCOPY_PAPER)
             calculate_rtt(s);
-            s->min_rtt = s->rtt / 3;
-            s->base_rtt = s->rtt;
+            s->min_rtt = s->rtt >> 2;
             s->max_rtt = s->rtt + s->min_rtt;
+            s->base_rtt = s->rtt;
 #endif
             if (s->vir_next_seq == ntohl(tcp_header->seq)) {
                 wrap_send_ip_packet(s, (unsigned char *) ip_header, true);

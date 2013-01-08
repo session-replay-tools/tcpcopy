@@ -25,9 +25,6 @@ int link_list_clear(link_list *l);
 inline void link_list_append(link_list *l, p_link_node);
 void link_list_append_by_order(link_list *l, p_link_node);
 
-#if (TCPCOPY_PAPER)
-bool link_list_exist(link_list *l, uint32_t key);
-#endif
 
 inline void link_list_push(link_list *l, p_link_node p);
 inline p_link_node link_list_remove(link_list *l, p_link_node node);

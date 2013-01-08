@@ -585,10 +585,6 @@ main(int argc, char **argv)
     }
     
     if (clt_settings.log_path == NULL) {
-        clt_settings.log_path = "tcpcopy.log";
-    }
-
-    if (clt_settings.log_path == NULL) {
         clt_settings.log_path = "error_tcpcopy.log";
     }   
 
