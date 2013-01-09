@@ -2857,7 +2857,9 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_log_debug2(LOG_DEBUG, 0, "paper unsend size:%u,p:%u",
                 s->unsend_packets->size, s->src_h_port);
         save_packet(s->unsend_packets, ip_header, tcp_header);
-        send_reserved_packets(s);
+        if (!s->sm.candidate_response_waiting) {
+            send_reserved_packets(s);
+        }
         return;
     }
 #endif
