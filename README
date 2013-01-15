@@ -26,7 +26,7 @@ Usage:
     1) Install
        a) obtain the source code with the following steps
             a1) download tcpcopy-x.x.x.tar.gz at 
-                https://github.com/wangbin579/tcpcopy/downloads 
+                https://github.com/wangbin579/tcpcopy/tags
             a2) tar -zxvf tcpcopy-x.x.x.tar.gz
             a3) cd tcpcopy-x.x.x
           You could also download it in the following method if you are a git user
@@ -94,9 +94,10 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) To know more about TCPCopy, refer to the following document
+    4) Paper version is now available in the paper branch
+    5) To know more about TCPCopy, refer to the following document
        (https://github.com/downloads/wangbin579/tcpcopy/TCPCopy_0.6.5_Manual.pdf)
-    5) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
+    6) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
        (https://github.com/wangbin579/tcpcopy/downloads)
-    6) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
+    7) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
 
