@@ -191,7 +191,7 @@ change_client_auth_content(unsigned char *payload, int length,
      */
     char          *str, user[256], *pwd;
     size_t         len, i;
-    unsigned char *p, scramble_buff[SCRAMBLE_LENGTH + 1];
+    unsigned char *p, *q, scramble_buff[SCRAMBLE_LENGTH + 1];
 
     memset(scramble_buff, 0, SCRAMBLE_LENGTH + 1);
 
@@ -208,16 +208,30 @@ change_client_auth_content(unsigned char *payload, int length,
     /* skip charset_number */
     p = p + 1;
     /* skip (filler) always 0x00... */
+    q = p;
     p = p + 23;
     len = p - payload;
     if (len > length) {
-        tc_log_info(LOG_ERR, 0, "payload len is too short:%u,%u", length, len);
+        tc_log_info(LOG_ERR, 0, "payload len is too short:%d,%u", length, len);
         return 0;
     }
 
+    tc_log_info(LOG_INFO, 0, "before judge,cont len:%d", length);
+    for (i = 0; i < 23; i++) {
+        if (q[i] != 0 ) {
+            tc_log_info(LOG_WARN, 0, "it is not a login packet");
+            return 0;
+        }
+    }
+
+    tc_log_info(LOG_INFO, 0, "after judge");
+
     str = (char *) p;
+    tc_log_info(LOG_INFO, 0, "break here?");
     /* retrieve user */
     memset(user, 0, 256);
+
+    tc_log_info(LOG_INFO, 0, "break here??");
 
     len = strlen(str);
     if (len >= 256) {
@@ -241,7 +255,7 @@ change_client_auth_content(unsigned char *payload, int length,
     p = p + 1;
     len = p - payload + SCRAMBLE_LENGTH;
     if (len > length) {
-        tc_log_info(LOG_ERR, 0, "payload len is too short too:%u,%u",
+        tc_log_info(LOG_ERR, 0, "payload len is too short too:%d,%u",
                 length, len);
         return 0;
     }
