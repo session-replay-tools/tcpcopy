@@ -274,18 +274,9 @@ change_client_auth_content(unsigned char *payload, int length,
 }
 
 int 
-change_client_second_auth_content(unsigned char *payload,size_t length,
+change_client_second_auth_content(unsigned char *payload, size_t length,
         char *new_content)
 {
-    /*
-     * 4                            client_flags
-     * 4                            max_packet_size
-     * 1                            charset_number
-     * 23                           (filler) always 0x00...
-     * n (Null-Terminated String)   user
-     * n (Length Coded Binary)      scramble_buff (1 + x bytes) 
-     * n (Null-Terminated String)   databasename (optional)
-     */
     size_t         i, len;
     unsigned char *p;
 
