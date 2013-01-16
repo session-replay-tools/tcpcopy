@@ -94,8 +94,8 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) If you use tcpcopy for mysql applications, please use 0.6.6+ version
-    5) Paper version is now available in the paper branch
+    4) If you use tcpcopy to test mysql applications, please use 0.6.6+ version
+    5) Modified version for a scentific paper (with more accurate latency control) is now available in the paper branch
     6) To know more about TCPCopy, refer to the following document
        (https://github.com/downloads/wangbin579/tcpcopy/TCPCopy_0.6.5_Manual.pdf)
     7) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
