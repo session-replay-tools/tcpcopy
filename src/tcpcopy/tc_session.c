@@ -7,10 +7,10 @@ static hash_table *tf_port_table;
 
 #if (TCPCOPY_MYSQL_BASIC)
 static hash_table *mysql_table;
-static hash_table *existed_sessions;
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED)
+static hash_table *existed_sessions;
 static hash_table *fir_auth_pack_table;
 static hash_table *sec_auth_pack_table;
 #endif
@@ -443,11 +443,13 @@ init_for_sessions()
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_table    = hash_create(65536);
     strcpy(mysql_table->name, "mysql table");
-    existed_sessions = hash_create(65536);
-    strcpy(existed_sessions->name, "existed session for skip");
+
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
+    existed_sessions = hash_create(65536);
+    strcpy(existed_sessions->name, "existed session for skip");
+
     fir_auth_pack_table = hash_create(65536);
     strcpy(fir_auth_pack_table->name, "first auth table");
 
@@ -529,15 +531,15 @@ destroy_for_sessions()
         mysql_table = NULL;
     }
 
+#endif
+
+#if (TCPCOPY_MYSQL_ADVANCED) 
     if (existed_sessions != NULL) {
         hash_destroy(existed_sessions);
         free(existed_sessions);
         existed_sessions = NULL;
     }
 
-#endif
-
-#if (TCPCOPY_MYSQL_ADVANCED) 
     if (fir_auth_pack_table != NULL) {
         hash_deep_destroy(fir_auth_pack_table);
         free(fir_auth_pack_table);
@@ -688,15 +690,18 @@ session_add(uint64_t key, tc_ip_header_t *ip_header,
 }
 
 
-static void 
+static tc_ip_header_t * 
 save_packet(link_list *list, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-    p_link_node ln = link_node_malloc(copy_ip_packet(ip_header));
+
+    tc_ip_header_t *copyed = copy_ip_packet(ip_header);
+    p_link_node ln = link_node_malloc(copyed);
 
     ln->key = ntohl(tcp_header->seq);
     link_list_append_by_order(list, ln);
     tc_log_debug0(LOG_DEBUG, 0, "save packet");
+    return copyed;
 }
 
 
@@ -1342,14 +1347,14 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     fir_ip_header  = (tc_ip_header_t *) fir_auth_pack;
     fir_ip_header->saddr = ip_header->saddr;
     size_ip        = fir_ip_header->ihl << 2;
-    fir_tcp_header = (tc_tcp_header_t *) ((char *) fir_ip_header
-            + size_ip);
+    fir_tcp_header = (tc_tcp_header_t *) ((char *) fir_ip_header + size_ip);
     fir_cont_len = TCP_PAYLOAD_LENGTH(fir_ip_header, fir_tcp_header);
     fir_tcp_header->source = tcp_header->source;
 
     /* save packet to unsend */
-    save_packet(s->unsend_packets, fir_ip_header, fir_tcp_header);
-
+    fir_ip_header = save_packet(s->unsend_packets, 
+            fir_ip_header, fir_tcp_header);
+    fir_tcp_header = (tc_tcp_header_t *) ((char *) fir_ip_header + size_ip);
     s->mysql_vir_req_seq_diff = g_seq_omit;
 
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -1362,7 +1367,10 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
                 + size_ip);
         sec_cont_len = TCP_PAYLOAD_LENGTH(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
-        save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
+        sec_ip_header = save_packet(s->unsend_packets, 
+                sec_ip_header, sec_tcp_header);
+        sec_tcp_header = (tc_tcp_header_t *) ((char *) sec_ip_header
+                + size_ip);
         tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u", s->src_h_port);
     } else {
         tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
@@ -2206,18 +2214,23 @@ static void
 process_client_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)  
 {
-#if (TCPCOPY_MYSQL_BASIC)
+#if (TCPCOPY_MYSQL_ADVANCED)
     uint64_t       key;
+#endif
+#if (TCPCOPY_MYSQL_BASIC)
     link_list     *list;
     p_link_node    ln, tmp_ln;
 #endif
 
     s->sm.req_syn_ok = 1;
 
-#if (TCPCOPY_MYSQL_BASIC)
-    tc_log_info(LOG_INFO, 0, "syn port:%u", s->src_h_port);
+#if (TCPCOPY_MYSQL_ADVANCED)
     key = get_key(ip_header->saddr, tcp_header->source);
     hash_add(existed_sessions, key, (void *) (long) s->orig_src_port);
+#endif
+
+#if (TCPCOPY_MYSQL_BASIC)
+    tc_log_info(LOG_INFO, 0, "syn port:%u", s->src_h_port);
     /* remove old mysql info */
     list = (link_list *)hash_find(mysql_table, s->src_h_port);
     if (list) {
@@ -2742,7 +2755,7 @@ is_packet_needed(const char *packet)
             if (tcp_header->syn) {
                 clt_syn_cnt++;
             } else {
-#if (TCPCOPY_MYSQL_BASIC)
+#if (TCPCOPY_MYSQL_ADVANCED)
                 sess_key = get_key(ip_header->saddr, tcp_header->source);
                 s = hash_find(sessions_table, sess_key);
                 if (s == NULL) {
