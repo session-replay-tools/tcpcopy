@@ -19,6 +19,7 @@ static uint64_t leave_cnt            = 0;
 static uint64_t obs_cnt              = 0;
 /* total client syn packets */
 static uint64_t clt_syn_cnt          = 0;
+static uint64_t clt_dropped_cnt      = 0;
 /* total client content packets */
 static uint64_t clt_cont_cnt         = 0;
 /* total client packets */
@@ -2191,9 +2192,8 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
 
     s->sm.req_syn_ok = 1;
 
-    tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
-
 #if (TCPCOPY_MYSQL_BASIC)
+    tc_log_info(LOG_INFO, 0, "syn port:%u", s->src_h_port);
     /* remove old mysql info */
     list = (link_list *)hash_find(mysql_table, s->src_h_port);
     if (list) {
@@ -2210,6 +2210,8 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
         }
         free(list);
     }
+#else
+    tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 #endif
 
     wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
@@ -2664,6 +2666,12 @@ is_packet_needed(const char *packet)
 {
     bool              is_needed = false;
     uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
+#if (TCPCOPY_MYSQL_BASIC)
+    uint16_t          src_port;
+    uint64_t          sess_key; 
+    link_list        *list;
+    session_t        *s;
+#endif
     tc_ip_header_t   *ip_header;
     tc_tcp_header_t  *tcp_header;
 
@@ -2704,11 +2712,26 @@ is_packet_needed(const char *packet)
                 }
             }
             is_needed = true;
-            cont_len  = tot_len - header_len;
             if (tcp_header->syn) {
                 clt_syn_cnt++;
-            } else if (cont_len > 0) {
-                clt_cont_cnt++;
+            } else {
+#if (TCPCOPY_MYSQL_BASIC)
+                sess_key = get_key(ip_header->daddr, tcp_header->dest);
+                s = hash_find(sessions_table, sess_key);
+                if (s == NULL) {
+                    src_port = ntohs(tcp_header->source);
+                    list = (link_list *)hash_find(mysql_table, src_port);
+                    if (list == NULL) {
+                        clt_dropped_cnt++;
+                        is_needed = false;
+                        return is_needed;
+                    } 
+                }
+#endif
+                cont_len  = tot_len - header_len;
+                if (cont_len > 0) {
+                    clt_cont_cnt++;
+                }
             }
             clt_packs_cnt++;
         } else {
@@ -2747,6 +2770,7 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+    tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);
 
     run_time = tc_time() - start_p_time;
 
