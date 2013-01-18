@@ -2,12 +2,12 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT(tcpcopy, 0.6.6, wangbin579@gmail.com)
+AC_INIT(tcpcopy, 0.6.7, wangbin579@gmail.com)
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 
 
-AM_INIT_AUTOMAKE(tcpcopy,0.6.6)
+AM_INIT_AUTOMAKE(tcpcopy,0.6.7)
 
 
 # Checks for programs.
