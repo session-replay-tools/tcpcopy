@@ -2725,7 +2725,7 @@ is_packet_needed(const char *packet)
                 clt_syn_cnt++;
             } else {
 #if (TCPCOPY_MYSQL_BASIC)
-                sess_key = get_key(ip_header->daddr, tcp_header->dest);
+                sess_key = get_key(ip_header->saddr, tcp_header->source);
                 s = hash_find(sessions_table, sess_key);
                 if (s == NULL) {
                     src_port = ntohs(tcp_header->source);
