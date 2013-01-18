@@ -695,7 +695,7 @@ save_packet(link_list *list, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
 
-    tc_ip_header_t *copyed = copy_ip_packet(ip_header);
+    tc_ip_header_t *copyed = (tc_ip_header_t *)copy_ip_packet(ip_header);
     p_link_node ln = link_node_malloc(copyed);
 
     ln->key = ntohl(tcp_header->seq);
@@ -2708,7 +2708,7 @@ is_packet_needed(const char *packet)
 {
     bool              is_needed = false;
     uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
-#if (TCPCOPY_MYSQL_BASIC)
+#if (TCPCOPY_MYSQL_ADVANCED)
     uint64_t          sess_key; 
     session_t        *s;
 #endif
