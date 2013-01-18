@@ -7,7 +7,9 @@ static hash_table *tf_port_table;
 
 #if (TCPCOPY_MYSQL_BASIC)
 static hash_table *mysql_table;
+static hash_table *existed_sessions;
 #endif
+
 #if (TCPCOPY_MYSQL_ADVANCED)
 static hash_table *fir_auth_pack_table;
 static hash_table *sec_auth_pack_table;
@@ -441,6 +443,8 @@ init_for_sessions()
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_table    = hash_create(65536);
     strcpy(mysql_table->name, "mysql table");
+    existed_sessions = hash_create(65536);
+    strcpy(existed_sessions->name, "existed session for skip");
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
@@ -524,6 +528,13 @@ destroy_for_sessions()
         free(mysql_table);
         mysql_table = NULL;
     }
+
+    if (existed_sessions != NULL) {
+        hash_destroy(existed_sessions);
+        free(existed_sessions);
+        existed_sessions = NULL;
+    }
+
 #endif
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
@@ -1378,7 +1389,7 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
         }
     }
 
-    tc_log_debug2(LOG_DEBUG, 0, "total len subtracted:%u,p:%u", 
+    tc_log_info(LOG_INFO, 0, "total len subtracted:%u,p:%u", 
             total_cont_len, s->src_h_port);
 
     /* rearrange seq */
@@ -1596,9 +1607,12 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
     uint16_t  target_port;
     uint64_t  new_key;
 
-
+#if (TCPCOPY_MYSQL_BASIC)
+        tc_log_info(LOG_INFO, 0, "call fake_syn:%u", s->src_h_port);
+#endif
+ 
     if (is_hard) {
-        tc_log_debug1(LOG_DEBUG, 0, "fake syn:%u", s->src_h_port);
+        tc_log_debug1(LOG_DEBUG, 0, "fake syn hard:%u", s->src_h_port);
         while (true) {
             target_port = get_port_by_rand_addition(tcp_header->source);
             s->src_h_port = target_port;
@@ -1698,6 +1712,8 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
                     tc_log_info(LOG_ERR, 0, "list create err");
                     return false;
                 } else {
+                    tc_log_info(LOG_NOTICE, 0, "add to mysql table:%u",
+                            s->src_h_port);
                     hash_add(mysql_table, s->src_h_port, list);
                 }
             }
@@ -2191,6 +2207,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)  
 {
 #if (TCPCOPY_MYSQL_BASIC)
+    uint64_t       key;
     link_list     *list;
     p_link_node    ln, tmp_ln;
 #endif
@@ -2199,9 +2216,12 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
 
 #if (TCPCOPY_MYSQL_BASIC)
     tc_log_info(LOG_INFO, 0, "syn port:%u", s->src_h_port);
+    key = get_key(ip_header->saddr, tcp_header->source);
+    hash_add(existed_sessions, key, (void *) (long) s->orig_src_port);
     /* remove old mysql info */
     list = (link_list *)hash_find(mysql_table, s->src_h_port);
     if (list) {
+        tc_log_info(LOG_INFO, 0, "del from mysql table:%u", s->src_h_port);
         ln = link_list_first(list); 
         while (ln) {
             tmp_ln = ln;
@@ -2676,9 +2696,7 @@ is_packet_needed(const char *packet)
     bool              is_needed = false;
     uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
 #if (TCPCOPY_MYSQL_BASIC)
-    uint16_t          src_port;
     uint64_t          sess_key; 
-    link_list        *list;
     session_t        *s;
 #endif
     tc_ip_header_t   *ip_header;
@@ -2728,13 +2746,11 @@ is_packet_needed(const char *packet)
                 sess_key = get_key(ip_header->saddr, tcp_header->source);
                 s = hash_find(sessions_table, sess_key);
                 if (s == NULL) {
-                    src_port = ntohs(tcp_header->source);
-                    list = (link_list *)hash_find(mysql_table, src_port);
-                    if (list == NULL) {
+                    if (hash_find(existed_sessions, sess_key) == NULL) {
                         clt_dropped_cnt++;
                         is_needed = false;
                         return is_needed;
-                    } 
+                    }
                 }
 #endif
                 cont_len  = tot_len - header_len;
@@ -2780,6 +2796,9 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
     tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);
+#if (TCPCOPY_MYSQL_BASIC)
+    tc_log_info(LOG_NOTICE, 0, "mysql table size:%u", mysql_table->size);
+#endif
 
     run_time = tc_time() - start_p_time;
 
