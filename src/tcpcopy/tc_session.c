@@ -854,7 +854,12 @@ send_reserved_packets(session_t *s)
         if (cur_seq > s->vir_next_seq) {
 
             /* We need to wait for previous packet */
+#if (TCPCOPY_MYSQL_BASIC)
+            tc_log_info(LOG_INFO, 0, "we need to wait prev pack:%u", 
+                    s->src_h_port);
+#else
             tc_log_debug0(LOG_DEBUG, 0, "we need to wait prev pack");
+#endif
             s->sm.is_waiting_previous_packet = 1;
             s->sm.candidate_response_waiting = 0;
             break;
@@ -2420,7 +2425,11 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if (cur_seq > s->vir_next_seq) {
 
+#if (TCPCOPY_MYSQL_BASIC)
+        tc_log_info(LOG_INFO, 0, "lost and need prev:%u", s->src_h_port);
+#else
         tc_log_debug1(LOG_DEBUG, 0, "lost and need prev:%u", s->src_h_port);
+#endif
         save_packet(s->unsend_packets, ip_header, tcp_header);
         send_reserved_packets(s);
         return DISP_STOP;
