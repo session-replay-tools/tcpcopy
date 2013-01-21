@@ -12,13 +12,10 @@ Scenarios:
     1) Distributed stress testing
        Use tcpcopy to copy real-world data to stress test your server software. Bugs that only can be produced in high-stress situations can be found.
 
-    2) Hot backup
-       It is very suitable for backup tasks if connections are short-lived. The request loss ratio is quite low (e.g. 0.00001).
-
-    3) live testing
+    2) live testing
        Prove the new system is stable and find bugs that only occur in the real world.
 
-    4) Benchmark
+    3) Benchmark
        Do performance benchmark. For instance, you can use tcpcopy to compare the performance of Apache and Nginx.
 
 
