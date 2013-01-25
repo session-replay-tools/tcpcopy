@@ -41,7 +41,7 @@ Usage:
           ./intercept 
 
        b) on the source host (root privilege is required):
-          ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
+          sudo ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
  
 
 Example:
