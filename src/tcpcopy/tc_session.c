@@ -960,6 +960,12 @@ send_reserved_packets(session_t *s)
             }
 
             if (cont_len > 0) {
+#if (TCPCOPY_MYSQL_BASIC) 
+                if (fir_auth_u_p == NULL && s->sm.resp_greet_received) {
+                    fir_auth_u_p = (tc_ip_header_t *) copy_ip_packet(ip_header);
+                    tc_log_info(LOG_NOTICE, 0, "fir auth is set from reserved");
+                }
+#endif
                 s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
                 s->req_cont_cur_ack_seq  = ntohl(tcp_header->ack_seq);
             }
