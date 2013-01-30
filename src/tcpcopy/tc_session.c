@@ -1581,8 +1581,12 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
     unsigned char     faked_rst_buf[FAKE_IP_DATAGRAM_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
-
+#if (TCPCOPY_MYSQL_BASIC)
+    tc_log_info(LOG_INFO, 0, "send faked rst::%u", s->src_h_port);
+#else
     tc_log_debug1(LOG_DEBUG, 0, "send faked rst:%u", s->src_h_port);
+#endif
+
 
     memset(faked_rst_buf, 0, FAKE_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) faked_rst_buf;
@@ -1879,6 +1883,8 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                     if (!retransmit_packets(s, ack)) {
                         /* retransmit failure, send reset */
                         send_faked_rst(s, ip_header, tcp_header);
+                        s->sm.sess_over = 1;
+                        return DISP_STOP;
                     }
                     s->sm.vir_already_retransmit = 1;
                 } else {
