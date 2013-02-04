@@ -871,8 +871,8 @@ send_reserved_packets(session_t *s)
 
             /* We need to wait for previous packet */
 #if (TCPCOPY_MYSQL_BASIC)
-            tc_log_info(LOG_INFO, 0, "we need to wait prev pack:%u", 
-                    s->src_h_port);
+            tc_log_info(LOG_INFO, 0, "wait prev pack,cur_seq:%u,vir:%u,p:%u",
+                    cur_seq, s->vir_next_seq, s->src_h_port); 
 #else
             tc_log_debug0(LOG_DEBUG, 0, "we need to wait prev pack");
 #endif
@@ -1357,10 +1357,6 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     fir_cont_len = TCP_PAYLOAD_LENGTH(fir_ip_header, fir_tcp_header);
     fir_tcp_header->source = tcp_header->source;
 
-    /* save packet to unsend */
-    fir_ip_header = save_packet(s->unsend_packets, 
-            fir_ip_header, fir_tcp_header);
-    fir_tcp_header = (tc_tcp_header_t *) ((char *) fir_ip_header + size_ip);
     s->mysql_vir_req_seq_diff = g_seq_omit;
 
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -1373,11 +1369,6 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
                 + size_ip);
         sec_cont_len = TCP_PAYLOAD_LENGTH(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
-        sec_ip_header = save_packet(s->unsend_packets, 
-                sec_ip_header, sec_tcp_header);
-        sec_tcp_header = (tc_tcp_header_t *) ((char *) sec_ip_header
-                + size_ip);
-        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u", s->src_h_port);
     } else {
         tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
     }
@@ -1410,10 +1401,15 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_cont_len);
     fir_tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
 
+    /* save packet to unsend */
+    save_packet(s->unsend_packets, fir_ip_header, fir_tcp_header);
+
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (sec_tcp_header != NULL) {
         sec_tcp_header->seq = htonl(ntohl(fir_tcp_header->seq) 
                 + fir_cont_len);
+        save_packet(s->unsend_packets, sec_ip_header, sec_tcp_header);
+        tc_log_info(LOG_NOTICE, 0, "set sec auth(normal):%u", s->src_h_port);
     }
 #endif
 
@@ -1432,6 +1428,8 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
             tmp_tcp_header = (tc_tcp_header_t *) ((char *) tmp_ip_header 
                     + size_ip); 
             tmp_cont_len   = TCP_PAYLOAD_LENGTH(tmp_ip_header, tmp_tcp_header);
+            tc_log_info(LOG_INFO, 0, "expected seq:%u,p:%u",
+                    base_seq, s->src_h_port);
             tmp_tcp_header->seq = htonl(base_seq);
             save_packet(s->unsend_packets, tmp_ip_header, tmp_tcp_header);
             base_seq += tmp_cont_len;
@@ -1485,7 +1483,6 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     f_tcp_header->dest    = tcp_header->dest;
     f_tcp_header->syn     = 1;
     f_tcp_header->seq     = htonl(ntohl(tcp_header->seq) - 1);
-    s->vir_next_seq       = ntohl(tcp_header->seq);
 
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_prepare_for_new_session(s, f_ip_header, f_tcp_header);
