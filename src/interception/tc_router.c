@@ -123,7 +123,9 @@ router_add(uint32_t ip, uint16_t port, int fd)
 void
 router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
 {
+#if (!TCPCOPY_SINGLE)
     void                   *fd;
+#endif
     uint32_t                size_ip;
     uint64_t                key;
     msg_server_t            msg;
@@ -155,13 +157,15 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     }
 
     pthread_mutex_unlock(&mutex);
-#else
-    fd = main_router_fd;
 #endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
+#if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
+#else
+    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
+#endif
 }
 
 #else 
@@ -169,11 +173,11 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
 void
 router_update(int main_router_fd, tc_ip_header_t *ip_header)
 {
-    void                   *fd;
-    uint32_t                size_ip;
 #if (!TCPCOPY_SINGLE)
+    void                   *fd;
     uint64_t                key;
 #endif
+    uint32_t                size_ip;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -221,12 +225,14 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
         delay_table_add(key, &msg);
         return ;
     }
-#else
-    fd = (void *)&main_router_fd;
 #endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+#if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
+#else
+    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
+#endif
 }
 
 #endif

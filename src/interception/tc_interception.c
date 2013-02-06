@@ -70,8 +70,8 @@ tc_msg_event_accept(tc_event_t *rev)
 #if (TCPCOPY_SINGLE)  
     if (srv_settings.router_fd > 0) {
         tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
-        srv_settings.router_fd = fd;
     }
+    srv_settings.router_fd = fd;
 #endif
 
     return TC_OK;
