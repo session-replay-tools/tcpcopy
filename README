@@ -21,7 +21,7 @@ Scenarios:
 
 Usage:
     1) Install
-       a) obtain the source code with the following steps
+       a) obtain the source code with the following steps (for mysql, please use the second method)
             a1) download tcpcopy-x.x.x.tar.gz at 
                 https://github.com/wangbin579/tcpcopy/downloads
             a2) tar -zxvf tcpcopy-x.x.x.tar.gz
