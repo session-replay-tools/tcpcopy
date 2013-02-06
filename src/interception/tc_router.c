@@ -171,7 +171,9 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 {
     void                   *fd;
     uint32_t                size_ip;
+#if (!TCPCOPY_SINGLE)
     uint64_t                key;
+#endif
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -220,7 +222,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
         return ;
     }
 #else
-    fd = main_router_fd;
+    fd = (void *)&main_router_fd;
 #endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);

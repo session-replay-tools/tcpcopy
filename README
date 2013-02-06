@@ -1,6 +1,6 @@
 Name:
     tcpcopy
-    It is an online TCP duplication tool and can be used for performance testing, regression testing, live tesing, etc.
+    It is an online TCP duplication tool and can be used for performance testing, regression testing, real tesing, etc.
 
 
 Description:
@@ -12,13 +12,10 @@ Scenarios:
     1) Distributed stress testing
        Use tcpcopy to copy real-world data to stress test your server software. Bugs that only can be produced in high-stress situations can be found.
 
-    2) Hot backup
-       It is very suitable for backup tasks if connections are short-lived. The request loss ratio is quite low (e.g. 0.00001).
-
-    3) live testing
+    2) live testing
        Prove the new system is stable and find bugs that only occur in the real world.
 
-    4) Benchmark
+    3) Benchmark
        Do performance benchmark. For instance, you can use tcpcopy to compare the performance of Apache and Nginx.
 
 
@@ -28,6 +25,9 @@ Usage:
             a1) git clone http://github.com/wangbin579/tcpcopy
             a2) cd tcpcopy
             a3) sh autogen.sh
+
+          For mysql, please use the second method.
+
        b) ./configure
        c) make
        d) make install
@@ -39,7 +39,7 @@ Usage:
           ./intercept 
 
        b) on the source host (root privilege is required):
-          ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
+          sudo ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
  
 
 Example:
@@ -89,11 +89,10 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) If you use tcpcopy to test mysql applications, please use 0.6.6+ version
-    5) Modified version for a scientific paper (with more accurate latency control) is now available in the paper branch
-    6) To know more about TCPCopy, refer to the following document
+    4) Modified version for a scientific paper (with more accurate latency control) is now available in the paper branch
+    5) To know more about TCPCopy, refer to the following document
        (https://github.com/downloads/wangbin579/tcpcopy/TCPCopy_0.6.5_Manual.pdf)
-    7) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
+    6) Using TCPCopy to compare performances of Apache and Nginx, refer to "Apache 2.4 vs. Nginx - A comparison under real online applications"
        (https://github.com/wangbin579/tcpcopy/downloads)
-    8) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
+    7) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
 

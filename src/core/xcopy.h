@@ -92,7 +92,12 @@
 #define MAX_REAL_SERVERS 256
 #endif
 
+#if (TCPCOPY_MYSQL_BASIC)
+#define DEFAULT_TIMEOUT 1200
+#else
 #define DEFAULT_TIMEOUT 120
+#endif
+
 #define CHECK_INTERVAL  15
 #define DEFAULT_SESSION_TIMEOUT 60
 

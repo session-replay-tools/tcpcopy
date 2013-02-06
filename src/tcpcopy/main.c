@@ -506,7 +506,9 @@ set_details()
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     if (clt_settings.user_pwd != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "-u argument:%s",clt_settings.user_pwd);
         if (retrieve_mysql_user_pwd_info(clt_settings.user_pwd) == -1) {
+            tc_log_info(LOG_ERR, 0, "wrong -u argument");
             return -1;
         }
     } else {
