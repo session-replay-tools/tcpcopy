@@ -2486,7 +2486,6 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
 #if (TCPCOPY_PAPER)
     calculate_rtt(s);
 #endif
-    tc_log_debug1(LOG_DEBUG, 0, "syn port:%u", s->src_h_port);
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     key = get_key(ip_header->saddr, tcp_header->source);

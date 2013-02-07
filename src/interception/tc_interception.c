@@ -6,6 +6,7 @@
 
 static pid_t           pid;
 static time_t          last_clean_time;
+static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
 
 #if (!INTERCEPT_NFQUEUE)
@@ -114,8 +115,8 @@ tc_check_cleaning()
     now  = tc_time();
     diff = now - last_clean_time;
     if (diff > CHECK_INTERVAL) {
-        tc_log_info(LOG_NOTICE, 0, "total response packets:%llu",
-                tot_resp_packs);
+        tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
+                tot_copy_resp_packs, tot_resp_packs);
         route_delete_obsolete(now);
         last_clean_time = now;
     }
@@ -324,13 +325,15 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
             }
         }
 
+        tot_resp_packs++;
+
         if (pass_through_flag) {
 
             /* pass through the firewall */
             ret = nfq_set_verdict(qh, id, NF_ACCEPT, 0, NULL);
         } else {
 
-            tot_resp_packs++;
+            tot_copy_resp_packs++;
             router_update(srv_settings.router_fd, ip_hdr);
 
             tc_check_cleaning();
@@ -435,6 +438,8 @@ tc_nl_event_process(tc_event_t *rev)
             }
         }
 
+        tot_resp_packs++;
+
         if (pass_through_flag) {
 
 #if (INTERCEPT_THREAD)
@@ -445,7 +450,7 @@ tc_nl_event_process(tc_event_t *rev)
 #endif
         } else {
 
-            tot_resp_packs++;
+            tot_copy_resp_packs++;
 #if (INTERCEPT_THREAD)
             /* put response packet header to pool */
             put_resp_header_to_pool(ip_hdr);
