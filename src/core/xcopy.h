@@ -101,6 +101,8 @@
 #define CHECK_INTERVAL  15
 #define DEFAULT_SESSION_TIMEOUT 60
 
+#define MAX_UNSEND_THRESHOLD 32768
+
 /* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
