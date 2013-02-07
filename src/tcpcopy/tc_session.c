@@ -53,6 +53,7 @@ static uint32_t g_seq_omit           = 0;
 static tc_ip_header_t *fir_auth_u_p  = NULL;
 #endif
 
+
 static bool
 check_session_over(session_t *s)
 {
@@ -991,6 +992,13 @@ static int
 check_overwhelming(session_t *s, const char *message, 
         int max_hold_packs, int size)
 {
+    if (size > MAX_UNSEND_THRESHOLD) {
+        obs_cnt++;
+        tc_log_info(LOG_WARN, 0, "%s:crazy number of packets:%u,p:%u",
+                message, size, s->src_h_port);
+        return OBSOLETE;
+    }
+
     if (size > max_hold_packs) {
         if (!s->sm.sess_candidate_erased) {
             s->sm.sess_candidate_erased = 1;
