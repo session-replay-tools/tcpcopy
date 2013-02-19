@@ -125,9 +125,9 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
 {
 #if (!TCPCOPY_SINGLE)
     void                   *fd;
+    uint64_t                key;
 #endif
     uint32_t                size_ip;
-    uint64_t                key;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 

@@ -117,10 +117,13 @@ tc_check_cleaning()
     if (diff > CHECK_INTERVAL) {
         tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
                 tot_copy_resp_packs, tot_resp_packs);
+#if (!TCPCOPY_SINGLE)  
         route_delete_obsolete(now);
+#endif
         last_clean_time = now;
     }
 }
+
 
 
 #if (INTERCEPT_THREAD)
