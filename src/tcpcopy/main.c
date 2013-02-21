@@ -98,7 +98,7 @@ usage(void)
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
 #if (TCPCOPY_DR)
-    printf("-s <iplist,> real server ip addresses behind lvs\n"
+    printf("-s <iplist,>   real server ip addresses behind lvs\n"
            "               Format:\n"
            "               ip_addr1, ip_addr2 ...\n");
 #endif
