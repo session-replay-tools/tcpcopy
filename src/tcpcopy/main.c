@@ -161,7 +161,7 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_OFFLINE)
             case 'i':
-                clt_settings.pcap_file= optarg;
+                clt_settings.pcap_file = optarg;
                 break;
 #endif
 #if (TCPCOPY_PCAP)
@@ -194,7 +194,7 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_DR)
             case 's':
-                clt_settings.raw_rs_ip_list= optarg;
+                clt_settings.raw_rs_ip_list = optarg;
                 break;
 #endif
             case 't':
