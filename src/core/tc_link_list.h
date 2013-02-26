@@ -24,6 +24,8 @@ link_list *link_list_create();
 int link_list_clear(link_list *l);
 inline void link_list_append(link_list *l, p_link_node);
 void link_list_append_by_order(link_list *l, p_link_node);
+
+
 inline void link_list_push(link_list *l, p_link_node p);
 inline p_link_node link_list_remove(link_list *l, p_link_node node);
 inline p_link_node link_list_first(link_list *l);

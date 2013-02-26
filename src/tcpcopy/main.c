@@ -161,7 +161,7 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_OFFLINE)
             case 'i':
-                clt_settings.pcap_file= optarg;
+                clt_settings.pcap_file = optarg;
                 break;
 #endif
 #if (TCPCOPY_PCAP)
@@ -194,7 +194,7 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_DR)
             case 's':
-                clt_settings.raw_rs_ip_list= optarg;
+                clt_settings.raw_rs_ip_list = optarg;
                 break;
 #endif
             case 't':
@@ -544,7 +544,7 @@ set_details()
 #if (TCPCOPY_OFFLINE)
     if (tc_time_set_timer(TIMER_INTERVAL) == TC_ERROR) {
 #else
-    if (tc_time_set_timer(100) == TC_ERROR) {
+    if (tc_time_set_timer(10) == TC_ERROR) {
 #endif
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
@@ -585,7 +585,7 @@ main(int argc, char **argv)
     if (read_args(argc, argv) == -1) {
         return -1;
     }
-
+    
     if (clt_settings.log_path == NULL) {
         clt_settings.log_path = "error_tcpcopy.log";
     }   

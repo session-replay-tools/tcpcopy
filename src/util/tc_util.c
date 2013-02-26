@@ -119,6 +119,12 @@ copy_ip_packet(tc_ip_header_t *ip_header)
     return data;
 }
 
+inline bool
+tcp_seq_before(uint32_t seq1, uint32_t seq2)
+{
+    return (int32_t)(seq1-seq2) < 0;
+}
+
 unsigned short
 csum(unsigned short *packet, int pack_len) 
 { 

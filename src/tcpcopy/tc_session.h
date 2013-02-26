@@ -19,8 +19,7 @@ void output_stat();
 typedef struct sess_state_machine_s{
     /* session status */
     uint32_t status:8;
-    /* round trip time(ms) */
-    uint32_t rtt:16;
+    uint32_t recv_client_close:1;
     /* already retransmission flag */
     uint32_t vir_already_retransmit:1;
     /* just for successful retransmission statistics */
@@ -41,6 +40,7 @@ typedef struct sess_state_machine_s{
     uint32_t last_window_full:1;
     /* candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
+    uint32_t send_reserved_from_bak_payload:1;
     /* delay sent flag because of flow control */
     uint32_t delay_sent_flag:1;
     /* waiting previous packet flag */
@@ -71,6 +71,9 @@ typedef struct sess_state_machine_s{
     uint32_t need_resp_greet:1;
     /* seset packet sent flag */
     uint32_t reset_sent:1;
+#if (TCPCOPY_PAPER)
+    uint32_t rtt_cal:2;
+#endif
 #if (TCPCOPY_MYSQL_BASIC)
     /* the second auth checked flag */
     uint32_t mysql_sec_auth_checked:1;
@@ -115,6 +118,16 @@ typedef struct session_s{
     uint16_t online_port;
     /* faked src or client port(network byte order) */
     uint16_t faked_src_port;
+#if (TCPCOPY_PAPER)
+    /* round trip time */
+    long     rtt;
+    long     min_rtt;
+    long     max_rtt;
+    long     base_rtt;
+    long     resp_unack_time;
+    long     first_resp_unack_time;
+    long     response_content_time;
+#endif
 
     /* These values will be sent to backend just for cheating */
     /* Virtual acknowledgement sequence that sends to backend */

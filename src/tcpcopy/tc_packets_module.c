@@ -525,7 +525,10 @@ send_packets_from_pcap(int first)
             } else {
 
                 ip_data = get_ip_data(pkt_data, pkt_hdr.len, &l2_len);
+                last_pack_time = pkt_hdr.ts;
                 if (ip_data != NULL) {
+                    clt_settings.pcap_time = last_pack_time.tv_sec * 1000 + 
+                        last_pack_time.tv_usec/1000; 
 
                     ip_pack_len = pkt_hdr.len - l2_len;
                     dispose_packet((char*)ip_data, ip_pack_len, &p_valid_flag);
@@ -538,11 +541,10 @@ send_packets_from_pcap(int first)
                             first_pack_time = pkt_hdr.ts;
                             first = 0;
                         }
-                        last_pack_time = pkt_hdr.ts;
                     } else {
 
                         stop = false;
-                        tc_log_debug0(LOG_DEBUG, 0, "stop,invalid flag");
+                        tc_log_debug0(LOG_DEBUG, 0, "invalid flag");
                     }
                 }
             }

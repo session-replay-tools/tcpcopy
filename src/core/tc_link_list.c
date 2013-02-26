@@ -100,6 +100,7 @@ link_list_append_by_order(link_list *l, p_link_node p)
     }
 }
 
+
 inline void
 link_list_push(link_list *l, p_link_node p)
 {

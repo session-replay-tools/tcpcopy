@@ -62,6 +62,15 @@ if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
 fi
 
+AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single],[run tcpcopy at non-distributed mode]),,single=no)
+if test "x$enable_single" = "xyes";then
+    AC_DEFINE(TCPCOPY_SINGLE, 1, [Define if --enable-single])
+fi
+
+AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode(only valid for high latency web applications)]),,paper=no)
+if test "x$enable_paper" = "xyes";then
+    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
+fi
 
 # Checks for header files.
 AC_HEADER_STDC

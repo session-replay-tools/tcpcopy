@@ -121,11 +121,13 @@ router_add(uint32_t ip, uint16_t port, int fd)
 #if (INTERCEPT_THREAD)
 /* update router table */
 void
-router_update(tc_ip_header_t *ip_header, int len)
+router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
 {
+#if (!TCPCOPY_SINGLE)
     void                   *fd;
-    uint32_t                size_ip;
     uint64_t                key;
+#endif
+    uint32_t                size_ip;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 
@@ -135,8 +137,8 @@ router_update(tc_ip_header_t *ip_header, int len)
     tc_log_debug1(LOG_DEBUG, 0, "router update:%u", ntohs(tcp_header->source));
     memcpy(&msg, ip_header, len);
 
+#if (!TCPCOPY_SINGLE)
     key = get_key(ip_header->daddr, tcp_header->dest);
-
     pthread_mutex_lock(&mutex);
 
     fd  = hash_find(table, key);
@@ -155,20 +157,27 @@ router_update(tc_ip_header_t *ip_header, int len)
     }
 
     pthread_mutex_unlock(&mutex);
+#endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
+#if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
+#else
+    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
+#endif
 }
 
 #else 
 
 void
-router_update(tc_ip_header_t *ip_header)
+router_update(int main_router_fd, tc_ip_header_t *ip_header)
 {
+#if (!TCPCOPY_SINGLE)
     void                   *fd;
-    uint32_t                size_ip;
     uint64_t                key;
+#endif
+    uint32_t                size_ip;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -203,6 +212,7 @@ router_update(tc_ip_header_t *ip_header)
         }
     }
 #endif
+#if (!TCPCOPY_SINGLE)
     key = get_key(ip_header->daddr, tcp_header->dest);
     fd  = hash_find(table, key);
     if (fd == NULL) {
@@ -215,9 +225,14 @@ router_update(tc_ip_header_t *ip_header)
         delay_table_add(key, &msg);
         return ;
     }
+#endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+#if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
+#else
+    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
+#endif
 }
 
 #endif

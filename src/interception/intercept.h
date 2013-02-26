@@ -18,6 +18,7 @@ typedef struct xcopy_srv_settings {
     struct nfq_q_handle *nfq_q_handler;  /* NFQUEUE queue handler */
 #endif
     int                  timeout;
+    int                  router_fd;
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
