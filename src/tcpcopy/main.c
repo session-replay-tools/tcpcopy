@@ -245,6 +245,16 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_OFFLINE mode");
 #endif
+#if (TCPCOPY_SINGLE)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_SINGLE mode");
+#endif
+#if (TCPCOPY_DR)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_DR mode");
+#endif
+#if (TCPCOPY_PAPER)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PAPER mode");
+#endif
+
 }
 
 static void

@@ -267,7 +267,15 @@ static void output_for_debug()
 #if (INTERCEPT_THREAD)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_THREAD mode");
 #endif
+#if (INTERCEPT_NFQUEUE)
+    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_NFQUEUE mode");
+#endif
+#if (TCPCOPY_SINGLE)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_SINGLE mode");
+#endif
+
 }
+
 
 int
 main(int argc, char **argv)
