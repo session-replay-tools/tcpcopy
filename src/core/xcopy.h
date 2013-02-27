@@ -247,6 +247,9 @@ struct ethernet_hdr {
 
 /* global functions */
 int daemonize();
+inline int before(uint32_t seq1, uint32_t seq2);
+
+#define after(seq2, seq1) before(seq1, seq2)
 
 #define TC_OK        0
 #define TC_ERROR    -1

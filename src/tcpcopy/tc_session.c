@@ -828,7 +828,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
          * when backend is closed
          * (TODO should be optimized)
          */
-        if (ack > s->req_last_ack_sent_seq && seq == s->vir_next_seq) {
+        if (after(ack, s->req_last_ack_sent_seq) && seq == s->vir_next_seq) {
             s->sm.need_resp_greet = 1;
             if (!s->sm.resp_greet_received) {
                 tc_log_info(LOG_NOTICE, 0, "it should wait:%u", s->src_h_port);
@@ -970,7 +970,7 @@ send_reserved_packets(session_t *s)
                 ip_header, tcp_header);
 
 #if (!TCPCOPY_PAPER)
-        if (cur_seq > s->vir_next_seq) {
+        if (after(cur_seq, s->vir_next_seq)) {
 
             /* We need to wait for previous packet */
 #if (TCPCOPY_MYSQL_BASIC)
@@ -982,7 +982,7 @@ send_reserved_packets(session_t *s)
             s->sm.is_waiting_previous_packet = 1;
             s->sm.candidate_response_waiting = 0;
             break;
-        } else if (cur_seq < s->vir_next_seq) {
+        } else if (before(cur_seq, s->vir_next_seq)) {
 
             cont_len   = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
             if (cont_len > 0) {
@@ -1384,7 +1384,7 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
                         s->src_h_port);
                 wrap_retransmit_ip_packet(s, data);
                 need_pause = true;  
-            } else if (cur_seq < s->resp_last_ack_seq) {
+            } else if (before(cur_seq, s->resp_last_ack_seq)) {
 #if (TCPCOPY_PAPER)
                 cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
                 diff = s->resp_last_ack_seq - cur_seq;
@@ -1446,7 +1446,7 @@ update_retransmission_packets(session_t *s)
         tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
         cur_seq    = ntohl(tcp_header->seq);  
 
-        if (cur_seq < s->resp_last_ack_seq) {
+        if (before(cur_seq, s->resp_last_ack_seq)) {
 #if (TCPCOPY_PAPER)
             cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
             diff = s->resp_last_ack_seq - cur_seq;
@@ -2002,7 +2002,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
     bool slide_window_empty = false;
 
     /* if ack from test server is more than what we expect */
-    if (ack > s->vir_next_seq) {
+    if (after(ack, s->vir_next_seq)) {
 #if (!TCPCOPY_PAPER)
         tc_log_info(LOG_NOTICE, 0, "ack more than vir next seq");
 #endif
@@ -2011,7 +2011,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
             return DISP_STOP;
         }
         s->vir_next_seq = ack;
-    } else if (ack < s->vir_next_seq) {
+    } else if (before(ack, s->vir_next_seq)) {
 
         /* if ack from test server is less than what we expect */
         tc_log_debug3(LOG_DEBUG, 0, "bak_ack less than vir_next_seq:%u,%u,p:%u",
@@ -2459,7 +2459,7 @@ process_client_rst(session_t *s, tc_ip_header_t *ip_header,
         send_reserved_packets(s);
     } else {
         seq = ntohl(tcp_header->seq);   
-        if (seq < s->vir_next_seq) {
+        if (before(seq, s->vir_next_seq)) {
             tcp_header->seq = htonl(s->vir_next_seq);
         }
         s->sm.unack_pack_omit_save_flag = 1;
@@ -2690,7 +2690,7 @@ check_pack_save_or_not(session_t *s, tc_ip_header_t *ip_header,
 
     if (*is_new_req) {
         cur_seq = ntohl(tcp_header->seq);
-        if (cur_seq > s->req_last_cont_sent_seq) {
+        if (after(cur_seq, s->req_last_cont_sent_seq)) {
             is_save =true;
         }
     } else {
@@ -2719,7 +2719,7 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
 
     cur_seq = ntohl(tcp_header->seq);
 
-    if (cur_seq > s->vir_next_seq) {
+    if (after(cur_seq, s->vir_next_seq)) {
 
 #if (TCPCOPY_MYSQL_BASIC)
         tc_log_info(LOG_INFO, 0, "lost and need prev:%u", s->src_h_port);
@@ -2747,9 +2747,9 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
     } else {
 
         retransmit_seq = s->vir_next_seq - cont_len;
-        if (cur_seq <= retransmit_seq) {
+        if (!after(cur_seq, retransmit_seq)) {
 #if (TCPCOPY_PAPER)
-            if (s->resp_last_ack_seq <= cur_seq) {
+            if (!after(s->resp_last_ack_seq, cur_seq)) {
                 tc_log_debug1(LOG_DEBUG, 0, "maybe a previous packet:%u",
                         s->src_h_port);
                 return DISP_CONTINUE;
@@ -2777,7 +2777,7 @@ is_continuous_packet(session_t *s, tc_ip_header_t *ip_header,
     uint32_t cur_seq = ntohl(tcp_header->seq);
 
     if (s->sm.candidate_response_waiting) {
-        if (cur_seq > s->req_last_cont_sent_seq) {
+        if (after(cur_seq, s->req_last_cont_sent_seq)) {
             wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             tc_log_debug0(LOG_DEBUG, 0, "it is a continuous req");
             return DISP_STOP;

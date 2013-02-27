@@ -43,7 +43,7 @@ tc_process_server_msg(tc_event_t *rev)
                 MSG_SERVER_SIZE) == TC_ERROR)
     {
         tc_log_info(LOG_ERR, 0, 
-                    "Recv socket(%d)error, server may be close", rev->fd);
+                    "Recv socket(%d)error, server may be closed", rev->fd);
         return TC_ERR_EXIT;
     }
 

@@ -86,7 +86,7 @@ link_list_append_by_order(link_list *l, p_link_node p)
         node = l->head.prev;
         next = node->next;
         /* find the node which key is less than the key of p */
-        while (node->key > p->key) {
+        while (node->data != NULL && after(node->key, p->key)) {
             next = node;
             node = node ->prev;
         }
