@@ -482,9 +482,15 @@ tc_socket_send(int fd, char *buffer, size_t len)
 
     send_len = send(fd, (const void *) buffer, len, 0);
 
+    if (-1 == send_len) {
+        tc_log_info(LOG_ERR, 0, "fd:%d, error:%s",
+                fd, strerror(errno) );
+        return TC_ERROR;
+    }
+
     if (send_len != len) {
-        tc_log_info(LOG_ERR, 0, "send length:%ld, buffer size:%ld",
-                    send_len, len);
+        tc_log_info(LOG_ERR, 0, "fd:%d, send length:%ld, buffer size:%ld",
+                    fd, send_len, len);
         return TC_ERROR;
     }
 
