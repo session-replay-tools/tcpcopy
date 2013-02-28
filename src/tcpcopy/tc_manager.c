@@ -220,6 +220,8 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         if (fd == TC_INVALID_SOCKET) {
             return TC_ERROR;
         }
+        clt_settings.real_servers.active_num++;
+        clt_settings.real_servers.active[i] = 1;
         clt_settings.real_servers.fds[i] = fd;
 
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",

@@ -37,6 +37,9 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
 static int
 tc_process_server_msg(tc_event_t *rev)
 {
+#if (TCPCOPY_DR)
+    int          i;
+#endif
     msg_server_t msg;
 
     if (tc_socket_recv(rev->fd, (char *) &msg,
@@ -44,7 +47,28 @@ tc_process_server_msg(tc_event_t *rev)
     {
         tc_log_info(LOG_ERR, 0, 
                     "Recv socket(%d)error, server may be closed", rev->fd);
+#if (TCPCOPY_DR)
+
+        for (i = 0; i < clt_settings.real_servers.num; i++) {
+
+            if (clt_settings.real_servers.fds[i] == rev->fd) {
+                if (clt_settings.real_servers.active[i]) {
+                    clt_settings.real_servers.active[i] = 0;
+                    clt_settings.real_servers.active_num--;
+                }
+                break;
+            }
+        }
+
+
+        if (clt_settings.real_servers.active_num == 0) {
+            return TC_ERR_EXIT;
+        } else {
+            return TC_OK;
+        }
+#else 
         return TC_ERR_EXIT;
+#endif
     }
 
     process((char *) &msg, REMOTE);

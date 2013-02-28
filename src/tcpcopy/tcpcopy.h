@@ -34,7 +34,9 @@ typedef struct devices_s{
 typedef struct real_ip_addr_s {
     uint32_t    ips[MAX_REAL_SERVERS];
     uint32_t    fds[MAX_REAL_SERVERS];
+    short       active[MAX_REAL_SERVERS];
     int         num;
+    int         active_num;
 } real_ip_addr_t;
 #endif
 

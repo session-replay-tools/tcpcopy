@@ -342,6 +342,11 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
     msg_client_t   msg;
 
     for (i = 0; i < clt_settings.real_servers.num; i++) {
+
+        if (!clt_settings.real_servers.active[i]) {
+            continue;
+        }
+
         fd = clt_settings.real_servers.fds[i];
         if (fd == -1) {
             tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
