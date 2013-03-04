@@ -74,6 +74,10 @@ typedef struct sess_state_machine_s{
 #if (TCPCOPY_PAPER)
     uint32_t rtt_cal:2;
 #endif
+#if (TCPCOPY_PRIVATE)
+    uint32_t private_clt_type_calculated:1;
+#endif
+
 #if (TCPCOPY_MYSQL_BASIC)
     /* the second auth checked flag */
     uint32_t mysql_sec_auth_checked:1;
@@ -100,6 +104,9 @@ typedef struct session_s{
 #if (TCPCOPY_MYSQL_BASIC)
     /* seq diff between virtual sequence and client sequence */
     uint32_t mysql_vir_req_seq_diff;
+#endif
+#if (TCPCOPY_PRIVATE)
+    uint32_t private_clt_type;
 #endif
 
     /* src or client ip address(network byte order) */

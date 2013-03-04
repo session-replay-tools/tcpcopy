@@ -5,6 +5,10 @@
 static hash_table *sessions_table;
 static hash_table *tf_port_table;
 
+#if (TCPCOPY_PRIVATE)
+static hash_table *private_clt_type_table;
+#endif
+
 #if (TCPCOPY_MYSQL_BASIC)
 static hash_table *mysql_table;
 #endif
@@ -473,6 +477,11 @@ init_for_sessions()
     tf_port_table  = hash_create(65536);
     strcpy(tf_port_table->name, "transfer port table");
 
+#if (TCPCOPY_PRIVATE)
+    private_clt_type_table = hash_create(65536);
+    strcpy(private_clt_type_table->name, "private client type table");
+#endif
+
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_table    = hash_create(65536);
     strcpy(mysql_table->name, "mysql table");
@@ -541,6 +550,14 @@ destroy_for_sessions()
         free(tf_port_table);
         tf_port_table = NULL;
     }
+
+#if (TCPCOPY_PRIVATE)
+    if (private_clt_type_table != NULL) {
+        hash_destroy(private_clt_type_table);
+        free(private_clt_type_table);
+        private_clt_type_table = NULL;
+    }
+#endif
 
 #if (TCPCOPY_MYSQL_BASIC)
     if (mysql_table != NULL) {
@@ -918,6 +935,99 @@ need_break(session_t *s)
 #endif
 
 
+#if (TCPCOPY_PRIVATE)
+static void
+private_add_client_type(session_t *s, tc_ip_header_t *ip_header,
+        tc_tcp_header_t *tcp_header)
+{
+    void             *value;
+    uint16_t          size_tcp;
+    uint32_t          total_cont_len, clt_type = 0, *p_clt_type;
+    uint64_t          key;
+    unsigned char     fake_clt_type_buf[FAKE_IP_DATAGRAM_LEN + 4], *payload;
+    tc_ip_header_t   *f_ip_header;
+    tc_tcp_header_t  *f_tcp_header;
+
+    memset(fake_clt_type_buf, 0, FAKE_IP_DATAGRAM_LEN + 4);
+    f_ip_header  = (tc_ip_header_t *) fake_clt_type_buf;
+    f_tcp_header = (tc_tcp_header_t *) (fake_clt_type_buf + IP_HEADER_LEN);
+    fill_pro_common_header(f_ip_header, f_tcp_header);
+    f_ip_header->tot_len  = htons(FAKE_IP_DATAGRAM_LEN + 4);
+    f_ip_header->id       = htons(++s->req_ip_id);
+    f_ip_header->saddr    = s->src_addr;
+    size_tcp              = tcp_header->doff << 2;
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
+    p_clt_type = (uint32_t *) payload;
+
+    key = get_key(ip_header->saddr, tcp_header->source);
+    value = hash_find(private_clt_type_table, key);
+    if (value != NULL) {
+        clt_type = (uint32_t ) (long) value;
+    }
+
+
+    if (clt_type == 0) {
+        clt_type = PRIVATE_CLIENT_TYPE;
+    }
+    
+    clt_type = htonl(clt_type);
+
+    *p_clt_type = clt_type;
+
+    /* here record online ip address */
+    f_ip_header->daddr    = s->online_addr; 
+
+    f_tcp_header->source  = tcp_header->source;
+
+    /* here record online port */
+    f_tcp_header->dest    = s->online_port;
+
+    f_tcp_header->ack     = 1;
+    f_tcp_header->psh     = 1;
+    
+
+    total_cont_len = 4;
+
+    /* rearrange seq */
+    tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_cont_len);
+    f_tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
+    f_tcp_header->ack = tcp_header->ack;
+
+    /* save packet to unsend */
+    save_packet(s->unsend_packets, f_ip_header, f_tcp_header);
+
+}
+
+static void 
+calculate_private_clt_type(session_t *s, tc_ip_header_t *ip_header, 
+        tc_tcp_header_t *tcp_header) 
+{
+    uint16_t        size_ip, size_tcp, tot_len, cont_len;
+    uint32_t        type, *p_clt_type;
+    uint64_t        key;
+    unsigned char  *payload;
+
+    size_ip  = ip_header->ihl << 2;
+    size_tcp = tcp_header->doff << 2;
+    tot_len  = ntohs(ip_header->tot_len);
+    cont_len = tot_len - size_tcp - size_ip;
+
+
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
+    p_clt_type = (uint32_t *) payload;
+    type = ntohl(*p_clt_type);
+    
+    tc_log_info(LOG_NOTICE, 0, "private client type:%u", type);
+
+    s->private_clt_type = type;
+    
+    key = get_key(ip_header->saddr, tcp_header->source);
+
+    hash_add(private_clt_type_table, key, (void *) (long) type);
+}
+
+#endif
+
 /*
  * send reserved packets to backend
  */
@@ -1016,7 +1126,11 @@ send_reserved_packets(session_t *s)
 
         cont_len   = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
         if (!omit_transfer && cont_len > 0) {
-
+#if (TCPCOPY_PRIVATE)
+            if (!s->sm.private_clt_type_calculated) {
+                calculate_private_clt_type(s, ip_header, tcp_header);
+            }
+#endif
             if (total_cont_sent > MAX_SIZE_PER_CONTINUOUS_SEND) {
                 s->sm.delay_sent_flag = 1;
                 break;
@@ -1643,6 +1757,7 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
 #endif
 
 
+
 /*
  * send faked syn packet to backend.
  */
@@ -1686,6 +1801,10 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     f_tcp_header->dest    = tcp_header->dest;
     f_tcp_header->syn     = 1;
     f_tcp_header->seq     = htonl(ntohl(tcp_header->seq) - 1);
+
+#if (TCPCOPY_PRIVATE)
+    private_add_client_type(s, f_ip_header, f_tcp_header);
+#endif
 
 #if (TCPCOPY_MYSQL_BASIC)
     mysql_prepare_for_new_session(s, f_ip_header, f_tcp_header);
@@ -2002,6 +2121,46 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
 }
 #endif
 
+#if (TCPCOPY_PRIVATE)
+static bool
+check_private_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
+{
+    uint16_t        size_ip, size_tcp, tot_len, cont_len;
+    uint32_t        flag;
+    unsigned char  *p;
+
+    size_ip  = ip_header->ihl << 2;
+    size_tcp = tcp_header->doff << 2;
+    tot_len  = ntohs(ip_header->tot_len);
+    cont_len = tot_len - size_tcp - size_ip;
+
+    if (cont_len >= 8) {
+        p = (unsigned char *) ((char *) tcp_header + size_tcp);
+
+        flag = p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24);
+        
+        if (flag != 0xFFFFFFFF) {
+            return false;
+        }
+
+        p = p + 4;
+
+        if (p[0] != 0 ||  p[1] != 1) {
+            return false;
+        }
+        
+        p = p + 2;
+
+        if (p[0] != 0 || (p[1] != 1 || p[1] != 2)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
+}
+#endif
 
 static int
 check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
@@ -2949,6 +3108,11 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
 
     if (cont_len > 0) {
+#if (TCPCOPY_PRIVATE)
+        if (!s->sm.private_clt_type_calculated) {
+            calculate_private_clt_type(s, ip_header, tcp_header);
+        }
+#endif
         /* update ack seq values for checking a new request */
         s->req_cont_last_ack_seq = s->req_cont_cur_ack_seq;
         s->req_cont_cur_ack_seq  = ntohl(tcp_header->ack_seq);
@@ -3319,6 +3483,11 @@ process(char *packet, int pack_src)
                    if (!check_mysql_padding(ip_header,tcp_header)) {
                         return false;
                     }
+#endif
+#if (TCPCOPY_PRIVATE)
+                   if (!check_private_padding(ip_header,tcp_header)) {
+                       return false;
+                   }
 #endif
                     s = session_add(key, ip_header, tcp_header);
                     if (s == NULL) {

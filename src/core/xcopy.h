@@ -51,6 +51,12 @@
 #undef TCPCOPY_PCAP
 #endif
 
+#if (TCPCOPY_PRIVATE)
+#undef TCPCOPY_MYSQL_SKIP
+#undef TCPCOPY_MYSQL_NO_SKIP
+#define PRIVATE_CLIENT_TYPE 902
+#endif
+
 /* 
  * If you define TCPCOPY_MYSQL_SKIP nonzero,
  * tcpcopy works only for mysql which sets

@@ -72,6 +72,11 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
+AC_ARG_ENABLE(private, AS_HELP_STRING([--enable-private],[run tcpcopy at private mode]),,private=no)
+if test "x$enable_private" = "xyes";then
+    AC_DEFINE(TCPCOPY_PRIVATE, 1, [Define if --enable-private])
+fi
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h])
