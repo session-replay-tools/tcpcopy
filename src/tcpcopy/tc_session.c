@@ -2134,8 +2134,11 @@ check_private_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = tot_len - size_tcp - size_ip;
 
-    if (cont_len >= 8) {
+    if (cont_len >= 12) {
         p = (unsigned char *) ((char *) tcp_header + size_tcp);
+        
+        /* skip length */
+        p = p + 4;
 
         flag = p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24);
         
