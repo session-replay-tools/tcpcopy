@@ -616,12 +616,18 @@ void
 interception_over()
 {
 #if (INTERCEPT_NFQUEUE)   
-    tc_log_info(LOG_NOTICE, 0, "unbinding from queue");
-    nfq_destroy_queue(srv_settings.nfq_q_handler);
-    srv_settings.nfq_q_handler = NULL;
-    tc_log_info(LOG_NOTICE, 0, "closing nfq library handle");
-    nfq_close(srv_settings.nfq_handler);
-    srv_settings.nfq_handler = NULL;
+
+    if (srv_settings.nfq_q_handler != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "unbinding from queue");
+        nfq_destroy_queue(srv_settings.nfq_q_handler);
+        srv_settings.nfq_q_handler = NULL;
+    }
+
+    if (srv_settings.nfq_handler != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "closing nfq library handle");
+        nfq_close(srv_settings.nfq_handler);
+        srv_settings.nfq_handler = NULL;
+    }
 #endif
 
     router_destroy();
