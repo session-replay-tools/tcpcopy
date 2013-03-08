@@ -254,7 +254,9 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_PAPER)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PAPER mode");
 #endif
-
+#if (TCPCOPY_PRIVATE)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PRIVATE mode");
+#endif
 }
 
 static void

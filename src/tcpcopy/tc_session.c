@@ -991,7 +991,6 @@ private_add_client_type(session_t *s, tc_ip_header_t *ip_header,
     /* rearrange seq */
     tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_cont_len);
     f_tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
-    f_tcp_header->ack = tcp_header->ack;
 
     /* save packet to unsend */
     save_packet(s->unsend_packets, f_ip_header, f_tcp_header);
@@ -2134,6 +2133,8 @@ check_private_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = tot_len - size_tcp - size_ip;
 
+    tc_log_debug0(LOG_DEBUG, 0, "check_private_padding");
+
     if (cont_len >= 12) {
         p = (unsigned char *) ((char *) tcp_header + size_tcp);
         
@@ -2143,18 +2144,21 @@ check_private_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
         flag = p[0] + (p[1] << 8) + (p[2] << 16) + (p[3] << 24);
         
         if (flag != 0xFFFFFFFF) {
+            tc_log_debug1(LOG_DEBUG, 0, "not expected:%u", flag);
             return false;
         }
 
         p = p + 4;
 
         if (p[0] != 0 ||  p[1] != 1) {
+            tc_log_debug0(LOG_DEBUG, 0, "not 01");
             return false;
         }
         
         p = p + 2;
 
-        if (p[0] != 0 || (p[1] != 1 || p[1] != 2)) {
+        if (p[0] != 0 || (p[1] != 1 && p[1] != 2)) {
+            tc_log_debug0(LOG_DEBUG, 0, "not 01 or 02");
             return false;
         }
 
