@@ -1905,7 +1905,7 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
             s->unsend_packets->size, s->src_h_port);
    
 #if (TCPCOPY_MYSQL_BASIC)
-    tc_log_info(LOG_INFO, 0, "send faked rst::%u", s->src_h_port);
+    tc_log_info(LOG_INFO, 0, "send faked rst:%u", s->src_h_port);
 #else
     tc_log_debug1(LOG_DEBUG, 0, "send faked rst:%u", s->src_h_port);
 #endif
