@@ -954,7 +954,7 @@ need_break(session_t *s)
 #if (TCPCOPY_PRIVATE)
 static void
 private_add_client_type(session_t *s, tc_ip_header_t *ip_header,
-        tc_tcp_header_t *tcp_header)
+        tc_tcp_header_t *tcp_header, uint32_t expected_ack_seq)
 {
     void             *value;
     uint16_t          size_tcp;
@@ -1007,6 +1007,9 @@ private_add_client_type(session_t *s, tc_ip_header_t *ip_header,
     /* rearrange seq */
     tcp_header->seq = htonl(ntohl(tcp_header->seq) - total_cont_len);
     f_tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
+
+    /* set ack seq for client type packet */
+    f_tcp_header->ack_seq = expected_ack_seq;
 
     /* save packet to unsend */
     save_packet(s->unsend_packets, f_ip_header, f_tcp_header);
@@ -1818,7 +1821,7 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     f_tcp_header->seq     = htonl(ntohl(tcp_header->seq) - 1);
 
 #if (TCPCOPY_PRIVATE)
-    private_add_client_type(s, f_ip_header, f_tcp_header);
+    private_add_client_type(s, f_ip_header, f_tcp_header, tcp_header->ack_seq);
 #endif
 
 #if (TCPCOPY_MYSQL_BASIC)
