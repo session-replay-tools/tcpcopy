@@ -413,6 +413,7 @@ tc_socket_connect(int fd, uint32_t ip, uint16_t port)
 int
 tc_socket_listen(int fd, const char *bind_ip, uint16_t port)
 {
+    int                opt, ret;
     socklen_t          len; 
     struct sockaddr_in local_addr;
 
@@ -424,6 +425,13 @@ tc_socket_listen(int fd, const char *bind_ip, uint16_t port)
     if (bind_ip) {
         /* set bind ip for security reasons */
         inet_aton(bind_ip, &local_addr.sin_addr);
+    }
+
+    opt = 1;
+    ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    if (ret == -1) {
+        tc_log_info(LOG_ERR, errno, "setsockopt error:%s", strerror(errno));
+        return TC_INVALID_SOCKET;
     }
 
     len = (socklen_t) sizeof(local_addr);
