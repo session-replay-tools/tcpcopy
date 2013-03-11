@@ -1025,6 +1025,11 @@ calculate_private_clt_type(session_t *s, tc_ip_header_t *ip_header,
     uint64_t        key;
     unsigned char  *payload;
 
+    s->sm.private_clt_type_calculated = 1;
+
+    if (s->sm.req_halfway_intercepted) {
+        return;
+    }
     size_ip  = ip_header->ihl << 2;
     size_tcp = tcp_header->doff << 2;
     tot_len  = ntohs(ip_header->tot_len);
