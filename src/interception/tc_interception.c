@@ -90,6 +90,10 @@ tc_msg_event_process(tc_event_t *rev)
         return TC_ERROR;
     }
 
+    msg.client_ip = ntohl(msg.client_ip);
+    msg.client_port = ntohs(msg.client_port);
+    msg.type = ntohs(msg.type);
+
     switch (msg.type) {
         case CLIENT_ADD:
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",

@@ -358,9 +358,9 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
             continue;
         }
 
-        msg.client_ip = client_ip;
-        msg.client_port = client_port;
-        msg.type = type;
+        msg.client_ip = htonl(client_ip);
+        msg.client_port = htons(client_port);
+        msg.type = htons(type);
 
         if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, "fd:%d, msg client send error:%u", 
@@ -392,9 +392,9 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         return false;
     }
 
-    msg.client_ip = client_ip;
-    msg.client_port = client_port;
-    msg.type = type;
+    msg.client_ip = htonl(client_ip);
+    msg.client_port = htons(client_port);
+    msg.type = htons(type);
 
     if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "msg client send error:%u", ntohs(client_port));
@@ -844,6 +844,21 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 {
     uint32_t seq, ack;
 
+#if (TCPCOPY_MYSQL_BASIC)
+    /* 
+     * TODO all protocols like mysql should implement the following 
+     * when reconnecting
+     */
+    if (s->sm.req_halfway_intercepted) { 
+        if (!s->sm.resp_greet_received) {
+            s->sm.need_resp_greet = 1;
+            tc_log_info(LOG_NOTICE, 0, "it should wait:%u", s->src_h_port);
+            return true;
+        }
+        return false;
+    }
+#endif
+
     if (s->sm.req_valid_last_ack_sent) {
 
         ack = ntohl(tcp_header->ack_seq);
@@ -873,6 +888,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
 
     return false;
 }
+
 
 #if (TCPCOPY_PAPER)
 static void calculate_rtt(session_t *s) 
@@ -1686,7 +1702,7 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
         sec_cont_len = TCP_PAYLOAD_LENGTH(sec_ip_header, sec_tcp_header);
         sec_tcp_header->source = tcp_header->source;
     } else {
-        tc_log_info(LOG_WARN, 0, "no sec auth packet here:%u", s->src_h_port);
+        tc_log_info(LOG_NOTICE, 0, "no sec auth packet:%u", s->src_h_port);
     }
 #endif
 
@@ -2193,6 +2209,9 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 ack, s->vir_next_seq, s->src_h_port);
 
         if (!s->sm.resp_syn_received) {
+#if (TCPCOPY_MYSQL_BASIC)
+            tc_log_info(LOG_INFO, 0, "try to eliminate");
+#endif
             /* try to eliminate the tcp state of backend */
             send_faked_rst(s, ip_header, tcp_header);
             s->sm.sess_over = 1;
@@ -2260,6 +2279,9 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
                 if (!s->sm.vir_already_retransmit) {
 #if (!TCPCOPY_PAPER)
                     if (!retransmit_packets(s, ack)) {
+#if (TCPCOPY_MYSQL_BASIC)
+                        tc_log_info(LOG_WARN, 0, "retransmit failure");
+#endif
                         /* retransmit failure, send reset */
                         send_faked_rst(s, ip_header, tcp_header);
                         s->sm.sess_over = 1;
@@ -2337,6 +2359,9 @@ process_back_fin(session_t *s, tc_ip_header_t *ip_header,
          * on this packet
          */
         tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
+#if (TCPCOPY_MYSQL_BASIC)
+        tc_log_info(LOG_WARN, 0, "process back fin");
+#endif
         /* send the constructed reset packet to backend */
         send_faked_rst(s, ip_header, tcp_header);
     }
@@ -2521,6 +2546,9 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     if (cont_len > 0) {
 
         if (s->sm.src_closed) {
+#if (TCPCOPY_MYSQL_BASIC)
+            tc_log_info(LOG_INFO, 0, "try to solve the obstacle");
+#endif
             /* try to solve the obstacle */ 
             send_faked_rst(s, ip_header, tcp_header);
             return;
@@ -2613,6 +2641,9 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         }
 
         if (s->sm.src_closed && !s->sm.dst_closed) {
+#if (TCPCOPY_MYSQL_BASIC)
+            tc_log_info(LOG_INFO, 0, "no content in pack");
+#endif
             send_faked_rst(s, ip_header, tcp_header);
             s->sm.sess_over = 1;
             return;
