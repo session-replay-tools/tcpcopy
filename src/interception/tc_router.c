@@ -26,7 +26,7 @@ route_delete_obsolete(time_t cur_time)
 #endif
 
     if (table->total < TIMEOUT_CHANGE_THRESHOLD) {
-        cur_timeout = cur_timeout << 2;
+        cur_timeout = cur_timeout << 3;
     }
 
     tc_log_info(LOG_NOTICE, 0, "router size:%u, timeout:%d",
