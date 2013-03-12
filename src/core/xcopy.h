@@ -103,6 +103,8 @@
 
 #define MAX_UNSEND_THRESHOLD 32768
 
+#define TIMEOUT_CHANGE_THRESHOLD 4096
+
 /* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)

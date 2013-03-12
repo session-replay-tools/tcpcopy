@@ -14,15 +14,23 @@ static pthread_mutex_t mutex;
 void 
 route_delete_obsolete(time_t cur_time)
 {   
-    int          i, count = 0, timeout;
+    int          i, count = 0, timeout, cur_timeout;
     hash_node   *hn;
     link_list   *l;
     p_link_node  ln;
 
-    tc_log_info(LOG_NOTICE, 0, "router size:%u", table->total);
+    cur_timeout = table->timeout;
+
 #if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif
+
+    if (table->total < TIMEOUT_CHANGE_THRESHOLD) {
+        cur_timeout = cur_timeout << 2;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "router size:%u, timeout:%d",
+            table->total, cur_timeout);
 
     for (i = 0; i < table->size; i++) {
 
@@ -34,7 +42,7 @@ route_delete_obsolete(time_t cur_time)
                     break;
                 }       
                 hn = (hash_node *)ln->data;
-                timeout = table->timeout;
+                timeout = cur_timeout;
                 if (0 == hn->visit_cnt) {
                     /* 
                      * If we have not received the second handshake packet 
@@ -56,13 +64,14 @@ route_delete_obsolete(time_t cur_time)
         }
     } 
 
-    tc_log_info(LOG_NOTICE, 0, "router delete obsolete:%d", count);
 
     delay_table_delete_obsolete(cur_time);
 
 #if (INTERCEPT_THREAD)
     pthread_mutex_unlock(&mutex);
 #endif
+
+    tc_log_info(LOG_NOTICE, 0, "router delete obsolete:%d", count);
 
 }
 
@@ -101,7 +110,7 @@ router_del(uint32_t ip, uint16_t port)
 }
 
 /* add item to the router table */
-    void
+void
 router_add(uint32_t ip, uint16_t port, int fd)
 {
     uint64_t key = get_key(ip, port);
