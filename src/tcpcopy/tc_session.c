@@ -25,7 +25,9 @@ static uint64_t leave_cnt            = 0;
 static uint64_t obs_cnt              = 0;
 /* total client syn packets */
 static uint64_t clt_syn_cnt          = 0;
+#if (TCPCOPY_MYSQL_ADVANCED)
 static uint64_t clt_dropped_cnt      = 0;
+#endif
 /* total client content packets */
 static uint64_t clt_cont_cnt         = 0;
 /* total client packets */
@@ -3340,7 +3342,9 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+#if (TCPCOPY_MYSQL_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);
+#endif
 #if (TCPCOPY_MYSQL_BASIC)
     tc_log_info(LOG_NOTICE, 0, "mysql table size:%u", mysql_table->size);
 #endif
