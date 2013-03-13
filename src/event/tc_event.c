@@ -38,7 +38,7 @@ int tc_event_loop_finish(tc_event_loop_t *loop)
 
     actions = loop->actions;
 
-    if (actions != NULL){
+    if (actions != NULL) {
         /* destroy io module */
         actions->destroy(loop);
 
