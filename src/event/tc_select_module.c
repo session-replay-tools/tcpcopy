@@ -1,4 +1,3 @@
-
 #include <xcopy.h>
 
 int tc_select_create (tc_event_loop_t *loop)
@@ -36,7 +35,12 @@ int tc_select_destroy (tc_event_loop_t *loop)
     io = loop->io;
 
     for (i = 0; i < io->last; i++) {
-        free(io->evs[i]);
+        tc_event_t * event = evs[i];
+        if( event->fd > 0){
+            close(event->fd);
+        }
+        event->fd = -1;
+        free(event);
     }
 
     free(io->evs);
