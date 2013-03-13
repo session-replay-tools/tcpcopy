@@ -430,7 +430,7 @@ tc_socket_listen(int fd, const char *bind_ip, uint16_t port)
     opt = 1;
     ret = setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     if (ret == -1) {
-        tc_log_info(LOG_ERR, errno, "setsockopt error:%s", strerror(errno));
+        tc_log_info(LOG_ERR, errno, "setsockopt error");
         return TC_INVALID_SOCKET;
     }
 
@@ -491,8 +491,7 @@ tc_socket_send(int fd, char *buffer, size_t len)
     send_len = send(fd, (const void *) buffer, len, 0);
 
     if (-1 == send_len) {
-        tc_log_info(LOG_ERR, 0, "fd:%d, error:%s",
-                fd, strerror(errno) );
+        tc_log_info(LOG_ERR, errno, "fd:%d", fd);
         return TC_ERROR;
     }
 
