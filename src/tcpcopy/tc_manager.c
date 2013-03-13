@@ -158,6 +158,11 @@ tcp_copy_release_resources()
     pcap_close(clt_settings.pcap);
 #endif
 
+    if (tc_raw_socket_out > 0) {
+        close(tc_raw_socket_out);
+        tc_raw_socket_out = -1;
+    }
+
     if (clt_settings.transfer.mappings != NULL) {
 
         for (i = 0; i < clt_settings.transfer.num; i++) {

@@ -1976,7 +1976,7 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
     uint64_t  new_key;
 
 #if (TCPCOPY_MYSQL_BASIC)
-        tc_log_info(LOG_INFO, 0, "call fake_syn:%u", s->src_h_port);
+    tc_log_info(LOG_INFO, 0, "call fake_syn:%u", s->src_h_port);
 #endif
  
     if (is_hard) {
@@ -2002,6 +2002,7 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
         tcp_header->source = target_port;
         s->faked_src_port  = tcp_header->source;
         s->sm.port_transfered = 1;
+
     } else {
         tc_log_debug1(LOG_DEBUG, 0, "fake syn with easy:%u", s->src_h_port);
     }
