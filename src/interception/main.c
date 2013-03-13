@@ -210,7 +210,7 @@ set_details()
 {
     /* ignore SIGPIPE signals */
     if (sigignore(SIGPIPE) == -1) {
-        perror("failed to ignore SIGPIPE; sigaction");
+        tc_log_info(LOG_ERR, errno, "failed to ignore SIGPIPE");
         return -1;
     }
 
@@ -227,7 +227,7 @@ set_details()
     /* daemonize */
     if (srv_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
-            tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
+            tc_log_info(LOG_ERR, errno, "failed to ignore SIGHUP");
         }
         if (daemonize() == -1) {
             fprintf(stderr, "failed to daemon() in order to daemonize\n");
