@@ -19,6 +19,11 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
 
+case "$host" in
+*-*-linux*) ;;
+*) AC_MSG_ERROR([Linux only!]);;
+esac
+
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile tcpcopy with debug support(saved in a log file)]),,debug=no)
 if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
@@ -45,6 +50,15 @@ fi
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+	PKG_CHECK_MODULES([LIBNETFILTER], [libnetfilter >= 1.0.0])
+else
+	#AC_CHECK_HEADERS([linux/netlink.h linux/netfilter_ipv4.h linux/netfilter_ipv4/ip_queue.h])
+	AC_CHECK_HEADERS([linux/netlink.h], [], 
+                     [AC_MSG_ERROR([linux/netlink.h not found.])], [])
+	AC_CHECK_HEADERS([linux/netfilter_ipv4.h], [],
+                     [AC_MSG_ERROR([linux/netfilter_ipv4.h not found.])], [])
+	AC_CHECK_HEADERS([linux/netfilter_ipv4/ip_queue.h], [],
+                     [AC_MSG_ERROR([linux/netfilter_ipv4/ip_queue.h not found.])], [])
 fi
 
 AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
@@ -94,6 +108,9 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 
+# Search for library
+AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
+
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
@@ -105,6 +122,9 @@ fi
 
 if test "x$enable_thread" = "xyes";then
     LIBS="$LIBS -lpthread "
+    if test "x$ac_cv_search_pthread_create" = "xno";then
+        AC_MSG_ERROR([need posix thread library to be installed])
+    fi
 fi
 
 if test "x$enable_nfqueue" = "xyes";then
