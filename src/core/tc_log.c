@@ -169,6 +169,7 @@ tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
     }
 }
 
+#if (TCPCOPY_UDP)
 void
 tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
         tc_udp_header_t *udp_header)
@@ -186,9 +187,14 @@ tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
     strcpy(dst_ip, tmp_buf);
 
     pack_size       = ntohs(ip_header->tot_len);
+
     tc_log_info(level, err, "from client %s:%u-->%s:%u,len %u",
-            src_ip, ntohs(udp_header->source), dst_ip,
-            ntohs(udp_header->dest), pack_size);
+            src_ip, 
+            ntohs(udp_header->source),
+            dst_ip,
+            ntohs(udp_header->dest),
+            pack_size);
 
 }
+#endif
 

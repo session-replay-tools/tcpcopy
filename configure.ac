@@ -90,10 +90,13 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
-AC_ARG_ENABLE(udp, AS_HELP_STRING([--enable-udp],[run tcpcopy for copying udp requests]),,udp=no)
-if test "x$enable_udp" = "xyes";then
-    AC_DEFINE(TCPCOPY_UDP, 1, [Define if --enable-udp])
-fi
+AC_ARG_ENABLE(udp,[--enable-udp    Turn on udpcopy],
+               [case "${enableval}" in
+                   yes) udp=true 
+                        AC_DEFINE(TCPCOPY_UDP, 1, [Define if --enable-udp]) ;;
+                   no)  udp=false ;;
+                   *)   AC_MSG_ERROR(bad value ${enableval} for --enable-udp) ;;
+               esac],[udp=false])
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -117,8 +120,6 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 
-# Search for library
-AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
 
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
@@ -130,7 +131,8 @@ fi
 
 
 if test "x$enable_thread" = "xyes";then
-    LIBS="$LIBS -lpthread "
+    # Search for library
+    AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
     if test "x$ac_cv_search_pthread_create" = "xno";then
         AC_MSG_ERROR([need posix thread library to be installed])
     fi
@@ -142,7 +144,7 @@ fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
 
-AM_CONDITIONAL(UDPCOPY, [test "x$enable_udp" = "xtrue"])
+AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])
 
 
 #AC_CONFIG_FILES([Makefile])

@@ -19,6 +19,10 @@ void tc_log_end();
 void tc_log_info(int level, int err, const char *fmt, ...);
 void tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header);
+#if (TCPCOPY_UDP)
+void tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
+        tc_udp_header_t *udp_header);
+#endif
 
 #if (TCPCOPY_DEBUG)
 

@@ -174,7 +174,9 @@
 
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
+#if (TCPCOPY_UDP)
 typedef struct udphdr tc_udp_header_t;
+#endif
 
 
 #if (INTERCEPT_THREAD)
