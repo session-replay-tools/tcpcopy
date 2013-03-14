@@ -50,7 +50,11 @@ fi
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
-	PKG_CHECK_MODULES([LIBNETFILTER], [libnetfilter >= 1.0.0])
+	#AC_CHECK_HEADERS([linux/netfilter.h libnetfilter_queue/libnetfilter_queue.h])
+	AC_CHECK_HEADERS([linux/netfilter.h], [], 
+                     [AC_MSG_ERROR([linux/netfilter.h not found.])], [])
+	AC_CHECK_HEADERS([libnetfilter_queue/libnetfilter_queue.h], [],
+                     [AC_MSG_ERROR([libnetfilter_queue/libnetfilter_queue.h not found.])], [])
 else
 	#AC_CHECK_HEADERS([linux/netlink.h linux/netfilter_ipv4.h linux/netfilter_ipv4/ip_queue.h])
 	AC_CHECK_HEADERS([linux/netlink.h], [], 
