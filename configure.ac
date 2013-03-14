@@ -19,6 +19,11 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AM_PROG_LIBTOOL
 
+case "$host" in
+*-*-linux*) ;;
+*) AC_MSG_ERROR([Linux only!]);;
+esac
+
 AC_ARG_ENABLE(debug, AS_HELP_STRING([--enable-debug],[compile tcpcopy with debug support(saved in a log file)]),,debug=no)
 if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
@@ -40,16 +45,29 @@ fi
 AC_ARG_ENABLE(offline, AS_HELP_STRING([--enable-offline],[run tcpcopy at offline mode]),,offline=no)
 if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
+	AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+
 fi
 
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
 	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+	AC_CHECK_HEADERS([linux/netfilter.h], [], 
+                     [AC_MSG_ERROR([linux/netfilter.h not found.])], [])
+	AC_CHECK_HEADERS([libnetfilter_queue/libnetfilter_queue.h], [],
+                     [AC_MSG_ERROR([libnetfilter_queue/libnetfilter_queue.h not found.])], [])
+else
+	AC_CHECK_HEADERS([linux/netfilter_ipv4/ip_queue.h], [],
+                     [AC_MSG_ERROR([linux/netfilter_ipv4/ip_queue.h not found.])], [])
 fi
 
 AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
 if test "x$enable_pcap" = "xyes";then
 	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
+	AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+
 fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
@@ -99,6 +117,9 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 
+# Search for library
+AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
+
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
@@ -110,6 +131,9 @@ fi
 
 if test "x$enable_thread" = "xyes";then
     LIBS="$LIBS -lpthread "
+    if test "x$ac_cv_search_pthread_create" = "xno";then
+        AC_MSG_ERROR([need posix thread library to be installed])
+    fi
 fi
 
 if test "x$enable_nfqueue" = "xyes";then
