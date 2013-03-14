@@ -45,6 +45,9 @@ fi
 AC_ARG_ENABLE(offline, AS_HELP_STRING([--enable-offline],[run tcpcopy at offline mode]),,offline=no)
 if test "x$enable_offline" = "xyes";then
 	AC_DEFINE(TCPCOPY_OFFLINE, 1, [Define if --enable-offline])
+	AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+
 fi
 
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
@@ -62,6 +65,9 @@ fi
 AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
 if test "x$enable_pcap" = "xyes";then
 	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
+	AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+
 fi
 
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
