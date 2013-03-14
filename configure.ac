@@ -117,9 +117,6 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 
-# Search for library
-AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
-
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
@@ -130,7 +127,8 @@ fi
 
 
 if test "x$enable_thread" = "xyes";then
-    LIBS="$LIBS -lpthread "
+    # Search for library
+    AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
     if test "x$ac_cv_search_pthread_create" = "xno";then
         AC_MSG_ERROR([need posix thread library to be installed])
     fi
