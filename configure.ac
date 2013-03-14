@@ -120,7 +120,6 @@ AC_TYPE_SIGNAL
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([atexit gettimeofday inet_ntoa memset select socket localtime_r])
 
-
 if test "x$enable_offline" = "xyes";then
     LIBS="-lpcap"
 fi
