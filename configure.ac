@@ -72,6 +72,11 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
+AC_ARG_ENABLE(udp, AS_HELP_STRING([--enable-udp],[run tcpcopy for copying udp requests]),,udp=no)
+if test "x$enable_udp" = "xyes";then
+    AC_DEFINE(TCPCOPY_UDP, 1, [Define if --enable-udp])
+fi
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h])
@@ -112,6 +117,9 @@ if test "x$enable_nfqueue" = "xyes";then
 fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
+
+AM_CONDITIONAL(UDPCOPY, [test "x$enable_udp" = "xtrue"])
+
 
 #AC_CONFIG_FILES([Makefile])
 AC_OUTPUT([

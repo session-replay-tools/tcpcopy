@@ -39,14 +39,14 @@ address_find_sock(uint32_t ip, uint16_t port)
     return (int) (long) fd;
 }
 
-void
+static void
 address_add_sock(uint32_t ip, uint16_t port, int fd) 
 {
     uint64_t key = get_key(ip, port);
     hash_add(addr_table, key, (void *) (long) fd);
 }
 
-void 
+static void 
 address_release()
 {   
     int          i, fd;
@@ -71,7 +71,7 @@ address_release()
                 fd  = (int) (long) hn->data;
                 hn->data = NULL;
 
-                if (fd != 0) {
+                if (fd > 0) {
                     tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
                     close(fd);
                 }
@@ -204,12 +204,11 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
-    /* init session table */
+    /* init tcp session table */
     init_for_sessions();
 
-
 #if (TCPCOPY_PCAP)
-    memset((void *)filter_port, 0, MAX_FILTER_PORTS<<1);
+    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
 #endif
 
 #if (TCPCOPY_DR)

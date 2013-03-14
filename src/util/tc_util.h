@@ -10,6 +10,11 @@
 #define TCP_PAYLOAD_LENGTH(iph, tcph) \
         (ntohs(iph->tot_len) - IP_HDR_LEN(iph) - TCP_HDR_LEN(tcph))
 
+#if (TCPCOPY_UDP)
+#define CHECKSUM_CARRY(x) \
+        (x = (x >> 16) + (x & 0xffff), (~(x + (x >> 16)) & 0xffff))
+#endif
+
 inline uint64_t get_key(uint32_t s_ip, uint16_t s_port);
 inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
@@ -25,6 +30,9 @@ unsigned short csum (unsigned short *packet, int pack_len);
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
 
+#if (TCPCOPY_UDP)
+void udpcsum(struct iphdr *ip_header, struct udphdr *udp_packet);
+#endif
 
 #endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */
 

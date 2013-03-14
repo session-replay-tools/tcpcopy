@@ -227,6 +227,75 @@ process_packet(bool backup, char *packet, int length)
     }
 }
 
+
+
+#if (TCPCOPY_UDP)
+static void
+replicate_packs(char *packet, int length, int replica_num)
+{
+    int            i;
+    uint32_t       size_ip;
+    uint16_t       orig_port, addition, dest_port, rand_port;
+    struct iphdr  *ip_header;
+    struct udphdr *udp_header;
+
+    ip_header  = (struct iphdr*)packet;
+    size_ip    = ip_header->ihl << 2;
+    udp_header = (struct udphdr*)((char *)ip_header + size_ip);
+    orig_port  = ntohs(udp_header->source);
+
+    tc_log_debug1(LOG_DEBUG, 0, "orig port:%u", orig_port);
+
+    rand_port = clt_settings.rand_port_shifted;
+    for (i = 1; i < replica_num; i++) {
+        addition   = (((i << 1) - 1) << 5) + rand_port;
+        dest_port  = get_appropriate_port(orig_port, addition);
+
+        tc_log_debug2(LOG_DEBUG, 0, "new port:%u,add:%u", dest_port, addition);
+
+        udp_header->source = htons(dest_port);
+        process_packet(true, packet, length);
+    }
+}
+
+static int
+dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
+{
+    int            replica_num;
+    char          *packet;
+    bool           packet_valid = false;
+    struct iphdr  *ip_header;
+
+    packet = recv_buf;
+
+    if (is_packet_needed((const char *) packet)) {
+
+        replica_num = clt_settings.replica_num;
+        ip_header   = (struct iphdr *) packet;
+
+        if (localhost == ip_header->saddr) {
+            if (0 != clt_settings.lo_tf_ip) {
+                ip_header->saddr = clt_settings.lo_tf_ip;
+            }
+        }
+
+        if (replica_num > 1) {
+            packet_valid = process_packet(true, packet, recv_len);
+            replicate_packs(packet, recv_len, replica_num);
+        }else{
+            packet_valid = process_packet(false, packet, recv_len);
+        }
+    }
+
+    if (p_valid_flag) {
+        *p_valid_flag = (packet_valid == true ? 1 : 0);
+    }
+
+    return TC_OK;  
+}
+
+#else
+
 /* replicate packets for multiple-copying */
 static void
 replicate_packs(char *packet, int length, int replica_num)
@@ -285,7 +354,6 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
         /* 
          * If the packet length is larger than MTU, we split it. 
-         * This is to solve the ip fragmentation problem
          */
         if (recv_len > clt_settings.mtu) {
 
@@ -355,6 +423,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
     return TC_OK;
 }
+#endif
 
 #if (TCPCOPY_OFFLINE)
 int

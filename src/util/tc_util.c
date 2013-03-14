@@ -148,7 +148,7 @@ csum(unsigned short *packet, int pack_len)
 
 static unsigned short buf[32768]; 
 
-unsigned short
+    unsigned short
 tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
 {       
     unsigned short        res;
@@ -161,4 +161,44 @@ tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
 
     return res; 
 }  
+
+#if (TCPCOPY_UDP)
+static int
+do_checksum_math(u_int16_t *data, int len)
+{   
+    int sum = 0;
+    union {
+        u_int16_t s;
+        u_int8_t b[2];
+    } pad;
+
+    while (len > 1) {
+        sum += *data++;
+        len -= 2;
+    }
+
+    if (len == 1) {
+        pad.b[0] = *(u_int8_t *)data;
+        pad.b[1] = 0;
+        sum += pad.s;
+    }
+
+    return (sum);
+} 
+
+void udpcsum(struct iphdr *ip_header, struct udphdr *udp_packet)
+{       
+    int            sum;
+    uint16_t       len;
+
+    udp_packet->check = 0;
+
+    len  = ntohs(udp_packet->len);
+    sum  = do_checksum_math((u_int16_t *)&ip_header->saddr, 8);
+    sum += ntohs(IPPROTO_UDP + len);
+    sum += do_checksum_math((u_int16_t *)udp_packet, len);
+    udp_packet->check = CHECKSUM_CARRY(sum);
+
+}
+#endif
 

@@ -9,6 +9,9 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#if (TCPCOPY_UDP)
+#include <netinet/udp.h>
+#endif
 #if (!INTERCEPT_NFQUEUE)
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
@@ -171,6 +174,7 @@
 
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
+typedef struct udphdr tc_udp_header_t;
 
 
 #if (INTERCEPT_THREAD)
