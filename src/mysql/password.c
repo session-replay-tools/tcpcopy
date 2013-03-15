@@ -26,7 +26,7 @@ scramble(char *to, const char *message, const char *password)
     mysql_sha1_reset(&sha1_context);
 
     /* stage 1: hash password */
-    mysql_sha1_input(&sha1_context, (uint8 *)password,
+    mysql_sha1_input(&sha1_context, (uint8 *) password,
             (uint)strlen(password));
     mysql_sha1_result(&sha1_context, hash_stage1);
 

@@ -41,7 +41,7 @@ route_delete_obsolete(time_t cur_time)
                 if (ln == NULL) {
                     break;
                 }       
-                hn = (hash_node *)ln->data;
+                hn = (hash_node *) ln->data;
                 timeout = cur_timeout;
                 if (0 == hn->visit_cnt) {
                     /* 

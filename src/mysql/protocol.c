@@ -260,7 +260,7 @@ change_client_auth_content(unsigned char *payload, int length,
         return 0;
     }
 
-    scramble((char*)scramble_buff, message, pwd);
+    scramble((char *) scramble_buff, message, pwd);
 
     /* change scramble_buff according the target server scramble */
     for (i = 0; i < SCRAMBLE_LENGTH; i++) {

@@ -4,7 +4,7 @@
 static hash_node *
 hash_node_malloc(uint64_t key, void *data)
 {
-    hash_node *hn = (hash_node *)malloc(sizeof(hash_node));
+    hash_node *hn = (hash_node *) malloc(sizeof(hash_node));
 
     if (hn == NULL) {
         tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
@@ -38,7 +38,7 @@ hash_find_node(hash_table *table, uint64_t key)
 
     while (ln) {
 
-        hn = (hash_node *)ln->data;
+        hn = (hash_node *) ln->data;
         table->total_key_compared++;
         if (hn->key == key) {
             hn->access_time = tc_time();
@@ -58,7 +58,7 @@ hash_table *
 hash_create(size_t size)
 {
     size_t      i;
-    hash_table *ht = (hash_table *)calloc(1, sizeof(hash_table));
+    hash_table *ht = (hash_table *) calloc(1, sizeof(hash_table));
 
     if (ht == NULL) {
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash table");
@@ -195,7 +195,7 @@ hash_deep_destroy(hash_table *table)
             ln   = link_list_first(l);
             while (ln) {
                 tmp_ln = link_list_get_next(l, ln);
-                hn = (hash_node *)ln->data;
+                hn = (hash_node *) ln->data;
                 if (hn->data != NULL) {
                     free(hn->data);
                     hn->data = NULL;

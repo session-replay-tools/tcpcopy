@@ -27,7 +27,7 @@ link_node_internal_free(p_link_node p)
 link_list *
 link_list_create()
 {
-    link_list *l = (link_list *)calloc(1, sizeof(link_list));
+    link_list *l = (link_list *) calloc(1, sizeof(link_list));
 
     if (l == NULL) {
         perror("calloc");
