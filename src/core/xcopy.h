@@ -142,7 +142,7 @@
 /* session constants from the client perspective */
 #define SESS_CREATE    0
 #define SESS_KEEPALIVE 1  /* online active while backend is closed */
-#define SESS_REUSE     2  /* when in ab test*/
+#define SESS_REUSE     2  /* when in ab test */
 
 #define DISP_STOP      1
 #define DISP_CONTINUE  0
@@ -150,7 +150,7 @@
 /* constants for tcp */
 #define TCP_HEADER_DOFF_MIN_VALUE 5
 
-/* results of obsolete checking*/
+/* results of obsolete checking */
 #define OBSOLETE 1
 #define CANDIDATE_OBSOLETE -1
 #define NOT_YET_OBSOLETE 0
@@ -198,7 +198,7 @@ typedef struct tcphdr tc_tcp_header_t;
 
 #endif
 
-/* bool constants*/
+/* bool constants */
 #if (HAVE_STDBOOL_H)
 #include <stdbool.h>
 #else

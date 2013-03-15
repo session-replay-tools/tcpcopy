@@ -81,7 +81,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
             return -1;
         }
 
-        p_user_info = (mysql_user*)calloc(1, sizeof(mysql_user));
+        p_user_info = (mysql_user*) calloc(1, sizeof(mysql_user));
         strncpy(p_user_info->user, p, q-p);
         strncpy(p_user_info->password, q + 1, pair_end - q);
         key = get_key_from_user(p_user_info->user);

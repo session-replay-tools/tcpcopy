@@ -94,7 +94,7 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
 
     ip_header->tot_len = htons(tot_len - diff);
     tcp_header->seq    = htonl(s->vir_next_seq);
-    payload = (unsigned char *) ((char*) tcp_header + size_tcp);
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
     memmove(payload, payload + diff, cont_len - diff);
     tc_log_debug1(LOG_DEBUG, 0, "trim packet:%u", s->src_h_port);
 
@@ -132,7 +132,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     if (tcp_header->doff > TCP_HEADER_DOFF_MIN_VALUE) {
         tcp_opt_len = (tcp_header->doff - TCP_HEADER_DOFF_MIN_VALUE) << 2;
         if (cont_len > 0) {
-            tcp_opt = (unsigned char *) ((char*) tcp_header
+            tcp_opt = (unsigned char *) ((char *) tcp_header
                     + (TCP_HEADER_DOFF_MIN_VALUE << 2));
             payload = (unsigned char *) (tcp_opt + tcp_opt_len);
             /* overide tcp options just for fast retransmit */
@@ -151,7 +151,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
 
     /* It should be set to zero for tcp checksum */
     tcp_header->check = 0;
-    tcp_header->check = tcpcsum((unsigned char *)ip_header,
+    tcp_header->check = tcpcsum((unsigned char *) ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
 
     tc_log_trace(LOG_NOTICE, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
@@ -236,7 +236,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
 
     /* It should be set to zero for tcp checksum */
     tcp_header->check = 0;
-    tcp_header->check = tcpcsum((unsigned char *)ip_header,
+    tcp_header->check = tcpcsum((unsigned char *) ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
 
     tc_log_debug_trace(LOG_DEBUG, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
@@ -524,7 +524,7 @@ destroy_for_sessions()
             while (ln) {
 
                 tmp_ln = link_list_get_next(list, ln);
-                hn = (hash_node *)ln->data;
+                hn = (hash_node *) ln->data;
                 if (hn->data != NULL) {
 
                     s = hn->data;
@@ -571,9 +571,9 @@ destroy_for_sessions()
             while (ln) {
 
                 tmp_ln = link_list_get_next(list, ln);
-                hn = (hash_node *)ln->data;
+                hn = (hash_node *) ln->data;
                 if (hn->data != NULL) {
-                    link_list_clear((link_list *)hn->data);
+                    link_list_clear((link_list *) hn->data);
                 }
                 ln = tmp_ln;
             }
@@ -703,7 +703,7 @@ session_create(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     session_t               *s;
     ip_port_pair_mapping_t  *test;
 
-    s = (session_t *)calloc(1, sizeof(session_t));
+    s = (session_t *) calloc(1, sizeof(session_t));
     if (s == NULL) {
         return NULL;
     }
@@ -747,7 +747,7 @@ save_packet(link_list *list, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
 
-    tc_ip_header_t *copyed = (tc_ip_header_t *)copy_ip_packet(ip_header);
+    tc_ip_header_t *copyed = (tc_ip_header_t *) copy_ip_packet(ip_header);
     p_link_node ln = link_node_malloc(copyed);
 
     ln->key = ntohl(tcp_header->seq);
@@ -1354,7 +1354,7 @@ static void activate_dead_sessions()
         ln   = link_list_first(list);   
         while (ln) {
 
-            hn = (hash_node *)ln->data;
+            hn = (hash_node *) ln->data;
             if (hn->data != NULL) {
                 s = hn->data;
                 if (s->sm.sess_over) {
@@ -1459,7 +1459,7 @@ clear_timeout_sessions()
         ln   = link_list_first(list);   
         while (ln) {
             tmp_ln = link_list_get_next(list, ln);
-            hn = (hash_node *)ln->data;
+            hn = (hash_node *) ln->data;
             if (hn->data != NULL) {
 
                 s = hn->data;
@@ -1722,7 +1722,7 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     total_cont_len = fir_cont_len;
 #endif
 
-    list = (link_list *)hash_find(mysql_table, s->src_h_port);
+    list = (link_list *) hash_find(mysql_table, s->src_h_port);
     if (list) {
         /* calculate the total content length */
         ln = link_list_first(list); 
@@ -2075,7 +2075,7 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
 
             tc_log_debug1(LOG_DEBUG, 0, "push statement:%u", s->src_h_port);
 
-            list = (link_list *)hash_find(mysql_table, s->src_h_port);
+            list = (link_list *) hash_find(mysql_table, s->src_h_port);
             if (!list) {
                 list = link_list_create();
                 if (list == NULL) {
@@ -2712,7 +2712,7 @@ process_client_syn(session_t *s, tc_ip_header_t *ip_header,
 #if (TCPCOPY_MYSQL_BASIC)
     tc_log_info(LOG_INFO, 0, "syn port:%u", s->src_h_port);
     /* remove old mysql info */
-    list = (link_list *)hash_find(mysql_table, s->src_h_port);
+    list = (link_list *) hash_find(mysql_table, s->src_h_port);
     if (list) {
         tc_log_info(LOG_INFO, 0, "del from mysql table:%u", s->src_h_port);
         ln = link_list_first(list); 
@@ -2955,7 +2955,7 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->sm.is_waiting_previous_packet) {
             s->sm.is_waiting_previous_packet = 0;
             /* Send the packet and reserved packets */
-            wrap_send_ip_packet(s, (unsigned char *)ip_header, true);
+            wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             send_reserved_packets(s);
             return DISP_STOP;
         } else {
