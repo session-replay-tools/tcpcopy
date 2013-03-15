@@ -82,6 +82,7 @@ tc_raw_socket_in_init()
 #if (TCPCOPY_UDP)
     fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
 #else
+    /* copy ip datagram from IP layer */
     fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
 #endif
 

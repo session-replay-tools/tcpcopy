@@ -56,7 +56,7 @@ signal_handler(int sig)
     if (sig == SIGSEGV) {
         tc_log_info(LOG_ERR, 0, "SIGSEGV error");
         release_resources();
-        /* avoid dead loop*/
+        /* avoid dead loop */
         signal(SIGSEGV, SIG_DFL);
         kill(getpid(), sig);
     } else {

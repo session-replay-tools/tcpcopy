@@ -65,7 +65,7 @@ address_release()
         while (ln) {
 
             tmp_ln = link_list_get_next(list, ln);
-            hn = (hash_node *)ln->data;
+            hn = (hash_node *) ln->data;
             if (hn->data != NULL) {
 
                 fd  = (int) (long) hn->data;

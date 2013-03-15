@@ -134,7 +134,7 @@ read_args(int argc, char **argv)
          "i:" /* <device,>*/
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
-         "u:" /* user password pair for mysql*/
+         "u:" /* user password pair for mysql */
 #endif
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
