@@ -101,7 +101,7 @@ delay_table_add(uint64_t key, struct msg_server_s *msg)
 
     cmsg = copy_message(msg);
     if (cmsg != NULL) {
-        ln   = link_node_malloc((void *)cmsg);
+        ln   = link_node_malloc((void *) cmsg);
         link_list_append(msg_list, ln);
 
         msg_item_cnt++;

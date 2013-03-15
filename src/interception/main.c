@@ -199,30 +199,35 @@ read_args(int argc, char **argv) {
             case '?':
                 switch (optopt) {    
                     case 'x':
-                        fprintf(stderr, "TCPCopy: option -%c require a ip address list\n", optopt);
+                        fprintf(stderr, "intercept: option -%c require an ip address list\n",
+                                optopt);
                         break;
                     case 'b':
-                        fprintf(stderr, "TCPCopy: option -%c require a ip address\n", optopt);
+                        fprintf(stderr, "intercept: option -%c require an ip address\n", 
+                                optopt);
                         break;
                     case 'l':
                     case 'P':
-                        fprintf(stderr, "TCPCopy: option -%c require a file name\n", optopt);
+                        fprintf(stderr, "intercept: option -%c require a file name\n", 
+                                optopt);
                         break;
 
                     case 'p':
                     case 't':
                     case 's':
-                        fprintf(stderr, "TCPCopy: option -%c require a number\n", optopt);
+                        fprintf(stderr, "intercept: option -%c require a number\n", 
+                                optopt);
                         break;
 
                     default:
-                        fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                        fprintf(stderr, "intercept: illegal argument \"%c\"\n", 
+                                optopt);
                         break;
                 }
                 return -1;
 
             default:
-                fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                fprintf(stderr, "intercept: illegal argument \"%c\"\n", optopt);
                 return -1;
         }
 

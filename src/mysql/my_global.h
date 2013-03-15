@@ -946,7 +946,7 @@ typedef long long intptr;
 #error sizeof(void *) is neither sizeof(int) nor sizeof(long) nor sizeof(long long)
 #endif
 
-#define MY_ERRPTR ((void*)(intptr)1)
+#define MY_ERRPTR ((void*) (intptr)1)
 
 #if defined(_WIN32)
 typedef unsigned long long my_off_t;
