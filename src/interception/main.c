@@ -151,6 +151,7 @@ static int
 read_args(int argc, char **argv) {
     int  c;
 
+    opterr = 0;
     while (-1 != (c = getopt(argc, argv,
          "x:" /* ip list passed through ip firewall */
          "p:" /* TCP port number to listen on */
@@ -195,8 +196,33 @@ read_args(int argc, char **argv) {
             case 'd':
                 srv_settings.do_daemonize = 1;
                 break;
+            case '?':
+                switch (optopt) {    
+                    case 'x':
+                        fprintf(stderr, "TCPCopy: option -%c require a ip address list\n", optopt);
+                        break;
+                    case 'b':
+                        fprintf(stderr, "TCPCopy: option -%c require a ip address\n", optopt);
+                        break;
+                    case 'l':
+                    case 'P':
+                        fprintf(stderr, "TCPCopy: option -%c require a file name\n", optopt);
+                        break;
+
+                    case 'p':
+                    case 't':
+                    case 's':
+                        fprintf(stderr, "TCPCopy: option -%c require a number\n", optopt);
+                        break;
+
+                    default:
+                        fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                        break;
+                }
+                return -1;
+
             default:
-                fprintf(stderr, "Illegal argument \"%c\"\n", c);
+                fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
                 return -1;
         }
 

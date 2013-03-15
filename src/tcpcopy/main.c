@@ -123,6 +123,7 @@ read_args(int argc, char **argv)
 {
     int  c;
 
+    opterr = 0;
     while (-1 != (c = getopt(argc, argv,
          "x:" /* <transfer,> */
          "c:" /* the localhost client ip will be changed to this ip address */
@@ -218,8 +219,54 @@ read_args(int argc, char **argv)
             case 'r':
                 clt_settings.percentage = atoi(optarg);
                 break;
+            case '?':
+                switch (optopt) {    
+                    case 'x':
+#if (TCPCOPY_MYSQL_ADVANCED)
+                    case 'u':
+#endif
+                        fprintf(stderr, "TCPCopy: option -%c require a string\n", optopt);
+                        break;
+                    case 'c':
+                        fprintf(stderr, "TCPCopy: option -%c require a ip address\n", optopt);
+                        break;
+#if (TCPCOPY_OFFLINE)
+                    case 'i':
+#endif
+                    case 'l':
+                    case 'P':
+                        fprintf(stderr, "TCPCopy: option -%c require a file name\n", optopt);
+                        break;
+#if (TCPCOPY_PCAP)
+                    case 'i':
+                        fprintf(stderr, "TCPCopy: option -%c require a device name\n", optopt);
+                        break;
+#endif
+#if (TCPCOPY_DR)
+                    case 's':
+                        fprintf(stderr, "TCPCopy: option -%c require a ip address list\n", optopt);
+                        break;
+#endif
+
+                    case 'n':
+                    case 'f':
+                    case 'm':
+                    case 'M':
+                    case 'S':
+                    case 't':
+                    case 'p':
+                    case 'r':
+                        fprintf(stderr, "TCPCopy: option -%c require a number\n", optopt);
+                        break;
+
+                    default:
+                        fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                        break;
+                }
+                return -1;
+
             default:
-                fprintf(stderr, "Illegal argument \"%c\"\n", c);
+                fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
                 return -1;
         }
     }
