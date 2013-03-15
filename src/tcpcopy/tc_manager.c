@@ -209,7 +209,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
 
 #if (TCPCOPY_PCAP)
-    memset((void *)filter_port, 0, MAX_FILTER_PORTS<<1);
+    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
 #endif
 
 #if (TCPCOPY_DR)

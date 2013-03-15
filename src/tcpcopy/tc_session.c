@@ -1810,7 +1810,7 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     /* TCPOPT_MAXSEG flag */
     opt[0] = 2;
     opt[1] = 4;
-    bcopy((void *)&mss, (void *)(opt + 2), sizeof(mss));
+    bcopy((void *) &mss, (void *) (opt + 2), sizeof(mss));
 
     s->req_ip_id = ntohs(ip_header->id);
     /* 

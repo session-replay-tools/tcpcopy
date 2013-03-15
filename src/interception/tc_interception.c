@@ -152,7 +152,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     save_len = RESP_MAX_USEFUL_SIZE;
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     size_tcp = tcp_header->doff << 2;
