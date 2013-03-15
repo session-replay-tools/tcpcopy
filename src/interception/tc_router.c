@@ -146,7 +146,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     }
 
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     tc_log_debug1(LOG_DEBUG, 0, "router update:%u", ntohs(tcp_header->source));
     memcpy(&msg, ip_header, len);

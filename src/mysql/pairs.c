@@ -88,7 +88,7 @@ retrieve_mysql_user_pwd_info(char *pairs)
         p_tmp_user_info = hash_find(user_pwd_table, key);
 
         if (p_tmp_user_info == NULL) {
-            hash_add(user_pwd_table, key, (void *)p_user_info);
+            hash_add(user_pwd_table, key, (void *) p_user_info);
         } else {
             p_tmp_user_info->next = p_user_info;
         }
