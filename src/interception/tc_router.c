@@ -140,6 +140,11 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 
+    if (ip_header->protocol != IPPROTO_TCP) {
+        tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
+        return;
+    }
+
     size_ip    = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
 

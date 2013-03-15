@@ -204,7 +204,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
-    /* init tcp session table */
+    /* init session table */
     init_for_sessions();
 
 #if (TCPCOPY_PCAP)
@@ -271,7 +271,11 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         return TC_ERROR;
     }
     pt = clt_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp dst port ");
+#else
     strcpy(pt, "tcp dst port ");
+#endif
     pt = pt + strlen(pt);
     for (i = 0; i < filter_port_num -1; i++) {
         sprintf(pt, "%d or ", ntohs(filter_port[i]));
@@ -294,3 +298,4 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     return TC_OK;
 }
+

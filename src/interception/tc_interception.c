@@ -380,7 +380,7 @@ tc_nfq_event_process(tc_event_t *rev)
 static int
 dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 {
-    struct nlmsghdr        *nl_header = (struct nlmsghdr*)buffer;
+    struct nlmsghdr        *nl_header = (struct nlmsghdr*) buffer;
     struct ipq_verdict_msg *ver_data;
     struct sockaddr_nl      addr;
 
@@ -393,7 +393,7 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
     nl_header->nlmsg_flags = (NLM_F_REQUEST);
     nl_header->nlmsg_pid   = pid;
     nl_header->nlmsg_seq   = seq++;
-    ver_data = (struct ipq_verdict_msg *)NLMSG_DATA(nl_header);
+    ver_data = (struct ipq_verdict_msg *) NLMSG_DATA(nl_header);
     ver_data->value = verdict;
     ver_data->id    = packet_id;
     memset(&addr, 0, sizeof(addr));
