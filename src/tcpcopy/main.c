@@ -600,7 +600,7 @@ set_details()
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
         }
         if (daemonize() == -1) {
-            fprintf(stderr, "failed to daemon() in order to daemonize\n");
+            fprintf(stderr, "failed to daemonize() in order to daemonize\n");
             return -1;
         }    
     }    
