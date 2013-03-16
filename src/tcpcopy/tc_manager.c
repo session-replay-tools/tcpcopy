@@ -65,7 +65,7 @@ address_release()
         while (ln) {
 
             tmp_ln = link_list_get_next(list, ln);
-            hn = (hash_node *)ln->data;
+            hn = (hash_node *) ln->data;
             if (hn->data != NULL) {
 
                 fd  = (int) (long) hn->data;
@@ -209,7 +209,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
 
 #if (TCPCOPY_PCAP)
-    memset((void *)filter_port, 0, MAX_FILTER_PORTS<<1);
+    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
 #endif
 
 #if (TCPCOPY_DR)

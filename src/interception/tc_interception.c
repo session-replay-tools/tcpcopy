@@ -152,7 +152,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     save_len = RESP_MAX_USEFUL_SIZE;
 
     size_ip = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     size_tcp = tcp_header->doff << 2;
@@ -200,7 +200,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 #if (TCPCOPY_MYSQL_ADVANCED) 
     if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
         p_content = p_content + sizeof(tc_tcp_header_t);
-        payload = (unsigned char*) ((char*) tcp_header + size_tcp);
+        payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         memcpy(p_content, payload, cont_len);
     }
 #endif
@@ -235,7 +235,7 @@ get_resp_ip_hdr_from_pool(char *resp, int *len)
     pthread_cond_signal(&empty);
     pthread_mutex_unlock(&mutex);
 
-    return (tc_ip_header_t *)resp;
+    return (tc_ip_header_t *) resp;
 }
 
 static
@@ -272,7 +272,7 @@ void put_nl_verdict_to_pool(int fd, int verdict, unsigned long packet_id)
 }
 
 static tc_verdict_t*
-get_nl_verdict_from_pool(tc_verdict_t* verdict)
+get_nl_verdict_from_pool(tc_verdict_t *verdict)
 {
     int   index;
 
@@ -321,7 +321,7 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
         return TC_ERROR;
     }
 
-    ip_hdr = (tc_ip_header_t *)payload;
+    ip_hdr = (tc_ip_header_t *) payload;
 
     if (ip_hdr != NULL) {
         /* check if it is the valid user to pass through firewall */
@@ -380,7 +380,7 @@ tc_nfq_event_process(tc_event_t *rev)
 static int
 dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 {
-    struct nlmsghdr        *nl_header = (struct nlmsghdr*)buffer;
+    struct nlmsghdr        *nl_header = (struct nlmsghdr*) buffer;
     struct ipq_verdict_msg *ver_data;
     struct sockaddr_nl      addr;
 
@@ -393,7 +393,7 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
     nl_header->nlmsg_flags = (NLM_F_REQUEST);
     nl_header->nlmsg_pid   = pid;
     nl_header->nlmsg_seq   = seq++;
-    ver_data = (struct ipq_verdict_msg *)NLMSG_DATA(nl_header);
+    ver_data = (struct ipq_verdict_msg *) NLMSG_DATA(nl_header);
     ver_data->value = verdict;
     ver_data->id    = packet_id;
     memset(&addr, 0, sizeof(addr));
@@ -408,8 +408,8 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
      * after every IPQM PACKET message is received.
      *
      */
-    if (sendto(fd, (void *)nl_header, nl_header->nlmsg_len, 0,
-                (struct sockaddr *)&addr, sizeof(struct sockaddr_nl)) < 0)
+    if (sendto(fd, (void *) nl_header, nl_header->nlmsg_len, 0,
+                (struct sockaddr *) &addr, sizeof(struct sockaddr_nl)) < 0)
     {
         tc_log_info(LOG_ERR, errno, "unable to send mode message");
         return 0;

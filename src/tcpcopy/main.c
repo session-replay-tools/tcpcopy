@@ -33,7 +33,7 @@ set_signal_handler()
 static void
 usage(void)
 {
-    printf("TCPCopy " VERSION "\n");
+    printf("tcpcopy " VERSION "\n");
     printf("-x <transfer,> use <transfer,> to specify the IPs and ports of the source and target\n"
            "               servers. Suppose 'sourceIP' and 'sourcePort' are the IP and port \n"
            "               number of the source server you want to copy from, 'targetIP' and \n"
@@ -54,8 +54,8 @@ usage(void)
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
            "               '192.168.0.1' when client IP is localhost.\n");
 #if (TCPCOPY_OFFLINE)
-    printf("-i <file>      set the pcap file used for TCPCopy to <file> (only valid for the\n"
-           "               offline version of TCPCopy when it is configured to run at\n"
+    printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
+           "               offline version of tcpcopy when it is configured to run at\n"
            "               enable-offline mode)\n");
 #endif
 #if (TCPCOPY_PCAP)
@@ -80,19 +80,19 @@ usage(void)
            "               The maximum value allowed is 1023. As multiple copying is based on \n"
            "               port number modification, the ports may conflict with each other,\n");
     printf("               in particular in intranet applications where there are few source IPs\n"
-           "               and most connections are short. Thus, TCPCopy would perform better \n"
+           "               and most connections are short. Thus, tcpcopy would perform better \n"
            "               when less copies are specified. For example, \n"
            "               './tcpcopy -x 80-192.168.0.2:8080 -n 3' would copy data flows from \n");
     printf("               port 80 on the current server, generate data stream that is three\n"
            "               times as large as the source data, and send these requests to the\n"
            "               target port 8080 on '192.168.0.2'.\n");
     printf("-f <num>       use this parameter to control the port number modification process\n"
-           "               and reduce port conflications when multiple TCPCopy instances are\n"
-           "               running. The value of <num> should be different for different TCPCopy\n"
+           "               and reduce port conflications when multiple tcpcopy instances are\n"
+           "               running. The value of <num> should be different for different tcpcopy\n"
            "               instances. The maximum value allowed is 1023.\n");
-    printf("-m <num>       set the maximum memory allowed to use for TCPCopy in megabytes, \n"
-           "               to prevent TCPCopy occupying too much memory and influencing the\n"
-           "               online system. When the memory exceeds this limit, TCPCopy would quit\n"
+    printf("-m <num>       set the maximum memory allowed to use for tcpcopy in megabytes, \n"
+           "               to prevent tcpcopy occupying too much memory and influencing the\n"
+           "               online system. When the memory exceeds this limit, tcpcopy would quit\n"
            "               automatically. The parameter is effective only when the kernel \n"
            "               version is 2.6.32 or above. The default value is 512.\n");
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
@@ -102,9 +102,9 @@ usage(void)
            "               Format:\n"
            "               ip_addr1, ip_addr2 ...\n");
 #endif
-    printf("-t <num>       set the session timeout limit. If TCPCopy does not receive response\n"
+    printf("-t <num>       set the session timeout limit. If tcpcopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
-           "               be dropped by TCPCopy. When the response from the target server is\n"
+           "               be dropped by tcpcopy. When the response from the target server is\n"
            "               slow or the application protocol is context based, the value should \n"
            "               be set larger. The default value is 60 seconds\n");
     printf("-l <file>      save the log information in <file>\n"
@@ -134,11 +134,11 @@ read_args(int argc, char **argv)
          "i:" /* <device,>*/
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
-         "u:" /* user password pair for mysql*/
+         "u:" /* user password pair for mysql */
 #endif
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
-         "m:" /* set the maximum memory allowed to use for TCPCopy */
+         "m:" /* set the maximum memory allowed to use for tcpcopy */
          "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
@@ -205,7 +205,7 @@ read_args(int argc, char **argv)
                 usage();
                 return -1;
             case 'v':
-                printf ("TCPCopy version:%s\n", VERSION);
+                printf ("tcpcopy version:%s\n", VERSION);
                 return -1;
             case 'd':
                 clt_settings.do_daemonize = 1;
@@ -225,26 +225,31 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_MYSQL_ADVANCED)
                     case 'u':
 #endif
-                        fprintf(stderr, "TCPCopy: option -%c require a string\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require a string\n", 
+                                optopt);
                         break;
                     case 'c':
-                        fprintf(stderr, "TCPCopy: option -%c require a ip address\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require a ip address\n", 
+                                optopt);
                         break;
 #if (TCPCOPY_OFFLINE)
                     case 'i':
 #endif
                     case 'l':
                     case 'P':
-                        fprintf(stderr, "TCPCopy: option -%c require a file name\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require a file name\n", 
+                                optopt);
                         break;
 #if (TCPCOPY_PCAP)
                     case 'i':
-                        fprintf(stderr, "TCPCopy: option -%c require a device name\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require a device name\n",
+                                optopt);
                         break;
 #endif
 #if (TCPCOPY_DR)
                     case 's':
-                        fprintf(stderr, "TCPCopy: option -%c require a ip address list\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require an ip address list\n",
+                                optopt);
                         break;
 #endif
 
@@ -256,17 +261,19 @@ read_args(int argc, char **argv)
                     case 't':
                     case 'p':
                     case 'r':
-                        fprintf(stderr, "TCPCopy: option -%c require a number\n", optopt);
+                        fprintf(stderr, "tcpcopy: option -%c require a number\n",
+                                optopt);
                         break;
 
                     default:
-                        fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                        fprintf(stderr, "tcpcopy: illegal argument \"%c\"\n",
+                                optopt);
                         break;
                 }
                 return -1;
 
             default:
-                fprintf(stderr, "TCPCopy: illegal argument \"%c\"\n", optopt);
+                fprintf(stderr, "tcpcopy: illegal argument \"%c\"\n", optopt);
                 return -1;
         }
     }
@@ -278,7 +285,7 @@ static void
 output_for_debug(int argc, char **argv)
 {
     /* print out version info */
-    tc_log_info(LOG_NOTICE, 0, "TCPCopy version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
     /* print out target info */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
@@ -311,7 +318,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
     uint16_t tmp_port;
 
     if ((seq = strchr(addr, ':')) == NULL) {
-        tc_log_info(LOG_NOTICE, 0, "set global port for TCPCopy");
+        tc_log_info(LOG_NOTICE, 0, "set global port for tcpcopy");
         *ip = 0;
         port_s = addr;
     } else {

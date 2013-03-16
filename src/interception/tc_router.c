@@ -41,7 +41,7 @@ route_delete_obsolete(time_t cur_time)
                 if (ln == NULL) {
                     break;
                 }       
-                hn = (hash_node *)ln->data;
+                hn = (hash_node *) ln->data;
                 timeout = cur_timeout;
                 if (0 == hn->visit_cnt) {
                     /* 
@@ -141,7 +141,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     tc_tcp_header_t        *tcp_header;
 
     size_ip    = ip_header->ihl << 2;
-    tcp_header = (tc_tcp_header_t *) ((char *)ip_header + size_ip);
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
     tc_log_debug1(LOG_DEBUG, 0, "router update:%u", ntohs(tcp_header->source));
     memcpy(&msg, ip_header, len);

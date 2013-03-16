@@ -162,7 +162,7 @@ tc_process_pcap_socket_packet(tc_event_t *rev)
             return TC_ERROR;
         }
 
-        ether = (struct ethernet_hdr *)recv_buf;
+        ether = (struct ethernet_hdr *) recv_buf;
         if (ntohs(ether->ether_type) != 0x800) {
             return TC_OK;
         }
@@ -275,7 +275,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
         replica_num = clt_settings.replica_num;
         packet_num = 1;
-        ip_header   = (tc_ip_header_t *)packet;
+        ip_header   = (tc_ip_header_t *) packet;
 
         if (localhost == ip_header->saddr) {
             if (clt_settings.lo_tf_ip != 0) {
@@ -439,7 +439,7 @@ get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
             return 0;
             break;
         case DLT_EN10MB:
-            eth_hdr = (struct ethernet_hdr *)packet;
+            eth_hdr = (struct ethernet_hdr *) packet;
             switch (ntohs(eth_hdr->ether_type)) {
                 case ETHERTYPE_VLAN:
                     return 18;
@@ -531,7 +531,8 @@ send_packets_from_pcap(int first)
                         last_pack_time.tv_usec/1000; 
 
                     ip_pack_len = pkt_hdr.len - l2_len;
-                    dispose_packet((char*)ip_data, ip_pack_len, &p_valid_flag);
+                    dispose_packet((char *) ip_data, ip_pack_len, 
+                            &p_valid_flag);
                     if (p_valid_flag) {
 
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
