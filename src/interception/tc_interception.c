@@ -380,7 +380,7 @@ tc_nfq_event_process(tc_event_t *rev)
 static int
 dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 {
-    struct nlmsghdr        *nl_header = (struct nlmsghdr*) buffer;
+    struct nlmsghdr        *nl_header = (struct nlmsghdr *) buffer;
     struct ipq_verdict_msg *ver_data;
     struct sockaddr_nl      addr;
 
