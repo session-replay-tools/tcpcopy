@@ -472,8 +472,8 @@ timeval_diff(struct timeval *start, struct timeval *cur)
 {
     uint64_t msec;
 
-    msec  = (cur->tv_sec - start->tv_sec)*1000;
-    msec += (cur->tv_usec - start->tv_usec)/1000;
+    msec  = (cur->tv_sec - start->tv_sec) * 1000;
+    msec += (cur->tv_usec - start->tv_usec) / 1000;
 
     return msec;
 }
@@ -597,7 +597,7 @@ send_packets_from_pcap(int first)
                 last_pack_time = pkt_hdr.ts;
                 if (ip_data != NULL) {
                     clt_settings.pcap_time = last_pack_time.tv_sec * 1000 + 
-                        last_pack_time.tv_usec/1000; 
+                        last_pack_time.tv_usec / 1000; 
 
                     ip_pack_len = pkt_hdr.len - l2_len;
                     dispose_packet((char *) ip_data, ip_pack_len, 
