@@ -455,7 +455,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     send_packets_from_pcap(1);
 
     /* register a timer for offline */
-    tc_event_timer_add(event_loop, TIMER_INTERVAL, tc_process_offline_packet);
+    tc_event_timer_add(event_loop, 0, tc_process_offline_packet);
 
     return TC_OK;
 }
@@ -464,18 +464,18 @@ static void
 tc_process_offline_packet(tc_event_timer_t *evt)
 {
     send_packets_from_pcap(0);
-    evt->msec = tc_current_time_msec + TIMER_INTERVAL;
+    evt->msec = tc_current_time_msec;
 }
 
 static uint64_t
 timeval_diff(struct timeval *start, struct timeval *cur)
 {
-    uint64_t msec;
+    uint64_t usec;
 
-    msec  = (cur->tv_sec - start->tv_sec) * 1000;
-    msec += (cur->tv_usec - start->tv_usec) / 1000;
+    usec  = (cur->tv_sec - start->tv_sec) * 1000000;
+    usec += cur->tv_usec - start->tv_usec;
 
-    return msec;
+    return usec;
 }
 
 static bool

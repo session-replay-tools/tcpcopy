@@ -250,7 +250,7 @@ struct ethernet_hdr {
 #endif 
 
 #if (TCPCOPY_OFFLINE)
-#define TIMER_INTERVAL 2
+#define TIMER_INTERVAL 1
 #endif
 
 /* global functions */
