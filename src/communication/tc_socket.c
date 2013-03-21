@@ -66,21 +66,8 @@ tc_raw_socket_in_init()
     int        fd, recv_buf_opt, ret;
     socklen_t  opt_len;
 
-#if (COPY_LINK_PACKETS)
-    /* 
-     * AF_PACKET
-     * Packet sockets are used to receive or send raw packets 
-     * at the device driver level.They allow the user to 
-     * implement protocol modules in user space on top of 
-     * the physical layer. 
-     * ETH_P_IP
-     * Internet Protocol packet that is related to the Ethernet 
-     */
-    fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
-#else 
     /* copy ip datagram from IP layer */
     fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-#endif
 
     if (fd == -1) {
         tc_log_info(LOG_ERR, errno, "Create raw socket to input failed");   
@@ -309,6 +296,10 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
     }
 
     fd = nfq_fd(*h);
+
+    if (fd > 0) {
+        tc_socket_set_nonblocking(fd);
+    }
 
     nfnl_rcvbufsiz(nfq_nfnlh(*h), 4096*4096);
 
