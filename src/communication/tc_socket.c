@@ -462,7 +462,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
         n = recv(fd, buffer + last, len, 0);
 
         if (n == -1) {
-            if (errno == EAGAIN) {
+            if (errno == EAGAIN || errno == EINTR) {
                 continue;
             } else {
                 return TC_ERROR;
