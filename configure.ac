@@ -29,9 +29,6 @@ if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
 fi
 
-#AC_ARG_ENABLE(epoll-module, AS_HELP_STRING([--enable-epoll-module],[use epoll module]),
-#    AC_DEFINE(TCPCOPY_USE_EPOLL, 1, [Define if --enable-epoll-module]), )
-
 AC_ARG_ENABLE(mysqlsgt, AS_HELP_STRING([--enable-mysqlsgt],[run tcpcopy at mysql skip-grant-tables mode]),,mysqlsgt=no)
 if test "x$enable_mysqlsgt" = "xyes";then
 	AC_DEFINE(TCPCOPY_MYSQL_SKIP, 1, [Define if --enable-mysqlsgt])
@@ -50,7 +47,7 @@ if test "x$enable_offline" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
+AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
     AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
 
@@ -58,9 +55,8 @@ if test "x$enable_nfqueue" = "xyes";then
     trynfqueuedir=""
     AC_ARG_WITH([nfqueue],
       [AS_HELP_STRING([--with-nfqueue=@<:@path@:>@], [specify path to nfqueue install])],
-      [trynfqueuedir=$withval], []
-    )
-    LIBNFQUEUE_URL=http://nfqueue.sourceforge.net
+      [trynfqueuedir=$withval])
+    LIBNFQUEUE_URL="http://www.netfilter.org/projects/libnetfilter_queue/index.html"
     AC_CACHE_CHECK([for nfqueue directory], [ac_cv_nfqueue_dir],
       [
         saved_LIBS="$LIBS"
@@ -124,7 +120,7 @@ if test "x$enable_nfqueue" = "xyes";then
         CPPFLAGS="$saved_CPPFLAGS"
         AS_IF(
           [test $nf_found = no],
-          [AC_MSG_ERROR([nfqueue required. Get it from $LIBNFQUEUE_URL or specify its path using --with-nfqueue=/dir/])]
+          [AC_MSG_ERROR([nfqueue required. Install libnetfilter_queue(download it from $LIBNFQUEUE_URL) or specify its path using --with-nfqueue=/dir/])]
         )
       ]
     )
