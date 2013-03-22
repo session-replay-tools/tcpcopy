@@ -51,20 +51,22 @@ AC_MSG_CHECKING([for the kernel version])
 major=`uname -r | cut -d. -f1`;
 minor=`uname -r | cut -d. -f2`;
 
-if test "$major" > "3";then
+if test $major -gt 3; then
     enable_nfqueue=yes
     echo "enable nfqueue"
-elif test "$major" == "3";then
-    if test "$minor" >= "5";then
-        enable_nfqueue=yes;
+elif test $major -eq 3; then
+    if test $minor -ge 5; then
+        enable_nfqueue=yes
         echo "enable nfqueue"
+    else
+        echo "ip_queue could be supported"
     fi
-    echo "enable ip_queue"
 else
-    echo "enable ip_queue";
+    echo "ip_queue could be supported"
 fi
 
-AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
+AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (ip queue will be used by default and this option is only valid if the linux kernel version is less than 3.5, otherwise nfqueue will be used by default and ip queue is no longer supported by the linux kernel)]),,nfqueue=no)
+
 if test "x$enable_nfqueue" = "xyes";then
     AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
 
