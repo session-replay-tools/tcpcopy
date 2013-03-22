@@ -47,6 +47,23 @@ if test "x$enable_offline" = "xyes";then
 
 fi
 
+AC_MSG_CHECKING([for the kernel version])
+major=`uname -r | cut -d. -f1`;
+minor=`uname -r | cut -d. -f2`;
+
+if test "$major" > "3";then
+    enable_nfqueue=yes
+    echo "enable nfqueue"
+elif test "$major" == "3";then
+    if test "$minor" >= "5";then
+        enable_nfqueue=yes;
+        echo "enable nfqueue"
+    fi
+    echo "enable ip_queue"
+else
+    echo "enable ip_queue";
+fi
+
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
 if test "x$enable_nfqueue" = "xyes";then
     AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
