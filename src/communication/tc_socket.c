@@ -66,21 +66,8 @@ tc_raw_socket_in_init()
     int        fd, recv_buf_opt, ret;
     socklen_t  opt_len;
 
-#if (COPY_LINK_PACKETS)
-    /* 
-     * AF_PACKET
-     * Packet sockets are used to receive or send raw packets 
-     * at the device driver level.They allow the user to 
-     * implement protocol modules in user space on top of 
-     * the physical layer. 
-     * ETH_P_IP
-     * Internet Protocol packet that is related to the Ethernet 
-     */
-    fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
-#else 
     /* copy ip datagram from IP layer */
     fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
-#endif
 
     if (fd == -1) {
         tc_log_info(LOG_ERR, errno, "Create raw socket to input failed");   
@@ -199,7 +186,6 @@ tc_nl_socket_init()
                     fd, rcvbuf);
         return TC_INVALID_SOCKET;
     }
-    tc_socket_set_nonblocking(fd);
 
     tc_memzero(&addr, sizeof(addr));
     tc_memzero(&buf, 128);
@@ -235,35 +221,38 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
 {
     ssize_t recv_len;
 
-    recv_len = recv(fd, buffer, len, 0);
-    if (recv_len == -1) {
-        if (errno == EAGAIN) {
-            return TC_OK;
+    for ( ;; ) {
+        recv_len = recv(fd, buffer, len, 0);
+        if (recv_len == -1) {
+            if (errno == EAGAIN || errno == EINTR) {
+                continue;
+            }
+
+            tc_log_info(LOG_ERR, errno, "nl recvfrom");
+            return TC_ERROR;
         }
 
-        tc_log_info(LOG_ERR, errno, "nl recvfrom");
-        return TC_ERROR;
-    }
+        if (recv_len == 0) {
+            tc_log_info(LOG_ERR, 0, "recv len is 0");
+            return TC_ERROR;
+        }
 
-    if (recv_len == 0) {
-        tc_log_info(LOG_ERR, 0, "recv len is 0");
-        return TC_ERROR;
-    }
-
-    if ((size_t) recv_len < sizeof(struct nlmsghdr)) {
-        tc_log_info(LOG_ERR, 0, "recv length not right for netlink");
-        return TC_ERROR;
-    }
+        if ((size_t) recv_len < sizeof(struct nlmsghdr)) {
+            tc_log_info(LOG_ERR, 0, "recv length not right for netlink");
+            return TC_ERROR;
+        }
 
 
-    if (recv_len < TC_IPQ_NLMSG_LEN) {
-        tc_log_info(LOG_WARN, 0, "netlink recv msg len:%ld, expect len:%ld."
+        if (recv_len < TC_IPQ_NLMSG_LEN) {
+            tc_log_info(LOG_WARN, 0, "netlink recv msg len:%ld, expect len:%ld."
                     "(privilage problems or not the obj of tcpcopy)",
                     recv_len, TC_IPQ_NLMSG_LEN);
-        return TC_ERROR;
+            return TC_ERROR;
+        }
+
+        return TC_OK;
     }
 
-    return TC_OK;
 }
 
 #else
@@ -320,28 +309,35 @@ tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv)
 {
     ssize_t recv_len;
 
-    recv_len = recv(fd, buffer, len, 0);
-    if (recv_len < 0) {
-        if (errno == EAGAIN) {
-            return TC_OK;
+    for ( ;; ) {
+
+        recv_len = recv(fd, buffer, len, 0);
+
+        if (recv_len < 0) {
+
+            if (errno == EAGAIN || errno == EINTR) {
+                continue;
+            }
+
+            if (errno == ENOBUFS) {
+                tc_log_info(LOG_WARN, errno, "losing packets!");
+                return TC_OK;
+            }
+
+            tc_log_info(LOG_ERR, errno, "nfq recvfrom");
+
+            return TC_ERROR;
         }
-        if (errno == ENOBUFS) {
-            tc_log_info(LOG_WARN, errno, "losing packets!");
-            return TC_OK;
+
+        if (recv_len == 0) {
+            tc_log_info(LOG_ERR, 0, "nfq recv len is 0");
+            return TC_ERROR;
         }
 
-        tc_log_info(LOG_ERR, errno, "nfq recvfrom");
-        return TC_ERROR;
+        *rv = (int)recv_len;
+
+        return TC_OK;
     }
-
-    if (recv_len == 0) {
-        tc_log_info(LOG_ERR, 0, "nfq recv len is 0");
-        return TC_ERROR;
-    }
-
-    *rv = (int)recv_len;
-
-    return TC_OK;
 }
 #endif
 
@@ -462,7 +458,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
         n = recv(fd, buffer + last, len, 0);
 
         if (n == -1) {
-            if (errno == EAGAIN) {
+            if (errno == EAGAIN || errno == EINTR) {
                 continue;
             } else {
                 return TC_ERROR;
