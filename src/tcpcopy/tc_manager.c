@@ -115,6 +115,7 @@ check_resource_usage(tc_event_timer_t *evt)
     if (usage.ru_maxrss > clt_settings.max_rss) {
         tc_log_info(LOG_WARN, 0, "occupies too much memory, limit:%ld",
                  clt_settings.max_rss);
+        event_loop.event_over = 1;
     }
 
     evt->msec = tc_current_time_msec + 60000;

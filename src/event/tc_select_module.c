@@ -1,6 +1,6 @@
 #include <xcopy.h>
 
-int tc_select_create (tc_event_loop_t *loop)
+int tc_select_create(tc_event_loop_t *loop)
 {
     tc_event_t               **evs;
     tc_select_multiplex_io_t  *io;

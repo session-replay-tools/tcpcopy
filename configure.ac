@@ -29,9 +29,6 @@ if test "x$enable_debug" = "xyes";then
 	AC_DEFINE(TCPCOPY_DEBUG, 1, [Define if --enable-debug])
 fi
 
-#AC_ARG_ENABLE(epoll-module, AS_HELP_STRING([--enable-epoll-module],[use epoll module]),
-#    AC_DEFINE(TCPCOPY_USE_EPOLL, 1, [Define if --enable-epoll-module]), )
-
 AC_ARG_ENABLE(mysqlsgt, AS_HELP_STRING([--enable-mysqlsgt],[run tcpcopy at mysql skip-grant-tables mode]),,mysqlsgt=no)
 if test "x$enable_mysqlsgt" = "xyes";then
 	AC_DEFINE(TCPCOPY_MYSQL_SKIP, 1, [Define if --enable-mysqlsgt])
@@ -50,9 +47,124 @@ if test "x$enable_offline" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[ run tcpcopy server (i.e. intercept) at nfqueue mode (without this setting, ip queue will be used by default)]),,nfqueue=no)
+AC_MSG_CHECKING([for the kernel version])
+major=`uname -r | cut -d. -f1`;
+minor=`uname -r | cut -d. -f2`;
+
+if test $major -gt 3; then
+    enable_nfqueue=yes
+    echo "enable nfqueue"
+elif test $major -eq 3; then
+    if test $minor -ge 5; then
+        enable_nfqueue=yes
+        echo "enable nfqueue"
+    else
+        echo "ip_queue could be supported"
+    fi
+else
+    echo "ip_queue could be supported"
+fi
+
+AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (ip queue will be used by default and this option is only valid if the linux kernel version is less than 3.5, otherwise nfqueue will be used by default and ip queue is no longer supported by the linux kernel)]),,nfqueue=no)
+
 if test "x$enable_nfqueue" = "xyes";then
-	AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+    AC_DEFINE(INTERCEPT_NFQUEUE, 1, [Define if --enable-nfqueue])
+
+    # nfqueue detection; swiped from Tor, modified a bit
+    trynfqueuedir=""
+    AC_ARG_WITH([nfqueue],
+      [AS_HELP_STRING([--with-nfqueue=@<:@path@:>@], [specify path to nfqueue install])],
+      [trynfqueuedir=$withval])
+    LIBNFQUEUE_URL="http://www.netfilter.org/projects/libnetfilter_queue/index.html"
+    AC_CACHE_CHECK([for nfqueue directory], [ac_cv_nfqueue_dir],
+      [
+        saved_LIBS="$LIBS"
+        saved_LDFLAGS="$LDFLAGS"
+        saved_CPPFLAGS="$CPPFLAGS"
+        nf_found=no
+        for nfdir in $trynfqueuedir "" $prefix /usr/local
+        do
+          LDFLAGS="$saved_LDFLAGS"
+          LIBS="-lnfnetlink -lnetfilter_queue $saved_LIBS"
+
+          # Skip the directory if it isn't there.
+          AS_IF([test ! -z "$nfdir" -a ! -d "$nfdir"], [continue])
+          AS_IF(
+            [test ! -z "$nfdir"],
+            [
+              AS_IF(
+                [test -d "$nfdir/lib"],
+                [LDFLAGS="-L$nfdir/lib $LDFLAGS"],
+                [LDFLAGS="-L$nfdir $LDFLAGS"]
+              )
+              AS_IF(
+                [test -d "$nfdir/include"],
+                [CPPFLAGS="-I$nfdir/include $CPPFLAGS"],
+                [CPPFLAGS="-I$nfdir $CPPFLAGS"]
+              )
+            ]
+          )
+
+          # Can I compile and link it?
+          AC_TRY_LINK(
+            [
+              #include <stddef.h>
+              #include <netinet/in.h>
+              #include <linux/netfilter.h> 
+              #include <libnetfilter_queue/libnetfilter_queue.h>
+            ],
+            [
+              struct nfq_handle *h;
+              h = nfq_open();
+              nfq_close(h);
+            ],
+            [nfqueue_linked=yes],
+            [nfqueue_linked=no]
+          )
+          AS_IF(
+            [test $nfqueue_linked = yes],
+            [
+              AS_IF(
+                [test ! -z "$nfdir"],
+                [ac_cv_nfqueue_dir=$nfdir],
+                [ac_cv_nfqueue_dir="(system)"]
+              )
+              nf_found=yes
+              break
+            ]
+          )
+        done
+        LIBS="$saved_LIBS"
+        LDFLAGS="$saved_LDFLAGS"
+        CPPFLAGS="$saved_CPPFLAGS"
+        AS_IF(
+          [test $nf_found = no],
+          [AC_MSG_ERROR([nfqueue required. Install libnetfilter_queue(download it from $LIBNFQUEUE_URL) or specify its path using --with-nfqueue=/dir/])]
+        )
+      ]
+    )
+    AS_IF(
+      [test $ac_cv_nfqueue_dir != "(system)"],
+      [
+        AS_IF(
+          [test -d "$ac_cv_nfqueue_dir/lib"],
+          [
+            LDFLAGS="-L$ac_cv_nfqueue_dir/lib $LDFLAGS"
+            nf_libdir="$ac_cv_nfqueue_dir/lib"
+          ],
+          [
+            LDFLAGS="-L$ac_cv_nfqueue_dir $LDFLAGS"
+            nf_libdir="$ac_cv_nfqueue_dir"
+          ]
+        )
+        AS_IF(
+          [test -d "$ac_cv_nfqueue_dir/include"],
+          [CPPFLAGS="-I$ac_cv_nfqueue_dir/include $CPPFLAGS"]
+          [CPPFLAGS="-I$ac_cv_nfqueue_dir $CPPFLAGS"]
+        )
+      ]
+    )
+
 fi
 
 AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
