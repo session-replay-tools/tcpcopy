@@ -233,15 +233,15 @@ process_packet(bool backup, char *packet, int length)
 static void
 replicate_packs(char *packet, int length, int replica_num)
 {
-    int            i;
-    uint32_t       size_ip;
-    uint16_t       orig_port, addition, dest_port, rand_port;
-    struct iphdr  *ip_header;
-    struct udphdr *udp_header;
+    int              i;
+    uint32_t         size_ip;
+    uint16_t         orig_port, addition, dest_port, rand_port;
+    tc_ip_header_t  *ip_header;
+    tc_udp_header_t *udp_header;
 
-    ip_header  = (struct iphdr*)packet;
+    ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
-    udp_header = (struct udphdr*)((char *)ip_header + size_ip);
+    udp_header = (tc_udp_header_t *) ((char *) ip_header + size_ip);
     orig_port  = ntohs(udp_header->source);
 
     tc_log_debug1(LOG_DEBUG, 0, "orig port:%u", orig_port);
@@ -261,17 +261,17 @@ replicate_packs(char *packet, int length, int replica_num)
 static int
 dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 {
-    int            replica_num;
-    char          *packet;
-    bool           packet_valid = false;
-    struct iphdr  *ip_header;
+    int             replica_num;
+    char           *packet;
+    bool            packet_valid = false;
+    tc_ip_header_t *ip_header;
 
     packet = recv_buf;
 
     if (is_packet_needed((const char *) packet)) {
 
         replica_num = clt_settings.replica_num;
-        ip_header   = (struct iphdr *) packet;
+        ip_header   = (tc_ip_header_t *) packet;
 
         if (localhost == ip_header->saddr) {
             if (0 != clt_settings.lo_tf_ip) {

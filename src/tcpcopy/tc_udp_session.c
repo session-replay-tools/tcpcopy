@@ -23,12 +23,12 @@ destroy_for_sessions()
 bool
 is_packet_needed(const char *packet)
 {
-    bool           is_needed = false;
-    uint16_t       size_ip, size_udp, tot_len;
-    struct iphdr  *ip_header;
-    struct udphdr *udp_header;
+    bool             is_needed = false;
+    uint16_t         size_ip, size_udp, tot_len;
+    tc_ip_header_t  *ip_header;
+    tc_udp_header_t *udp_header;
 
-    ip_header = (struct iphdr*) packet;
+    ip_header = (tc_ip_header_t *) packet;
 
     /* check if it is a udp packet */
     if (ip_header->protocol != IPPROTO_UDP) {
@@ -42,10 +42,10 @@ is_packet_needed(const char *packet)
         return is_needed;
     }
 
-    udp_header = (struct udphdr *) ((char *) ip_header + size_ip);
+    udp_header = (tc_udp_header_t *) ((char *) ip_header + size_ip);
     size_udp   = ntohs(udp_header->len);
-    if (size_udp < sizeof(struct udphdr)) {
-        tc_log_info(LOG_WARN, 0, "Invalid udp header len: %d bytes,pack len:%d",
+    if (size_udp < sizeof(tc_udp_header_t)) {
+        tc_log_info(LOG_WARN, 0, "Invalid udp header len: %d,pack len:%d",
                 size_udp, tot_len);
         return is_needed;
     }
@@ -82,17 +82,17 @@ tc_interval_dispose(tc_event_timer_t *evt)
 
 
 void
-ip_fragmentation(struct iphdr *ip_header, struct udphdr *udp_header)
+ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 {
-    int           ret, max_pack_no, index, i;
-    char          tmp_buf[RECV_BUF_SIZE];
-    uint16_t      offset, head_len, size_ip, tot_len,
-                  remainder, payload_len;
-    struct iphdr *tmp_ip_header;
+    int             ret, max_pack_no, index, i;
+    char            tmp_buf[RECV_BUF_SIZE];
+    uint16_t        offset, head_len, size_ip, tot_len,
+                    remainder, payload_len;
+    tc_ip_header_t *tmp_ip_header;
 
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
-    head_len   = size_ip + sizeof(struct udphdr);
+    head_len   = size_ip + sizeof(tc_udp_header_t);
 
     /* dispose the first packet here */
     memcpy(tmp_buf, (char *) ip_header, size_ip);
@@ -103,7 +103,7 @@ ip_fragmentation(struct iphdr *ip_header, struct udphdr *udp_header)
     }
     payload_len = offset;
 
-    tmp_ip_header = (struct iphdr *) tmp_buf;
+    tmp_ip_header = (tc_ip_header_t *) tmp_buf;
     tmp_ip_header->frag_off = htons(0x2000);
 
     index  = size_ip;
@@ -126,7 +126,7 @@ ip_fragmentation(struct iphdr *ip_header, struct udphdr *udp_header)
 
         memcpy(tmp_buf, (char *) ip_header, size_ip);
 
-        tmp_ip_header = (struct iphdr *) tmp_buf;
+        tmp_ip_header = (tc_ip_header_t *) tmp_buf;
         tmp_ip_header->frag_off = htons(offset >> 3);
 
         if (i == max_pack_no) {
@@ -158,15 +158,15 @@ bool process(char *packet, int pack_src)
 {
     int                      ret;
     uint16_t                 size_ip, tot_len;
-    struct iphdr            *ip_header;
-    struct udphdr           *udp_header;
+    tc_ip_header_t          *ip_header;
+    tc_udp_header_t         *udp_header;
     ip_port_pair_mapping_t  *test;
 
 
-    ip_header  = (struct iphdr *) packet;
+    ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
-    udp_header = (struct udphdr *) ((char *) ip_header + size_ip);
+    udp_header = (tc_udp_header_t *) ((char *) ip_header + size_ip);
 
     test = get_test_pair(&(clt_settings.transfer),
             ip_header->daddr, udp_header->dest);

@@ -31,7 +31,7 @@ unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
 
 #if (TCPCOPY_UDP)
-void udpcsum(struct iphdr *ip_header, struct udphdr *udp_packet);
+void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet);
 #endif
 
 #endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */

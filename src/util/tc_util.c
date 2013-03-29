@@ -186,7 +186,7 @@ do_checksum_math(u_int16_t *data, int len)
     return (sum);
 } 
 
-void udpcsum(struct iphdr *ip_header, struct udphdr *udp_packet)
+void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet)
 {       
     int            sum;
     uint16_t       len;
