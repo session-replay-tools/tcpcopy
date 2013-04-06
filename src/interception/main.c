@@ -51,7 +51,6 @@ static void
 signal_handler(int sig)
 {
     tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
-    printf("set signal handler:%d\n", sig);
 
     if (sig == SIGSEGV) {
         tc_log_info(LOG_ERR, 0, "SIGSEGV error");

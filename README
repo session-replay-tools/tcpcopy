@@ -86,6 +86,6 @@ Note:
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
     4) Modified version for a scientific paper (with more accurate latency control) is now available in the paper branch
-    5) To know more about TCPCopy, refer to the documents in the docs directory
+    5) To know more about tcpcopy, refer to the documents in the docs directory
     6) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
 
