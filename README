@@ -30,9 +30,17 @@ Usage:
 
     2) Run:
        a) on the target host (root privilege is required):
-          modprobe ip_queue # if not running
-          iptables -I OUTPUT -p tcp --sport port -j QUEUE # if not set
-          ./intercept 
+
+          using ip queue (kernel < 3.5):
+            modprobe ip_queue # if not running
+            iptables -I OUTPUT -p tcp --sport port -j QUEUE # if not set
+            ./intercept 
+
+          or
+
+          using nfqueue (kernel >= 3.5 only uses nfqueue):
+            iptables -I OUTPUT -p tcp --sport port -j NFQUEUE # if not set
+            ./intercept
 
        b) on the source host (root privilege is required):
           sudo ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
@@ -85,7 +93,7 @@ Note:
     1) It is tested on Linux only (kernal 2.6 or above).
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
-    4) Modified version for a scientific paper (with more accurate latency control) is now available in the paper branch
-    5) To know more about tcpcopy, refer to the documents in the docs directory
+    4) Modified version for a scientific paper (with more accurate latency control) is now available in the paper branch.
+    5) To know more about tcpcopy, refer to the documents in the docs directory.
     6) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
 
