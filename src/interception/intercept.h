@@ -33,7 +33,7 @@ typedef struct xcopy_srv_settings {
 #if (INTERCEPT_ADVANCED)
     char                *raw_device;
     devices_t            devices;
-    char                 filter[512];
+    char                *filter;
 #endif
 
     int                  timeout;

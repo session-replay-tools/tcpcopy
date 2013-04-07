@@ -140,8 +140,11 @@ usage(void)
            "               It should be set larger when connections are idle longer than \n"
            "               the default value\n"
            "-P <file>      save PID in <file>, only used with -d option\n"
-           "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n"
-           "-v             intercept version\n"
+           "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
+#if (INTERCEPT_ADVANCED)
+    printf("-f <filter>    set the pcap filter for capturing response packets.\n");
+#endif
+    printf("-v             intercept version\n"
            "-h             print this help and exit\n"
            "-d             run as a daemon\n");
 }
@@ -174,6 +177,11 @@ read_args(int argc, char **argv) {
             case 't':
                 srv_settings.timeout = (size_t) atoi(optarg);
                 break;
+#if (INTERCEPT_ADVANCED)
+            case 'f':
+                srv_settings.filter = optarg;
+                break;
+#endif
             case 's':
                 srv_settings.hash_size = (size_t) atoi(optarg);
                 break;
