@@ -167,7 +167,7 @@ if test "x$enable_nfqueue" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run tcpcopy client(i.e. tcpcopy) at pcap mode]),,pcap=no)
+AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run the tcpcopy client (i.e. tcpcopy) at pcap mode]),,pcap=no)
 if test "x$enable_pcap" = "xyes";then
 	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
 	AC_CHECK_HEADERS([pcap.h], [], 
@@ -175,12 +175,12 @@ if test "x$enable_pcap" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run tcpcopy server(i.e. intercept) at multi-threading mode(valid only when using ip queue)]),,thread=no)
+AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run the tcpcopy server (i.e. intercept) at multi-threading mode (valid only when using ip queue)]),,thread=no)
 if test "x$enable_thread" = "xyes";then
     AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
 fi
 
-AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode(such as lvs)]),,dr=no)
+AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode (such as lvs)]),,dr=no)
 if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
 fi
@@ -190,7 +190,7 @@ if test "x$enable_single" = "xyes";then
     AC_DEFINE(TCPCOPY_SINGLE, 1, [Define if --enable-single])
 fi
 
-AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode(only valid for high latency web applications)]),,paper=no)
+AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode (only valid for high latency web applications)]),,paper=no)
 if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
