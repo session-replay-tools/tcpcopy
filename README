@@ -38,7 +38,7 @@ Usage:
 
           or
 
-          using nfqueue (kernel >= 3.5 only uses nfqueue):
+          using nfqueue (kernel >= 3.5):
             iptables -I OUTPUT -p tcp --sport port -j NFQUEUE # if not set
             ./intercept
 
@@ -51,7 +51,7 @@ Example:
 
     Here we use tcpcopy to perform the above test task.
     
-    1) on the target host (1.2.3.161)
+    1) on the target host (1.2.3.161, kernel 2.6.18)
        # modprobe ip_queue 
        # iptables -I OUTPUT -p tcp --sport 11511 -j QUEUE 
        # ./intercept
