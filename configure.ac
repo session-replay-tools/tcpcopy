@@ -195,6 +195,16 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
+AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
+              [case "${enableval}" in
+               yes) advanced=true 
+               AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+               AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
+               no)  advanced=false ;;
+               *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
+           esac],[advanced=false])
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h getopt.h])
@@ -225,6 +235,11 @@ if test "x$enable_pcap" = "xyes";then
     LIBS="-lpcap"
 fi
 
+if test "x$enable_advanced" = "xyes";then
+    LIBS="-lpcap"
+fi
+
+
 
 if test "x$enable_thread" = "xyes";then
     # Search for library
@@ -239,6 +254,8 @@ if test "x$enable_nfqueue" = "xyes";then
 fi
 
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
+
+AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
 
 #AC_CONFIG_FILES([Makefile])
 AC_OUTPUT([

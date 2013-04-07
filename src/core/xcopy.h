@@ -35,7 +35,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
 #include <pcap.h>
 #endif
 
@@ -220,7 +220,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
 #define ETHER_ADDR_LEN 0x6
 
 #ifndef ETHERTYPE_VLAN

@@ -1,7 +1,7 @@
  
 #include <xcopy.h>
 
-#if (TCPCOPY_PCAP)
+#if (TCPCOPY_PCAP || INTERCEPT_ADVANCED)
 int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
 {
@@ -159,6 +159,8 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
 
     return TC_OK;
 }
+
+#if (!INTERCEPT_ADVANCED)
 
 #if (!INTERCEPT_NFQUEUE)
 int
@@ -339,6 +341,8 @@ tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv)
         return TC_OK;
     }
 }
+#endif
+
 #endif
 
 int
