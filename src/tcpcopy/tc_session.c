@@ -3063,8 +3063,7 @@ bool
 is_packet_needed(const char *packet)
 {
     bool              is_needed = false;
-    uint16_t          size_ip, size_tcp, tot_len, cont_len,
-                      header_len, key;
+    uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
 #if (TCPCOPY_MYSQL_ADVANCED)
     uint64_t          sess_key; 
     session_t        *s;
@@ -3090,8 +3089,7 @@ is_packet_needed(const char *packet)
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     size_tcp   = tcp_header->doff << 2;
     if (size_tcp < 20) {
-        tc_log_info(LOG_WARN, 0, 
-                "Invalid TCP header len: %d bytes,pack len:%d",
+        tc_log_info(LOG_WARN, 0, "Invalid TCP header len: %d bytes,pack len:%d",
                 size_tcp, tot_len);
         return is_needed;
     }
