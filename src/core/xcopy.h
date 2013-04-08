@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <linux/if_ether.h>
 #if (!INTERCEPT_NFQUEUE)
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
@@ -37,6 +38,10 @@
 #include <getopt.h>
 #if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
 #include <pcap.h>
+#endif
+
+#if (INTERCEPT_ADVANCED)
+#define TCPCOPY_DR 1
 #endif
 
 #if (INTERCEPT_NFQUEUE)
@@ -74,6 +79,9 @@
 #define TCPCOPY_MYSQL_ADVANCED 1
 
 #endif
+
+#define COPY_FROM_IP_LAYER 0
+#define COPY_FROM_LINK_LAYER 1
 
 /* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536

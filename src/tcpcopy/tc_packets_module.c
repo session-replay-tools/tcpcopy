@@ -115,7 +115,9 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 #else
     /* init the raw socket to recv packets */
-    if ((fd = tc_raw_socket_in_init()) == TC_INVALID_SOCKET) {
+    if ((fd = tc_raw_socket_in_init(COPY_FROM_IP_LAYER)) 
+            == TC_INVALID_SOCKET) 
+    {
         return TC_ERROR;
     }
     tc_socket_set_nonblocking(fd);
@@ -163,7 +165,7 @@ tc_process_pcap_socket_packet(tc_event_t *rev)
         }
 
         ether = (struct ethernet_hdr *) recv_buf;
-        if (ntohs(ether->ether_type) != 0x800) {
+        if (ntohs(ether->ether_type) != ETH_P_IP) {
             return TC_OK;
         }
 

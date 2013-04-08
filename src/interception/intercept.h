@@ -8,6 +8,7 @@ typedef struct passed_ip_addr_s {
 } passed_ip_addr_t;
 
 #if (INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
 typedef struct device_s{
     char    name[MAX_DEVICE_NAME_LEN];
     pcap_t *pcap;
@@ -18,6 +19,20 @@ typedef struct devices_s{
     device_t        device[MAX_DEVICE_NUM];
 }devices_t;
 #endif
+
+typedef struct ip_port_pair_t{
+    uint32_t ip;
+    uint16_t port;
+}ip_port_pair_t;
+
+
+typedef struct ip_port_pairs_t{
+    int              num;
+    ip_port_pair_t **mappings;
+}ip_port_pairs_t;
+
+#endif
+
 
 typedef struct xcopy_srv_settings {
     char                *raw_ip_list;    /* raw ip list */
@@ -31,9 +46,14 @@ typedef struct xcopy_srv_settings {
 #endif
 
 #if (INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
     char                *raw_device;
     devices_t            devices;
     char                *filter;
+#endif
+    char                *raw_targets;
+    ip_port_pairs_t      targets;
+
 #endif
 
     int                  timeout;

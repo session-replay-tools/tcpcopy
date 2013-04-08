@@ -126,6 +126,87 @@ retrieve_ip_addr()
     return 1;
 }
 
+#if (INTERCEPT_ADVANCED)
+static void
+parse_target(ip_port_pair_t *pair, char *addr)
+{
+    char    *seq, *ip_s, *port_s;
+    uint16_t tmp_port;
+
+    if ((seq = strchr(addr, ':')) == NULL) {
+        pair->ip = 0;
+        port_s = addr;
+    } else {
+        ip_s = addr;
+        port_s = seq + 1;
+
+        *seq = '\0';
+        pair->ip = inet_addr(ip_s);
+        *seq = ':';
+    }
+
+    tmp_port = atoi(port_s);
+    pair->port = htons(tmp_port);
+}
+
+
+/*
+ * retrieve target addresses
+ * format
+ * 192.168.0.1:80,192.168.0.1:8080
+ */
+static int
+retrieve_target_addresses(char *raw_transfer,
+        ip_port_pairs_t *transfer)
+{
+    int   i;
+    char *p, *seq;
+
+    if (raw_transfer == NULL) {
+        tc_log_info(LOG_ERR, 0, "it must have -o argument");
+        fprintf(stderr, "no -o argument\n");
+        return -1;
+    }
+
+    for (transfer->num = 1, p = raw_transfer; *p; p++) {
+        if (*p == ',') {
+            transfer->num++;
+        }
+    }
+
+    transfer->mappings = malloc(transfer->num *
+                                sizeof(ip_port_pair_t *));
+    if (transfer->mappings == NULL) {
+        return -1;
+    }
+
+    for (i = 0; i < transfer->num; i++) {
+        transfer->mappings[i] = malloc(sizeof(ip_port_pair_t));
+        if (transfer->mappings[i] == NULL) {
+            return -1;
+        }
+    }
+
+    p = raw_transfer;
+    i = 0;
+    for ( ;; ) {
+        if ((seq = strchr(p, ',')) == NULL) {
+            parse_target(transfer->mappings[i++], p);
+            break;
+        } else {
+            *seq = '\0';
+            parse_target(transfer->mappings[i++], p);
+            *seq = ',';
+
+            p = seq + 1;
+        }
+    }
+
+    return 0;
+}
+#endif
+
+
 static void
 usage(void)
 {
@@ -142,7 +223,10 @@ usage(void)
            "-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
 #if (INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
     printf("-f <filter>    set the pcap filter for capturing response packets.\n");
+#endif
+    printf("-o <target>    set the target for capturing response packets.\n");
 #endif
     printf("-v             intercept version\n"
            "-h             print this help and exit\n"
@@ -160,6 +244,12 @@ read_args(int argc, char **argv) {
          "t:" /* router item timeout */
          "s:" /* hash table size for intercept */
          "b:" /* binded ip address */
+#if (INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
+         "f:" /* filter for pcap */
+#endif
+         "o:" /* target addresses */
+#endif
          "h"  /* print this help and exit */
          "l:" /* error log file path */
          "P:" /* save PID in file */
@@ -178,8 +268,13 @@ read_args(int argc, char **argv) {
                 srv_settings.timeout = (size_t) atoi(optarg);
                 break;
 #if (INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
             case 'f':
                 srv_settings.filter = optarg;
+                break;
+#endif
+            case 'o':
+                srv_settings.raw_targets = optarg;
                 break;
 #endif
             case 's':
@@ -258,6 +353,19 @@ set_details()
                 srv_settings.raw_ip_list);
         retrieve_ip_addr();
     }
+    
+#if (INTERCEPT_ADVANCED)
+    if (srv_settings.raw_targets != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "-o parameter:%s", 
+                srv_settings.raw_targets);
+        retrieve_target_addresses(srv_settings.raw_targets,
+                &(srv_settings.targets));
+    } else {
+        tc_log_info(LOG_WARN, 0, "no raw targets");
+        return -1;
+
+    }
+#endif
 
     if (srv_settings.timeout == 0) {
         srv_settings.timeout = DEFAULT_TIMEOUT;

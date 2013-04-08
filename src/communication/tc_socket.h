@@ -21,7 +21,7 @@
 #if (TCPCOPY_PCAP)
 int tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter);
 #endif
-int tc_raw_socket_in_init();
+int tc_raw_socket_in_init(int type);
 
 int tc_raw_socket_out_init();
 int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);

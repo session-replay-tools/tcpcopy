@@ -5,7 +5,7 @@
 #define localhost (inet_addr("127.0.0.1"))
 
 typedef struct {
-    /* Online ip from the client perspective */
+    /* online ip from the client perspective */
     uint32_t online_ip;
     uint32_t target_ip;
     uint16_t online_port;

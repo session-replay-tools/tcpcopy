@@ -61,13 +61,19 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
 #endif
 
 int
-tc_raw_socket_in_init()
+tc_raw_socket_in_init(int type)
 {
     int        fd, recv_buf_opt, ret;
     socklen_t  opt_len;
 
-    /* copy ip datagram from IP layer */
-    fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    if (type == COPY_FROM_LINK_LAYER) {
+        /* copy ip datagram from Link layer */
+        fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
+    }
+    else {
+        /* copy ip datagram from IP layer */
+        fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+    }
 
     if (fd == -1) {
         tc_log_info(LOG_ERR, errno, "Create raw socket to input failed");   
