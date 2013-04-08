@@ -102,7 +102,8 @@ tc_packets_init(tc_event_loop_t *event_loop)
         if (tc_device_set(event_loop, &(devices->device[i]))
                 == TC_ERROR) 
         {
-            tc_log_info(LOG_WARN, 0, "device could not work:%s", d->name);
+            tc_log_info(LOG_WARN, 0, "device could not work:%s", 
+                    devices->device[i].name);
         } else {
             work = true;
         }
