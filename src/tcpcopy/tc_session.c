@@ -3258,11 +3258,12 @@ is_packet_needed(const char *packet)
     }
 
     size_ip   = ip_header->ihl << 2;
-    tot_len   = ntohs(ip_header->tot_len);
     if (size_ip < 20) {
         tc_log_info(LOG_WARN, 0, "Invalid IP header length: %d", size_ip);
         return is_needed;
     }
+
+    tot_len    = ntohs(ip_header->tot_len);
 
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     size_tcp   = tcp_header->doff << 2;
