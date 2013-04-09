@@ -418,6 +418,10 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
+    if (clt_settings.accelerated_times > 1) {
+        cur_diff = cur_diff / clt_settings.accelerated_times;
+    }
+
     if (history_diff <= cur_diff) {
         return false;
     }
