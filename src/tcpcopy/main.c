@@ -564,6 +564,9 @@ set_details()
     if (clt_settings.accelerated_times < 1) {
         clt_settings.accelerated_times = 1;
     }
+
+    tc_log_info(LOG_NOTICE, 0, "accelerated %d times",
+            clt_settings.accelerated_times);
 #endif
 
 #if (TCPCOPY_PCAP)

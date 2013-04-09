@@ -419,7 +419,7 @@ check_read_stop()
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
     if (clt_settings.accelerated_times > 1) {
-        cur_diff = cur_diff / clt_settings.accelerated_times;
+        cur_diff = cur_diff * clt_settings.accelerated_times;
     }
 
     if (history_diff <= cur_diff) {
