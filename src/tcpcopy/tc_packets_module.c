@@ -420,6 +420,10 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
+    if (clt_settings.accelerated_times > 1) {
+        cur_diff = cur_diff * clt_settings.accelerated_times;
+    }
+
     if (clt_settings.interval > 0) {
         if (adj_v_pack_diff > 0 && adj_v_pack_diff > clt_settings.interval) {
             accumulated_diff += adj_v_pack_diff;
@@ -427,10 +431,6 @@ check_read_stop()
                     accumulated_diff);
         }
         cur_diff = cur_diff + accumulated_diff;
-    }
-
-    if (clt_settings.accelerated_times > 1) {
-        cur_diff = cur_diff * clt_settings.accelerated_times;
     }
 
 
@@ -563,6 +563,7 @@ send_packets_from_pcap(int first)
                                     &last_pack_time);
                         }
 
+                        /* set last valid packet time in pcap file */
                         last_v_pack_time = last_pack_time;
 
                         stop = check_read_stop();
