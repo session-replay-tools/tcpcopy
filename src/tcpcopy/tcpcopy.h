@@ -62,6 +62,7 @@ typedef struct xcopy_clt_settings {
 #if (TCPCOPY_OFFLINE)
     char         *pcap_file;            /* pcap file */
     int           accelerated_times;    /* accelerated times */
+    uint64_t      interval;             /* accelerated times */
 #endif
 #if (TCPCOPY_PCAP)
     char         *raw_device;

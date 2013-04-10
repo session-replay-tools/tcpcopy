@@ -4,7 +4,9 @@
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over= false;
-static struct timeval first_pack_time, last_pack_time, base_time, cur_time;
+static uint64_t       accumulated_diff = 0, adj_v_pack_diff = 0;
+static struct timeval first_pack_time, last_v_pack_time,
+                      last_pack_time, base_time, cur_time;
 #endif
 
 #if (TCPCOPY_PCAP)
@@ -418,9 +420,19 @@ check_read_stop()
     history_diff = timeval_diff(&first_pack_time, &last_pack_time);
     cur_diff     = timeval_diff(&base_time, &cur_time);
 
+    if (clt_settings.interval > 0) {
+        if (adj_v_pack_diff > 0 && adj_v_pack_diff > clt_settings.interval) {
+            accumulated_diff += adj_v_pack_diff;
+            tc_log_info(LOG_NOTICE, 0, "accumulated time saved:%llu",
+                    accumulated_diff);
+        }
+        cur_diff = cur_diff + accumulated_diff;
+    }
+
     if (clt_settings.accelerated_times > 1) {
         cur_diff = cur_diff * clt_settings.accelerated_times;
     }
+
 
     if (history_diff <= cur_diff) {
         return false;
@@ -519,6 +531,7 @@ send_packets_from_pcap(int first)
     gettimeofday(&cur_time, NULL);
 
     stop = check_read_stop();
+
     while (!stop) {
 
         pkt_data = (u_char *) pcap_next(pcap, &pkt_hdr);
@@ -543,10 +556,17 @@ send_packets_from_pcap(int first)
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");
 
                         if (first) {
-
                             first_pack_time = pkt_hdr.ts;
                             first = 0;
+                        } else {
+                            adj_v_pack_diff = timeval_diff(&last_v_pack_time,
+                                    &last_pack_time);
                         }
+
+                        last_v_pack_time = last_pack_time;
+
+                        stop = check_read_stop();
+
                     } else {
 
                         stop = false;
@@ -554,7 +574,6 @@ send_packets_from_pcap(int first)
                     }
                 }
             }
-            stop = check_read_stop();
         } else {
 
             tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
