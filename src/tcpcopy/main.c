@@ -57,6 +57,9 @@ usage(void)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
            "               enable-offline mode)\n");
+    printf("-a <num>       accelerated times for offline replay\n");
+    printf("-I <num>       set the threshold interval for offline replay acceleration\n"
+           "               in millisecond\n");
 #endif
 #if (TCPCOPY_PCAP)
     printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
@@ -129,6 +132,8 @@ read_args(int argc, char **argv)
          "c:" /* the localhost client ip will be changed to this ip address */
 #if (TCPCOPY_OFFLINE)
          "i:" /* input pcap file */
+         "a:" /* accelerated times */
+         "I:" /* threshold interval time for acceleratation */
 #endif
 #if (TCPCOPY_PCAP)
          "i:" /* <device,>*/
@@ -163,6 +168,12 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
             case 'i':
                 clt_settings.pcap_file = optarg;
+                break;
+            case 'a':
+                clt_settings.accelerated_times = atoi(optarg);
+                break;
+            case 'I':
+                clt_settings.interval = atoi(optarg);
                 break;
 #endif
 #if (TCPCOPY_PCAP)
@@ -554,6 +565,18 @@ set_details()
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
         return -1;
+    }
+
+
+    if (clt_settings.accelerated_times < 1) {
+        clt_settings.accelerated_times = 1;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "accelerated %d times,interval:%llu ms",
+            clt_settings.accelerated_times, clt_settings.interval);
+
+    if (clt_settings.interval > 0) {
+        clt_settings.interval = clt_settings.interval * 1000;
     }
 #endif
 
