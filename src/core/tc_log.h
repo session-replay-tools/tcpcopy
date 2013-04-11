@@ -1,5 +1,5 @@
-#ifndef  _LOG_H_INC
-#define  _LOG_H_INC
+#ifndef  TC_LOG_INCLUDED
+#define  TC_LOG_INCLUDED
 
 #include <xcopy.h>
 
@@ -67,6 +67,6 @@ void tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
 
 #endif /* TCPCOPY_DEBUG */
 
-#endif /* _LOG_H_INC */
+#endif /* TC_LOG_INCLUDED */
 
 

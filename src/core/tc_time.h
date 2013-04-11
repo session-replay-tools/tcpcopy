@@ -1,5 +1,5 @@
-#ifndef __TC_TIME_H__
-#define __TC_TIME_H__
+#ifndef TC_TIME_INCLUDED
+#define TC_TIME_INCLUDED
 
 #include <xcopy.h>
 
@@ -23,4 +23,4 @@ void tc_time_update(void);
 void tc_localtime(time_t sec, struct tm *tm);
 void tc_time_sig_alarm(int sig);
 
-#endif /* __TC_TIME_H__ */
+#endif /* TC_TIME_INCLUDED */

@@ -1,5 +1,5 @@
-#ifndef  _ROUTER_H_INC
-#define  _ROUTER_H_INC
+#ifndef  TC_ROUTER_INCLUDED
+#define  TC_ROUTER_INCLUDED
 
 #include <xcopy.h> 
 
@@ -16,5 +16,5 @@ void router_add(uint32_t, uint16_t, int);
 void router_del(uint32_t, uint16_t);
 void router_destroy();
 
-#endif /* _ROUTER_H_INC */
+#endif /* TC_ROUTER_INCLUDED */
 

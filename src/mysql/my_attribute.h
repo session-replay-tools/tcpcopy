@@ -18,8 +18,8 @@
   on functions in a portable fashion
 */
 
-#ifndef _my_attribute_h
-#define _my_attribute_h
+#ifndef MY_ATTRIBUTE_INCLUDED
+#define MY_ATTRIBUTE_INCLUDED
 
 #if defined(__GNUC__)
 # ifndef GCC_VERSION

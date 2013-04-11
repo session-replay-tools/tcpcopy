@@ -1,5 +1,5 @@
-#ifndef  _TCPCOPY_UTIL_H_INC
-#define  _TCPCOPY_UTIL_H_INC
+#ifndef  TC_UTIL_INCLUDED
+#define  TC_UTIL_INCLUDED
 
 #include <xcopy.h>
 #include <tcpcopy.h>
@@ -26,5 +26,5 @@ unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
 
 
-#endif   /* ----- #ifndef _TCPCOPY_UTIL_H_INC  ----- */
+#endif   /* ----- #ifndef TC_UTIL_INCLUDED  ----- */
 

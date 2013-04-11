@@ -1,5 +1,5 @@
-#ifndef __SELECT_MODULE_H__
-#define __SELECT_MODULE_H__
+#ifndef TC_SELECT_MODULE_INCLUDED
+#define TC_SELECT_MODULE_INCLUDED
 
 #include <xcopy.h>
 

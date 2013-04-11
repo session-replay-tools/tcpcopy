@@ -1,5 +1,5 @@
-#ifndef  _TCPCOPY_MSG_H__INC
-#define  _TCPCOPY_MSG_H__INC
+#ifndef  TC_MSG_INCLUDED
+#define  TC_MSG_INCLUDED
 
 #include <xcopy.h>
 
@@ -26,5 +26,5 @@ struct msg_server_s {
 #define MSG_CLIENT_SIZE sizeof(msg_client_t)
 #define MSG_SERVER_SIZE sizeof(msg_server_t)
 
-#endif /*  _TCPCOPY_MSG_H__INC */
+#endif /*  TC_MSG_INCLUDED */
 

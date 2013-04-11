@@ -126,6 +126,10 @@ tcp_copy_release_resources()
 {
     int i;
 
+    if (clt_settings.sig > 0) {
+        tc_log_info(LOG_WARN, 0, "sig %d received", clt_settings.sig); 
+    }
+
     output_stat();
 
     tc_time_remove_timer();
@@ -178,10 +182,7 @@ tcp_copy_release_resources()
 void
 tcp_copy_over(const int sig)
 {
-    long int pid   = (long int)syscall(SYS_gettid);
-
-    tc_log_info(LOG_WARN, 0, "sig %d received, pid=%ld", sig, pid);
-
+    clt_settings.sig = sig;
     event_loop.event_over = 1;
 }
 
