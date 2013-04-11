@@ -1,5 +1,5 @@
-#ifndef  _DELAY_H_INC
-#define  _DELAY_H_INC
+#ifndef  TC_DELAY_INCLUDED
+#define  TC_DELAY_INCLUDED
 
 #include <xcopy.h>
 #include <intercept.h>
@@ -11,5 +11,5 @@ void delay_table_send(uint64_t key, int fd);
 void delay_table_del(uint64_t key);
 void delay_table_destroy();
 
-#endif /* _DELAY_H_INC */
+#endif /* TC_DELAY_INCLUDED */
 

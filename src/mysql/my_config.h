@@ -13,8 +13,8 @@
  along with this program; if not, write to the Free Software
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA */
 
-#ifndef MY_CONFIG_H
-#define MY_CONFIG_H
+#ifndef MY_CONFIG_INCLUDED
+#define MY_CONFIG_INCLUDED
 #define DOT_FRM_VERSION 6
 /* Headers we may want to use. */
 #define STDC_HEADERS 1

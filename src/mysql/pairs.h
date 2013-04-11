@@ -1,5 +1,5 @@
-#ifndef  _PAIRS_H_INC
-#define  _PAIRS_H_INC
+#ifndef  PAIRS_INCLUDED
+#define  PAIRS_INCLUDED
 
 
 typedef struct mysql_user{

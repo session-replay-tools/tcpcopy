@@ -16,8 +16,8 @@
 
 /* This is the include file that should be included 'first' in every C file. */
 
-#ifndef _global_h
-#define _global_h
+#ifndef MY_GLOBAL_INCLUDED
+#define MY_GLOBAL_INCLUDED
 
 /* Client library users on Windows need this macro defined here. */
 #if !defined(__WIN__) && defined(_WIN32)
@@ -1444,4 +1444,4 @@ do { doubleget_union _tmp; \
 
 #endif /* EMBEDDED_LIBRARY */
 
-#endif /* my_global_h */
+#endif /* MY_GLOBAL_INCLUDED */

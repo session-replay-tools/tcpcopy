@@ -1,5 +1,5 @@
-#ifndef  _XCOPY_H_INC
-#define  _XCOPY_H_INC
+#ifndef  XCOPY_H_INCLUDED
+#define  XCOPY_H_INCLUDED
 
 #include "config.h"
 
@@ -277,5 +277,5 @@ inline int before(uint32_t seq1, uint32_t seq2);
 #include <tc_socket.h>
 
 
-#endif /* _XCOPY_H_INC */
+#endif /* XCOPY_H_INCLUDED */
 
