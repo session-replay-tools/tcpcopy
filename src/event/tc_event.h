@@ -1,5 +1,5 @@
-#ifndef __NET_EVENT_H__
-#define __NET_EVENT_H__
+#ifndef TC_EVENT_H
+#define TC_EVENT_H
 
 #include <xcopy.h>
 
@@ -81,4 +81,4 @@ void tc_event_destroy(tc_event_t *ev);
 int tc_event_timer_add(tc_event_loop_t *loop, long timer,
         tc_event_timer_handler_pt handler);
 
-#endif  /* __NET_EVENT_H__ */
+#endif  /* TC_EVENT_H */

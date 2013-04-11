@@ -1,5 +1,5 @@
-#ifndef __TCPCOPY_H__
-#define __TCPCOPY_H__ 
+#ifndef TCPCOPY_INCLUDED
+#define TCPCOPY_INCLUDED 
 
 
 #define localhost (inet_addr("127.0.0.1"))
@@ -85,6 +85,7 @@ typedef struct xcopy_clt_settings {
     ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
                                            target_ip target_port */
     int           multiplex_io;
+    int           sig;  
 } xcopy_clt_settings;
 
 
@@ -104,4 +105,4 @@ extern xcopy_clt_settings clt_settings;
 #include <tc_message_module.h>
 #include <tc_packets_module.h>
 
-#endif /* __TCPCOPY_H__ */
+#endif /* TCPCOPY_INCLUDED */
