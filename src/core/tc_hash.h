@@ -1,5 +1,5 @@
-#ifndef  _TCPCOPY_HASH_H_INC
-#define  _TCPCOPY_HASH_H_INC
+#ifndef  TC_HASH_INCLUDED
+#define  TC_HASH_INCLUDED
 
 #include <xcopy.h>
 
@@ -29,5 +29,5 @@ bool hash_del(hash_table*, uint64_t);
 void hash_destroy(hash_table*);
 void hash_deep_destroy(hash_table *table);
 
-#endif /* _TCPCOPY_HASH_H_INC */
+#endif /* TC_HASH_INCLUDED */
 
