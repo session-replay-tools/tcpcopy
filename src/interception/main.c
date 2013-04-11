@@ -61,18 +61,8 @@ signal_handler(int sig)
 static void
 set_signal_handler()
 {
-    int i = 1;
-
-    for (; i<SIGTTOU; i++) {
-        if (i != SIGPIPE && i != SIGKILL && i !=SIGSTOP ) {
-            if (i != SIGALRM) {
-                signal(i, signal_handler);
-            } else {
-                signal(i, tc_time_sig_alarm);
-            }
-        }
-    }
-
+    signal(SIGALRM, tc_time_sig_alarm);
+    signal(SIGINT, signal_handler);
 }
 
 /* retrieve ip addresses */
