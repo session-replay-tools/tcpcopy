@@ -1,5 +1,5 @@
-#ifndef __TC_SOCKET_H__
-#define __TC_SOCKET_H__
+#ifndef TC_SOCKET_INCLUDED
+#define TC_SOCKET_INCLUDED
 
 #if (INTERCEPT_NFQUEUE)
 #include <libnetfilter_queue/libnetfilter_queue.h>
@@ -44,4 +44,4 @@ int tc_socket_listen(int fd, const char *bind_ip, uint16_t port);
 int tc_socket_recv(int fd, char *buffer, ssize_t len);
 int tc_socket_send(int fd, char *buffer, size_t len);
 
-#endif /* __TC_SOCKET_H__ */
+#endif /* TC_SOCKET_INCLUDED */

@@ -1,5 +1,5 @@
-#ifndef  _TCP_SESSION_H_INC
-#define  _TCP_SESSION_H_INC
+#ifndef  TC_SESSION_INCLUDED
+#define  TC_SESSION_INCLUDED
 
 #include <xcopy.h>
 #include <tcpcopy.h>
@@ -197,5 +197,5 @@ typedef struct session_s{
 
 }session_t;
 
-#endif   /* ----- #ifndef _TCP_SESSION_H_INC ----- */
+#endif   /* ----- #ifndef TC_SESSION_INCLUDED ----- */
 

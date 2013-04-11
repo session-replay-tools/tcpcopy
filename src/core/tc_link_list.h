@@ -1,5 +1,5 @@
-#ifndef  _LINK_LIST_H_INC
-#define  _LINK_LIST_H_INC
+#ifndef  TC_LINK_LIST_INCLUDED
+#define  TC_LINK_LIST_INCLUDED
 
 #include <xcopy.h>
 
@@ -35,5 +35,5 @@ inline p_link_node link_list_pop_tail(link_list *l);
 inline p_link_node link_list_get_next(link_list *l, p_link_node p);
 inline bool link_list_is_empty(link_list *l);
 
-#endif /* _LINK_LIST_H_INC */
+#endif /* TC_LINK_LIST_INCLUDED */
 

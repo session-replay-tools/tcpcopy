@@ -1,5 +1,5 @@
-#ifndef  _PROTOCOL_INC
-#define  _PROTOCOL_INC
+#ifndef  PROTOCOL_INCLUDED
+#define  PROTOCOL_INCLUDED
 
 /*
  * We support only mysql 4.1 and later.
@@ -17,5 +17,5 @@ int change_client_second_auth_content(unsigned char *payload,
         size_t length, char *new_content);
 #endif
 
-#endif   /* ----- #ifndef _PROTOCOL_INC  ----- */
+#endif   /* ----- #ifndef PROTOCOL_INCLUDED  ----- */
 

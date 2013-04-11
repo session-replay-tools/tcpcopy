@@ -19,8 +19,8 @@
 
 /*  This is needed for the definitions of strchr... on solaris */
 
-#ifndef _m_string_h
-#define _m_string_h
+#ifndef M_STRING_INCLUDED
+#define M_STRING_INCLUDED
 
 #include "my_global.h"                          /* HAVE_* */
 

@@ -1,5 +1,5 @@
-#ifndef __INTERCEPT_H__
-#define __INTERCEPT_H__
+#ifndef INTERCEPT_INCLUDED
+#define INTERCEPT_INCLUDED
 
 typedef struct passed_ip_addr_s {
     /* It allows 32 ip addresses passed through server firewall */
@@ -62,6 +62,7 @@ typedef struct xcopy_srv_settings {
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
     passed_ip_addr_t     passed_ips;     /* passed ip list */
+    int                  sig;
 }xcopy_srv_settings;
 
 extern xcopy_srv_settings srv_settings;
@@ -71,4 +72,4 @@ extern xcopy_srv_settings srv_settings;
 #include <tc_interception.h>
 #include <tc_router.h>
 
-#endif /* __INTERCEPT_H__ */
+#endif /* INTERCEPT_INCLUDED */

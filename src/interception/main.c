@@ -21,8 +21,12 @@ xcopy_srv_settings srv_settings;
 static tc_event_loop_t s_event_loop;
 
 static void
-release_resources()
+server_release_resources()
 {
+    if (srv_settings.sig > 0) {
+        tc_log_info(LOG_WARN, 0, "sig %d received", srv_settings.sig); 
+    }
+
     tc_log_info(LOG_NOTICE, 0, "release_resources begin");
     interception_over();
 
@@ -50,36 +54,16 @@ sigignore(int sig)
 static void
 signal_handler(int sig)
 {
-    tc_log_info(LOG_ERR, 0, "set signal handler:%d", sig);
-
-    if (sig == SIGSEGV) {
-        tc_log_info(LOG_ERR, 0, "SIGSEGV error");
-        release_resources();
-        /* avoid dead loop */
-        signal(SIGSEGV, SIG_DFL);
-        kill(getpid(), sig);
-    } else {
-        exit(EXIT_SUCCESS);
-    }
+    srv_settings.sig = sig;
+    s_event_loop.event_over = 1;
 }
 
 static void
 set_signal_handler()
 {
-    int i = 1;
-
-    atexit(release_resources);
-    /* just to try */
-    for (; i<SIGTTOU; i++) {
-        if (i != SIGPIPE && i != SIGKILL && i !=SIGSTOP ) {
-            if (i != SIGALRM) {
-                signal(i, signal_handler);
-            } else {
-                signal(i, tc_time_sig_alarm);
-            }
-        }
-    }
-
+    signal(SIGALRM, tc_time_sig_alarm);
+    signal(SIGTERM, signal_handler);
+    signal(SIGINT, signal_handler);
 }
 
 /* retrieve ip addresses */
@@ -464,6 +448,8 @@ main(int argc, char **argv)
 
     /* run now */
     tc_event_process_cycle(&s_event_loop);
+
+    server_release_resources();
 
     return 0;
 }
