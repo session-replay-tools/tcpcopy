@@ -62,6 +62,7 @@ static void
 set_signal_handler()
 {
     signal(SIGALRM, tc_time_sig_alarm);
+    signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
 }
 
