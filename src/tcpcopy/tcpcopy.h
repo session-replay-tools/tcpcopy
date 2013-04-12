@@ -89,6 +89,7 @@ typedef struct xcopy_clt_settings {
 } xcopy_clt_settings;
 
 
+extern tc_atomic_t tcpcopy_sig;
 extern int tc_raw_socket_out;
 extern tc_event_loop_t event_loop;
 extern xcopy_clt_settings clt_settings;

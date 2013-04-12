@@ -23,7 +23,6 @@ typedef struct xcopy_srv_settings {
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
     passed_ip_addr_t     passed_ips;     /* passed ip list */
-    int                  sig;
 }xcopy_srv_settings;
 
 extern xcopy_srv_settings srv_settings;

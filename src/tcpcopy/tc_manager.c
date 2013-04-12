@@ -126,8 +126,8 @@ tcp_copy_release_resources()
 {
     int i;
 
-    if (clt_settings.sig > 0) {
-        tc_log_info(LOG_WARN, 0, "sig %d received", clt_settings.sig); 
+    if (tcpcopy_sig > 0) {
+        tc_log_info(LOG_WARN, 0, "sig %d received", tcpcopy_sig); 
     }
 
     output_stat();
@@ -182,7 +182,7 @@ tcp_copy_release_resources()
 void
 tcp_copy_over(const int sig)
 {
-    clt_settings.sig = sig;
+    tcpcopy_sig = sig;
     event_loop.event_over = 1;
 }
 

@@ -19,12 +19,13 @@
 
 xcopy_srv_settings srv_settings;
 static tc_event_loop_t s_event_loop;
+static tc_atomic_t intercept_sig = 0;
 
 static void
 server_release_resources()
 {
-    if (srv_settings.sig > 0) {
-        tc_log_info(LOG_WARN, 0, "sig %d received", srv_settings.sig); 
+    if (intercept_sig > 0) {
+        tc_log_info(LOG_WARN, 0, "sig %d received", intercept_sig); 
     }
 
     tc_log_info(LOG_NOTICE, 0, "release_resources begin");
@@ -54,7 +55,7 @@ sigignore(int sig)
 static void
 signal_handler(int sig)
 {
-    srv_settings.sig = sig;
+    intercept_sig = sig;
     s_event_loop.event_over = 1;
 }
 

@@ -61,7 +61,7 @@ struct tc_event_timer_s {
 struct tc_event_loop_s {
     void               *io;
     int                 size;
-    int                 event_over;
+    tc_atomic_t         event_over;
     tc_event_t         *active_events;
     tc_event_actions_t *actions;
     tc_event_timer_t   *timers;
