@@ -56,7 +56,7 @@ static void
 signal_handler(int sig)
 {
     intercept_sig = sig;
-    s_event_loop.event_over = 1;
+    event_over = 1;
 }
 
 static void

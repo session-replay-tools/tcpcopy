@@ -1,6 +1,8 @@
 
 #include <xcopy.h>
 
+tc_atomic_t  event_over = 0;
+
 static long tc_event_timer_find(tc_event_loop_t *loop);
 static void tc_event_timer_run(tc_event_loop_t *loop);
 
@@ -129,7 +131,7 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
 
         ret = actions->poll(loop, timeout);
 
-        if (loop->event_over) {
+        if (event_over) {
             goto FINISH;
         }
 
