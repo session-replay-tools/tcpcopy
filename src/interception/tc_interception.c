@@ -135,8 +135,7 @@ static
 void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
     int                    *p_len, cur_w_pos, diff, next_w_pos;
-    char                   *p_content, *opt_content;
-    u_short                 wscale;
+    char                   *p_content;
     uint16_t                size_ip, size_tcp, save_len, record_len;
 #if (TCPCOPY_MYSQL_ADVANCED) 
     uint16_t                cont_len, tot_len;
