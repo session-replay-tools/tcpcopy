@@ -171,7 +171,8 @@
 
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
-
+#define MAX_OPTION_LEN 20
+#define TCPOPT_WSCALE 3
 
 #if (INTERCEPT_THREAD)
 
@@ -179,7 +180,7 @@ typedef struct tcphdr tc_tcp_header_t;
 #define POOL_SHIFT 24
 #define POOL_SIZE (1 << POOL_SHIFT) 
 #define POOL_MASK (POOL_SIZE - 1)
-#define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t))
+#define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t) + MAX_OPTION_LEN)
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
 #else

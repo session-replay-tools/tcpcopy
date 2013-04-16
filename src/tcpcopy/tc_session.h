@@ -7,6 +7,7 @@
 #define FAKE_IP_DATAGRAM_LEN 40
 #define FAKE_SYN_IP_DATAGRAM_LEN 44
 #define IP_HEADER_LEN 20
+#define TCP_HEADER_MIN_LEN 20
 
 /* global functions */
 void init_for_sessions();
@@ -108,6 +109,8 @@ typedef struct session_s{
     uint32_t dst_addr;
     /* online ip address(network byte order) */
     uint32_t online_addr;
+    uint32_t srv_window;
+    uint16_t wscale;
     /* orginal src or client port(network byte order, never changed) */
     uint16_t orig_src_port;
     /* src or client port(host byte order and  it may be changed) */
