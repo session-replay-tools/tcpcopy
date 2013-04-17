@@ -18,7 +18,6 @@
 xcopy_clt_settings clt_settings;
 
 int tc_raw_socket_out;
-tc_atomic_t tcpcopy_sig = 0;
 tc_event_loop_t event_loop;
 
 static void

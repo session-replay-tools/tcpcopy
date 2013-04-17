@@ -80,6 +80,6 @@ void tc_event_destroy(tc_event_t *ev);
 int tc_event_timer_add(tc_event_loop_t *loop, long timer,
         tc_event_timer_handler_pt handler);
 
-extern tc_atomic_t  event_over;
+extern tc_atomic_t  tc_over;
 
 #endif  /* TC_EVENT_H */
