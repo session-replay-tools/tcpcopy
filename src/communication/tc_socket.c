@@ -398,8 +398,8 @@ tc_socket_connect(int fd, uint32_t ip, uint16_t port)
     len = (socklen_t) (sizeof(remote_addr));
 
     if (connect(fd, (struct sockaddr *) &remote_addr, len) == -1) {
-        tc_log_info(LOG_ERR, errno, "Can not connect to remote server(%d:%d)",
-                    ip, port);
+        tc_log_info(LOG_ERR, errno, "Can not connect to remote server(%s:%d)",
+                    inet_ntoa(remote_addr.sin_addr), port);
         return TC_ERROR;
     }   
 
