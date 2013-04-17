@@ -177,6 +177,8 @@
 #define RTT_CAL 2
 #endif
 
+typedef volatile sig_atomic_t tc_atomic_t;
+
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
 

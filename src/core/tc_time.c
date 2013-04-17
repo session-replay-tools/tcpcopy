@@ -1,7 +1,7 @@
 
 #include <xcopy.h>
 
-volatile int        tc_update_time;
+tc_atomic_t         tc_update_time;
 volatile char      *tc_error_log_time;
 volatile time_t     tc_current_time_sec;
 volatile long       tc_current_time_msec;

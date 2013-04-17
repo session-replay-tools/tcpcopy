@@ -115,7 +115,7 @@ check_resource_usage(tc_event_timer_t *evt)
     if (usage.ru_maxrss > clt_settings.max_rss) {
         tc_log_info(LOG_WARN, 0, "occupies too much memory, limit:%ld",
                  clt_settings.max_rss);
-        event_loop.event_over = 1;
+        tc_over = 1;
     }
 
     evt->msec = tc_current_time_msec + 60000;
@@ -126,8 +126,8 @@ tcp_copy_release_resources()
 {
     int i;
 
-    if (clt_settings.sig > 0) {
-        tc_log_info(LOG_WARN, 0, "sig %d received", clt_settings.sig); 
+    if (tc_over > 1) {
+        tc_log_info(LOG_WARN, 0, "sig %d received", tc_over); 
     }
 
     output_stat();
@@ -182,8 +182,7 @@ tcp_copy_release_resources()
 void
 tcp_copy_over(const int sig)
 {
-    clt_settings.sig = sig;
-    event_loop.event_over = 1;
+    tc_over = (sig != 0 ? sig : 1);
 }
 
 
