@@ -182,7 +182,7 @@ tcp_copy_release_resources()
 void
 tcp_copy_over(const int sig)
 {
-    tc_over = (sig !=0 ? sig:1);
+    tc_over = (sig != 0 ? sig : 1);
 }
 
 
