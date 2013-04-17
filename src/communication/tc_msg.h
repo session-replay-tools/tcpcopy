@@ -16,9 +16,10 @@ struct msg_client_s {
 struct msg_server_s {
     tc_ip_header_t  ip_header;
     tc_tcp_header_t tcp_header;
-
 #if (TCPCOPY_MYSQL_ADVANCED)
-    unsigned char payload[MAX_PAYLOAD_LEN];
+    unsigned char extension[MAX_OPTION_LEN + MAX_PAYLOAD_LEN];
+#else
+    unsigned char extension[MAX_OPTION_LEN];
 #endif
 };
 #pragma pack(pop)

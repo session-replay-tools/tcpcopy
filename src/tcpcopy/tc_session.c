@@ -291,7 +291,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     /* the TCP header length(the number of 32-bit words in the header) */
     tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     /* window size(you may feel strange here) */
-    tcp_header->window  = 65535; 
+    tcp_header->window  = htons(65535); 
 }
 
 
@@ -950,9 +950,9 @@ send_reserved_packets(session_t *s)
 #endif
     uint16_t          size_ip, cont_len;
 #if (TCPCOPY_PAPER)
-    uint32_t          cur_ack, cur_seq;
+    uint32_t          cur_ack, cur_seq, srv_sk_buf_s;
 #else
-    uint32_t          cur_ack, cur_seq, diff;
+    uint32_t          cur_ack, cur_seq, diff, srv_sk_buf_s;
 #endif
     link_list        *list;
     p_link_node       ln, tmp_ln;
@@ -964,6 +964,15 @@ send_reserved_packets(session_t *s)
             s->unsend_packets->size, s->src_h_port);
 
     if (SYN_CONFIRM > s->sm.status) {
+        return count;
+    }
+
+    srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq;
+
+    tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
+            srv_sk_buf_s, s->srv_window, s->src_h_port);
+    if (srv_sk_buf_s > s->srv_window) {
+        s->sm.delay_sent_flag = 1;
         return count;
     }
 
@@ -1036,6 +1045,14 @@ send_reserved_packets(session_t *s)
         if (!omit_transfer && cont_len > 0) {
 
             if (total_cont_sent > MAX_SIZE_PER_CONTINUOUS_SEND) {
+                s->sm.delay_sent_flag = 1;
+                break;
+            }
+
+            srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq + cont_len;
+            if (srv_sk_buf_s > s->srv_window) {
+                tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
+                        srv_sk_buf_s, s->srv_window, s->src_h_port);
                 s->sm.delay_sent_flag = 1;
                 break;
             }
@@ -2153,9 +2170,22 @@ static void
 process_back_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
+    uint16_t size_tcp;
+
     conn_cnt++;
 
-    tc_log_debug1(LOG_DEBUG, 0, "recv syn from back:%u", s->src_h_port);
+    size_tcp = tcp_header->doff << 2;
+
+    tc_log_debug2(LOG_DEBUG, 0, "recv syn from back, size tcp:%u, p:%u", 
+            size_tcp, s->src_h_port);
+
+    if (size_tcp > TCP_HEADER_MIN_LEN) {
+        s->wscale = retrieve_wscale(tcp_header);
+        if (s->wscale > 0) {
+            tc_log_debug2(LOG_DEBUG, 0, "wscale:%u, p:%u", 
+                    s->wscale, s->src_h_port);
+        }
+    }
 
     s->sm.resp_syn_received = 1;
     s->sm.status = SYN_CONFIRM;
@@ -2309,6 +2339,14 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     cont_len = tot_len - size_tcp - size_ip;
 
     current  = tc_time();
+
+    s->srv_window = ntohs(tcp_header->window);
+    tc_log_debug3(LOG_DEBUG, 0, "window value:%u,wscale value:%u,p:%u",
+            s->srv_window, s->wscale, s->src_h_port);
+
+    if (s->wscale) {
+        s->srv_window = s->srv_window << (s->wscale);
+    }
 
     if (cont_len > 0) {
 
@@ -2741,7 +2779,7 @@ check_pack_save_or_not(session_t *s, tc_ip_header_t *ip_header,
             if (check_reserved_content_left(s)) {
                 is_save = true;
             }
-        }
+        } 
     }
 
     if (is_save) {
@@ -2780,6 +2818,7 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
 
         if (s->sm.is_waiting_previous_packet) {
             s->sm.is_waiting_previous_packet = 0;
+            s->sm.candidate_response_waiting = 1;
             /* Send the packet and reserved packets */
             wrap_send_ip_packet(s, (unsigned char *) ip_header, true);
             send_reserved_packets(s);
@@ -2892,6 +2931,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 {
     int       is_new_req = 0;
     uint16_t  cont_len;
+    uint32_t  srv_sk_buf_s;
 
     tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
@@ -2901,7 +2941,6 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
     }
 
     s->src_h_port = ntohs(tcp_header->source);
-    /* tcp_header->window  = 65535; */
 
 #if (TCPCOPY_MYSQL_BASIC)
     /* subtract client packet's seq for mysql */
@@ -2999,6 +3038,15 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->sm.dst_closed || s->sm.reset_sent) {
             /* when backend is closed or we have sent rst packet */
             proc_clt_cont_when_bak_closed(s, ip_header, tcp_header);
+            return;
+        }
+
+        srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq  + cont_len;
+        if (srv_sk_buf_s > s->srv_window) {
+            tc_log_debug3(LOG_DEBUG, 0, "wait,srv_sk_buf_s:%u, win:%u, p:%u",
+                    srv_sk_buf_s, s->srv_window, s->src_h_port);
+            s->sm.delay_sent_flag = 1;
+            save_packet(s->unsend_packets, ip_header, tcp_header);
             return;
         }
 

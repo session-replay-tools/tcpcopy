@@ -24,7 +24,8 @@ inline bool tcp_seq_before(uint32_t seq1, uint32_t seq2);
 unsigned short csum (unsigned short *packet, int pack_len);
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
-
+uint16_t retrieve_wscale(tc_tcp_header_t *tcp_header);
+void set_wscale(tc_tcp_header_t *tcp_header);
 
 #endif   /* ----- #ifndef TC_UTIL_INCLUDED  ----- */
 

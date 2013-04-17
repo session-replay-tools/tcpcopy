@@ -136,9 +136,9 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
     int                    *p_len, cur_w_pos, diff, next_w_pos;
     char                   *p_content;
-    uint16_t                size_ip, save_len, record_len;
+    uint16_t                size_ip, size_tcp, save_len, record_len;
 #if (TCPCOPY_MYSQL_ADVANCED) 
-    uint16_t                size_tcp, cont_len, tot_len;
+    uint16_t                cont_len, tot_len;
     unsigned char          *payload; 
 #endif
     uint64_t                next_w_cnt; 
@@ -153,14 +153,11 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 
     size_ip = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
+    size_tcp = tcp_header->doff << 2;
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
-    size_tcp = tcp_header->doff << 2;
     tot_len  = ntohs(ip_header->tot_len);
     cont_len = tot_len - size_ip - size_tcp;
-    if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
-            save_len += cont_len;
-    }
 #endif
 
     record_len = save_len;
@@ -195,11 +192,16 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     ip_header->ihl = (sizeof(tc_ip_header_t)) >> 2;
     memcpy(p_content, ip_header, sizeof(tc_ip_header_t));
     p_content = p_content + sizeof(tc_ip_header_t);
-    memcpy(p_content, tcp_header, sizeof(tc_tcp_header_t));
+
+    if (size_tcp > MAX_OPTION_LEN) {
+        set_wscale(tcp_header);
+        size_tcp = tcp_header->doff << 2;
+    }   
+    memcpy(p_content, tcp_header, size_tcp);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
-        p_content = p_content + sizeof(tc_tcp_header_t);
+        p_content = p_content + size_tcp
         payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         memcpy(p_content, payload, cont_len);
     }

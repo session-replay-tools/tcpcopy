@@ -98,7 +98,6 @@ tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
     char           *tmp_buf, src_ip[1024], dst_ip[1024];
-    uint16_t        window;
     uint32_t        pack_size;
     unsigned int    seq, ack_seq;
     struct in_addr  src_addr, dst_addr;
@@ -115,43 +114,35 @@ tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
     seq = ntohl(tcp_header->seq);
     ack_seq = ntohl(tcp_header->ack_seq);
 
-    /* strange here, not using ntohs */
-    window = tcp_header->window;
-
     if (BACKEND_FLAG == flag) {
         tc_log_info(level, err,
-                    "from bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    "from bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq,
-                    ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
     } else if (CLIENT_FLAG == flag) {
         tc_log_info(level, err,
-                    "recv clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    "recv clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq,
-                    ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
     } else if (TO_BAKEND_FLAG == flag) {
         tc_log_info(level, err,
-                    "to bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    "to bak:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq,
-                    ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
     } else if (RESERVED_CLIENT_FLAG == flag) {
         tc_log_info(level, err,
-                    "reserved clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    "reserved clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq,
-                    ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
     } else if (FAKED_CLIENT_FLAG == flag) {
         tc_log_info(level, err,
-                    "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u,win:%u",
+                    "fake clt:%s:%u-->%s:%u,len %u,seq=%u,ack=%u",
                     src_ip, ntohs(tcp_header->source), dst_ip,
-                    ntohs(tcp_header->dest), pack_size, seq,
-                    ack_seq, window);
+                    ntohs(tcp_header->dest), pack_size, seq, ack_seq);
 
     } else if (UNKNOWN_FLAG == flag) {
         tc_log_info(level, err,

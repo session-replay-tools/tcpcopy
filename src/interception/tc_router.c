@@ -186,12 +186,12 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     void                   *fd;
     uint64_t                key;
 #endif
-    uint32_t                size_ip;
+    uint32_t                size_ip, size_tcp;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
-    uint32_t                size_tcp, cont_len, tot_len;
-    unsigned char          *payload;
+    uint32_t                cont_len, tot_len;
+    unsigned char          *payload, *p;
 #endif
 
     if (ip_header->protocol != IPPROTO_TCP) {
@@ -201,23 +201,29 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 
     size_ip = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
+    size_tcp = tcp_header->doff << 2;
 
     memset(&msg, 0, sizeof(struct msg_server_s));
     memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
-    memcpy((void *) &(msg.tcp_header), tcp_header, sizeof(tc_tcp_header_t));
+
+    if (size_tcp > MAX_OPTION_LEN) {
+        set_wscale(tcp_header);
+        size_tcp = tcp_header->doff << 2;
+    }
+    memcpy((void *) &(msg.tcp_header), tcp_header, size_tcp);
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     tot_len  = ntohs(ip_header->tot_len);
-    size_tcp = tcp_header->doff << 2;
     cont_len = tot_len - size_ip - size_tcp;
     if (cont_len > 0) {
         payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
+            p = ((unsigned char *) msg.tcp_header) + size_tcp;
             /*
              * only transfer payload if content length is less
              * than MAX_PAYLOAD_LEN
              */
-            memcpy((void *) &(msg.payload), payload, cont_len);
+            memcpy((void *) &(p), payload, cont_len);
         }
     }
 #endif
