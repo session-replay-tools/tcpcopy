@@ -2750,10 +2750,10 @@ proc_clt_cont_when_bak_closed(session_t *s, tc_ip_header_t *ip_header,
 /* check the current packet be saved or not */
 static int 
 check_pack_save_or_not(session_t *s, tc_ip_header_t *ip_header,
-        tc_tcp_header_t *tcp_header, int *is_new_req, uint16_t cont_len)
+        tc_tcp_header_t *tcp_header, int *is_new_req)
 {
     bool        is_save = false;
-    uint32_t    cur_seq, srv_sk_buf_s;
+    uint32_t    cur_seq;
 
     *is_new_req  = 0;
 
@@ -2779,15 +2779,7 @@ check_pack_save_or_not(session_t *s, tc_ip_header_t *ip_header,
             if (check_reserved_content_left(s)) {
                 is_save = true;
             }
-        } else {
-            srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq  + cont_len;
-            if (srv_sk_buf_s > s->srv_window) {
-                tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
-                        srv_sk_buf_s, s->srv_window, s->src_h_port);
-                s->sm.delay_sent_flag = 1;
-                is_save =true;
-            }
-        }
+        } 
     }
 
     if (is_save) {
@@ -2939,6 +2931,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 {
     int       is_new_req = 0;
     uint16_t  cont_len;
+    uint32_t  srv_sk_buf_s;
 
     tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
@@ -3048,10 +3041,19 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
             return;
         }
 
+        srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq  + cont_len;
+        if (srv_sk_buf_s > s->srv_window) {
+            tc_log_debug3(LOG_DEBUG, 0, "wait,srv_sk_buf_s:%u, win:%u, p:%u",
+                    srv_sk_buf_s, s->srv_window, s->src_h_port);
+            s->sm.delay_sent_flag = 1;
+            save_packet(s->unsend_packets, ip_header, tcp_header);
+            return;
+        }
+
         /* check if the packet is to be saved for later use */
         if (s->sm.candidate_response_waiting) {
-            if (check_pack_save_or_not(s, ip_header, tcp_header, 
-                        &is_new_req, cont_len) == DISP_STOP)
+            if (check_pack_save_or_not(s, ip_header, tcp_header, &is_new_req)
+                    == DISP_STOP)
             {
                 return;
             }
