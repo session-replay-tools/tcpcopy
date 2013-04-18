@@ -543,14 +543,14 @@ send_packets_from_pcap(int first)
                             first_pack_time = pkt_hdr.ts;
                             first = 0;
                         }
+                        stop = check_read_stop();
                     } else {
-
-                        stop = false;
                         tc_log_debug0(LOG_DEBUG, 0, "invalid flag");
                     }
                 }
             }
-            stop = check_read_stop();
+
+
         } else {
 
             tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
