@@ -550,7 +550,6 @@ send_packets_from_pcap(int first)
                 }
             }
 
-
         } else {
 
             tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
