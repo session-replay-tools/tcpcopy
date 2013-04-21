@@ -545,7 +545,7 @@ set_details()
         return -1;
     }
 
-    if (clt_settings.percentage < 0 && clt_settings.percentage >99) {
+    if (clt_settings.percentage < 0 || clt_settings.percentage >99) {
         clt_settings.percentage = 0;
     }
 
