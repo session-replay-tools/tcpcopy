@@ -18,18 +18,6 @@ typedef struct {
     ip_port_pair_mapping_t **mappings;
 } ip_port_pair_mappings_t;
 
-#if (TCPCOPY_PCAP)
-typedef struct device_s{
-    char    name[MAX_DEVICE_NAME_LEN];
-    pcap_t *pcap;
-}device_t;
-
-typedef struct devices_s{
-    int             device_num;
-    device_t        device[MAX_DEVICE_NUM];
-}devices_t;
-#endif
-
 #if (TCPCOPY_DR)
 typedef struct real_ip_addr_s {
     uint32_t    ips[MAX_REAL_SERVERS];

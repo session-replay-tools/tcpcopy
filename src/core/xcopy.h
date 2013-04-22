@@ -261,6 +261,18 @@ struct ethernet_hdr {
 };
 #endif 
 
+#if (TCPCOPY_PCAP)
+typedef struct device_s{
+    char    name[MAX_DEVICE_NAME_LEN];
+    pcap_t *pcap;
+}device_t;
+
+typedef struct devices_s{
+    int             device_num;
+    device_t        device[MAX_DEVICE_NUM];
+}devices_t;
+#endif
+
 #if (TCPCOPY_OFFLINE)
 #define TIMER_INTERVAL 1
 #endif

@@ -8,18 +8,6 @@ typedef struct passed_ip_addr_s {
 } passed_ip_addr_t;
 
 #if (INTERCEPT_ADVANCED)
-#if (TCPCOPY_PCAP)
-typedef struct device_s{
-    char    name[MAX_DEVICE_NAME_LEN];
-    pcap_t *pcap;
-}device_t;
-
-typedef struct devices_s{
-    int             device_num;
-    device_t        device[MAX_DEVICE_NUM];
-}devices_t;
-#endif
-
 typedef struct ip_port_pair_t{
     uint32_t ip;
     uint16_t port;

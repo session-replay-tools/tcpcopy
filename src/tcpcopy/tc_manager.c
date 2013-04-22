@@ -192,12 +192,16 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
 #if (TCPCOPY_PCAP)
-    int                      j, filter_port_num = 0;
+    int                      filter_port_num = 0;
     char                    *pt;
     uint16_t                 filter_port[MAX_FILTER_PORTS];
 #endif
     uint32_t                 target_ip;
+
 #if (!TCPCOPY_DR)
+#if (TCPCOPY_PCAP)
+    int                      j;
+#endif
     ip_port_pair_mapping_t  *pair, **mappings;
 #endif
 
