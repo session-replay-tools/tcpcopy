@@ -10,6 +10,9 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 #include <linux/if_ether.h>
+#if (TCPCOPY_UDP)
+#include <netinet/udp.h>
+#endif
 #if (!INTERCEPT_NFQUEUE)
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
@@ -181,6 +184,10 @@ typedef volatile sig_atomic_t tc_atomic_t;
 
 typedef struct iphdr  tc_ip_header_t;
 typedef struct tcphdr tc_tcp_header_t;
+#if (TCPCOPY_UDP)
+typedef struct udphdr tc_udp_header_t;
+#endif
+
 #define MAX_OPTION_LEN 20
 #define TCPOPT_WSCALE 3
 

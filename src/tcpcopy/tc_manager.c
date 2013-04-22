@@ -39,14 +39,14 @@ address_find_sock(uint32_t ip, uint16_t port)
     return (int) (long) fd;
 }
 
-void
+static void
 address_add_sock(uint32_t ip, uint16_t port, int fd) 
 {
     uint64_t key = get_key(ip, port);
     hash_add(addr_table, key, (void *) (long) fd);
 }
 
-void 
+static void 
 address_release()
 {   
     int          i, fd;
@@ -71,7 +71,7 @@ address_release()
                 fd  = (int) (long) hn->data;
                 hn->data = NULL;
 
-                if (fd != 0) {
+                if (fd > 0) {
                     tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
                     close(fd);
                 }
@@ -208,7 +208,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     /* init session table */
     init_for_sessions();
 
-
 #if (TCPCOPY_PCAP)
     memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
 #endif
@@ -273,7 +272,11 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         return TC_ERROR;
     }
     pt = clt_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp dst port ");
+#else
     strcpy(pt, "tcp dst port ");
+#endif
     pt = pt + strlen(pt);
     for (i = 0; i < filter_port_num -1; i++) {
         sprintf(pt, "%d or ", ntohs(filter_port[i]));
@@ -296,3 +299,4 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     return TC_OK;
 }
+

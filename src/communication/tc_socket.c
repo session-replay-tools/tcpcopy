@@ -72,7 +72,11 @@ tc_raw_socket_in_init(int type)
     }
     else {
         /* copy ip datagram from IP layer */
+#if (TCPCOPY_UDP)
+        fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
+#else
         fd = socket(AF_INET, SOCK_RAW, IPPROTO_TCP);
+#endif
     }
 
     if (fd == -1) {

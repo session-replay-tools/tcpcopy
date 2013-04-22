@@ -203,6 +203,14 @@ AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
                *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
            esac],[advanced=false])
 
+AC_ARG_ENABLE(udp,[--enable-udp    Turn on udpcopy],
+               [case "${enableval}" in
+                   yes) udp=true 
+                        AC_DEFINE(TCPCOPY_UDP, 1, [Define if --enable-udp]) ;;
+                   no)  udp=false ;;
+                   *)   AC_MSG_ERROR(bad value ${enableval} for --enable-udp) ;;
+               esac],[udp=false])
+
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([arpa/inet.h fcntl.h limits.h netinet/in.h stdint.h stdlib.h string.h sys/file.h sys/param.h sys/socket.h sys/time.h unistd.h getopt.h])
@@ -254,6 +262,7 @@ fi
 CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
 
 AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
+AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])
 
 #AC_CONFIG_FILES([Makefile])
 AC_OUTPUT([
