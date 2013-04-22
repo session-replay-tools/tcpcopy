@@ -571,8 +571,6 @@ send_packets_from_pcap(int first)
                         stop = check_read_stop();
 
                     } else {
-
-                        stop = false;
                         tc_log_debug0(LOG_DEBUG, 0, "invalid flag");
                     }
                 }
