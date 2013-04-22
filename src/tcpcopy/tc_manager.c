@@ -192,18 +192,12 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, fd;
 #if (TCPCOPY_PCAP)
-    int                      filter_port_num = 0;
+    int                      j, filter_port_num = 0;
     char                    *pt;
     uint16_t                 filter_port[MAX_FILTER_PORTS];
 #endif
     uint32_t                 target_ip;
-
-#if (!TCPCOPY_DR)
-#if (TCPCOPY_PCAP)
-    int                      j;
-#endif
     ip_port_pair_mapping_t  *pair, **mappings;
-#endif
 
     /* register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
@@ -233,13 +227,14 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         clt_settings.real_servers.active[i] = 1;
         clt_settings.real_servers.fds[i] = fd;
 
-        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
-                    ntohl(target_ip), clt_settings.srv_port);
+        tc_log_info(LOG_NOTICE, 0, "add a dr tunnel for exchanging info:%u:%u",
+                ntohl(target_ip), clt_settings.srv_port);
     }
+
 #else
     address_init();
+#endif
 
-    /* add connections to the tested server for exchanging info */
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
@@ -258,17 +253,17 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         }
 #endif
 
+#if (!TCPCOPY_DR)
         fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
         if (fd == TC_INVALID_SOCKET) {
             return TC_ERROR;
         }
 
         address_add_sock(pair->online_ip, pair->online_port, fd);
-
+#endif
         tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
                     ntohl(target_ip), clt_settings.srv_port);
     }
-#endif
 
 #if (TCPCOPY_PCAP)
     if (filter_port_num == 0) {
