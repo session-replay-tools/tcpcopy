@@ -310,6 +310,9 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_OFFLINE)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_OFFLINE mode");
 #endif
+#if (TCPCOPY_PCAP)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP mode");
+#endif
 #if (TCPCOPY_SINGLE)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_SINGLE mode");
 #endif
