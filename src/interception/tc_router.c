@@ -4,8 +4,12 @@
 #endif
 #include <intercept.h>
 
-static hash_table *table;
-static uint64_t    fd_null_cnt = 0;
+static hash_table     *table;
+static uint64_t        fd_null_cnt = 0;
+#if (INTERCEPT_COMBINED)
+static aggregation_t  *combined[MAX_FD_NUM];
+static int             max_fd = 0;
+#endif
 
 #if (INTERCEPT_THREAD)
 static pthread_mutex_t mutex; 
@@ -127,6 +131,82 @@ router_add(uint32_t ip, uint16_t port, int fd)
 #endif
 }
 
+#if (INTERCEPT_COMBINED)
+static void 
+buffer_and_send(int mfd, int fd, msg_server_t *msg)
+{
+    int                  is_send = 0, bytes;
+    unsigned char       *p;
+    aggregation_t       *aggr;
+
+    if (fd > max_fd) {
+        max_fd = fd;
+    }
+
+    if (max_fd > MAX_FD_NUM) {
+        tc_log_info(LOG_WARN, 0, "fd is too large:%d", max_fd);
+    }
+
+    aggr = combined[fd];
+    if (!aggr) {
+        aggr = (aggregation_t *) malloc(sizeof(aggregation_t));
+        if (aggr == NULL) {
+            tc_log_info(LOG_ERR, errno, "can't malloc memory");
+        } else {
+            aggr->num = 0;
+            memset(aggr->aggr_resp, 0, sizeof(aggr->aggr_resp));
+            aggr->cur_write = aggr->aggr_resp;
+            combined[fd] = aggr;
+        }
+    }
+
+    if (aggr) {
+        if (msg != NULL) {
+            p = aggr->cur_write;
+            memcpy((char *) p, (char *) msg, MSG_SERVER_SIZE); 
+            aggr->cur_write = p + MSG_SERVER_SIZE;
+            aggr->num = aggr->num + 1;
+        }
+
+        if (aggr->num == COMB_MAX_NUM) {
+            is_send = 1;
+        } else if ((aggr->access_time + COM_DELAY) < tc_current_time_sec) {
+            is_send = 1;
+        }
+
+        if (is_send) {
+            tc_log_debug1(LOG_DEBUG, 0, "combined send:%d", aggr->num);
+            aggr->num = htons(aggr->num);
+            p = (unsigned char *) (&(aggr->num));
+            bytes = aggr->cur_write - aggr->aggr_resp + sizeof(aggr->num);
+            tc_log_debug1(LOG_DEBUG, 0, "send bytes:%d", bytes);
+#if (!TCPCOPY_SINGLE)
+            tc_socket_send(fd, (char *) p, bytes);
+#else
+            tc_socket_send(mfd, (char *) p, bytes);
+#endif
+            aggr->num = 0;
+            aggr->cur_write = aggr->aggr_resp;
+        } 
+    }
+
+    aggr->access_time = tc_current_time_sec;
+
+}
+
+void
+send_buffered_packets(time_t cur_time)
+{
+    int i;
+    for (i = 0; i < max_fd; i++) {
+        if (combined[i] != NULL) {
+            buffer_and_send(srv_settings.router_fd, i, NULL);
+        }
+    }
+}
+
+#endif
+
 #if (INTERCEPT_THREAD)
 /* update router table */
 void
@@ -175,11 +255,18 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
+#if (INTERCEPT_COMBINED)
+    buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+#else
+
 #if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
 #else
     tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
 #endif
+
+#endif
+
 }
 
 #else 
@@ -248,11 +335,19 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 #endif
 
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+
+#if (INTERCEPT_COMBINED)
+    buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+#else
+
 #if (!TCPCOPY_SINGLE)
     tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
 #else
     tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
 #endif
+
+#endif
+
 }
 
 #endif

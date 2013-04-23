@@ -115,6 +115,9 @@ tc_check_cleaning()
 #if (!TCPCOPY_SINGLE)  
         route_delete_obsolete(now);
 #endif
+#if (INTERCEPT_COMBINED)
+        send_buffered_packets(now);
+#endif
         last_clean_time = now;
     }
 }

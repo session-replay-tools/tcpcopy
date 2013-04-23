@@ -26,6 +26,11 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
     if (tc_socket_set_nodelay(fd) == TC_ERROR) {
         return TC_INVALID_SOCKET;
     }
+#if (TCPCOPY_COMBINED)
+    if (tc_socket_set_nonblocking(fd) == TC_ERROR) {
+        return TC_INVALID_SOCKET;
+    }
+#endif
 
 #if (TCPCOPY_DR)
     len = (socklen_t) sizeof(struct timeval);
@@ -47,13 +52,29 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
 static int
 tc_process_server_msg(tc_event_t *rev)
 {
+    int            len;
 #if (TCPCOPY_DR)
-    int          i;
+    int            i;
 #endif
-    msg_server_t msg;
+#if (!TCPCOPY_COMBINED)
+    msg_server_t   msg;
+#else
+    int            num, j;
+    unsigned char *p, aggr_resp[COMB_LENGTH + sizeof(uint16_t)];
+#endif
 
-    if (tc_socket_recv(rev->fd, (char *) &msg,
-                MSG_SERVER_SIZE) == TC_ERROR)
+
+#if (!TCPCOPY_COMBINED)
+    len = MSG_SERVER_SIZE;
+#else
+    len = COMB_LENGTH + sizeof(uint16_t);
+#endif
+
+#if (!TCPCOPY_COMBINED)
+    if (tc_socket_recv(rev->fd, (char *) &msg, len) == TC_ERROR)
+#else
+    if (tc_socket_cmb_recv(rev->fd, &num, (char *) aggr_resp, len) == TC_ERROR)
+#endif
     {
         tc_log_info(LOG_ERR, 0, 
                     "Recv socket(%d)error, server may be closed", rev->fd);
@@ -85,7 +106,16 @@ tc_process_server_msg(tc_event_t *rev)
 #endif
     }
 
+#if (!TCPCOPY_COMBINED)
     process((char *) &msg, REMOTE);
+#else
+    tc_log_debug1(LOG_DEBUG, 0, "resp packets:%d", num);
+    p = aggr_resp + sizeof(uint16_t);
+    for (j = 0; j < num; j++) {
+        process((char *) p, REMOTE);
+        p = p + MSG_SERVER_SIZE;
+    }
+#endif
 
     return TC_OK;
 }

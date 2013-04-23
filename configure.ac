@@ -188,6 +188,12 @@ if test "x$enable_single" = "xyes";then
     AC_DEFINE(TCPCOPY_SINGLE, 1, [Define if --enable-single])
 fi
 
+AC_ARG_ENABLE(combined, AS_HELP_STRING([--enable-combined],[run at combined response mode]),,combined=no)
+if test "x$enable_combined" = "xyes";then
+    AC_DEFINE(TCPCOPY_COMBINED, 1, [Define if --enable-combined])
+    AC_DEFINE(INTERCEPT_COMBINED, 1, [Define if --enable-combined])
+fi
+
 AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode (only valid for high latency web applications)]),,paper=no)
 if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])

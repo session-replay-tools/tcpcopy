@@ -109,6 +109,7 @@
 #define DEFAULT_TIMEOUT 120
 #endif
 
+#define COM_DELAY 1
 #define CHECK_INTERVAL  15
 #define DEFAULT_SESSION_TIMEOUT 60
 
@@ -119,6 +120,11 @@
 /* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
+
+#if (INTERCEPT_COMBINED)
+#define COMB_MAX_NUM 2
+#define COMB_LENGTH (COMB_MAX_NUM * MSG_SERVER_SIZE)
+#endif
 
 #define MAX_FILTER_PORTS 32
 #define MAX_DEVICE_NUM 32

@@ -494,6 +494,62 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
 }
 
 int
+tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
+{
+    int     read_num = 0;
+    size_t  last;
+    ssize_t n, len;
+
+    last = 0;
+    len = sizeof(uint16_t);
+
+    for ( ;; ) {
+        n = recv(fd, buffer + last, len, 0);
+
+        if (n == -1) {
+            if (errno == EAGAIN || errno == EINTR) {
+                continue;
+            } else {
+                return TC_ERROR;
+            }
+        }
+
+        if (n == 0) {
+            return TC_ERROR;
+        }
+
+        last += n;
+
+        tc_log_debug1(LOG_DEBUG, 0, "current len:%d", len);
+        if ((!read_num) && last >= sizeof(uint16_t)) {
+            *num = (int) ntohs(*(uint16_t *) buffer);
+            read_num = 1;
+            len = max_len;
+            if (*num != COMB_MAX_NUM) {
+                len -= ((COMB_MAX_NUM - *num) * MSG_SERVER_SIZE);
+            }
+            tc_log_debug1(LOG_DEBUG, 0, "all bytes needed reading:%d", len);
+        }
+
+        tc_log_debug1(LOG_DEBUG, 0, "this time reading:%d", n);
+        if ((len -= n) == 0) {
+            tc_log_debug1(LOG_DEBUG, 0, "remain readed:%d", len);
+            break;
+        }
+
+        if (len < 0) {
+            tc_log_info(LOG_WARN, 0, "read:%d,num packs:%d, remain:%d",
+                    n, *num, len);
+            break;
+        }
+        tc_log_debug1(LOG_DEBUG, 0, "remain readed:%d", len);
+    }
+
+    return TC_OK;
+}
+
+
+int
 tc_socket_send(int fd, char *buffer, size_t len)
 {
     ssize_t send_len;
@@ -505,6 +561,7 @@ tc_socket_send(int fd, char *buffer, size_t len)
         return TC_ERROR;
     }
 
+    tc_log_debug2(LOG_DEBUG, 0, "send len:%d, requested len:%d", send_len, len);
     if (send_len != len) {
         tc_log_info(LOG_ERR, 0, "fd:%d, send length:%ld, buffer size:%ld",
                     fd, send_len, len);
