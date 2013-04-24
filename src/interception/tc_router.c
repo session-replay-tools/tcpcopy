@@ -168,6 +168,10 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             memcpy((char *) p, (char *) msg, MSG_SERVER_SIZE); 
             aggr->cur_write = p + MSG_SERVER_SIZE;
             aggr->num = aggr->num + 1;
+        } else {
+            if (aggr->num == 0) {
+                return;
+            }
         }
 
         if (aggr->num == COMB_MAX_NUM) {
@@ -194,10 +198,10 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             aggr->num = 0;
             aggr->cur_write = aggr->aggr_resp;
         } 
-    }
 
-    aggr->access_time = tc_current_time_sec;
-    aggr->access_msec = tc_current_time_msec;
+        aggr->access_time = tc_current_time_sec;
+        aggr->access_msec = tc_current_time_msec;
+    }
 
 }
 
