@@ -143,8 +143,10 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         max_fd = fd;
     }
 
-    if (max_fd > MAX_FD_NUM) {
+    if (max_fd > MAX_FD_VALUE) {
         tc_log_info(LOG_WARN, 0, "fd is too large:%d", max_fd);
+        max_fd = MAX_FD_VALUE;
+        return;
     }
 
     aggr = combined[fd];
@@ -153,6 +155,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         if (aggr == NULL) {
             tc_log_info(LOG_ERR, errno, "can't malloc memory");
         } else {
+            tc_log_info(LOG_ERR, 0, "malloc memory for fd:%d", fd);
             memset(aggr, 0, sizeof(aggregation_t));
             aggr->cur_write = aggr->aggr_resp;
             combined[fd] = aggr;
@@ -203,7 +206,7 @@ send_buffered_packets(time_t cur_time)
 {
     int i;
 
-    for (i = 0; i < max_fd; i++) {
+    for (i = 0; i <= max_fd; i++) {
         if (combined[i] != NULL) {
             buffer_and_send(srv_settings.router_fd, i, NULL);
         }
@@ -361,14 +364,17 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 void
 router_destroy()
 {
+#if (INTERCEPT_COMBINED)
     int i;
 
-    for (i = 0; i < max_fd; i++) {
+    for (i = 0; i <= max_fd; i++) {
         if (combined[i] != NULL) {
             free(combined[i]);
             combined[i] = NULL;
+            tc_log_info(LOG_NOTICE, 0, "release resources for fd %d", i);
         }
     }
+#endif
 
 #if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
