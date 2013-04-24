@@ -529,7 +529,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
             if (*num != COMB_MAX_NUM) {
                 len -= ((COMB_MAX_NUM - *num) * MSG_SERVER_SIZE);
             }
-            tc_log_debug1(LOG_DEBUG, 0, "all bytes needed reading:%d,num:%d",
+            tc_log_debug2(LOG_DEBUG, 0, "all bytes needed reading:%d,num:%d",
                     len, *num);
         }
 
