@@ -153,8 +153,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         if (aggr == NULL) {
             tc_log_info(LOG_ERR, errno, "can't malloc memory");
         } else {
-            aggr->num = 0;
-            memset(aggr->aggr_resp, 0, sizeof(aggr->aggr_resp));
+            memset(aggr, 0, sizeof(aggregation_t));
             aggr->cur_write = aggr->aggr_resp;
             combined[fd] = aggr;
         }
@@ -203,6 +202,7 @@ void
 send_buffered_packets(time_t cur_time)
 {
     int i;
+
     for (i = 0; i < max_fd; i++) {
         if (combined[i] != NULL) {
             buffer_and_send(srv_settings.router_fd, i, NULL);
@@ -361,6 +361,15 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 void
 router_destroy()
 {
+    int i;
+
+    for (i = 0; i < max_fd; i++) {
+        if (combined[i] != NULL) {
+            free(combined[i]);
+            combined[i] = NULL;
+        }
+    }
+
 #if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);
 #endif

@@ -148,7 +148,7 @@ csum(unsigned short *packet, int pack_len)
 
 static unsigned short buf[32768]; 
 
-    unsigned short
+unsigned short
 tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
 {       
     unsigned short        res;

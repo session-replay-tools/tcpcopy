@@ -202,8 +202,6 @@ fi
 AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
               [case "${enableval}" in
                yes) advanced=true 
-               AC_CHECK_HEADERS([pcap.h], [], 
-                                [AC_MSG_ERROR([pcap.h not found.])], [])
                AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
                no)  advanced=false ;;
                *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
