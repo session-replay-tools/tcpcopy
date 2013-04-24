@@ -170,8 +170,12 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
 
         if (aggr->num == COMB_MAX_NUM) {
             is_send = 1;
-        } else if ((aggr->access_time + COM_DELAY) < tc_current_time_sec) {
+        } else if (aggr->access_time < tc_current_time_sec) {
             is_send = 1;
+        } else if (aggr->access_time == tc_current_time_sec) {
+            if (aggr->access_msec != tc_current_time_msec) {
+                is_send = 1;
+            }
         }
 
         if (is_send) {
@@ -191,6 +195,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
     }
 
     aggr->access_time = tc_current_time_sec;
+    aggr->access_msec = tc_current_time_msec;
 
 }
 

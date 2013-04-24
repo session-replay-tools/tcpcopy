@@ -6,6 +6,7 @@
 #if (INTERCEPT_COMBINED)
 typedef struct aggregation_s{
     time_t         access_time;
+    long           access_msec;
     unsigned char *cur_write;
     uint16_t       num;
     unsigned char  aggr_resp[COMB_LENGTH];

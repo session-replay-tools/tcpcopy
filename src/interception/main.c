@@ -364,7 +364,12 @@ set_details()
         }
     }
 
-    if (tc_time_set_timer(1000) == TC_ERROR) {
+#if (INTERCEPT_COMBINED)
+    if (tc_time_set_timer(1000) == TC_ERROR)
+#else
+    if (tc_time_set_timer(10) == TC_ERROR)
+#endif
+    {
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     }   
