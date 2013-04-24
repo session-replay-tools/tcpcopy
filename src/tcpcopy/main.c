@@ -20,15 +20,14 @@ xcopy_clt_settings clt_settings;
 int tc_raw_socket_out;
 tc_event_loop_t event_loop;
 
-static void
-set_signal_handler()
-{
-    signal(SIGALRM, tc_time_sig_alarm);
-    signal(SIGINT,  tcp_copy_over);
-    signal(SIGPIPE, tcp_copy_over);
-    signal(SIGHUP,  tcp_copy_over);
-    signal(SIGTERM, tcp_copy_over);
-}
+static signal_t signals[] = {
+    { SIGALRM, "SIGALRM", 0,    tc_time_sig_alarm },
+    { SIGINT,  "SIGINT",  0,    tcp_copy_over },
+    { SIGPIPE, "SIGPIPE", 0,    tcp_copy_over },
+    { SIGHUP,  "SIGHUP",  0,    tcp_copy_over },
+    { SIGTERM, "SIGTERM", 0,    tcp_copy_over },
+    { 0,        NULL,     0,    NULL }
+};
 
 static void
 usage(void)
@@ -464,22 +463,6 @@ retrieve_devices()
 }
 #endif
 
-
-static int
-sigignore(int sig)
-{
-    struct sigaction sa;
-
-    sa.sa_handler = SIG_IGN;
-    sa.sa_flags = 0;
-
-    if (sigemptyset(&sa.sa_mask) == -1 || sigaction(sig, &sa, 0) == -1) {
-        return -1;
-    }
-
-    return 0;
-}
-
 #if (TCPCOPY_DR)
 static int retrieve_real_servers() 
 {
@@ -630,8 +613,6 @@ settings_init()
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
-
-    set_signal_handler();
 }
 
 /*
@@ -643,6 +624,10 @@ main(int argc, char **argv)
     int ret;
 
     settings_init();
+
+    if (set_signal_handler(signals) == -1) {
+        return -1;
+    }
 
     tc_time_init();
 
