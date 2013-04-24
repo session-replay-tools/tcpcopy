@@ -42,7 +42,9 @@ int tc_socket_set_nodelay(int fd);
 int tc_socket_connect(int fd, uint32_t ip, uint16_t port);
 int tc_socket_listen(int fd, const char *bind_ip, uint16_t port);
 int tc_socket_recv(int fd, char *buffer, ssize_t len);
+#if (TCPCOPY_COMBINED)
 int tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len);
+#endif
 int tc_socket_send(int fd, char *buffer, size_t len);
 
 #endif /* TC_SOCKET_INCLUDED */

@@ -493,6 +493,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
     return TC_OK;
 }
 
+#if (TCPCOPY_COMBINED)
 int
 tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
 {
@@ -547,6 +548,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
 
     return TC_OK;
 }
+#endif
 
 
 int
