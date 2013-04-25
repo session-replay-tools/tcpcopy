@@ -52,28 +52,25 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
 static int
 tc_process_server_msg(tc_event_t *rev)
 {
-    int            len;
 #if (TCPCOPY_DR)
     int            i;
 #endif
 #if (!TCPCOPY_COMBINED)
+    int            len;
     msg_server_t   msg;
 #else
     int            num, j;
     unsigned char *p, aggr_resp[COMB_LENGTH + sizeof(uint16_t)];
 #endif
 
-
 #if (!TCPCOPY_COMBINED)
     len = MSG_SERVER_SIZE;
-#else
-    len = COMB_LENGTH + sizeof(uint16_t);
 #endif
 
 #if (!TCPCOPY_COMBINED)
     if (tc_socket_recv(rev->fd, (char *) &msg, len) == TC_ERROR)
 #else
-    if (tc_socket_cmb_recv(rev->fd, &num, (char *) aggr_resp, len) == TC_ERROR)
+    if (tc_socket_cmb_recv(rev->fd, &num, (char *) aggr_resp) == TC_ERROR)
 #endif
     {
         tc_log_info(LOG_ERR, 0, 

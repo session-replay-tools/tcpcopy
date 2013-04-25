@@ -128,7 +128,11 @@ delay_table_send(uint64_t key, int fd)
         first = link_list_pop_first(msg_list);
         msg = (first->data);
 
-        tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE); 
+#if (INTERCEPT_COMBINED)
+        buffer_and_send(srv_settings.router_fd, fd, msg);
+#else
+        tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE);
+#endif
 
         msg_item_free_cnt++;
         link_node_internal_free(first);

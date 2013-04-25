@@ -495,7 +495,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
 
 #if (TCPCOPY_COMBINED)
 int
-tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
+tc_socket_cmb_recv(int fd, int *num, char *buffer)
 {
     int     read_num = 0;
     size_t  last;
@@ -524,11 +524,12 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer, ssize_t max_len)
         tc_log_debug1(LOG_DEBUG, 0, "current len:%d", len);
         if ((!read_num) && last >= sizeof(uint16_t)) {
             *num = (int) ntohs(*(uint16_t *) buffer);
-            read_num = 1;
-            len = max_len;
-            if (*num != COMB_MAX_NUM) {
-                len -= ((COMB_MAX_NUM - *num) * MSG_SERVER_SIZE);
+            if (*num > COMB_MAX_NUM) {
+                tc_log_info(LOG_WARN, 0, "num:%d larger than threshold", *num);
+                break;
             }
+            read_num = 1;
+            len = ((*num) * MSG_SERVER_SIZE) + len;
             tc_log_debug2(LOG_DEBUG, 0, "all bytes needed reading:%d,num:%d",
                     len, *num);
         }

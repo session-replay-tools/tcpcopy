@@ -6,6 +6,7 @@ intercept_SOURCES=\
                   tc_router.c tc_router.h\
                   tc_delay.c tc_delay.h\
                   tc_pool.c tc_pool.h\
+                  tc_combine.c tc_combine.h\
                   tc_capture.c tc_interception.h\
                   main.c
 else
@@ -14,6 +15,7 @@ intercept_SOURCES=\
                   tc_router.c tc_router.h\
                   tc_delay.c tc_delay.h\
                   tc_pool.c tc_pool.h\
+                  tc_combine.c tc_combine.h\
                   tc_interception.c tc_interception.h\
                   main.c
 endif
