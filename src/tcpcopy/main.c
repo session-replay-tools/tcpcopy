@@ -325,6 +325,10 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_UDP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_UDP mode");
 #endif
+#if (TCPCOPY_COMBINED)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_COMBINED mode");
+#endif
+
 
 }
 

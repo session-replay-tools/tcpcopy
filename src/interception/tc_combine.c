@@ -12,6 +12,12 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
     unsigned char       *p;
     aggregation_t       *aggr;
 
+#if (TCPCOPY_SINGLE)
+    if (mfd == 0) {
+        return;
+    }
+#endif
+
     if (fd > max_fd) {
         max_fd = fd;
     }

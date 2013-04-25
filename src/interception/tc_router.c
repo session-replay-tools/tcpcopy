@@ -140,6 +140,11 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 
+#if (TCPCOPY_SINGLE)
+    if (main_router_fd == 0) {
+        return;
+    }
+#endif
     if (ip_header->protocol != IPPROTO_TCP) {
         tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
         return;
@@ -212,6 +217,11 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     unsigned char          *payload, *p;
 #endif
 
+#if (TCPCOPY_SINGLE)
+    if (main_router_fd == 0) {
+        return;
+    }
+#endif
     if (ip_header->protocol != IPPROTO_TCP) {
         tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
         return;

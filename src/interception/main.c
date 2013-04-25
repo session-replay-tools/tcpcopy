@@ -407,6 +407,10 @@ static void output_for_debug()
 #if (TCPCOPY_SINGLE)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_SINGLE mode");
 #endif
+#if (INTERCEPT_COMBINED)
+    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_COMBINED mode");
+#endif
+
 
 }
 
