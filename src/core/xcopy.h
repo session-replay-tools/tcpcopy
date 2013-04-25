@@ -263,6 +263,7 @@ inline int before(uint32_t seq1, uint32_t seq2);
 #include <tc_link_list.h>
 #include <tc_hash.h>
 #include <tc_time.h>
+#include <tc_signal.h>
 
 #include <tc_event.h>
 #include <tc_select_module.h>
