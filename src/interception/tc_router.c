@@ -176,7 +176,13 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header, int len)
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
 #if (INTERCEPT_COMBINED)
+
+#if (!TCPCOPY_SINGLE)
     buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+#else
+    buffer_and_send(main_router_fd, main_router_fd, &msg);
+#endif
+
 #else
 
 #if (!TCPCOPY_SINGLE)
@@ -257,7 +263,13 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
 #if (INTERCEPT_COMBINED)
+
+#if (!TCPCOPY_SINGLE)
     buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+#else
+    buffer_and_send(main_router_fd, main_router_fd, &msg);
+#endif
+
 #else
 
 #if (!TCPCOPY_SINGLE)
@@ -276,9 +288,6 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 void
 router_destroy()
 {
-#if (INTERCEPT_COMBINED)
-    release_combined_resouces();
-#endif
 
 #if (INTERCEPT_THREAD)
     pthread_mutex_lock(&mutex);

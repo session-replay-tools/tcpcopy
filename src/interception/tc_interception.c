@@ -8,6 +8,7 @@ static pid_t           pid;
 static time_t          last_clean_time;
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
+static uint64_t        tot_router_items = 0; 
 
 #if (!INTERCEPT_NFQUEUE)
 static uint32_t        seq = 1;
@@ -52,7 +53,7 @@ tc_msg_event_accept(tc_event_t *rev)
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
-        tc_log_info(LOG_ERR, 0, "Msg event create failed.");
+        tc_log_info(LOG_ERR, 0, "msg event create failed.");
         return TC_ERROR;
     }
 
@@ -87,6 +88,7 @@ tc_msg_event_process(tc_event_t *rev)
 
     switch (msg.type) {
         case CLIENT_ADD:
+            tot_router_items++;
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                           ntohs(msg.client_port));
             router_add(msg.client_ip, msg.client_port, rev->fd);
@@ -110,8 +112,9 @@ tc_check_cleaning()
     now  = tc_time();
     diff = now - last_clean_time;
     if (diff > CHECK_INTERVAL) {
-        tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
-                tot_copy_resp_packs, tot_resp_packs);
+        tc_log_info(LOG_NOTICE, 0, 
+                "total resp packs:%llu, all:%llu, route:%llu",
+                tot_copy_resp_packs, tot_resp_packs, tot_router_items);
 #if (!TCPCOPY_SINGLE)  
         route_delete_obsolete(now);
 #endif
@@ -417,7 +420,9 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 #endif
     tc_event_t *ev;
 
+#if (!TCPCOPY_SINGLE)
     router_init(srv_settings.hash_size, srv_settings.timeout);
+#endif
 
     pid = getpid();
 
@@ -519,6 +524,12 @@ interception_over()
     }
 #endif
 
+#if (INTERCEPT_COMBINED)
+    release_combined_resouces();
+#endif
+
+#if (!TCPCOPY_SINGLE)
     router_destroy();
+#endif
 }
 

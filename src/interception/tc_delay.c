@@ -129,7 +129,7 @@ delay_table_send(uint64_t key, int fd)
         msg = (first->data);
 
 #if (INTERCEPT_COMBINED)
-        buffer_and_send(srv_settings.router_fd, fd, msg);
+        buffer_and_send(fd, fd, msg);
 #else
         tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE);
 #endif
