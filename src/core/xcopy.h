@@ -119,6 +119,7 @@
 /* max fd number for select */
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
+#define MAX_CONNECTION_NUM 16
 
 #if (INTERCEPT_COMBINED)
 #define COMB_MAX_NUM 20
@@ -277,6 +278,12 @@ typedef struct devices_s{
     device_t        device[MAX_DEVICE_NUM];
 }devices_t;
 #endif
+
+typedef struct connections_s{
+    int index; 
+    int num;
+    int fds[MAX_CONNECTION_NUM];
+}connections_t;
 
 #if (TCPCOPY_OFFLINE)
 #define TIMER_INTERVAL 1

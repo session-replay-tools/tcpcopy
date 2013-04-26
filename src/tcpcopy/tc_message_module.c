@@ -53,13 +53,14 @@ static int
 tc_process_server_msg(tc_event_t *rev)
 {
 #if (TCPCOPY_DR)
-    int            i;
+    int            i, j;
+    connections_t *connetions;
 #endif
 #if (!TCPCOPY_COMBINED)
     int            len;
     msg_server_t   msg;
 #else
-    int            num, j;
+    int            num, k;
     unsigned char *p, aggr_resp[COMB_LENGTH + sizeof(uint16_t)];
 #endif
 
@@ -79,18 +80,24 @@ tc_process_server_msg(tc_event_t *rev)
 
         for (i = 0; i < clt_settings.real_servers.num; i++) {
 
-            if (clt_settings.real_servers.fds[i] == rev->fd) {
-                if (clt_settings.real_servers.active[i]) {
-                    clt_settings.real_servers.active[i] = 0;
-                    clt_settings.real_servers.active_num--;
-                }
-                tc_socket_close(rev->fd);
-                tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-                tc_event_del(rev->loop, rev, TC_EVENT_READ);
+            connetions = &(clt_settings.real_servers.connections[i]);
+            for (j = 0; j < connections->num; j++) {
+                if (connections->fds[j] == rev->fd) {
+                    tc_socket_close(rev->fd);
+                    tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
+                    tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                    connections->num--;
 
-                break;
+                    if (connections->num == 0 && 
+                            clt_settings.real_servers.active[i]) 
+                    {
+                        clt_settings.real_servers.active[i] = 0;
+                        clt_settings.real_servers.active_num--;
+                    }
+
+                    break;
+                }
             }
-        }
 
 
         if (clt_settings.real_servers.active_num == 0) {
@@ -108,7 +115,7 @@ tc_process_server_msg(tc_event_t *rev)
 #else
     tc_log_debug1(LOG_DEBUG, 0, "resp packets:%d", num);
     p = aggr_resp + sizeof(uint16_t);
-    for (j = 0; j < num; j++) {
+    for (k = 0; k < num; k++) {
         process((char *) p, REMOTE);
         p = p + MSG_SERVER_SIZE;
     }

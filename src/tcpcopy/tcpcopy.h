@@ -20,11 +20,11 @@ typedef struct {
 
 #if (TCPCOPY_DR)
 typedef struct real_ip_addr_s {
-    uint32_t    ips[MAX_REAL_SERVERS];
-    uint32_t    fds[MAX_REAL_SERVERS];
-    short       active[MAX_REAL_SERVERS];
-    int         num;
-    int         active_num;
+    int           num;
+    int           active_num;
+    short         active[MAX_REAL_SERVERS];
+    uint32_t      ips[MAX_REAL_SERVERS];
+    connections_t connectins[MAX_REAL_SERVERS];
 } real_ip_addr_t;
 #endif
 
@@ -32,6 +32,7 @@ typedef struct xcopy_clt_settings {
     unsigned int  replica_num:10;       /* replicated number of each request */
     unsigned int  factor:8;             /* port shift factor */
     unsigned int  mtu:16;               /* MTU sent to backend */
+    unsigned int  par_connections:8;    /* parallel connections */
     unsigned int  mss:16;               /* MSS sent to backend */
     unsigned int  do_daemonize:1;       /* daemon flag */
     unsigned int  max_rss:21;           /* max memory allowed for tcpcopy */

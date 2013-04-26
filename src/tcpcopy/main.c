@@ -99,6 +99,8 @@ usage(void)
            "               version is 2.6.32 or above. The default value is 512.\n");
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
+    printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
+           "               The maximum value allowed is 16.\n");
 #if (TCPCOPY_DR)
     printf("-s <iplist,>   real server ip addresses behind lvs\n"
            "               Format:\n"
@@ -143,6 +145,7 @@ read_args(int argc, char **argv)
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
          "m:" /* set the maximum memory allowed to use for tcpcopy */
+         "C:" /* parallel connections between tcpcopy and intercept */
          "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
@@ -193,6 +196,9 @@ read_args(int argc, char **argv)
                 break;
             case 'm':
                 clt_settings.max_rss = 1024*atoi(optarg);
+                break;
+            case 'C':
+                clt_settings.par_connections = atoi(optarg);
                 break;
             case 'l':
                 clt_settings.log_path = optarg;
@@ -553,6 +559,12 @@ set_details()
         clt_settings.percentage = 0;
     }
 
+    if (clt_settings.par_connections <= 0) {
+        clt_settings.par_connections = 1;
+    } else if (clt_settings.par_connections > MAX_CONNECTION_NUM) {
+        clt_settings.par_connections = MAX_CONNECTION_NUM;
+    }
+
 #if (TCPCOPY_OFFLINE)
     if (clt_settings.pcap_file == NULL) {
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
@@ -643,6 +655,7 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
+    clt_settings.par_connections = 1;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;

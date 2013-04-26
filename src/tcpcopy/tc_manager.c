@@ -17,8 +17,9 @@ address_init()
 int
 address_find_sock(uint32_t ip, uint16_t port)
 {
-    void                    *fd;
+    int                      fd;
     uint64_t                 key;
+    connections_t           *connections;
     ip_port_pair_mapping_t  *test;
 
     test = get_test_pair(&(clt_settings.transfer), ip, port);
@@ -29,30 +30,57 @@ address_find_sock(uint32_t ip, uint16_t port)
     }
 
     key = get_key(test->online_ip, test->online_port);
-    fd  = hash_find(addr_table, key);
+    connections = hash_find(addr_table, key);
 
-    if (fd == NULL) {
+    if (connections == NULL) {
         tc_log_info(LOG_WARN, 0, "it can't find address socket,%u:%u",
                     ntohl(ip), ntohs(port));
         return -1;
     }
-    return (int) (long) fd;
+
+    fd = connections->fds[connections->index];
+    connections->index = (connections->index + 1) % connections->num;
+
+    return fd;
 }
 
 static void
 address_add_sock(uint32_t ip, uint16_t port, int fd) 
 {
-    uint64_t key = get_key(ip, port);
-    hash_add(addr_table, key, (void *) (long) fd);
+    uint64_t        key;
+    connections_t  *connections;
+
+    key = get_key(ip, port);
+
+    connections = hash_find(addr_table, key);
+
+    if (connections == NULL) {
+        connections = (connections_t *)malloc(sizeof(connections_t));
+        if (connections == NULL) {
+            tc_log_info(LOG_ERR, errno, "can't malloc memory for conn");
+            return;
+        }
+        memset(connections, 0, sizeof(connections_t));
+        hash_add(addr_table, key, connections);
+    }
+
+    if (connections->num >= MAX_CONNECTION_NUM) {
+        return;
+    }
+
+    connections->fds[connections->num] = fd;
+    connections->num = connections->num + 1;
+
 }
 
 static void 
 address_release()
 {   
-    int          i, fd;
-    hash_node   *hn;
-    link_list   *list;
-    p_link_node  ln, tmp_ln;
+    int             i, j, fd;
+    hash_node      *hn;
+    link_list      *list;
+    p_link_node     ln, tmp_ln;
+    connections_t  *connections;
 
     if (addr_table == NULL) {
         return;
@@ -68,13 +96,17 @@ address_release()
             hn = (hash_node *) ln->data;
             if (hn->data != NULL) {
 
-                fd  = (int) (long) hn->data;
+                connections = (connections_t *) hn->data;
                 hn->data = NULL;
 
-                if (fd > 0) {
-                    tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
-                    close(fd);
+                for (j = 0; j < connections->num; j++) {
+                    fd = connections->fds[j];
+                    if (fd > 0) {
+                        tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+                        close(fd);
+                    }
                 }
+                free(connections);
             }
             ln = tmp_ln;
         }
@@ -190,9 +222,9 @@ tcp_copy_over(const int sig)
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
-    int                      i, fd;
+    int                      i, j, fd;
 #if (TCPCOPY_PCAP)
-    int                      j, filter_port_num = 0;
+    int                      k, filter_port_num = 0;
     char                    *pt;
     uint16_t                 filter_port[MAX_FILTER_PORTS];
 #endif
@@ -219,15 +251,20 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
         target_ip = clt_settings.real_servers.ips[i];
 
-        fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
-        if (fd == TC_INVALID_SOCKET) {
-            return TC_ERROR;
+        for (j = 0; j < clt_settings.par_connections; j++) {
+            fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+            if (fd == TC_INVALID_SOCKET) {
+                return TC_ERROR;
+            }
+            if (j == 0) {
+                clt_settings.real_servers.active_num++;
+                clt_settings.real_servers.active[i] = 1;
+            }
+            clt_settings.real_servers.connections.fds[j] = fd;
+            clt_settings.real_servers.connections.num++;
         }
-        clt_settings.real_servers.active_num++;
-        clt_settings.real_servers.active[i] = 1;
-        clt_settings.real_servers.fds[i] = fd;
 
-        tc_log_info(LOG_NOTICE, 0, "add a dr tunnel for exchanging info:%u:%u",
+        tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",
                 ntohl(target_ip), clt_settings.srv_port);
     }
 
@@ -242,26 +279,28 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         target_ip = pair->target_ip;
 
 #if (TCPCOPY_PCAP)
-        for (j = 0; j < MAX_FILTER_PORTS; j++) {
-            if (filter_port[j] == 0) {
-                filter_port[j] = pair->online_port;
+        for (k = 0; k < MAX_FILTER_PORTS; k++) {
+            if (filter_port[k] == 0) {
+                filter_port[k] = pair->online_port;
                 filter_port_num++;
                 break;
-            } else if (filter_port[j] == pair->online_port) {
+            } else if (filter_port[k] == pair->online_port) {
                 break;
             }
         }
 #endif
 
 #if (!TCPCOPY_DR)
-        fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
-        if (fd == TC_INVALID_SOCKET) {
-            return TC_ERROR;
-        }
+        for ( j = 0; j < clt_settings.par_connections; j++) {
+            fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+            if (fd == TC_INVALID_SOCKET) {
+                return TC_ERROR;
+            }
 
-        address_add_sock(pair->online_ip, pair->online_port, fd);
+            address_add_sock(pair->online_ip, pair->online_port, fd);
+        }
 #endif
-        tc_log_info(LOG_NOTICE, 0, "add a tunnel for exchanging info:%u:%u",
+        tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
                     ntohl(target_ip), clt_settings.srv_port);
     }
 

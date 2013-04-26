@@ -342,6 +342,7 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
     int            i, fd;
     bool           result = false;
     msg_client_t   msg;
+    connections_t  connections;
 
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
@@ -349,7 +350,10 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
             continue;
         }
 
-        fd = clt_settings.real_servers.fds[i];
+        connections = clt_settings.real_servers.connections[i];
+        fd = connections->fds[connections->index];
+        connections->index = (connections->index + 1) % connections->num;
+
         if (fd == -1) {
             tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
                     ntohl(local_ip), ntohs(local_port));
