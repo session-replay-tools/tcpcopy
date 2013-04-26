@@ -4,10 +4,10 @@
 #include <xcopy.h>
 
 typedef struct signal_s{
-    int  signo;
+    int   signo;
     char *signame;
-    int  flags;
-    void (*handler)(int signo);
+    int   flags;
+    void  (*handler)(int signo);
 }signal_t;
 
 int set_signal_handler(signal_t *signals);

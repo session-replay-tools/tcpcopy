@@ -19,12 +19,11 @@ sigignore(int sig)
 int
 set_signal_handler(signal_t *signals)
 {
-    signal_t *sig;
+    int              status;
+    signal_t        *sig;
+    struct sigaction sa;
 
     for (sig = signals; sig->signo != 0; sig++) {
-        int status;
-        struct sigaction sa;
-
         memset(&sa, 0, sizeof(sa));
         sa.sa_handler = sig->handler;
         sa.sa_flags = sig->flags;
@@ -32,8 +31,7 @@ set_signal_handler(signal_t *signals)
 
         status = sigaction(sig->signo, &sa, NULL);
         if (status < 0) {
-            tc_log_info(LOG_ERR, 0, "sigaction(%s) failed: %s", sig->signame,
-                      strerror(errno));
+            tc_log_info(LOG_ERR, errno, "sigaction(%s) failed", sig->signame);
             return -1;
         }
     }
