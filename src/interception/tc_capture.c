@@ -20,6 +20,8 @@ tc_msg_event_accept(tc_event_t *rev)
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
         return TC_ERROR;
     }
+    
+    tc_log_info(LOG_NOTICE, 0, "it adds fd:%d", fd);
 
     if (tc_socket_set_nodelay(fd) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
