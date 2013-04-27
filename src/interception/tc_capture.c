@@ -385,12 +385,19 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 void
 interception_over()
 {
+    int i;
 #if (INTERCEPT_COMBINED)
     release_combined_resouces();
 #endif
     router_destroy();
 
     if (srv_settings.targets.mappings != NULL) {
+        for (i = 0; i < srv_settings.targets.num; i++) {
+            if (srv_settings.targets.mappings[i] != NULL) {
+                free(srv_settings.targets.mappings[i]);
+                srv_settings.targets.mappings[i] = NULL;
+            }
+        }
         free(srv_settings.targets.mappings);
         srv_settings.targets.mappings = NULL;
     }
