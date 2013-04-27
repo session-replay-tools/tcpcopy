@@ -129,11 +129,7 @@ static int
 tc_process_resp_packet(tc_event_t *rev)
 {
     int                  i, recv_len, threshold, passed;
-#if (TCPCOPY_PCAP)
-    char                 recv_buf[PCAP_RECV_BUF_SIZE];
-#else
-    char                 recv_buf[RECV_BUF_SIZE];
-#endif
+    char                 recv_buf[RESP_RECV_BUF_SIZE];
     uint16_t             port, size_ip, size_tcp, tot_len;
     uint32_t             ip_addr;
     ip_port_pair_t      *pair;
@@ -151,13 +147,8 @@ tc_process_resp_packet(tc_event_t *rev)
 
     for ( ;; ) {
 
-#if (TCPCOPY_PCAP)
         recv_len = recvfrom(rev->fd, recv_buf, 
-                PCAP_RECV_BUF_SIZE, 0, NULL, NULL);
-#else
-        recv_len = recvfrom(rev->fd, recv_buf, 
-                RECV_BUF_SIZE, 0, NULL, NULL);
-#endif
+                RESP_RECV_BUF_SIZE, 0, NULL, NULL);
 
         if (recv_len == -1) {
             if (errno == EAGAIN) {
@@ -180,11 +171,9 @@ tc_process_resp_packet(tc_event_t *rev)
             return TC_OK;
         }
 
-        ip_header =(tc_ip_header_t *) (char *) (recv_buf + ETHERNET_HDR_LEN);
-        recv_len = recv_len - ETHERNET_HDR_LEN;
+        ip_header = (tc_ip_header_t *) (char *) (recv_buf + ETHERNET_HDR_LEN);
 #else
-        ip_header =(tc_ip_header_t *) (char *) (recv_buf);
-        recv_len = recv_len;
+        ip_header = (tc_ip_header_t *) (char *) (recv_buf);
 #endif
 
         if (ip_header->protocol != IPPROTO_TCP) {

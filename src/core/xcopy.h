@@ -89,6 +89,8 @@
 /* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 8192
+
+
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
@@ -266,6 +268,14 @@ struct ethernet_hdr {
     uint16_t ether_type;                 
 };
 #endif 
+
+/* receiving buffer size for response */
+#if (TCPCOPY_PCAP)
+#define RESP_RECV_BUF_SIZE (ETHERNET_HDR_LEN + RESP_MAX_USEFUL_SIZE)
+#else
+#define RESP_RECV_BUF_SIZE (RESP_MAX_USEFUL_SIZE)
+#endif
+
 
 #if (TCPCOPY_PCAP)
 typedef struct device_s{

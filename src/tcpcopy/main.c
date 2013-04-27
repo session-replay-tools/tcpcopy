@@ -100,7 +100,7 @@ usage(void)
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
-           "               The maximum value allowed is 16.\n");
+           "               The maximum value allowed is 16(default 3 connections since 0.8.0)\n");
 #if (TCPCOPY_DR)
     printf("-s <iplist,>   real server ip addresses behind lvs\n"
            "               Format:\n"
@@ -657,7 +657,7 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
-    clt_settings.par_connections = 1;
+    clt_settings.par_connections = 3;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
