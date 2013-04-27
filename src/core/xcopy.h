@@ -13,6 +13,7 @@
 #if (TCPCOPY_UDP)
 #include <netinet/udp.h>
 #endif
+#if (!INTERCEPT_ADVANCED)
 #if (!INTERCEPT_NFQUEUE)
 #include <linux/netlink.h>
 #include <linux/netfilter_ipv4.h>
@@ -20,6 +21,7 @@
 #else
 #include <linux/netfilter.h> 
 #include <libnetfilter_queue/libnetfilter_queue.h>
+#endif
 #endif
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -39,7 +41,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #include <pcap.h>
 #endif
 
@@ -90,14 +92,13 @@
 #define RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 8192
 
-
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
 /* default mtu for output raw socket */
 #define DEFAULT_MTU   1500
 #define DEFAULT_MSS   1460
-/* default listening port for intercept program */
+/* default listening port for intercept */
 #define SERVER_PORT   36524
 
 
@@ -199,20 +200,20 @@ typedef struct udphdr tc_udp_header_t;
 #define MAX_OPTION_LEN 20
 #define TCPOPT_WSCALE 3
 
-#if (INTERCEPT_THREAD)
-
-/* constants for intercept pool */
-#define POOL_SHIFT 24
-#define POOL_SIZE (1 << POOL_SHIFT) 
-#define POOL_MASK (POOL_SIZE - 1)
 #define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t) + MAX_OPTION_LEN)
 #if (TCPCOPY_MYSQL_ADVANCED) 
 #define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
 #else
 #define RESP_MAX_USEFUL_SIZE RESP_HEADER_SIZE
 #endif
-#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
 
+#if (INTERCEPT_THREAD)
+
+/* constants for intercept pool */
+#define POOL_SHIFT 24
+#define POOL_SIZE (1 << POOL_SHIFT) 
+#define POOL_MASK (POOL_SIZE - 1)
+#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
 #define NL_POOL_SIZE 65536
 #define NL_POOL_MASK (NL_POOL_SIZE - 1)
 

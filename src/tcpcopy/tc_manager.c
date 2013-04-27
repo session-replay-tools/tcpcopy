@@ -260,8 +260,8 @@ tcp_copy_init(tc_event_loop_t *event_loop)
                 clt_settings.real_servers.active_num++;
                 clt_settings.real_servers.active[i] = 1;
             }
-            clt_settings.real_servers.connections.fds[j] = fd;
-            clt_settings.real_servers.connections.num++;
+            clt_settings.real_servers.connections[i].fds[j] = fd;
+            clt_settings.real_servers.connections[i].num++;
         }
 
         tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",

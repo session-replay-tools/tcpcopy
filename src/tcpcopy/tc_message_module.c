@@ -54,7 +54,7 @@ tc_process_server_msg(tc_event_t *rev)
 {
 #if (TCPCOPY_DR)
     int            i, j;
-    connections_t *connetions;
+    connections_t *connections;
 #endif
 #if (!TCPCOPY_COMBINED)
     int            len;
@@ -80,7 +80,7 @@ tc_process_server_msg(tc_event_t *rev)
 
         for (i = 0; i < clt_settings.real_servers.num; i++) {
 
-            connetions = &(clt_settings.real_servers.connections[i]);
+            connections = &(clt_settings.real_servers.connections[i]);
             for (j = 0; j < connections->num; j++) {
                 if (connections->fds[j] == rev->fd) {
                     tc_socket_close(rev->fd);
@@ -98,6 +98,7 @@ tc_process_server_msg(tc_event_t *rev)
                     break;
                 }
             }
+        }
 
 
         if (clt_settings.real_servers.active_num == 0) {

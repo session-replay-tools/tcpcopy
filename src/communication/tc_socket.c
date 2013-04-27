@@ -1,7 +1,7 @@
  
 #include <xcopy.h>
 
-#if (TCPCOPY_PCAP || INTERCEPT_ADVANCED)
+#if (TCPCOPY_PCAP)
 int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
 {

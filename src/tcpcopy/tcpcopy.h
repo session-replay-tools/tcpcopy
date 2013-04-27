@@ -24,7 +24,7 @@ typedef struct real_ip_addr_s {
     int           active_num;
     short         active[MAX_REAL_SERVERS];
     uint32_t      ips[MAX_REAL_SERVERS];
-    connections_t connectins[MAX_REAL_SERVERS];
+    connections_t connections[MAX_REAL_SERVERS];
 } real_ip_addr_t;
 #endif
 
