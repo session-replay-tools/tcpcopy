@@ -1283,6 +1283,11 @@ check_session_obsolete(session_t *s, time_t cur, time_t threshold_time)
         return OBSOLETE;
     }
 
+    diff = cur - s->resp_last_recv_cont_time;
+    if (diff < 6) {
+        threshold = threshold << 1;
+    }
+
     diff = cur - s->req_last_send_cont_time;
     /* check if the session is idle for a long time */
     if (diff < 30) {
