@@ -323,7 +323,7 @@ set_details()
         retrieve_target_addresses(srv_settings.raw_targets,
                 &(srv_settings.targets));
     } else {
-        tc_log_info(LOG_WARN, 0, "no raw targets");
+        tc_log_info(LOG_WARN, 0, "no raw targets for advanced mode");
         return -1;
 
     }
@@ -343,28 +343,20 @@ set_details()
         }
     }
 
-#if (INTERCEPT_COMBINED)
-    if (tc_time_set_timer(1000) == TC_ERROR)
-#else
-    if (tc_time_set_timer(10) == TC_ERROR)
-#endif
-    {
-        tc_log_info(LOG_ERR, 0, "set timer error");
-        return -1;
-    }   
-
     return 0;
 }
 
 /* set default values for intercept */
-static void settings_init(void)
+static void
+settings_init(void)
 {
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.binded_ip = NULL;
 }
 
-static void output_for_debug()
+static void
+output_for_debug()
 {
     /* print out intercept version */
     tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
@@ -388,7 +380,21 @@ static void output_for_debug()
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_COMBINED mode");
 #endif
 
+}
 
+static int 
+set_timer()
+{
+#if (INTERCEPT_COMBINED)
+    if (tc_time_set_timer(10) == TC_ERROR)
+#else
+    if (tc_time_set_timer(1000) == TC_ERROR)
+#endif
+    {
+        tc_log_info(LOG_ERR, 0, "set timer error");
+        return -1;
+    } 
+    return 0;
 }
 
 
@@ -432,6 +438,10 @@ main(int argc, char **argv)
     if (interception_init(&s_event_loop, srv_settings.binded_ip,
                           srv_settings.port) == TC_ERROR)
     {
+        return -1;
+    }
+
+    if (set_timer() == -1) {
         return -1;
     }
 

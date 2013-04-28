@@ -635,15 +635,6 @@ set_details()
         }    
     }    
 
-#if (TCPCOPY_OFFLINE)
-    if (tc_time_set_timer(TIMER_INTERVAL) == TC_ERROR) {
-#else
-    if (tc_time_set_timer(10) == TC_ERROR) {
-#endif
-        tc_log_info(LOG_ERR, 0, "set timer error");
-        return -1;
-    }
-
     return 0;
 }
 
@@ -661,6 +652,21 @@ settings_init()
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
+}
+
+static int 
+set_timer()
+{
+#if (TCPCOPY_OFFLINE)
+    if (tc_time_set_timer(TIMER_INTERVAL) == TC_ERROR) {
+#else
+    if (tc_time_set_timer(10) == TC_ERROR) {
+#endif
+            tc_log_info(LOG_ERR, 0, "set timer error");
+            return -1;
+    }
+
+    return 0;
 }
 
 /*
@@ -708,6 +714,10 @@ main(int argc, char **argv)
     ret = tcp_copy_init(&event_loop);
     if (ret == TC_ERROR) {
         exit(EXIT_FAILURE);
+    }
+
+    if (set_timer() == -1) {
+        return -1;
     }
 
     /* run now */
