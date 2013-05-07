@@ -245,11 +245,6 @@ if test "x$enable_pcap" = "xyes";then
     LIBS="-lpcap"
 fi
 
-if test "x$enable_advanced" = "xyes";then
-    LIBS="-lpcap"
-fi
-
-
 
 if test "x$enable_thread" = "xyes";then
     # Search for library
