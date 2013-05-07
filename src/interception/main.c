@@ -386,9 +386,9 @@ static int
 set_timer()
 {
 #if (INTERCEPT_COMBINED)
-    if (tc_time_set_timer(10) == TC_ERROR)
+    if (tc_time_set_timer(COMBINED_TIMER_INTERVAL) == TC_ERROR)
 #else
-    if (tc_time_set_timer(1000) == TC_ERROR)
+    if (tc_time_set_timer(100) == TC_ERROR)
 #endif
     {
         tc_log_info(LOG_ERR, 0, "set timer error");
@@ -444,6 +444,12 @@ main(int argc, char **argv)
     if (set_timer() == -1) {
         return -1;
     }
+
+#if (INTERCEPT_COMBINED)
+    tc_event_timer_add(&s_event_loop, CHECK_INTERVAL, interception_push);
+#endif
+    tc_event_timer_add(&s_event_loop, OUTPUT_INTERVAL,
+            interception_output_stat);
 
     /* run now */
     tc_event_process_cycle(&s_event_loop);

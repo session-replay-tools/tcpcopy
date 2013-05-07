@@ -5,7 +5,6 @@
 #include <intercept.h>
 
 static pid_t           pid;
-static time_t          last_clean_time;
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
 static uint64_t        tot_router_items = 0; 
@@ -103,28 +102,26 @@ tc_msg_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
-static void
-tc_check_cleaning()
+void
+interception_output_stat(tc_event_timer_t *evt)
 {
-    int      diff;
-    time_t   now;
-
-    now  = tc_time();
-    diff = now - last_clean_time;
-    if (diff > CHECK_INTERVAL) {
-        tc_log_info(LOG_NOTICE, 0, 
-                "total resp packs:%llu, all:%llu, route:%llu",
-                tot_copy_resp_packs, tot_resp_packs, tot_router_items);
+    tc_log_info(LOG_NOTICE, 0, 
+            "total resp packs:%llu, all:%llu, route:%llu",
+            tot_copy_resp_packs, tot_resp_packs, tot_router_items);
 #if (!TCPCOPY_SINGLE)  
-        route_delete_obsolete(now);
+    route_delete_obsolete(tc_time());
 #endif
-#if (INTERCEPT_COMBINED)
-        send_buffered_packets(now);
-#endif
-        last_clean_time = now;
-    }
+    evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
 
+#if (INTERCEPT_COMBINED)
+void
+interception_push(tc_event_timer_t *evt)
+{
+    send_buffered_packets(tc_time());
+    evt->msec = tc_current_time_msec + CHECK_INTERVAL;
+}
+#endif
 
 
 #if (INTERCEPT_THREAD)
@@ -232,8 +229,6 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
 
             tot_copy_resp_packs++;
             router_update(srv_settings.router_fd, ip_hdr);
-
-            tc_check_cleaning();
 
             /* drop the packet */
             ret = nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
@@ -356,8 +351,6 @@ tc_nl_event_process(tc_event_t *rev)
 #else
             router_update(srv_settings.router_fd, ip_hdr);
 
-            tc_check_cleaning();
-
             /* drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
 #endif
@@ -401,8 +394,6 @@ interception_process_msg(void *tid)
         }
 
         router_update(srv_settings.router_fd, ip_hdr, len);
-
-        tc_check_cleaning();
 
     }
 

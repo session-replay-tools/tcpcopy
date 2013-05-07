@@ -112,7 +112,8 @@
 #define DEFAULT_TIMEOUT 120
 #endif
 
-#define CHECK_INTERVAL  15
+#define CHECK_INTERVAL  50
+#define OUTPUT_INTERVAL  5000
 #define DEFAULT_SESSION_TIMEOUT 60
 
 #define MAX_UNSEND_THRESHOLD 32768
@@ -304,6 +305,9 @@ typedef struct connections_s{
 
 #if (TCPCOPY_OFFLINE)
 #define TIMER_INTERVAL 1
+#endif
+#if (INTERCEPT_COMBINED)
+#define COMBINED_TIMER_INTERVAL 1
 #endif
 
 /* global functions */

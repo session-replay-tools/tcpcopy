@@ -4,7 +4,6 @@
 #endif
 #include <intercept.h>
 
-static time_t          last_clean_time;
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
 
@@ -79,26 +78,25 @@ tc_msg_event_process(tc_event_t *rev)
     return TC_OK;
 }
 
-static void
-tc_check_cleaning()
+void
+interception_output_stat(tc_event_timer_t *evt)
 {
-    int      diff;
-    time_t   now;
-
-    now  = tc_time();
-    diff = now - last_clean_time;
-    if (diff > CHECK_INTERVAL) {
-        tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
-                tot_copy_resp_packs, tot_resp_packs);
+    tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
+            tot_copy_resp_packs, tot_resp_packs);
 #if (!TCPCOPY_SINGLE)  
-        route_delete_obsolete(now);
+    route_delete_obsolete(tc_time());
 #endif
-#if (INTERCEPT_COMBINED)
-        send_buffered_packets(now);
-#endif
-        last_clean_time = now;
-    }
+    evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
+
+#if (INTERCEPT_COMBINED)
+void
+interception_push(tc_event_timer_t *evt)
+{
+    send_buffered_packets(tc_time());
+    evt->msec = tc_current_time_msec + CHECK_INTERVAL;
+}
+#endif
 
 #if (INTERCEPT_THREAD)
 static void *
@@ -116,8 +114,6 @@ interception_process_msg(void *tid)
         }
 
         router_update(srv_settings.router_fd, ip_hdr, len);
-
-        tc_check_cleaning();
 
     }
 
@@ -224,7 +220,6 @@ tc_process_resp_packet(tc_event_t *rev)
         put_resp_header_to_pool(ip_header);
 #else
         router_update(srv_settings.router_fd, ip_header);
-        tc_check_cleaning();
 #endif
 
     }

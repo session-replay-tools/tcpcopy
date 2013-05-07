@@ -1094,6 +1094,10 @@ send_reserved_packets(session_t *s)
 #endif
         } else if (tcp_header->rst) {
 
+            if (s->sm.resp_slow) {
+                break;
+            }
+
             if (s->sm.candidate_response_waiting) {
                 break;
             }
@@ -1101,6 +1105,10 @@ send_reserved_packets(session_t *s)
             omit_transfer = false;
             need_pause    = true;
         } else if (tcp_header->fin) {
+
+            if (s->sm.resp_slow) {
+                break;
+            }
 
             if (s->sm.candidate_response_waiting) {
                 break;
@@ -2055,6 +2063,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
 {
     bool slide_window_empty = false;
 
+    s->sm.resp_slow = 0;
     /* if ack from test server is more than what we expect */
     if (after(ack, s->vir_next_seq)) {
 #if (!TCPCOPY_PAPER)
@@ -2067,6 +2076,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
         s->vir_next_seq = ack;
     } else if (before(ack, s->vir_next_seq)) {
 
+        s->sm.resp_slow = 1;
         /* if ack from test server is less than what we expect */
         tc_log_debug3(LOG_DEBUG, 0, "bak_ack less than vir_next_seq:%u,%u,p:%u",
                 ack, s->vir_next_seq, s->src_h_port);

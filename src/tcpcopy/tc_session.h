@@ -20,6 +20,7 @@ void output_stat();
 typedef struct sess_state_machine_s{
     /* session status */
     uint32_t status:8;
+    uint32_t resp_slow:1;
     uint32_t recv_client_close:1;
     /* already retransmission flag */
     uint32_t vir_already_retransmit:1;
