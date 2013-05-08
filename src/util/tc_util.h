@@ -34,6 +34,9 @@ void set_wscale(tc_tcp_header_t *tcp_header);
 #if (TCPCOPY_UDP)
 void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet);
 #endif
+#if (TCPCOPY_PCAP)
+int retrieve_devices(char *raw_device, devices_t *devices);
+#endif
 
 #endif   /* ----- #ifndef TC_UTIL_INCLUDED  ----- */
 

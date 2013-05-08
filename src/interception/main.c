@@ -192,7 +192,9 @@ usage(void)
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
-    printf("-f <filter>    set the pcap filter for capturing response packets.\n");
+    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
+            "               name followed by a unit number,for example eth0 for the first\n"
+            "               Ethernet interface.\n");
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif
@@ -214,7 +216,7 @@ read_args(int argc, char **argv) {
          "b:" /* binded ip address */
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
-         "f:" /* filter for pcap */
+         "i:" /* <device,> */
 #endif
          "o:" /* target addresses */
 #endif
@@ -237,8 +239,8 @@ read_args(int argc, char **argv) {
                 break;
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
-            case 'f':
-                srv_settings.filter = optarg;
+            case 'i':
+                srv_settings.raw_device = optarg;
                 break;
 #endif
             case 'o':
@@ -306,6 +308,56 @@ read_args(int argc, char **argv) {
     return 0;
 }
 
+#if (TCPCOPY_PCAP)
+static int 
+extract_filter()
+{
+    int              i, j, filter_port_num = 0;
+    char            *pt;
+    uint16_t         filter_port[MAX_FILTER_PORTS];
+    ip_port_pair_t  *pair, **mappings;
+
+    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
+    mappings = srv_settings.targets.mappings;
+
+    for (i = 0; i < srv_settings.targets.num; i++) {
+
+        pair = mappings[i];
+
+        for (j = 0; j < MAX_FILTER_PORTS; j++) {
+            if (filter_port[j] == 0) {
+                filter_port[j] = pair->port;
+                filter_port_num++;
+                break;
+            } else if (filter_port[j] == pair->port) {
+                break;
+            }
+        }
+    }
+
+    if (filter_port_num == 0) {
+        tc_log_info(LOG_ERR, 0, "filter_port_num is zero");
+        return TC_ERROR;
+    }
+    pt = srv_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp src port ");
+#else
+    strcpy(pt, "tcp src port ");
+#endif
+    pt = pt + strlen(pt);
+    for (i = 0; i < filter_port_num -1; i++) {
+        sprintf(pt, "%d or ", ntohs(filter_port[i]));
+        pt = pt + strlen(pt);
+    }
+    sprintf(pt, "%d", ntohs(filter_port[i]));
+    tc_log_info(LOG_NOTICE, 0, "intercept filter = %s", srv_settings.filter);
+
+    return TC_OK;
+
+}
+#endif
+
 static int  
 set_details()
 {
@@ -326,6 +378,22 @@ set_details()
         tc_log_info(LOG_WARN, 0, "no raw targets for advanced mode");
         return -1;
 
+    }
+#endif
+
+#if (TCPCOPY_PCAP)
+    if (srv_settings.raw_device != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "device:%s", srv_settings.raw_device);
+        if (strcmp(srv_settings.raw_device, DEFAULT_DEVICE) == 0) {
+            srv_settings.raw_device = NULL; 
+        } else {
+            retrieve_devices(srv_settings.raw_device, &(srv_settings.devices));
+        }
+    }
+
+    if (extract_filter() != TC_OK) {
+        tc_log_info(LOG_ERR, 0, "failed to extract filter");
+        return -1;
     }
 #endif
 

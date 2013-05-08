@@ -248,3 +248,43 @@ void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet)
 }
 #endif
 
+#if (TCPCOPY_PCAP)
+int
+retrieve_devices(char *raw_device, devices_t *devices)
+{
+    int          count = 0;
+    size_t       len;
+    const char  *split, *p;
+
+    p = raw_device;
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            len = (size_t) (split - p);
+        } else {
+            len = strlen(p);
+        }
+
+        strncpy(devices->device[count].name, p, len);
+
+        if (count == MAX_DEVICE_NUM) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for devices");
+            break;
+        }
+
+        count++;
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+    }
+
+    devices->device_num = count;
+
+    return 1;
+}
+#endif
+

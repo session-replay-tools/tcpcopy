@@ -37,7 +37,7 @@ typedef struct xcopy_srv_settings {
 #if (TCPCOPY_PCAP)
     char                *raw_device;
     devices_t            devices;
-    char                *filter;
+    char                 filter[512];
 #endif
     char                *raw_targets;
     ip_port_pairs_t      targets;

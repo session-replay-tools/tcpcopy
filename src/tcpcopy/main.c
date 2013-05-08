@@ -137,7 +137,7 @@ read_args(int argc, char **argv)
          "I:" /* threshold interval time for acceleratation */
 #endif
 #if (TCPCOPY_PCAP)
-         "i:" /* <device,>*/
+         "i:" /* <device,> */
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql */
@@ -447,49 +447,6 @@ retrieve_target_addresses(char *raw_transfer,
     return 0;
 }
 
-#if (TCPCOPY_PCAP)
-/* retrieve devices */
-static int
-retrieve_devices()
-{
-    int          count = 0;
-    size_t       len;
-    devices_t   *devices;
-    const char  *split, *p;
-
-    p = clt_settings.raw_device;
-    devices = &(clt_settings.devices);
-
-    while (true) {
-        split = strchr(p, ',');
-        if (split != NULL) {
-            len = (size_t) (split - p);
-        } else {
-            len = strlen(p);
-        }
-
-        strncpy(devices->device[count].name, p, len);
-
-        if (count == MAX_DEVICE_NUM) {
-            tc_log_info(LOG_WARN, 0, "reach the limit for devices");
-            break;
-        }
-
-        count++;
-
-        if (split == NULL) {
-            break;
-        } else {
-            p = split + 1;
-        }
-    }
-
-    devices->device_num = count;
-
-    return 1;
-}
-#endif
-
 #if (TCPCOPY_DR)
 static int retrieve_real_servers() 
 {
@@ -593,7 +550,7 @@ set_details()
         if (strcmp(clt_settings.raw_device, DEFAULT_DEVICE) == 0) {
             clt_settings.raw_device = NULL; 
         } else {
-            retrieve_devices();
+            retrieve_devices(clt_settings.raw_device, &(clt_settings.devices));
         }
     }
 #endif
