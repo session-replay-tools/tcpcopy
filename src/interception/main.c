@@ -58,12 +58,37 @@ signal_handler(int sig)
     s_event_loop.event_over = 1;
 }
 
-static void
+static struct signal signals[] = {
+    { SIGALRM, "SIGALRM", 0,    tc_time_sig_alarm },
+    { SIGTERM, "SIGTERM", 0,    signal_handler },
+    { SIGINT,  "SIGINT",  0,    signal_handler },
+    { SIGPIPE, "SIGPIPE", 0,    SIG_IGN },
+    { 0,        NULL,     0,    NULL }
+};
+
+static int
 set_signal_handler()
 {
-    signal(SIGALRM, tc_time_sig_alarm);
-    signal(SIGTERM, signal_handler);
-    signal(SIGINT, signal_handler);
+    struct signal *sig;
+
+    for (sig = signals; sig->signo != 0; sig++) {
+        int status;
+        struct sigaction sa;
+
+        memset(&sa, 0, sizeof(sa));
+        sa.sa_handler = sig->handler;
+        sa.sa_flags = sig->flags;
+        sigemptyset(&sa.sa_mask);
+
+        status = sigaction(sig->signo, &sa, NULL);
+        if (status < 0) {
+            tc_log_info(LOG_ERR, 0, "sigaction(%s) failed: %s", sig->signame,
+                      strerror(errno));
+            return -1;
+        }
+    }
+
+    return 0;
 }
 
 /* retrieve ip addresses */
@@ -222,12 +247,6 @@ read_args(int argc, char **argv) {
 static int  
 set_details()
 {
-    /* ignore SIGPIPE signals */
-    if (sigignore(SIGPIPE) == -1) {
-        tc_log_info(LOG_ERR, errno, "failed to ignore SIGPIPE");
-        return -1;
-    }
-
     /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "-x parameter:%s", 
@@ -244,7 +263,7 @@ set_details()
             tc_log_info(LOG_ERR, errno, "failed to ignore SIGHUP");
         }
         if (daemonize() == -1) {
-            fprintf(stderr, "failed to daemon() in order to daemonize\n");
+            fprintf(stderr, "failed to daemonize() in order to daemonize\n");
             return -1;
         }
     }
@@ -263,8 +282,6 @@ static void settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.binded_ip = NULL;
-
-    set_signal_handler();
 }
 
 static void output_for_debug()
@@ -297,6 +314,10 @@ main(int argc, char **argv)
     int ret;
 
     settings_init();
+
+    if (set_signal_handler() == -1) {
+        return -1;
+    }
 
     tc_time_init();
 

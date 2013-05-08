@@ -271,5 +271,12 @@ inline int before(uint32_t seq1, uint32_t seq2);
 #include <tc_socket.h>
 
 
+struct signal {
+    int  signo;
+    char *signame;
+    int  flags;
+    void (*handler)(int signo);
+};
+
 #endif /* XCOPY_H_INCLUDED */
 
