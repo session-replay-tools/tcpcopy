@@ -34,7 +34,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         if (aggr == NULL) {
             tc_log_info(LOG_ERR, errno, "can't malloc memory");
         } else {
-            tc_log_info(LOG_ERR, 0, "malloc memory for fd:%d", fd);
+            tc_log_info(LOG_INFO, 0, "malloc memory for fd:%d", fd);
             memset(aggr, 0, sizeof(aggregation_t));
             aggr->cur_write = aggr->aggr_resp;
             combined[fd] = aggr;
