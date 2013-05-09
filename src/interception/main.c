@@ -308,6 +308,7 @@ read_args(int argc, char **argv) {
     return 0;
 }
 
+#if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
 static int 
 extract_filter()
@@ -357,6 +358,7 @@ extract_filter()
 
 }
 #endif
+#endif
 
 static int  
 set_details()
@@ -379,7 +381,6 @@ set_details()
         return -1;
 
     }
-#endif
 
 #if (TCPCOPY_PCAP)
     if (srv_settings.raw_device != NULL) {
@@ -395,6 +396,8 @@ set_details()
         tc_log_info(LOG_ERR, 0, "failed to extract filter");
         return -1;
     }
+#endif
+
 #endif
 
     if (srv_settings.timeout == 0) {
