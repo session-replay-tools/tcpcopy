@@ -475,7 +475,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
             if (errno == EAGAIN || errno == EINTR) {
                 continue;
             } else {
-                tc_log_info(LOG_ERR, errno, "return -1,fd:%d", fd);
+                tc_log_info(LOG_NOTICE, errno, "return -1,fd:%d", fd);
                 return TC_ERROR;
             }
         }
@@ -513,7 +513,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
             if (errno == EAGAIN || errno == EINTR) {
                 continue;
             } else {
-                tc_log_info(LOG_ERR, errno, "return -1,fd:%d", fd);
+                tc_log_info(LOG_NOTICE, errno, "return -1,fd:%d", fd);
                 return TC_ERROR;
             }
         }

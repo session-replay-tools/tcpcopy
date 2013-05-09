@@ -20,6 +20,7 @@ xcopy_clt_settings clt_settings;
 int tc_raw_socket_out;
 tc_event_loop_t event_loop;
 
+#if (TCPCOPY_SIGACTION)
 static signal_t signals[] = {
     { SIGALRM, "SIGALRM", 0,    tc_time_sig_alarm },
     { SIGINT,  "SIGINT",  0,    tcp_copy_over },
@@ -28,6 +29,7 @@ static signal_t signals[] = {
     { SIGTERM, "SIGTERM", 0,    tcp_copy_over },
     { 0,        NULL,     0,    NULL }
 };
+#endif
 
 static void
 usage(void)
@@ -609,6 +611,7 @@ settings_init()
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
+
 }
 
 static int 
@@ -636,9 +639,17 @@ main(int argc, char **argv)
 
     settings_init();
 
+#if (TCPCOPY_SIGACTION)
     if (set_signal_handler(signals) == -1) {
         return -1;
     }
+#else
+    signal(SIGALRM, tc_time_sig_alarm);
+    signal(SIGINT,  tcp_copy_over);
+    signal(SIGPIPE, tcp_copy_over);
+    signal(SIGHUP,  tcp_copy_over);
+    signal(SIGTERM, tcp_copy_over);
+#endif
 
     tc_time_init();
 
