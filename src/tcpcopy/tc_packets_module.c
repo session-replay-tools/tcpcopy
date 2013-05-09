@@ -118,8 +118,13 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 #else
     /* init the raw socket to recv packets */
+#if (TCPCOPY_CAPTURE_FROM_LINK)
+    if ((fd = tc_raw_socket_in_init(COPY_FROM_LINK_LAYER)) 
+            == TC_INVALID_SOCKET) 
+#else
     if ((fd = tc_raw_socket_in_init(COPY_FROM_IP_LAYER)) 
             == TC_INVALID_SOCKET) 
+#endif
     {
         return TC_ERROR;
     }
@@ -138,7 +143,6 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
     return TC_OK;
 }
-
 
 
 #if (TCPCOPY_PCAP)
