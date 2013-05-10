@@ -95,6 +95,9 @@
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
 
+#define TCPCOPY_PCAP_BUF_SIZE 16777216
+#define INTERCEPT_PCAP_BUF_SIZE 4194304
+
 /* default mtu for output raw socket */
 #define DEFAULT_MTU   1500
 #define DEFAULT_MSS   1460

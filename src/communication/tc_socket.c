@@ -3,7 +3,8 @@
 
 #if (TCPCOPY_PCAP)
 int
-tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
+tc_pcap_socket_in_init(pcap_t **pd, char *device, 
+        int snap_len, int buf_size, char *pcap_filter)
 {
     int         fd;
     char        ebuf[PCAP_ERRBUF_SIZE]; 
@@ -17,7 +18,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device, char *pcap_filter)
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 
     *ebuf = '\0';
-    *pd = pcap_open_live(device, PCAP_RECV_BUF_SIZE, 0, 1000, ebuf);
+    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
     if (*pd == NULL) {
         tc_log_info(LOG_ERR, 0, "pcap error:%s", ebuf);
         return TC_INVALID_SOCKET;

@@ -236,10 +236,11 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
     tc_event_t *ev;
 
     fd = tc_pcap_socket_in_init(&(device->pcap), device->name,
-            srv_settings.filter);
+            RESP_RECV_BUF_SIZE, INTERCEPT_PCAP_BUF_SIZE, srv_settings.filter);
     if (fd == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
+
     ev = tc_event_create(fd, tc_process_resp_packet, NULL);
     if (ev == NULL) {
         return TC_ERROR;
