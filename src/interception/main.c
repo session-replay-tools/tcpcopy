@@ -413,9 +413,12 @@ set_details()
         retrieve_target_addresses(srv_settings.raw_targets,
                 &(srv_settings.targets));
     } else {
+#if (!TCPCOPY_PCAP)
         tc_log_info(LOG_WARN, 0, "no raw targets for advanced mode");
         return -1;
-
+#else
+        tc_log_info(LOG_NOTICE, 0, "no raw targets for advanced mode");
+#endif
     }
 
 #if (TCPCOPY_PCAP)
@@ -429,8 +432,8 @@ set_details()
     }
 
     if (srv_settings.user_filter != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "user filter:%s", srv_settings.user_filter);
         len = strlen(srv_settings.user_filter);
-
         if (len >= MAX_FILTER_LENGH) {
             tc_log_info(LOG_ERR, 0, "user filter is too long");
             return -1;

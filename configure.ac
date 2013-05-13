@@ -56,6 +56,7 @@ AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
               [case "${enableval}" in
                yes) advanced=true 
                AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
+               AC_DEFINE(TCPCOPY_ADVANCED, 1, [Define if --enable-advanced]) ;;
                no)  advanced=false ;;
                *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
            esac],[advanced=false])
