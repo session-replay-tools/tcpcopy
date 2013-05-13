@@ -45,22 +45,48 @@ if test "x$enable_offline" = "xyes";then
 
 fi
 
-AC_MSG_CHECKING([for the kernel version])
-major=`uname -r | cut -d. -f1`;
-minor=`uname -r | cut -d. -f2`;
+AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run the tcpcopy at pcap mode]),,pcap=no)
+if test "x$enable_pcap" = "xyes";then
+    AC_CHECK_FUNCS(pcap_create, [], 
+                   [AC_MSG_ERROR([pcap_create not found. It needs libpcap 1.0.0 or above])])
+    if test $ac_cv_func_pcap_create = "yes" ; then 
+        AC_CHECK_FUNCS(pcap_set_buffer_size, [],
+                       [AC_MSG_ERROR([pcap_set_buffer_size not found])])
+    fi
+	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
+	AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+fi
 
-if test $major -gt 3; then
-    enable_nfqueue=yes
-    echo "enable nfqueue"
-elif test $major -eq 3; then
-    if test $minor -ge 5; then
+AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
+              [case "${enableval}" in
+               yes) advanced=true 
+               AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
+               no)  advanced=false ;;
+               *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
+           esac],[advanced=false])
+
+
+if test "x$advanced" = "xfalse";then
+    AC_MSG_CHECKING([for the kernel version])
+    major=`uname -r | cut -d. -f1`;
+    minor=`uname -r | cut -d. -f2`;
+
+    if test $major -gt 3; then
         enable_nfqueue=yes
         echo "enable nfqueue"
+    elif test $major -eq 3; then
+        if test $minor -ge 5; then
+            enable_nfqueue=yes
+            echo "enable nfqueue"
+        else
+            echo "ip_queue could be supported"
+        fi
     else
         echo "ip_queue could be supported"
     fi
 else
-    echo "ip_queue could be supported"
+    echo "no need to check nfqueue or ip_queue"
 fi
 
 AC_ARG_ENABLE(nfqueue, AS_HELP_STRING([--enable-nfqueue],[run tcpcopy at nfqueue mode (ip queue will be used by default and this option is only valid if the linux kernel version is less than 3.5, otherwise nfqueue will be used by default and ip queue is no longer supported by the linux kernel)]),,nfqueue=no)
@@ -165,14 +191,6 @@ if test "x$enable_nfqueue" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run the tcpcopy client (i.e. tcpcopy) at pcap mode]),,pcap=no)
-if test "x$enable_pcap" = "xyes";then
-	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
-	AC_CHECK_HEADERS([pcap.h], [], 
-                     [AC_MSG_ERROR([pcap.h not found.])], [])
-
-fi
-
 AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run the tcpcopy server (i.e. intercept) at multi-threading mode (valid only when using ip queue)]),,thread=no)
 if test "x$enable_thread" = "xyes";then
     AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
@@ -198,14 +216,6 @@ AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode 
 if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
-
-AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
-              [case "${enableval}" in
-               yes) advanced=true 
-               AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
-               no)  advanced=false ;;
-               *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;
-           esac],[advanced=false])
 
 AC_ARG_ENABLE(udp,[--enable-udp    Turn on udpcopy],
                [case "${enableval}" in
