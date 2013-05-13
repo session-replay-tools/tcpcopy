@@ -91,6 +91,7 @@
 /* raw socket receiving buffer size */
 #define RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 8192
+#define MAX_FILTER_LENGH 4096 
 
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
@@ -133,7 +134,9 @@
 #define COMB_LENGTH (COMB_MAX_NUM * MSG_SERVER_SIZE)
 #endif
 
+#define MAX_FILTER_ITEMS 32
 #define MAX_FILTER_PORTS 32
+#define MAX_FILTER_IPS 32
 #define MAX_DEVICE_NUM 32
 #define MAX_DEVICE_NAME_LEN 32
 

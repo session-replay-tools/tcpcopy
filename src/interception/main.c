@@ -193,8 +193,9 @@ usage(void)
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
     printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
-            "               name followed by a unit number,for example eth0 for the first\n"
-            "               Ethernet interface.\n");
+            "              name followed by a unit number,for example eth0 for the first\n"
+            "              Ethernet interface.\n");
+    printf("-f <filter>    user filter\n");
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif
@@ -217,6 +218,7 @@ read_args(int argc, char **argv) {
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
+         "f:" /* <filter> */
 #endif
          "o:" /* target addresses */
 #endif
@@ -241,6 +243,9 @@ read_args(int argc, char **argv) {
 #if (TCPCOPY_PCAP)
             case 'i':
                 srv_settings.raw_device = optarg;
+                break;
+            case 'f':
+                srv_settings.user_filter = optarg;
                 break;
 #endif
             case 'o':
@@ -313,45 +318,72 @@ read_args(int argc, char **argv) {
 static int 
 extract_filter()
 {
-    int              i, j, filter_port_num = 0;
+    int              i, cnt = 0, filter_port_num = 0, filter_ip_num = 0;
     char            *pt;
-    uint16_t         filter_port[MAX_FILTER_PORTS];
+    uint32_t         filter_ip[MAX_FILTER_IPS];
+    struct in_addr   net_address;
     ip_port_pair_t  *pair, **mappings;
 
-    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
+    memset((void *) filter_ip, 0, MAX_FILTER_IPS << 2);
     mappings = srv_settings.targets.mappings;
 
+    pt = srv_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp and (");
+#else
+    strcpy(pt, "tcp and (");
+#endif
+    pt = pt + strlen(pt);
+ 
     for (i = 0; i < srv_settings.targets.num; i++) {
 
         pair = mappings[i];
 
-        for (j = 0; j < MAX_FILTER_PORTS; j++) {
-            if (filter_port[j] == 0) {
-                filter_port[j] = pair->port;
-                filter_port_num++;
-                break;
-            } else if (filter_port[j] == pair->port) {
-                break;
-            }
+        if (pair->port == 0 && pair->ip == 0) {
+            continue;
         }
+
+        if (cnt >= MAX_FILTER_ITEMS) {
+            break;
+        }
+
+        cnt++; 
+
+        if (i == 0) {
+            strcpy(pt, "(");
+        } else {
+            strcpy(pt, " or (");
+        }
+        pt = pt + strlen(pt);
+
+        if (pair->port > 0) {
+            sprintf(pt, "src port %d", ntohs(pair->port));
+            pt = pt + strlen(pt);
+            filter_port_num++;
+        }
+ 
+        if (pair->ip > 0) {
+            net_address.s_addr = pair->ip;
+            if (pair->port == 0) {
+                sprintf(pt, "src host %s", inet_ntoa(net_address));
+            } else {
+                sprintf(pt, " and src host %s", inet_ntoa(net_address));
+            }
+            pt = pt + strlen(pt);
+            filter_ip_num++;
+        }       
+
+        strcpy(pt, ")");
+        pt = pt + strlen(pt);
+
     }
 
-    if (filter_port_num == 0) {
-        tc_log_info(LOG_ERR, 0, "filter_port_num is zero");
-        return TC_ERROR;
+    strcpy(pt, ")");
+
+    if (filter_port_num == 0 && filter_ip_num == 0) {
+        tc_log_info(LOG_WARN, 0, "filter is not set");
     }
-    pt = srv_settings.filter;
-#if (TCPCOPY_UDP)
-    strcpy(pt, "udp src port ");
-#else
-    strcpy(pt, "tcp src port ");
-#endif
-    pt = pt + strlen(pt);
-    for (i = 0; i < filter_port_num -1; i++) {
-        sprintf(pt, "%d or ", ntohs(filter_port[i]));
-        pt = pt + strlen(pt);
-    }
-    sprintf(pt, "%d", ntohs(filter_port[i]));
+
     tc_log_info(LOG_NOTICE, 0, "intercept filter = %s", srv_settings.filter);
 
     return TC_OK;
@@ -363,6 +395,10 @@ extract_filter()
 static int  
 set_details()
 {
+#if (TCPCOPY_PCAP)
+    int  len;
+#endif
+
     /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "-x parameter:%s", 
@@ -392,9 +428,19 @@ set_details()
         }
     }
 
-    if (extract_filter() != TC_OK) {
-        tc_log_info(LOG_ERR, 0, "failed to extract filter");
-        return -1;
+    if (srv_settings.user_filter != NULL) {
+        len = strlen(srv_settings.user_filter);
+
+        if (len >= MAX_FILTER_LENGH) {
+            tc_log_info(LOG_ERR, 0, "user filter is too long");
+            return -1;
+        }
+        memcpy(srv_settings.filter, srv_settings.user_filter, len);
+    } else {
+        if (extract_filter() != TC_OK) {
+            tc_log_info(LOG_ERR, 0, "failed to extract filter");
+            return -1;
+        }
     }
 #endif
 

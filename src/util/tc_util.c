@@ -286,5 +286,74 @@ retrieve_devices(char *raw_device, devices_t *devices)
 
     return 1;
 }
+
+int
+get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
+{
+    struct ethernet_hdr *eth_hdr;
+
+    switch (datalink) {
+        case DLT_RAW:
+            return 0;
+            break;
+        case DLT_EN10MB:
+            eth_hdr = (struct ethernet_hdr *) packet;
+            switch (ntohs(eth_hdr->ether_type)) {
+                case ETHERTYPE_VLAN:
+                    return 18;
+                    break;
+                default:
+                    return 14;
+                    break;
+            }
+            break;
+        case DLT_C_HDLC:
+            return CISCO_HDLC_LEN;
+            break;
+        case DLT_LINUX_SLL:
+            return SLL_HDR_LEN;
+            break;
+        default:
+            tc_log_info(LOG_ERR, 0, "unsupported DLT type: %s (0x%x)", 
+                    pcap_datalink_val_to_description(datalink), datalink);
+            break;
+    }
+
+    return -1;
+}
+
+#ifdef FORCE_ALIGN
+static unsigned char pcap_ip_buf[65536];
+#endif
+
+unsigned char *
+get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len, 
+        int *p_l2_len)
+{
+    int      l2_len;
+    u_char  *ptr;
+
+    l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
+    *p_l2_len = l2_len;
+
+    if (pkt_len <= l2_len) {
+        return NULL;
+    }
+#ifdef FORCE_ALIGN
+    if (l2_len % 4 == 0) {
+        ptr = (&(packet)[l2_len]);
+    } else {
+        ptr = pcap_ip_buf;
+        memcpy(ptr, (&(packet)[l2_len]), pkt_len - l2_len);
+    }
+#else
+    ptr = (&(packet)[l2_len]);
+#endif
+
+    return ptr;
+
+}
+
+
 #endif
 

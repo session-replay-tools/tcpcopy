@@ -6,7 +6,7 @@ int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, 
         int snap_len, int buf_size, char *pcap_filter)
 {
-    int         fd;
+    int         fd, status;
     char        ebuf[PCAP_ERRBUF_SIZE]; 
     struct      bpf_program fp;
     bpf_u_int32 net, netmask;      
@@ -18,13 +18,50 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 
     *ebuf = '\0';
-    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
+    *pd = pcap_create(device, ebuf);
     if (*pd == NULL) {
-        tc_log_info(LOG_ERR, 0, "pcap error:%s", ebuf);
+        tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
         return TC_INVALID_SOCKET;
-    } else if (*ebuf) {
-        tc_log_info(LOG_WARN, 0, "pcap warn:%s", ebuf);
     }
+
+    status = pcap_set_snaplen(*pd, snap_len);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_snaplen error:%s",
+                pcap_statustostr(status));
+        return TC_INVALID_SOCKET;
+    }
+    
+    status = pcap_set_promisc(*pd, 0);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
+                pcap_statustostr(status));
+        return TC_INVALID_SOCKET;
+    }
+    
+    status = pcap_set_timeout(*pd, 1000);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
+                pcap_statustostr(status));
+        return TC_INVALID_SOCKET;
+    }
+    
+    status = pcap_set_buffer_size(*pd, buf_size);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_buffer_size error:%s",
+                pcap_statustostr(status));
+        return TC_INVALID_SOCKET;
+    }
+ 
+    status = pcap_activate(*pd);
+    if (status < 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",
+                pcap_statustostr(status));
+        return TC_INVALID_SOCKET;
+    } else if (status > 0) {
+        tc_log_info(LOG_WARN, 0, "pcap activate warn:%s", 
+                pcap_statustostr(status));
+    }
+
 
     if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
         net = 0;

@@ -6,6 +6,9 @@
 
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
+#if (TCPCOPY_PCAP)
+static  pcap_t        *pcap_map[MAX_FD_NUM];
+#endif
 
 static int tc_msg_event_process(tc_event_t *rev);
 
@@ -121,109 +124,123 @@ interception_process_msg(void *tid)
 }
 #endif
 
-static int
-tc_process_resp_packet(tc_event_t *rev)
+static int resp_dispose(tc_ip_header_t *ip_header)
 {
-    int                  i, recv_len, threshold, passed;
-    char                 recv_buf[RESP_RECV_BUF_SIZE];
+    int                  i, passed;
     uint16_t             port, size_ip, size_tcp, tot_len;
     uint32_t             ip_addr;
     ip_port_pair_t      *pair;
-    tc_ip_header_t      *ip_header;
     tc_tcp_header_t     *tcp_header;
-#if (TCPCOPY_PCAP)
-    struct ethernet_hdr *ether;
-#endif
 
-#if (TCPCOPY_PCAP)
-    threshold = ETHERNET_HDR_LEN;
-#else
-    threshold = 40;
-#endif
-
-    for ( ;; ) {
-
-        recv_len = recvfrom(rev->fd, recv_buf, 
-                RESP_RECV_BUF_SIZE, 0, NULL, NULL);
-
-        if (recv_len == -1) {
-            if (errno == EAGAIN) {
-                return TC_OK;
-            }
-
-            tc_log_info(LOG_ERR, errno, "recvfrom");
-            return TC_ERROR;
-        }
-
-
-        if (recv_len == 0 ||recv_len < threshold) {
-            tc_log_info(LOG_ERR, 0, "recv len is 0 or less than threshold");
-            return TC_ERROR;
-        }
-
-#if (TCPCOPY_PCAP)
-        ether = (struct ethernet_hdr *) recv_buf;
-        if (ntohs(ether->ether_type) != ETH_P_IP) {
-            return TC_OK;
-        }
-
-        ip_header = (tc_ip_header_t *) (char *) (recv_buf + ETHERNET_HDR_LEN);
-#else
-        ip_header = (tc_ip_header_t *) (char *) (recv_buf);
-#endif
-
-        if (ip_header->protocol != IPPROTO_TCP) {
-            return TC_OK;
-        }
-
-        tot_resp_packs++;
-
-        size_ip   = ip_header->ihl << 2;
-        if (size_ip < 20) {
-            tc_log_info(LOG_WARN, 0, "Invalid IP header length: %d", size_ip);
-            return TC_OK;
-        }
-
-        tot_len   = ntohs(ip_header->tot_len);
-
-        tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
-        size_tcp   = tcp_header->doff << 2;
-        if (size_tcp < 20) {
-            tc_log_info(LOG_WARN, 0, "Invalid TCP header len: %d bytes,pack len:%d",
-                    size_tcp, tot_len);
-            return TC_OK;
-        }
-
-        /* filter the packets we do care about */
-        ip_addr = ip_header->saddr;
-        port    = tcp_header->source;
-
-        passed = 0;
-        for (i = 0; i < srv_settings.targets.num; i++) {
-            pair = srv_settings.targets.mappings[i];
-            if (ip_addr == pair->ip && port == pair->port) {
-                passed = 1;
-                break;
-            } else if (0 == pair->ip && port == pair->port) {
-                passed = 1;
-                break;
-            }
-        }
-
-        if (passed == 0) {
-            return TC_OK;
-        }
-
-        tot_copy_resp_packs++;
-
-#if (INTERCEPT_THREAD)
-        put_resp_header_to_pool(ip_header);
-#else
-        router_update(srv_settings.router_fd, ip_header);
-#endif
-
+    if (ip_header->protocol != IPPROTO_TCP) {
+        return TC_OK;
     }
 
+    tot_resp_packs++;
+
+    size_ip   = ip_header->ihl << 2;
+    if (size_ip < 20) {
+        tc_log_info(LOG_WARN, 0, "Invalid IP header length: %d", size_ip);
+        return TC_OK;
+    }
+
+    tot_len   = ntohs(ip_header->tot_len);
+
+    tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
+    size_tcp   = tcp_header->doff << 2;
+    if (size_tcp < 20) {
+        tc_log_info(LOG_WARN, 0, "Invalid TCP header len: %d bytes,pack len:%d",
+                size_tcp, tot_len);
+        return TC_OK;
+    }
+
+    /* filter the packets we do care about */
+    ip_addr = ip_header->saddr;
+    port    = tcp_header->source;
+
+    passed = 0;
+    for (i = 0; i < srv_settings.targets.num; i++) {
+        pair = srv_settings.targets.mappings[i];
+        if (ip_addr == pair->ip && port == pair->port) {
+            passed = 1;
+            break;
+        } else if (0 == pair->ip && port == pair->port) {
+            passed = 1;
+            break;
+        }
+    }
+
+    if (passed == 0) {
+        return TC_OK;
+    }
+
+    tot_copy_resp_packs++;
+
+#if (INTERCEPT_THREAD)
+    put_resp_header_to_pool(ip_header);
+#else
+    router_update(srv_settings.router_fd, ip_header);
+#endif
+    return TC_OK;
+
+}
+
+#if (TCPCOPY_PCAP)
+static void 
+pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
+        unsigned char *packet)
+{
+    pcap_t        *pcap;
+    unsigned char *ip_data; 
+    int            l2_len, ip_pack_len;
+    
+    if (pkt_hdr->len < ETHERNET_HDR_LEN) {
+        tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
+        return;
+    }
+    pcap = (pcap_t *)args;
+    ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+    ip_pack_len = pkt_hdr->len - l2_len;
+    resp_dispose((tc_ip_header_t *) ip_data);
+}
+#endif
+
+static int
+tc_process_resp_packet(tc_event_t *rev)
+{
+#if (TCPCOPY_PCAP)
+    pcap_t              *pcap;
+#else
+    int                  recv_len;
+    char                 recv_buf[RESP_RECV_BUF_SIZE];
+    tc_ip_header_t      *ip_header;
+#endif
+
+#if (TCPCOPY_PCAP)
+    pcap = pcap_map[rev->fd];
+    pcap_dispatch(pcap, 1,(pcap_handler) pcap_packet_callback, (u_char *) pcap);
+#else
+    recv_len = recvfrom(rev->fd, recv_buf, 
+            RESP_RECV_BUF_SIZE, 0, NULL, NULL);
+    if (recv_len == -1) {
+        if (errno == EAGAIN) {
+            return TC_OK;
+        }
+
+        tc_log_info(LOG_ERR, errno, "recvfrom");
+        return TC_ERROR;
+    }
+
+
+    if (recv_len < 40) {
+        tc_log_info(LOG_ERR, 0, "recv len is less than 40:%d", recv_len);
+        return TC_ERROR;
+    }
+
+    ip_header = (tc_ip_header_t *) (char *) (recv_buf);
+    resp_dispose(ip_header);
+
+#endif
     return TC_OK;
 }
 
@@ -240,6 +257,8 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
     if (fd == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
+
+    pcap_map[fd] = device->pcap;
 
     ev = tc_event_create(fd, tc_process_resp_packet, NULL);
     if (ev == NULL) {
@@ -299,7 +318,8 @@ sniff_init(tc_event_loop_t *event_loop)
         if (tc_device_set(event_loop, &(devices->device[i]))
                 == TC_ERROR) 
         {
-            tc_log_info(LOG_WARN, 0, "device could not work:%s", d->name);
+            tc_log_info(LOG_WARN, 0, "device could not work:%s", 
+                    devices->device[i].name);
         } else {
             work = true;
         }
@@ -366,7 +386,9 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
     }
 
     
-    sniff_init(event_loop);
+    if (sniff_init(event_loop) != TC_OK) {
+        return TC_ERROR;
+    }
 
 #if (INTERCEPT_THREAD)
     tc_pool_init();

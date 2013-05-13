@@ -10,6 +10,10 @@ static struct timeval first_pack_time, last_v_pack_time,
 #endif
 
 #if (TCPCOPY_PCAP)
+static  pcap_t       *pcap_map[MAX_FD_NUM];
+#endif
+
+#if (TCPCOPY_PCAP)
 static int tc_process_pcap_socket_packet(tc_event_t *rev);
 #else
 static int tc_process_raw_socket_packet(tc_event_t *rev);
@@ -24,9 +28,6 @@ static uint64_t timeval_diff(struct timeval *start, struct timeval *cur);
 static bool check_read_stop();
 static int get_l2_len(const unsigned char *packet, const int pkt_len,
         const int datalink);
-static unsigned char * get_ip_data(unsigned char *packet, const int pkt_len,
-        int *p_l2_len);
-static void send_packets_from_pcap(int first);
 #endif
 
 
@@ -42,6 +43,8 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
     if (fd == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
+
+    pcap_map[fd] = device->pcap;
 
     ev = tc_event_create(fd, tc_process_pcap_socket_packet, NULL);
     if (ev == NULL) {
@@ -147,43 +150,40 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 
 #if (TCPCOPY_PCAP)
+
+static void
+pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
+        unsigned char *packet)
+{
+    int                  l2_len, ip_pack_len;
+    pcap_t              *pcap;
+    unsigned char       *ip_data; 
+    struct ethernet_hdr *ether;
+
+    if (pkt_hdr->len < ETHERNET_HDR_LEN) {
+        tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
+        return;
+    }
+
+    ether = (struct ethernet_hdr *) packet;
+    if (ntohs(ether->ether_type) != ETH_P_IP) {
+        return;
+    }
+
+    pcap = (pcap_t *)args;
+    ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+    ip_pack_len = pkt_hdr->len - l2_len;
+
+    dispose_packet((char *) ip_data, ip_pack_len, NULL);
+}
+
 static int
 tc_process_pcap_socket_packet(tc_event_t *rev)
 {
-    int  recv_len;
-    char recv_buf[PCAP_RECV_BUF_SIZE], *ip_header;
-    struct ethernet_hdr *ether;
+    pcap_t *pcap;
 
-    for ( ;; ) {
-
-        recv_len = recvfrom(rev->fd, recv_buf, PCAP_RECV_BUF_SIZE, 0, NULL, NULL);
-
-        if (recv_len == -1) {
-            if (errno == EAGAIN) {
-                return TC_OK;
-            }
-
-            tc_log_info(LOG_ERR, errno, "recvfrom");
-            return TC_ERROR;
-        }
-
-        if (recv_len == 0 ||recv_len < ETHERNET_HDR_LEN) {
-            tc_log_info(LOG_ERR, 0, "recv len is 0 or less than 16");
-            return TC_ERROR;
-        }
-
-        ether = (struct ethernet_hdr *) recv_buf;
-        if (ntohs(ether->ether_type) != ETH_P_IP) {
-            return TC_OK;
-        }
-
-        ip_header = recv_buf + ETHERNET_HDR_LEN;
-        recv_len = recv_len - ETHERNET_HDR_LEN;
-
-        if (dispose_packet(ip_header, recv_len, NULL) == TC_ERROR) {
-            return TC_ERROR;
-        }
-    }
+    pcap = pcap_map[rev->fd];
+    pcap_dispatch(pcap, 1,(pcap_handler) pcap_retrieve, (u_char *) pcap);
 
     return TC_OK;
 }
@@ -522,73 +522,6 @@ check_read_stop()
     return false;
 }
 
-static int
-get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
-{
-    struct ethernet_hdr *eth_hdr;
-
-    switch (datalink) {
-        case DLT_RAW:
-            return 0;
-            break;
-        case DLT_EN10MB:
-            eth_hdr = (struct ethernet_hdr *) packet;
-            switch (ntohs(eth_hdr->ether_type)) {
-                case ETHERTYPE_VLAN:
-                    return 18;
-                    break;
-                default:
-                    return 14;
-                    break;
-            }
-            break;
-        case DLT_C_HDLC:
-            return CISCO_HDLC_LEN;
-            break;
-        case DLT_LINUX_SLL:
-            return SLL_HDR_LEN;
-            break;
-        default:
-            tc_log_info(LOG_ERR, 0, "unsupported DLT type: %s (0x%x)", 
-                    pcap_datalink_val_to_description(datalink), datalink);
-            break;
-    }
-
-    return -1;
-}
-
-#ifdef FORCE_ALIGN
-static unsigned char pcap_ip_buf[65536];
-#endif
-
-static unsigned char *
-get_ip_data(unsigned char *packet, const int pkt_len, int *p_l2_len)
-{
-    int      l2_len;
-    u_char  *ptr;
-    pcap_t  *pcap = clt_settings.pcap;
-
-    l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
-    *p_l2_len = l2_len;
-
-    if (pkt_len <= l2_len) {
-        return NULL;
-    }
-#ifdef FORCE_ALIGN
-    if (l2_len % 4 == 0) {
-        ptr = (&(packet)[l2_len]);
-    } else {
-        ptr = pcap_ip_buf;
-        memcpy(ptr, (&(packet)[l2_len]), pkt_len - l2_len);
-    }
-#else
-    ptr = (&(packet)[l2_len]);
-#endif
-
-    return ptr;
-
-}
-
 static void 
 send_packets_from_pcap(int first)
 {
@@ -618,7 +551,7 @@ send_packets_from_pcap(int first)
                 tc_log_info(LOG_WARN, 0, "truncated packets,drop");
             } else {
 
-                ip_data = get_ip_data(pkt_data, pkt_hdr.len, &l2_len);
+                ip_data = get_ip_data(clt_settings.pcap, pkt_data, pkt_hdr.len, &l2_len);
                 last_pack_time = pkt_hdr.ts;
                 if (ip_data != NULL) {
                     clt_settings.pcap_time = last_pack_time.tv_sec * 1000 + 
