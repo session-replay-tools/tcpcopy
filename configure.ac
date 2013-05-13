@@ -49,13 +49,7 @@ AC_ARG_ENABLE(pcap, AS_HELP_STRING([--enable-pcap],[ run the tcpcopy at pcap mod
 if test "x$enable_pcap" = "xyes";then
     AC_CHECK_HEADERS([pcap.h], [], 
                      [AC_MSG_ERROR([pcap.h not found.])], [])
-    AC_CHECK_FUNCS(pcap_create, [], 
-                   [AC_MSG_ERROR([pcap_create not found. It needs libpcap 1.0.0 or above])])
-    if test $ac_cv_func_pcap_create = "yes" ; then 
-        AC_CHECK_FUNCS(pcap_set_buffer_size, [],
-                       [AC_MSG_ERROR([pcap_set_buffer_size not found])])
-    fi
-	AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
+    AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
 fi
 
 AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
