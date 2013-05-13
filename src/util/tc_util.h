@@ -36,12 +36,14 @@ void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet);
 #endif
 #if (TCPCOPY_PCAP)
 int retrieve_devices(char *raw_device, devices_t *devices);
+#endif
+
+#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
 int get_l2_len(const unsigned char *packet, const int pkt_len, 
         const int datalink);
 unsigned char *
 get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len, 
         int *p_l2_len);
-
 #endif
 
 #endif   /* ----- #ifndef TC_UTIL_INCLUDED  ----- */

@@ -26,8 +26,7 @@ static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag);
 static void tc_process_offline_packet(tc_event_timer_t *evt);
 static uint64_t timeval_diff(struct timeval *start, struct timeval *cur);
 static bool check_read_stop();
-static int get_l2_len(const unsigned char *packet, const int pkt_len,
-        const int datalink);
+static void send_packets_from_pcap(int first);
 #endif
 
 

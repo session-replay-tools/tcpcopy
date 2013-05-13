@@ -286,7 +286,9 @@ retrieve_devices(char *raw_device, devices_t *devices)
 
     return 1;
 }
+#endif
 
+#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
 int
 get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
 {
@@ -353,7 +355,5 @@ get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len,
     return ptr;
 
 }
-
-
 #endif
 

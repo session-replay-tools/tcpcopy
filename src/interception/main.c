@@ -395,7 +395,7 @@ extract_filter()
 static int  
 set_details()
 {
-#if (TCPCOPY_PCAP)
+#if (INTERCEPT_ADVANCED && TCPCOPY_PCAP)
     int  len;
 #endif
 
