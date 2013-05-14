@@ -24,6 +24,7 @@ static uint64_t clt_syn_cnt          = 0;
 #if (TCPCOPY_MYSQL_ADVANCED)
 static uint64_t clt_dropped_cnt      = 0;
 #endif
+static uint64_t captured_cnt         = 0;
 /* total client content packets */
 static uint64_t clt_cont_cnt         = 0;
 /* total client packets */
@@ -3140,6 +3141,8 @@ is_packet_needed(const char *packet)
 
     ip_header = (tc_ip_header_t *) packet;
 
+    captured_cnt++;
+
     /* check if it is a tcp packet(could be removed) */
     if (ip_header->protocol != IPPROTO_TCP) {
         return is_needed;
@@ -3232,6 +3235,7 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+    tc_log_info(LOG_NOTICE, 0, "total captured pakcets:%llu", captured_cnt);
 #if (TCPCOPY_MYSQL_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);
 #endif
