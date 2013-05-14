@@ -3200,11 +3200,7 @@ is_packet_needed(const char *packet)
             tc_log_info(LOG_WARN, 0, "bad tot_len:%d bytes, header len:%d",
                     tot_len, header_len);
         }
-
-    } else {
-        tc_log_debug_trace(LOG_DEBUG, 0, UNKNOWN_FLAG, ip_header,
-                    tcp_header);
-    }
+    } 
 
     return is_needed;
 

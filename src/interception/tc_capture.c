@@ -154,24 +154,35 @@ static int resp_dispose(tc_ip_header_t *ip_header)
         return TC_OK;
     }
 
-    /* filter the packets we do care about */
+#if (TCPCOPY_PCAP)
+    if (srv_settings.user_filter != NULL) {
+        passed = 1;
+    } else {
+        passed = 0;
+    }
+#else
+    passed = 0;
+#endif
+
     ip_addr = ip_header->saddr;
     port    = tcp_header->source;
 
-    passed = 0;
-    for (i = 0; i < srv_settings.targets.num; i++) {
-        pair = srv_settings.targets.mappings[i];
-        if (ip_addr == pair->ip && port == pair->port) {
-            passed = 1;
-            break;
-        } else if (0 == pair->ip && port == pair->port) {
-            passed = 1;
-            break;
+    if (!passed) {
+        /* filter the packets we do care about */
+        for (i = 0; i < srv_settings.targets.num; i++) {
+            pair = srv_settings.targets.mappings[i];
+            if (ip_addr == pair->ip && port == pair->port) {
+                passed = 1;
+                break;
+            } else if (0 == pair->ip && port == pair->port) {
+                passed = 1;
+                break;
+            }
         }
-    }
 
-    if (passed == 0) {
-        return TC_OK;
+        if (passed == 0) {
+            return TC_OK;
+        }
     }
 
     tot_copy_resp_packs++;
