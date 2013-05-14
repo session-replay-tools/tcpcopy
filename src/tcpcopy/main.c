@@ -401,6 +401,15 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
         clt_settings.lo_tf_ip = ip_port->online_ip;
     }
 
+#if (TCPCOPY_PCAP)
+    if (ip_port->online_ip == 0 && 
+            ip_port->online_port == ip_port->target_port) 
+    {
+        tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
+        tc_log_info(LOG_WARN, 0, "please choose a different target port");
+    }
+#endif
+
     *seq = '-';
 
     return 0;
