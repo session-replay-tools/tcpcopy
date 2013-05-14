@@ -402,11 +402,12 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     }
 
 #if (TCPCOPY_PCAP)
-    if (ip_port->online_ip == 0 && 
-            ip_port->online_port == ip_port->target_port) 
-    {
-        tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
-        tc_log_info(LOG_WARN, 0, "please choose a different target port");
+    if (clt_settings.user_filter == NULL && ip_port->online_ip == 0) {
+        if (ip_port->online_port == ip_port->target_port) 
+        {
+            tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
+            tc_log_info(LOG_WARN, 0, "please choose a different target port");
+        }
     }
 #endif
 
