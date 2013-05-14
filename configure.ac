@@ -50,12 +50,15 @@ if test "x$enable_pcap" = "xyes";then
     AC_CHECK_HEADERS([pcap.h], [], 
                      [AC_MSG_ERROR([pcap.h not found.])], [])
     AC_DEFINE(TCPCOPY_PCAP, 1, [Define if --enable-pcap])
+    AC_SEARCH_LIBS([pcap_create], [pcap],
+                   AC_DEFINE([HAVE_PCAP_CREATE], [1], [Define to 1 if pcap_create() is available.])
+                   )
 fi
 
 AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
               [case "${enableval}" in
                yes) advanced=true 
-               AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced]) ;;
+               AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced])
                AC_DEFINE(TCPCOPY_ADVANCED, 1, [Define if --enable-advanced]) ;;
                no)  advanced=false ;;
                *)   AC_MSG_ERROR(bad value ${enableval} for --enable-advanced) ;;

@@ -56,7 +56,8 @@ typedef struct xcopy_clt_settings {
 #if (TCPCOPY_PCAP)
     char         *raw_device;
     devices_t     devices;
-    char          filter[512];
+    char          filter[MAX_FILTER_LENGH];
+    char         *user_filter;
 #endif
 #if (TCPCOPY_OFFLINE)
     pcap_t       *pcap;

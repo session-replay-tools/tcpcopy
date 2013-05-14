@@ -36,6 +36,7 @@ void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet);
 #endif
 #if (TCPCOPY_PCAP)
 int retrieve_devices(char *raw_device, devices_t *devices);
+char *construct_filter(int flag, uint32_t ip, uint16_t port, char *filter);
 #endif
 
 #if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)

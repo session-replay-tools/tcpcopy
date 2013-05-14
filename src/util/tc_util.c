@@ -286,6 +286,43 @@ retrieve_devices(char *raw_device, devices_t *devices)
 
     return 1;
 }
+
+char *
+construct_filter(int flag, uint32_t ip, uint16_t port, char *filter)
+{
+    char          *pt, direction[16];
+    struct in_addr net_address;
+
+    memset(direction, 0, 16);
+    if (flag == SRC_DIRECTION) {
+        strcpy(direction, "src");
+    } else if (flag == DST_DIRECTION) {
+        strcpy(direction, "dst");
+    }
+    pt = filter;
+    strcpy(pt, "(");
+    pt = pt + strlen(pt);
+
+    if (port > 0) {
+        sprintf(pt, "%s port %d", direction, ntohs(port));
+        pt = pt + strlen(pt);
+    }
+
+    if (ip > 0) {
+        net_address.s_addr = ip;
+        if (port == 0) {
+            sprintf(pt, "%s host %s", direction, inet_ntoa(net_address));
+        } else {
+            sprintf(pt, " and %s host %s", direction, inet_ntoa(net_address));
+        }
+        pt = pt + strlen(pt);
+    }       
+
+    strcpy(pt, ")");
+    pt = pt + strlen(pt);
+
+    return pt;
+}
 #endif
 
 #if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)

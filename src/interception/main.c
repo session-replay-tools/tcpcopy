@@ -313,18 +313,14 @@ read_args(int argc, char **argv) {
     return 0;
 }
 
-#if (INTERCEPT_ADVANCED)
-#if (TCPCOPY_PCAP)
+#if (INTERCEPT_ADVANCED && TCPCOPY_PCAP)
 static int 
 extract_filter()
 {
-    int              i, cnt = 0, filter_port_num = 0, filter_ip_num = 0;
+    int              i, cnt = 0;
     char            *pt;
-    uint32_t         filter_ip[MAX_FILTER_IPS];
-    struct in_addr   net_address;
     ip_port_pair_t  *pair, **mappings;
 
-    memset((void *) filter_ip, 0, MAX_FILTER_IPS << 2);
     mappings = srv_settings.targets.mappings;
 
     pt = srv_settings.filter;
@@ -349,38 +345,17 @@ extract_filter()
 
         cnt++; 
 
-        if (i == 0) {
-            strcpy(pt, "(");
-        } else {
-            strcpy(pt, " or (");
+        if (i > 0) {
+            strcpy(pt, " or ");
         }
         pt = pt + strlen(pt);
 
-        if (pair->port > 0) {
-            sprintf(pt, "src port %d", ntohs(pair->port));
-            pt = pt + strlen(pt);
-            filter_port_num++;
-        }
- 
-        if (pair->ip > 0) {
-            net_address.s_addr = pair->ip;
-            if (pair->port == 0) {
-                sprintf(pt, "src host %s", inet_ntoa(net_address));
-            } else {
-                sprintf(pt, " and src host %s", inet_ntoa(net_address));
-            }
-            pt = pt + strlen(pt);
-            filter_ip_num++;
-        }       
-
-        strcpy(pt, ")");
-        pt = pt + strlen(pt);
-
+        pt = construct_filter(SRC_DIRECTION, pair->ip, pair->port, pt);
     }
 
     strcpy(pt, ")");
 
-    if (filter_port_num == 0 && filter_ip_num == 0) {
+    if (cnt == 0) {
         tc_log_info(LOG_WARN, 0, "filter is not set");
     }
 
@@ -389,7 +364,6 @@ extract_filter()
     return TC_OK;
 
 }
-#endif
 #endif
 
 static int  
@@ -502,6 +476,10 @@ output_for_debug()
 #if (INTERCEPT_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_ADVANCED mode");
 #endif
+#if (HAVE_PCAP_CREATE)
+    tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true,new pcap");
+#endif
+
 
 }
 

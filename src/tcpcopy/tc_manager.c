@@ -217,14 +217,13 @@ tcp_copy_over(const int sig)
     tc_over = (sig != 0 ? sig : 1);
 }
 
-
 /* initiate TCPCopy client */
 int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
 #if (TCPCOPY_PCAP)
-    int                      k, filter_port_num = 0;
+    int                      cnt = 0;
     char                    *pt;
     uint16_t                 filter_port[MAX_FILTER_PORTS];
 #endif
@@ -272,24 +271,40 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     address_init();
 #endif
 
+#if (TCPCOPY_PCAP)
+    pt = clt_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp ");
+#else
+    strcpy(pt, "tcp ");
+#endif
+    pt = pt + strlen(pt);
+#endif
+ 
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
         pair = mappings[i];
-        target_ip = pair->target_ip;
 
 #if (TCPCOPY_PCAP)
-        for (k = 0; k < MAX_FILTER_PORTS; k++) {
-            if (filter_port[k] == 0) {
-                filter_port[k] = pair->online_port;
-                filter_port_num++;
-                break;
-            } else if (filter_port[k] == pair->online_port) {
+        if (pair->target_ip > 0 || pair->target_port > 0) {
+            if (cnt >= MAX_FILTER_ITEMS) {
                 break;
             }
+
+            cnt++; 
+
+            if (i > 0) {
+                strcpy(pt, " or ");
+            }
+            pt = pt + strlen(pt);
+
+            pt = construct_filter(DST_DIRECTION,
+                    pair->target_ip, pair->target_port, pt);
         }
 #endif
 
+        target_ip = pair->target_ip;
 #if (!TCPCOPY_DR)
         for ( j = 0; j < clt_settings.par_connections; j++) {
             fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
@@ -305,22 +320,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     }
 
 #if (TCPCOPY_PCAP)
-    if (filter_port_num == 0) {
-        tc_log_info(LOG_ERR, 0, "filter_port_num is zero");
-        return TC_ERROR;
+    if (cnt == 0) {
+        tc_log_info(LOG_WARN, 0, "filter is not set");
     }
-    pt = clt_settings.filter;
-#if (TCPCOPY_UDP)
-    strcpy(pt, "udp dst port ");
-#else
-    strcpy(pt, "tcp dst port ");
-#endif
-    pt = pt + strlen(pt);
-    for (i = 0; i < filter_port_num -1; i++) {
-        sprintf(pt, "%d or ", ntohs(filter_port[i]));
-        pt = pt + strlen(pt);
-    }
-    sprintf(pt, "%d", ntohs(filter_port[i]));
     tc_log_info(LOG_NOTICE, 0, "filter = %s", clt_settings.filter);
 #endif
 

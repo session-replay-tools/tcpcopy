@@ -338,6 +338,10 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_ADVANCED mode");
 #endif
+#if (HAVE_PCAP_CREATE)
+    tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true, new pap");
+#endif
+
 
 
 }
