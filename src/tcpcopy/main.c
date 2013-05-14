@@ -66,6 +66,7 @@ usage(void)
     printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
            "               name followed by a unit number,for example eth0 for the first\n"
            "               Ethernet interface.\n");
+    printf("-F <filter>    user filter\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -140,6 +141,7 @@ read_args(int argc, char **argv)
 #endif
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
+         "F:" /* <filter> */
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql */
@@ -183,6 +185,9 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_PCAP)
             case 'i':
                 clt_settings.raw_device = optarg;
+                break;
+            case 'F':
+                clt_settings.user_filter = optarg;
                 break;
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
@@ -501,10 +506,57 @@ static int retrieve_real_servers()
 }
 #endif
 
+#if (TCPCOPY_PCAP)
+static void 
+extract_filter()
+{
+    int                      i, cnt = 0;
+    char                    *pt;
+    ip_port_pair_mapping_t  *pair, **mappings;
+
+    pt = clt_settings.filter;
+#if (TCPCOPY_UDP)
+    strcpy(pt, "udp and (");
+#else
+    strcpy(pt, "tcp and (");
+#endif
+    pt = pt + strlen(pt);
+ 
+    mappings = clt_settings.transfer.mappings;
+
+    for (i = 0; i < clt_settings.transfer.num; i++) {
+        pair = mappings[i];
+        if (pair->online_ip > 0 || pair->online_port > 0) {
+            if (cnt >= MAX_FILTER_ITEMS) {
+                break;
+            }
+            cnt++; 
+            if (i > 0) {
+                strcpy(pt, " or ");
+            }
+            pt = pt + strlen(pt);
+            pt = construct_filter(DST_DIRECTION,
+                    pair->online_ip, pair->online_port, pt);
+        }
+    }
+    strcpy(pt, ")");
+    if (cnt == 0) {
+        tc_log_info(LOG_WARN, 0, "filter is not set");
+    }
+    tc_log_info(LOG_NOTICE, 0, "filter = %s", clt_settings.filter);
+
+    return;
+}
+#endif
+
 static int
 set_details()
 {
+#if (!TCPCOPY_PCAP)
     int            rand_port;
+#else
+    int            len, rand_port;
+#endif
     unsigned int   seed;
     struct timeval tp;
 
@@ -540,7 +592,6 @@ set_details()
         return -1;
     }
 
-
     if (clt_settings.accelerated_times < 1) {
         clt_settings.accelerated_times = 1;
     }
@@ -561,6 +612,19 @@ set_details()
         } else {
             retrieve_devices(clt_settings.raw_device, &(clt_settings.devices));
         }
+    }
+
+    if (clt_settings.user_filter != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "user filter:%s", clt_settings.user_filter);
+        len = strlen(clt_settings.user_filter);
+        if (len >= MAX_FILTER_LENGH) {
+            tc_log_info(LOG_ERR, 0, "user filter is too long");
+            return -1;
+        }
+        memcpy(clt_settings.filter, clt_settings.user_filter, len);
+
+    } else {
+        extract_filter();
     }
 #endif
 

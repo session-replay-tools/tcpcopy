@@ -222,11 +222,6 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
-#if (TCPCOPY_PCAP)
-    int                      cnt = 0;
-    char                    *pt;
-    uint16_t                 filter_port[MAX_FILTER_PORTS];
-#endif
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
@@ -236,10 +231,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     /* init session table */
     init_for_sessions();
-
-#if (TCPCOPY_PCAP)
-    memset((void *) filter_port, 0, MAX_FILTER_PORTS << 1);
-#endif
 
 #if (TCPCOPY_DR)
     /* 
@@ -271,40 +262,12 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     address_init();
 #endif
 
-#if (TCPCOPY_PCAP)
-    pt = clt_settings.filter;
-#if (TCPCOPY_UDP)
-    strcpy(pt, "udp ");
-#else
-    strcpy(pt, "tcp ");
-#endif
-    pt = pt + strlen(pt);
-#endif
- 
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
 
         pair = mappings[i];
-
-#if (TCPCOPY_PCAP)
-        if (pair->target_ip > 0 || pair->target_port > 0) {
-            if (cnt >= MAX_FILTER_ITEMS) {
-                break;
-            }
-
-            cnt++; 
-
-            if (i > 0) {
-                strcpy(pt, " or ");
-            }
-            pt = pt + strlen(pt);
-
-            pt = construct_filter(DST_DIRECTION,
-                    pair->target_ip, pair->target_port, pt);
-        }
-#endif
-
         target_ip = pair->target_ip;
+
 #if (!TCPCOPY_DR)
         for ( j = 0; j < clt_settings.par_connections; j++) {
             fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
@@ -315,16 +278,10 @@ tcp_copy_init(tc_event_loop_t *event_loop)
             address_add_sock(pair->online_ip, pair->online_port, fd);
         }
 #endif
+
         tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
                     ntohl(target_ip), clt_settings.srv_port);
     }
-
-#if (TCPCOPY_PCAP)
-    if (cnt == 0) {
-        tc_log_info(LOG_WARN, 0, "filter is not set");
-    }
-    tc_log_info(LOG_NOTICE, 0, "filter = %s", clt_settings.filter);
-#endif
 
     /* init packets for processing */
 #if (TCPCOPY_OFFLINE)

@@ -195,7 +195,7 @@ usage(void)
     printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
             "              name followed by a unit number,for example eth0 for the first\n"
             "              Ethernet interface.\n");
-    printf("-f <filter>    user filter\n");
+    printf("-F <filter>    user filter\n");
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif
@@ -218,7 +218,7 @@ read_args(int argc, char **argv) {
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
-         "f:" /* <filter> */
+         "F:" /* <filter> */
 #endif
          "o:" /* target addresses */
 #endif
@@ -244,7 +244,7 @@ read_args(int argc, char **argv) {
             case 'i':
                 srv_settings.raw_device = optarg;
                 break;
-            case 'f':
+            case 'F':
                 srv_settings.user_filter = optarg;
                 break;
 #endif
@@ -314,7 +314,7 @@ read_args(int argc, char **argv) {
 }
 
 #if (INTERCEPT_ADVANCED && TCPCOPY_PCAP)
-static int 
+static void 
 extract_filter()
 {
     int              i, cnt = 0;
@@ -361,7 +361,7 @@ extract_filter()
 
     tc_log_info(LOG_NOTICE, 0, "intercept filter = %s", srv_settings.filter);
 
-    return TC_OK;
+    return;
 
 }
 #endif
@@ -414,10 +414,7 @@ set_details()
         }
         memcpy(srv_settings.filter, srv_settings.user_filter, len);
     } else {
-        if (extract_filter() != TC_OK) {
-            tc_log_info(LOG_ERR, 0, "failed to extract filter");
-            return -1;
-        }
+        extract_filter();
     }
 #endif
 
