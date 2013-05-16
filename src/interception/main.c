@@ -50,6 +50,7 @@ static signal_t signals[] = {
     { 0,        NULL,     0,    NULL }
 };
 
+#if (!INTERCEPT_ADVANCED)
 /* retrieve ip addresses */
 static int
 retrieve_ip_addr()
@@ -93,8 +94,7 @@ retrieve_ip_addr()
 
     return 1;
 }
-
-#if (INTERCEPT_ADVANCED)
+#else
 static void
 parse_target(ip_port_pair_t *pair, char *addr)
 {
@@ -179,10 +179,12 @@ static void
 usage(void)
 {
     printf("intercept " VERSION "\n");
+#if (!INTERCEPT_ADVANCED)
     printf("-x <passlist,> passed IP list through firewall\n"
            "               Format:\n"
-           "               ip_addr1, ip_addr2 ...\n"
-           "-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
+           "               ip_addr1, ip_addr2 ...\n");
+#endif
+    printf("-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
     printf("-t <num>       set the router item timeout limit. The default value is 120 sec.\n"
@@ -210,7 +212,9 @@ read_args(int argc, char **argv) {
 
     opterr = 0;
     while (-1 != (c = getopt(argc, argv,
+#if (!INTERCEPT_ADVANCED)
          "x:" /* ip list passed through ip firewall */
+#endif
          "p:" /* TCP port number to listen on */
          "t:" /* router item timeout */
          "s:" /* hash table size for intercept */
@@ -230,9 +234,11 @@ read_args(int argc, char **argv) {
         )))
     {
         switch (c) {
+#if (!INTERCEPT_ADVANCED)
             case 'x':
                 srv_settings.raw_ip_list = optarg;
                 break;
+#endif
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
                 break;
@@ -373,12 +379,14 @@ set_details()
     int  len;
 #endif
 
+#if (!INTERCEPT_ADVANCED)
     /* retrieve ip address */
     if (srv_settings.raw_ip_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "-x parameter:%s", 
                 srv_settings.raw_ip_list);
         retrieve_ip_addr();
     }
+#endif
     
 #if (INTERCEPT_ADVANCED)
     if (srv_settings.raw_targets != NULL) {

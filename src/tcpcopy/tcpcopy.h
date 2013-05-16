@@ -2,7 +2,7 @@
 #define TCPCOPY_INCLUDED 
 
 
-#define localhost (inet_addr("127.0.0.1"))
+#define LOCALHOST (inet_addr("127.0.0.1"))
 
 typedef struct {
     /* online ip from the client perspective */
@@ -42,6 +42,9 @@ typedef struct xcopy_clt_settings {
     unsigned int  session_timeout:16;   /* max value for session timeout.
                                            If reaching this value, the session
                                            will be removed */
+#if (TCPCOPY_OFFLINE)
+    unsigned int target_localhost:1;
+#endif
 
     char         *raw_transfer;         /* online_ip online_port target_ip
                                            target_port string */
@@ -49,8 +52,10 @@ typedef struct xcopy_clt_settings {
     char         *pid_file;             /* pid file */
     char         *log_path;             /* error log path */
 #if (TCPCOPY_OFFLINE)
-    char         *pcap_file;            /* pcap file */
     int           accelerated_times;    /* accelerated times */
+    char         *pcap_file;            /* pcap file */
+    long          pcap_time;
+    pcap_t       *pcap;
     uint64_t      interval;             /* accelerated times */
 #endif
 #if (TCPCOPY_PCAP)
@@ -58,10 +63,6 @@ typedef struct xcopy_clt_settings {
     devices_t     devices;
     char          filter[MAX_FILTER_LENGH];
     char         *user_filter;
-#endif
-#if (TCPCOPY_OFFLINE)
-    pcap_t       *pcap;
-    long          pcap_time;
 #endif
     uint16_t      rand_port_shifted;    /* random port shifted */
     uint16_t      srv_port;             /* server listening port */

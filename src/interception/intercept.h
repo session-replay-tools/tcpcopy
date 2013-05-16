@@ -23,7 +23,9 @@ typedef struct ip_port_pairs_t{
 
 
 typedef struct xcopy_srv_settings {
+#if (!INTERCEPT_ADVANCED)
     char                *raw_ip_list;    /* raw ip list */
+#endif
     char                *pid_file;       /* pid file */
     char                *binded_ip;      /* binded ip for security */
     char                *log_path;       /* error log path */

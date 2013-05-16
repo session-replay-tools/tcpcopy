@@ -2071,6 +2071,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
         tc_log_info(LOG_NOTICE, 0, "ack more than vir next seq");
 #endif
         if (!s->sm.resp_syn_received) {
+            send_faked_rst(s, ip_header, tcp_header);
             s->sm.sess_over = 1;
             return DISP_STOP;
         }
@@ -3167,6 +3168,14 @@ is_packet_needed(const char *packet)
     /* filter the packets we do care about */
     if (LOCAL == check_pack_src(&(clt_settings.transfer), 
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
+#if (TCPCOPY_OFFLINE)
+        if (clt_settings.target_localhost) {
+            if (ip_header->saddr != LOCALHOST) {
+                tc_log_info(LOG_WARN, 0, "not localhost source ip address");
+                return is_needed;
+            }
+        }
+#endif
         header_len = size_tcp + size_ip;
         if (tot_len >= header_len) {
 

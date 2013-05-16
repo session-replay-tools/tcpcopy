@@ -282,7 +282,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (localhost == ip_header->saddr) {
+        if (LOCALHOST == ip_header->saddr) {
             if (0 != clt_settings.lo_tf_ip) {
                 ip_header->saddr = clt_settings.lo_tf_ip;
             }
@@ -355,7 +355,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         packet_num = 1;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (localhost == ip_header->saddr) {
+        if (LOCALHOST == ip_header->saddr) {
             if (clt_settings.lo_tf_ip != 0) {
                 ip_header->saddr = clt_settings.lo_tf_ip;
             }

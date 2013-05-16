@@ -401,6 +401,15 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
         clt_settings.lo_tf_ip = ip_port->online_ip;
     }
 
+#if (TCPCOPY_OFFLINE)
+    if (ip_port->target_ip == LOCALHOST) {
+        clt_settings.target_localhost = 1;
+        tc_log_info(LOG_WARN, 0, "target host is 127.0.0.1");
+        tc_log_info(LOG_WARN, 0, 
+                "only client requests from localhost are valid");
+    }
+#endif
+
 #if (TCPCOPY_PCAP)
     if (clt_settings.user_filter == NULL && ip_port->online_ip == 0) {
         if (ip_port->online_port == ip_port->target_port) 
