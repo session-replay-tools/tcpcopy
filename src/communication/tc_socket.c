@@ -56,6 +56,8 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
                 pcap_statustostr(status));
         return TC_INVALID_SOCKET;
     }
+
+    tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
  
     status = pcap_activate(*pd);
     if (status < 0) {
