@@ -43,6 +43,7 @@ static uint64_t conn_cnt             = 0;
 static uint64_t retrans_succ_cnt     = 0;
 /* total retransmission */
 static uint64_t retrans_cnt          = 0;
+static uint64_t clt_con_retrans_cnt  = 0;
 /* total reconnections for backend */
 static uint64_t recon_for_closed_cnt = 0;
 /* total reconnections for halfway interception */
@@ -2862,6 +2863,7 @@ check_wait_prev_packet(session_t *s, tc_ip_header_t *ip_header,
             /* retransmission packet from client */
             tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
                     s->src_h_port);
+            clt_con_retrans_cnt++;
         } else {
             diff = s->vir_next_seq - cur_seq;
             if (trim_packet(s, ip_header, tcp_header, diff)) {
@@ -3244,6 +3246,8 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
+    tc_log_info(LOG_NOTICE, 0, "total client content retransmit:%llu",
+            clt_con_retrans_cnt);
     tc_log_info(LOG_NOTICE, 0, "total captured pakcets:%llu", captured_cnt);
 #if (TCPCOPY_MYSQL_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);

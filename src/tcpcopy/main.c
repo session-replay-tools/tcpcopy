@@ -415,7 +415,8 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
         if (ip_port->online_port == ip_port->target_port) 
         {
             tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
-            tc_log_info(LOG_WARN, 0, "please choose a different target port");
+            tc_log_info(LOG_WARN, 0, 
+                    "choose a different port or set filter or set device");
         }
     }
 #endif
