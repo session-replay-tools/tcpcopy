@@ -55,7 +55,7 @@ if test "x$enable_pcap" = "xyes";then
                    )
 fi
 
-AC_ARG_ENABLE(advanced,[--enable-advanced    Turn on advanced tcpcopy],
+AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpcopy]),
               [case "${enableval}" in
                yes) advanced=true 
                AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced])
@@ -215,7 +215,7 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
-AC_ARG_ENABLE(udp,[--enable-udp    Turn on udpcopy],
+AC_ARG_ENABLE(udp,AS_HELP_STRING([--enable-udp],[turn on udpcopy]),
                [case "${enableval}" in
                    yes) udp=true 
                         AC_DEFINE(TCPCOPY_UDP, 1, [Define if --enable-udp]) ;;
