@@ -488,15 +488,11 @@ output_for_debug()
 static int 
 set_timer()
 {
-#if (INTERCEPT_COMBINED)
-    if (tc_time_set_timer(COMBINED_TIMER_INTERVAL) == TC_ERROR)
-#else
-    if (tc_time_set_timer(100) == TC_ERROR)
-#endif
-    {
+    if (tc_time_set_timer(COMBINED_TIMER_INTERVAL) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     } 
+
     return 0;
 }
 
