@@ -122,8 +122,7 @@ tc_raw_socket_in_init(int type)
     if (type == COPY_FROM_LINK_LAYER) {
         /* copy ip datagram from Link layer */
         fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
-    }
-    else {
+    } else {
         /* copy ip datagram from IP layer */
 #if (TCPCOPY_UDP)
         fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
