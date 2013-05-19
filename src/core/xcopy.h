@@ -313,7 +313,10 @@ typedef struct connections_s{
 
 #if (TCPCOPY_OFFLINE)
 #define TIMER_INTERVAL 1
+#else
+#define TIMER_INTERVAL 10
 #endif
+
 #if (INTERCEPT_COMBINED)
 #define COMBINED_TIMER_INTERVAL 1
 #endif
