@@ -488,7 +488,7 @@ output_for_debug()
 static int 
 set_timer()
 {
-    if (tc_time_set_timer(COMBINED_TIMER_INTERVAL) == TC_ERROR) {
+    if (tc_time_set_timer(INTERCEPT_TIMER_INTERVAL) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     } 

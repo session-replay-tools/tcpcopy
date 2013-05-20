@@ -318,9 +318,9 @@ typedef struct connections_s{
 #endif
 
 #if (INTERCEPT_COMBINED)
-#define COMBINED_TIMER_INTERVAL 1
+#define INTERCEPT_TIMER_INTERVAL 1
 #else
-#define COMBINED_TIMER_INTERVAL 100
+#define INTERCEPT_TIMER_INTERVAL 100
 #endif
 
 /* global functions */
