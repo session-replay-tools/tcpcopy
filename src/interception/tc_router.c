@@ -252,7 +252,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
              * only transfer payload if content length is less
              * than MAX_PAYLOAD_LEN
              */
-            memcpy((void *) &(p), payload, cont_len);
+            memcpy((void *) p, payload, cont_len);
         }
     }
 #endif
