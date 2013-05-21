@@ -246,12 +246,12 @@ static int
 tc_nfq_event_process(tc_event_t *rev)
 {
     int             rv = 0;
-    char            buffer[65535];
+    char            buffer[65536];
     unsigned long   packet_id;
 
     packet_id = 0;
 
-    if (tc_nfq_socket_recv(rev->fd, buffer, 65535, &rv) == TC_ERROR) {
+    if (tc_nfq_socket_recv(rev->fd, buffer, 65536, &rv) == TC_ERROR) {
         return TC_ERROR;
     }
 
@@ -308,14 +308,13 @@ static int
 tc_nl_event_process(tc_event_t *rev)
 {
     int             i, pass_through_flag = 0;
-    char            buffer[TC_IPQ_NLMSG_LEN + RESP_MAX_USEFUL_SIZE];
+    char            buffer[65536];
     unsigned long   packet_id;
     tc_ip_header_t *ip_hdr;
 
     packet_id = 0;
 
-    if (tc_nl_socket_recv(rev->fd, buffer, 
-                TC_IPQ_NLMSG_LEN + RESP_MAX_USEFUL_SIZE) == TC_ERROR) 
+    if (tc_nl_socket_recv(rev->fd, buffer, 65536) == TC_ERROR) 
     {
         return TC_ERROR;
     }

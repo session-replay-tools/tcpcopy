@@ -356,7 +356,7 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
     }
 
     tc_log_info(LOG_NOTICE, 0, "setting copy_packet mode");
-    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, 0xffff) < 0) {
+    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, RESP_MAX_USEFUL_SIZE) < 0) {
         tc_log_info(LOG_ERR, errno, "can't set packet_copy mode");
         return TC_INVALID_SOCKET;
     }
