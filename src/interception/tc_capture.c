@@ -203,7 +203,7 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
 {
     pcap_t        *pcap;
     unsigned char *ip_data; 
-    int            l2_len, ip_pack_len;
+    int            l2_len;
     
     if (pkt_hdr->len < ETHERNET_HDR_LEN) {
         tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
@@ -211,7 +211,6 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
     }
     pcap = (pcap_t *)args;
     ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
-    ip_pack_len = pkt_hdr->len - l2_len;
     resp_dispose((tc_ip_header_t *) ip_data);
 }
 #endif
@@ -291,7 +290,7 @@ sniff_init(tc_event_loop_t *event_loop)
 {
 #if (TCPCOPY_PCAP)
     int         i = 0;
-    bool        work;
+    bool        work = false;
     char        ebuf[PCAP_ERRBUF_SIZE];
     devices_t  *devices;
     pcap_if_t  *alldevs, *d;
@@ -336,7 +335,7 @@ sniff_init(tc_event_loop_t *event_loop)
         }
     }
 
-    if (work == false) {
+    if (!work) {
         tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
         return TC_ERROR;
     }

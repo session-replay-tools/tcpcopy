@@ -144,12 +144,14 @@ retrieve_target_addresses(char *raw_transfer,
     if (transfer->mappings == NULL) {
         return -1;
     }
+    memset(transfer->mappings, 0, transfer->num * sizeof(ip_port_pair_t *));
 
     for (i = 0; i < transfer->num; i++) {
         transfer->mappings[i] = malloc(sizeof(ip_port_pair_t));
         if (transfer->mappings[i] == NULL) {
             return -1;
         }
+        memset(transfer->mappings[i], 0, sizeof(ip_port_pair_t));
     }
 
     p = raw_transfer;

@@ -65,7 +65,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
     int         fd;
 #if (TCPCOPY_PCAP)
     int         i = 0;
-    bool        work;
+    bool        work = false;
     char        ebuf[PCAP_ERRBUF_SIZE];
     devices_t  *devices;
     pcap_if_t  *alldevs, *d;
@@ -114,7 +114,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
         }
     }
 
-    if (work == false) {
+    if (!work) {
         tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
         return TC_ERROR;
     }

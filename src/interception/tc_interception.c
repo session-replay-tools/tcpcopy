@@ -247,9 +247,6 @@ tc_nfq_event_process(tc_event_t *rev)
 {
     int             rv = 0;
     char            buffer[65536];
-    unsigned long   packet_id;
-
-    packet_id = 0;
 
     if (tc_nfq_socket_recv(rev->fd, buffer, 65536, &rv) == TC_ERROR) {
         return TC_ERROR;

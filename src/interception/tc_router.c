@@ -246,7 +246,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     if (cont_len > 0) {
         payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
-            p = ((unsigned char *) msg.tcp_header) + size_tcp;
+            p = ((unsigned char *) &(msg.tcp_header)) + size_tcp;
             /*
              * only transfer payload if content length is less
              * than MAX_PAYLOAD_LEN
