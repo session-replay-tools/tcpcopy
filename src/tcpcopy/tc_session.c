@@ -80,7 +80,6 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
     uint16_t        size_ip, size_tcp, tot_len, cont_len;
     unsigned char  *payload;
 
-    size_ip   = ip_header->ihl << 2;
     tot_len   = ntohs(ip_header->tot_len);
     size_ip   = ip_header->ihl << 2;
     size_tcp  = tcp_header->doff << 2;

@@ -312,8 +312,6 @@ tc_nl_event_process(tc_event_t *rev)
     unsigned long   packet_id;
     tc_ip_header_t *ip_hdr;
 
-    packet_id = 0;
-
     if (tc_nl_socket_recv(rev->fd, buffer, 65536) == TC_ERROR) 
     {
         return TC_ERROR;
