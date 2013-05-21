@@ -308,13 +308,15 @@ static int
 tc_nl_event_process(tc_event_t *rev)
 {
     int             i, pass_through_flag = 0;
-    char            buffer[65535];
+    char            buffer[TC_IPQ_NLMSG_LEN + RESP_MAX_USEFUL_SIZE];
     unsigned long   packet_id;
     tc_ip_header_t *ip_hdr;
 
     packet_id = 0;
 
-    if (tc_nl_socket_recv(rev->fd, buffer, 65535) == TC_ERROR) {
+    if (tc_nl_socket_recv(rev->fd, buffer, 
+                TC_IPQ_NLMSG_LEN + RESP_MAX_USEFUL_SIZE) == TC_ERROR) 
+    {
         return TC_ERROR;
     }
 

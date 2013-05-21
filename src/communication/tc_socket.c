@@ -266,7 +266,7 @@ tc_nl_socket_init()
 
     mode_data = NLMSG_DATA(nl_header);
     mode_data->value = IPQ_COPY_PACKET;
-    mode_data->range = 65536;
+    mode_data->range = RESP_MAX_USEFUL_SIZE;
 
     if (sendto(fd, (void *) nl_header, nl_header->nlmsg_len, 0,
                (struct sockaddr *) &addr, sizeof(struct sockaddr_nl)) == -1)
