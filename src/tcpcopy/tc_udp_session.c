@@ -86,13 +86,12 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 {
     int             ret, max_pack_no, index, i;
     char            tmp_buf[RECV_BUF_SIZE];
-    uint16_t        offset, head_len, size_ip, tot_len,
+    uint16_t        offset, size_ip, tot_len,
                     remainder, payload_len;
     tc_ip_header_t *tmp_ip_header;
 
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
-    head_len   = size_ip + sizeof(tc_udp_header_t);
 
     /* dispose the first packet here */
     memcpy(tmp_buf, (char *) ip_header, size_ip);
@@ -131,7 +130,7 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 
         if (i == max_pack_no) {
             payload_len = remainder;
-        }else {
+        } else {
             tmp_ip_header->frag_off |= htons(IP_MF);
             remainder = remainder - payload_len;
         }

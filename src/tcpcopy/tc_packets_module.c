@@ -291,7 +291,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         if (replica_num > 1) {
             packet_valid = process_packet(true, packet, recv_len);
             replicate_packs(packet, recv_len, replica_num);
-        }else{
+        } else {
             packet_valid = process_packet(false, packet, recv_len);
         }
     }
