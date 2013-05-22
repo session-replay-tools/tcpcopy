@@ -955,7 +955,7 @@ send_reserved_packets(session_t *s)
 #endif
     uint16_t          size_ip, cont_len;
 #if (TCPCOPY_PAPER)
-    uint32_t          cur_ack, cur_seq, srv_sk_buf_s;
+    uint32_t          cur_ack, srv_sk_buf_s;
 #else
     uint32_t          cur_ack, cur_seq, diff, srv_sk_buf_s;
 #endif
@@ -1005,12 +1005,12 @@ send_reserved_packets(session_t *s)
         ip_header  = (tc_ip_header_t *) ((char *) data);
         size_ip    = ip_header->ihl << 2;
         tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
-        cur_seq    = ntohl(tcp_header->seq);
 
         tc_log_debug_trace(LOG_DEBUG, 0, RESERVED_CLIENT_FLAG,
                 ip_header, tcp_header);
 
 #if (!TCPCOPY_PAPER)
+        cur_seq    = ntohl(tcp_header->seq);
         if (after(cur_seq, s->vir_next_seq)) {
 
             /* We need to wait for previous packet */
@@ -2333,9 +2333,6 @@ void
 process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-#if (TCPCOPY_PAPER)
-    long      base_rtt;
-#endif
     time_t    current;
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
     uint32_t  ack, seq;
@@ -2494,10 +2491,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
         } else {
-            base_rtt = s->max_rtt;
-            if (s->unsend_packets->size > 8) {
-                base_rtt = s->rtt;
-            }
             if ((tc_milliscond_time() - s->resp_unack_time) > s->max_rtt) {
                 send_faked_ack(s, ip_header, tcp_header, true);
             }
