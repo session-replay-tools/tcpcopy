@@ -240,8 +240,10 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     if (size_tcp > TCP_HEADER_MIN_LEN) {
         set_wscale(tcp_header);
         new_size_tcp = tcp_header->doff << 2;
+#if (TCPCOPY_MYSQL_ADVANCED)
         new_tot_len = tot_len - (size_tcp - new_size_tcp);
         ip_header->tot_len = htons(new_tot_len);
+#endif
     }
     memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
     memcpy((void *) &(msg.tcp_header), tcp_header, new_size_tcp);
