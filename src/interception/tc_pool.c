@@ -21,7 +21,7 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
 {
     int                    *p_len, cur_w_pos, diff, next_w_pos;
     char                   *p_content;
-    uint16_t                size_ip, size_tcp, save_len, record_len;
+    uint16_t                size_ip, size_tcp, new_size_tcp, save_len, record_len;
 #if (TCPCOPY_MYSQL_ADVANCED) 
     uint16_t                cont_len, tot_len;
     unsigned char          *payload; 
@@ -78,15 +78,16 @@ void put_resp_header_to_pool(tc_ip_header_t *ip_header)
     memcpy(p_content, ip_header, sizeof(tc_ip_header_t));
     p_content = p_content + sizeof(tc_ip_header_t);
 
-    if (size_tcp > MAX_OPTION_LEN) {
+    new_size_tcp = size_tcp;
+    if (size_tcp > TCP_HEADER_MIN_LEN) {
         set_wscale(tcp_header);
-        size_tcp = tcp_header->doff << 2;
+        new_size_tcp = tcp_header->doff << 2;
     }   
-    memcpy(p_content, tcp_header, size_tcp);
+    memcpy(p_content, tcp_header, new_size_tcp);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
     if (cont_len > 0 && cont_len <= MAX_PAYLOAD_LEN) {
-        p_content = p_content + size_tcp
+        p_content = p_content + new_size_tcp
         payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         memcpy(p_content, payload, cont_len);
     }

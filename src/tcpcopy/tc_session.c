@@ -2269,14 +2269,16 @@ mysql_process_greet(session_t *s, tc_ip_header_t *ip_header,
 {
 #if (TCPCOPY_MYSQL_ADVANCED)
     int            ret; 
+    uint16_t       size_tcp; 
     unsigned char *payload;
 #endif
 
     tc_log_info(LOG_NOTICE, 0, "recv greeting from back:%u", s->src_h_port);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
+    size_tcp = tcp_header->doff << 2;
     s->sm.mysql_sec_auth_checked  = 0;
-    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
     memset(s->mysql_scramble, 0, SCRAMBLE_LENGTH + 1);
     ret = parse_handshake_init_cont(payload, cont_len, s->mysql_scramble);
     tc_log_info(LOG_WARN, 0, "scram:%s,p:%u", s->mysql_scramble, s->src_h_port);
@@ -2302,12 +2304,14 @@ static void
 mysql_check_need_sec_auth(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
+    uint16_t       size_tcp;
     unsigned char *payload;
 
     tc_log_info(LOG_NOTICE, 0, "check if it needs second auth:%u",
                 s->src_h_port);
 
-    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
+    size_tcp = tcp_header->doff << 2;
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
 
      /* check if it is the last data packet */
     if (is_last_data_packet(payload)) {

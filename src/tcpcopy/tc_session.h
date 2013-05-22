@@ -6,8 +6,8 @@
 
 #define FAKE_IP_DATAGRAM_LEN 40
 #define FAKE_SYN_IP_DATAGRAM_LEN 44
-#define IP_HEADER_LEN 20
-#define TCP_HEADER_MIN_LEN 20
+#define IP_HEADER_LEN sizeof(tc_ip_header_t)
+#define TCP_HEADER_MIN_LEN sizeof(tc_tcp_header_t)
 
 /* global functions */
 void init_for_sessions();
