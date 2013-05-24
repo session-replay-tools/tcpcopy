@@ -227,11 +227,17 @@ static long tc_event_timer_find(tc_event_loop_t *loop)
     long              min;
     tc_event_timer_t *timer;
 
-    min = 0;
+    min   = 0;
+    timer = loop->timers;
 
-    for (timer = loop->timers; timer; timer = timer->next) {
-        if (min == 0 || timer->msec < min) {
-            min = timer->msec;
+    if (timer) {
+        min   = timer->msec;
+        timer = timer->next;
+
+        for (; timer; timer = timer->next) {
+            if (timer->msec < min) {
+                min = timer->msec;
+            }
         }
     }
 
