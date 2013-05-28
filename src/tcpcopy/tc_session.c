@@ -3166,14 +3166,12 @@ is_packet_needed(const char *packet)
     /* filter the packets we do care about */
     if (LOCAL == check_pack_src(&(clt_settings.transfer), 
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
-#if (TCPCOPY_OFFLINE)
         if (clt_settings.target_localhost) {
             if (ip_header->saddr != LOCALHOST) {
                 tc_log_info(LOG_WARN, 0, "not localhost source ip address");
                 return is_needed;
             }
         }
-#endif
         header_len = size_tcp + size_ip;
         if (tot_len >= header_len) {
 

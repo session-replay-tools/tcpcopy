@@ -42,9 +42,7 @@ typedef struct xcopy_clt_settings {
     unsigned int  session_timeout:16;   /* max value for session timeout.
                                            If reaching this value, the session
                                            will be removed */
-#if (TCPCOPY_OFFLINE)
     unsigned int target_localhost:1;
-#endif
 
     char         *raw_transfer;         /* online_ip online_port target_ip
                                            target_port string */
