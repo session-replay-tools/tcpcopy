@@ -49,10 +49,6 @@
 #define TCPCOPY_DR 1
 #endif
 
-#if (INTERCEPT_NFQUEUE)
-#undef INTERCEPT_THREAD
-#endif
-
 #if (TCPCOPY_PCAP)
 #undef TCPCOPY_OFFLINE
 #endif
@@ -128,6 +124,14 @@
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 #define MAX_CONNECTION_NUM 16
+
+#if (!INTERCEPT_MILLION_SUPPORT)
+#define ROUTE_SLOTS 65536
+#define ROUTE_ARRAY_SIZE 15
+#else
+#define ROUTE_SLOTS 1048576
+#define ROUTE_ARRAY_SIZE 31
+#endif
 
 #if (INTERCEPT_COMBINED)
 #define COMB_MAX_NUM 20
@@ -214,18 +218,6 @@ typedef struct udphdr tc_udp_header_t;
 #define RESP_MAX_USEFUL_SIZE (RESP_HEADER_SIZE + MAX_PAYLOAD_LEN)
 #else
 #define RESP_MAX_USEFUL_SIZE RESP_HEADER_SIZE
-#endif
-
-#if (INTERCEPT_THREAD)
-
-/* constants for intercept pool */
-#define POOL_SHIFT 24
-#define POOL_SIZE (1 << POOL_SHIFT) 
-#define POOL_MASK (POOL_SIZE - 1)
-#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
-#define NL_POOL_SIZE 65536
-#define NL_POOL_MASK (NL_POOL_SIZE - 1)
-
 #endif
 
 /* bool constants */

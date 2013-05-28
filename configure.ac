@@ -189,11 +189,6 @@ if test "x$enable_nfqueue" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(thread, AS_HELP_STRING([--enable-thread],[run the tcpcopy server (i.e. intercept) at multi-threading mode (valid only when using ip queue)]),,thread=no)
-if test "x$enable_thread" = "xyes";then
-    AC_DEFINE(INTERCEPT_THREAD, 1, [Define if --enable-thread])
-fi
-
 AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode (such as lvs)]),,dr=no)
 if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
@@ -251,15 +246,6 @@ fi
 
 if test "x$enable_pcap" = "xyes";then
     LIBS="-lpcap"
-fi
-
-
-if test "x$enable_thread" = "xyes";then
-    # Search for library
-    AC_SEARCH_LIBS([pthread_create], [pthread], [], [])
-    if test "x$ac_cv_search_pthread_create" = "xno";then
-        AC_MSG_ERROR([need posix thread library to be installed])
-    fi
 fi
 
 if test "x$enable_nfqueue" = "xyes";then

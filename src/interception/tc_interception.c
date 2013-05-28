@@ -1,7 +1,4 @@
 #include <xcopy.h>
-#if (INTERCEPT_THREAD)
-#include <pthread.h>
-#endif
 #include <intercept.h>
 
 static pid_t           pid;
@@ -12,24 +9,6 @@ static uint64_t        tot_router_items = 0;
 #if (!INTERCEPT_NFQUEUE)
 static uint32_t        seq = 1;
 static unsigned char   buffer[128];
-#endif
-
-#if (INTERCEPT_THREAD)
-typedef struct tc_verdict_s{
-    int fd;
-    int verdict;
-    unsigned long packet_id;
-}tc_verdict_t;
-
-
-/* for netlink sending */
-static tc_verdict_t    nl_pool[NL_POOL_SIZE];
-static uint64_t        nl_read_counter  = 0;
-static uint64_t        nl_write_counter = 0; 
-static pthread_mutex_t nl_mutex;
-static pthread_cond_t  nl_empty;
-static pthread_cond_t  nl_full;
-
 #endif
 
 static int tc_msg_event_process(tc_event_t *rev);
@@ -95,7 +74,6 @@ tc_msg_event_process(tc_event_t *rev)
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
                           ntohs(msg.client_port));
-            router_del(msg.client_ip, msg.client_port);
             break;
     }
 
@@ -108,9 +86,6 @@ interception_output_stat(tc_event_timer_t *evt)
     tc_log_info(LOG_NOTICE, 0, 
             "total resp packs:%llu, all:%llu, route:%llu",
             tot_copy_resp_packs, tot_resp_packs, tot_router_items);
-#if (!TCPCOPY_SINGLE)  
-    route_delete_obsolete(tc_time());
-#endif
     evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
 
@@ -121,69 +96,6 @@ interception_push(tc_event_timer_t *evt)
     send_buffered_packets(tc_time());
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
 }
-#endif
-
-
-#if (INTERCEPT_THREAD)
-static
-void put_nl_verdict_to_pool(int fd, int verdict, unsigned long packet_id)
-{
-    int  index, diff;
-
-    pthread_mutex_lock(&nl_mutex);
-
-    index = nl_write_counter & NL_POOL_MASK;
-
-    diff = nl_write_counter - nl_read_counter + 1;
-    
-    for (;;) {
-        if (diff > NL_POOL_SIZE) {
-            tc_log_info(LOG_WARN, 0, "nl pool is full");
-            pthread_cond_wait(&nl_empty, &nl_mutex);
-        } else {
-            break;
-        }
-
-        diff = nl_write_counter - nl_read_counter + 1;
-    }
-
-    
-    nl_pool[index].fd = fd;
-    nl_pool[index].verdict = verdict;
-    nl_pool[index].packet_id = packet_id;
-
-    nl_write_counter++;
-    
-    pthread_cond_signal(&nl_full);
-    pthread_mutex_unlock(&nl_mutex);
-}
-
-static tc_verdict_t*
-get_nl_verdict_from_pool(tc_verdict_t *verdict)
-{
-    int   index;
-
-    pthread_mutex_lock(&nl_mutex);
-
-    if (nl_read_counter >= nl_write_counter) {
-        pthread_cond_wait(&nl_full, &nl_mutex);
-    }
-
-    index = nl_read_counter & NL_POOL_MASK;
-
-    verdict->fd = nl_pool[index].fd;
-    verdict->verdict = nl_pool[index].verdict;
-    verdict->packet_id = nl_pool[index].packet_id;
-
-
-    nl_read_counter++;
-
-    pthread_cond_signal(&nl_empty);
-    pthread_mutex_unlock(&nl_mutex);
-
-    return verdict;
-}
-
 #endif
 
 
@@ -330,26 +242,15 @@ tc_nl_event_process(tc_event_t *rev)
 
         if (pass_through_flag) {
 
-#if (INTERCEPT_THREAD)
-            put_nl_verdict_to_pool(rev->fd, NF_ACCEPT, packet_id);
-#else
             /* pass through the firewall */
             dispose_netlink_packet(rev->fd, NF_ACCEPT, packet_id);
-#endif
+            
         } else {
 
             tot_copy_resp_packs++;
-#if (INTERCEPT_THREAD)
-            /* put response packet header to pool */
-            put_resp_header_to_pool(ip_hdr);
-            /* drop the packet */
-            put_nl_verdict_to_pool(rev->fd, NF_DROP, packet_id);
-#else
             router_update(srv_settings.router_fd, ip_hdr);
-
             /* drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
-#endif
         }
     }
 
@@ -358,57 +259,18 @@ tc_nl_event_process(tc_event_t *rev)
 
 #endif
 
-
-#if (INTERCEPT_THREAD)
-static void *
-interception_dispose_nl_verdict(void *tid)
-{
-
-    tc_verdict_t verdict;
-
-    for (;;) {
-        get_nl_verdict_from_pool(&verdict); 
-        dispose_netlink_packet(verdict.fd, verdict.verdict, verdict.packet_id);
-    }
-
-    return NULL;
-}
-
-
-static void *
-interception_process_msg(void *tid)
-{
-    int             len;
-    char            resp[65536];
-    tc_ip_header_t *ip_hdr;
-
-    for (;;) {
-
-        ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
-        if (ip_hdr == NULL) {
-            tc_log_info(LOG_WARN, 0, "ip header is null");
-        }
-
-        router_update(srv_settings.router_fd, ip_hdr, len);
-
-    }
-
-    return NULL;
-}
-#endif
-
 /* initiate for tcpcopy server */
 int
 interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
     int         fd;
-#if (INTERCEPT_THREAD)
-    pthread_t   thread;
-#endif
     tc_event_t *ev;
 
 #if (!TCPCOPY_SINGLE)
-    router_init(srv_settings.hash_size, srv_settings.timeout);
+    delay_table_init(srv_settings.hash_size);
+    if (router_init() != TC_OK) {
+        return TC_ERROR;
+    }
 #endif
 
     pid = getpid();
@@ -476,17 +338,6 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
         }
     }
 
-
-#if (INTERCEPT_THREAD)
-    tc_pool_init();
-    pthread_create(&thread, NULL, interception_process_msg, NULL);
-
-    pthread_mutex_init(&nl_mutex, NULL);
-    pthread_cond_init(&nl_full, NULL);
-    pthread_cond_init(&nl_empty, NULL);
-    pthread_create(&thread, NULL, interception_dispose_nl_verdict, NULL);
-#endif
-
 #endif
 
     return TC_OK;
@@ -517,6 +368,7 @@ interception_over()
 
 #if (!TCPCOPY_SINGLE)
     router_destroy();
+    delay_table_destroy();
 #endif
 }
 
