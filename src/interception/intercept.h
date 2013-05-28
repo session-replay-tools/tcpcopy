@@ -58,7 +58,6 @@ typedef struct xcopy_srv_settings {
 extern xcopy_srv_settings srv_settings;
 
 #include <tc_util.h>
-#include <tc_pool.h>
 #include <tc_combine.h>
 #include <tc_delay.h>
 #include <tc_interception.h>
