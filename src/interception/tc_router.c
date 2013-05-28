@@ -94,12 +94,13 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     int                     fd;
     uint32_t                key;
 #endif
-    uint32_t                size_ip, size_tcp, new_size_tcp;
+    uint32_t                size_ip, size_tcp, new_size_tcp,
+                            tot_len, new_tot_len;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
-    uint32_t                cont_len, tot_len, new_tot_len;
-    unsigned char          *payload, *p; 
+    uint32_t                cont_len;
+    unsigned char          *payload, *p;
 #endif
 #if (TCPCOPY_SINGLE)
     if (main_router_fd == 0) {
@@ -114,19 +115,19 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     size_ip = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
     size_tcp = tcp_header->doff << 2;
-#if (TCPCOPY_MYSQL_ADVANCED)
     tot_len  = ntohs(ip_header->tot_len);
-#endif
 
     memset(&msg, 0, sizeof(struct msg_server_s));
     new_size_tcp = size_tcp;
     if (size_tcp > TCP_HEADER_MIN_LEN) {
-        set_wscale(tcp_header);
+        if (tcp_header->syn) {
+            set_wscale(tcp_header);
+        } else {
+            tcp_header->doff = (sizeof(tc_tcp_header_t)) >> 2; 
+        }
         new_size_tcp = tcp_header->doff << 2;
-#if (TCPCOPY_MYSQL_ADVANCED)
         new_tot_len = tot_len - (size_tcp - new_size_tcp);
         ip_header->tot_len = htons(new_tot_len);
-#endif
     }
     memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
     memcpy((void *) &(msg.tcp_header), tcp_header, new_size_tcp);
