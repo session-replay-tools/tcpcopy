@@ -265,8 +265,8 @@ enum packet_classification{
  *  static header size: 14 bytes          
  */ 
 struct ethernet_hdr {
-    uint8_t ether_dhost[ETHER_ADDR_LEN];
-    uint8_t ether_shost[ETHER_ADDR_LEN];
+    uint8_t  ether_dhost[ETHER_ADDR_LEN];
+    uint8_t  ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
 #endif 
@@ -292,8 +292,8 @@ typedef struct device_s{
 }device_t;
 
 typedef struct devices_s{
-    int             device_num;
-    device_t        device[MAX_DEVICE_NUM];
+    int       device_num;
+    device_t  device[MAX_DEVICE_NUM];
 }devices_t;
 #endif
 

@@ -24,10 +24,9 @@ router_init()
 inline uint32_t
 get_route_key(uint32_t ip, uint16_t port)
 {
-    /* TODO needs to be optimized */
-    uint32_t value = ip;
+    uint32_t value = port;
 
-    value += port;
+    value = (value << 16) + ip + port;
 
     return value;
 }
