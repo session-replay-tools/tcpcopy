@@ -23,7 +23,6 @@ int router_init();
 
 void router_update(int main_router_fd, tc_ip_header_t *ip_header);
 void router_add(uint32_t, uint16_t, int);
-void router_del(uint32_t, uint16_t);
 void router_destroy();
 
 #endif /* TC_ROUTER_INCLUDED */

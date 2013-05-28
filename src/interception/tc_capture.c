@@ -71,7 +71,6 @@ tc_msg_event_process(tc_event_t *rev)
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
                           ntohs(msg.client_port));
-            router_del(msg.client_ip, msg.client_port);
             break;
     }
 
