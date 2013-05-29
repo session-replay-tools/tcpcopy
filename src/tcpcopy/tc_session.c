@@ -1107,6 +1107,8 @@ send_reserved_packets(session_t *s)
             need_pause    = true;
         } else if (tcp_header->fin) {
 
+            s->sm.recv_client_close = 1;
+
             if (s->sm.resp_slow) {
                 tc_log_debug1(LOG_DEBUG, 0, "resp slow:%u", s->src_h_port);
                 break;
@@ -1131,6 +1133,9 @@ send_reserved_packets(session_t *s)
             }
         } else if (cont_len == 0) {
 
+            if (!s->sm.recv_client_close) {
+                s->req_ack_before_fin = ntohl(tcp_header->ack_seq);
+            }
 #if (!TCPCOPY_PAPER)
             /* waiting the response pack or the sec handshake pack */
             if (s->sm.candidate_response_waiting
@@ -2632,6 +2637,7 @@ process_client_fin(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
     s->sm.recv_client_close = 1;
+
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
         tc_log_debug1(LOG_DEBUG, 0, "fin has content:%u", s->src_h_port);
