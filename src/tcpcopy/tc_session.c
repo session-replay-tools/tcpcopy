@@ -1134,7 +1134,10 @@ send_reserved_packets(session_t *s)
         } else if (cont_len == 0) {
 
             if (!s->sm.recv_client_close) {
-                s->req_ack_before_fin = ntohl(tcp_header->ack_seq);
+                cur_ack = ntohl(tcp_header->ack_seq);
+                if (after(cur_ack, s->req_ack_before_fin)) {
+                    s->req_ack_before_fin = cur_ack;
+                }
             }
 #if (!TCPCOPY_PAPER)
             /* waiting the response pack or the sec handshake pack */
