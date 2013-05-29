@@ -2932,7 +2932,9 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
 
 #if (!TCPCOPY_PAPER)
     tc_log_debug1(LOG_DEBUG, 0, "drop packet:%u", s->src_h_port);
-    s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
+    if (!s->sm.recv_client_close) {
+        s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
+    }
 #else
     /* this is for adding response latency(only valid for high latency) */
     save_packet(s->unsend_packets, ip_header, tcp_header);
