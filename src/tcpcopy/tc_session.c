@@ -1108,10 +1108,12 @@ send_reserved_packets(session_t *s)
         } else if (tcp_header->fin) {
 
             if (s->sm.resp_slow) {
+                tc_log_debug1(LOG_DEBUG, 0, "resp slow:%u", s->src_h_port);
                 break;
             }
 
             if (s->sm.candidate_response_waiting) {
+                tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
                 break;
             }
             need_pause = true;
@@ -1119,8 +1121,12 @@ send_reserved_packets(session_t *s)
                 /* active close from client */
                 s->sm.src_closed = 1;
                 s->sm.status |= CLIENT_FIN;
+                tc_log_debug1(LOG_DEBUG, 0, "active close from client:%u", 
+                        s->src_h_port);
             } else {
                 /* server active close */
+                tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
+                        s->src_h_port);
                 omit_transfer = true;
             }
         } else if (cont_len == 0) {
@@ -2926,6 +2932,7 @@ process_clt_afer_filtering(session_t *s, tc_ip_header_t *ip_header,
 
 #if (!TCPCOPY_PAPER)
     tc_log_debug1(LOG_DEBUG, 0, "drop packet:%u", s->src_h_port);
+    s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
 #else
     /* this is for adding response latency(only valid for high latency) */
     save_packet(s->unsend_packets, ip_header, tcp_header);
