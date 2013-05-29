@@ -42,8 +42,8 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
     key = get_route_key(ip, port);
 
-    index = (key & 0xFFFF0000) >> 16;
-    remainder = key & 0x0000FFFF;
+    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+    remainder = key & ROUTE_KEY_LOW_MASK;
 
     table->cache[index].key = remainder; 
     table->cache[index].fd  = (uint16_t) fd; 
@@ -62,8 +62,8 @@ router_get(uint32_t key)
     int           i, fd = 0, index, remainder;
     route_slot_t *slot;
 
-    index = (key & 0xFFFF0000) >> 16;
-    remainder = key & 0x0000FFFF;
+    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+    remainder = key & ROUTE_KEY_LOW_MASK;
 
     if (table->cache[index].key == remainder) {
         return (int) table->cache[index].fd;
