@@ -1107,24 +1107,38 @@ send_reserved_packets(session_t *s)
             need_pause    = true;
         } else if (tcp_header->fin) {
 
+            s->sm.recv_client_close = 1;
+
             if (s->sm.resp_slow) {
+                tc_log_debug1(LOG_DEBUG, 0, "resp slow:%u", s->src_h_port);
                 break;
             }
 
             if (s->sm.candidate_response_waiting) {
+                tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
                 break;
             }
             need_pause = true;
-            if (s->req_last_ack_sent_seq == ntohl(tcp_header->ack_seq)) {
+            if (s->req_ack_before_fin == ntohl(tcp_header->ack_seq)) {
                 /* active close from client */
                 s->sm.src_closed = 1;
                 s->sm.status |= CLIENT_FIN;
+                tc_log_debug1(LOG_DEBUG, 0, "active close from client:%u", 
+                        s->src_h_port);
             } else {
                 /* server active close */
+                tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
+                        s->src_h_port);
                 omit_transfer = true;
             }
         } else if (cont_len == 0) {
 
+            if (!s->sm.recv_client_close) {
+                cur_ack = ntohl(tcp_header->ack_seq);
+                if (after(cur_ack, s->req_ack_before_fin)) {
+                    s->req_ack_before_fin = cur_ack;
+                }
+            }
 #if (!TCPCOPY_PAPER)
             /* waiting the response pack or the sec handshake pack */
             if (s->sm.candidate_response_waiting
@@ -2626,6 +2640,7 @@ process_client_fin(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
     s->sm.recv_client_close = 1;
+
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
         tc_log_debug1(LOG_DEBUG, 0, "fin has content:%u", s->src_h_port);
@@ -3010,6 +3025,10 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
         if (process_client_fin(s, ip_header, tcp_header) == DISP_STOP) {
             return;
         }
+    }
+
+    if (!s->sm.recv_client_close) {
+        s->req_ack_before_fin = ntohl(tcp_header->ack_seq);
     }
 
     /* if not receiving syn packet */ 
