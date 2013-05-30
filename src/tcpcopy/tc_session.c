@@ -1119,7 +1119,10 @@ send_reserved_packets(session_t *s)
                 break;
             }
             need_pause = true;
-            if (s->req_ack_before_fin == ntohl(tcp_header->ack_seq)) {
+            cur_ack = ntohl(tcp_header->ack_seq);
+            tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
+                    cur_ack, s->req_ack_before_fin, s->src_h_port);
+            if (s->req_ack_before_fin == cur_ack) {
                 /* active close from client */
                 s->sm.src_closed = 1;
                 s->sm.status |= CLIENT_FIN;
@@ -1133,10 +1136,18 @@ send_reserved_packets(session_t *s)
             }
         } else if (cont_len == 0) {
 
+            tc_log_debug1(LOG_DEBUG, 0, "cont len 0:%u", s->src_h_port);
             if (!s->sm.recv_client_close) {
                 cur_ack = ntohl(tcp_header->ack_seq);
-                if (after(cur_ack, s->req_ack_before_fin)) {
+                tc_log_debug3(LOG_DEBUG, 0, "ack:%u, record:%u, p:%u", 
+                        cur_ack, s->req_ack_before_fin, s->src_h_port);
+                if (!s->sm.record_ack_before_fin) {
+                    s->sm.record_ack_before_fin = 1;
                     s->req_ack_before_fin = cur_ack;
+                    tc_log_debug1(LOG_DEBUG, 0, "record:%u", s->src_h_port);
+                } else if (after(cur_ack, s->req_ack_before_fin)) {
+                    s->req_ack_before_fin = cur_ack;
+                    tc_log_debug1(LOG_DEBUG, 0, "record:%u", s->src_h_port);
                 }
             }
 #if (!TCPCOPY_PAPER)
@@ -3029,6 +3040,9 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if (!s->sm.recv_client_close) {
         s->req_ack_before_fin = ntohl(tcp_header->ack_seq);
+        s->sm.record_ack_before_fin = 1;
+        tc_log_debug2(LOG_DEBUG, 0, "record:%u, p:%u",
+                s->req_ack_before_fin, s->src_h_port);
     }
 
     /* if not receiving syn packet */ 
