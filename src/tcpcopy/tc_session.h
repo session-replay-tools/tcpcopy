@@ -50,6 +50,7 @@ typedef struct sess_state_machine_s{
     /* This indicates if the session intercepted the syn packets from client
      * or it has faked the syn packets */
     uint32_t req_syn_ok:1;
+    uint32_t record_ack_before_fin:1;
     /* flag that avoids using the first handshake ack seq */
     uint32_t req_valid_last_ack_sent:1;
     /*
