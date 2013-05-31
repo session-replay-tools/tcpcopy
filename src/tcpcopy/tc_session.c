@@ -422,10 +422,6 @@ session_rel_dynamic_mem(session_t *s)
 
         /* send the last rst packet to backend */
         send_faked_passive_rst(s);
-#if (!TCPCOPY_SINGLE)
-        send_router_info(s->online_addr, s->online_port, s->src_addr,
-                htons(s->src_h_port), CLIENT_DEL);
-#endif
         s->sm.sess_over = 1;
     }
 
@@ -3367,10 +3363,6 @@ process(char *packet, int pack_src)
                     tc_log_info(LOG_NOTICE, 0, "init for next sess from bak");
                     restore_buffered_next_session(s);
                 } else {
-#if (!TCPCOPY_SINGLE)
-                    send_router_info(s->online_addr, s->online_port,
-                            ip_header->daddr, tcp_header->dest, CLIENT_DEL);
-#endif
                     session_rel_dynamic_mem(s);
                     if (!hash_del(sessions_table, s->hash_key)) {
                         tc_log_info(LOG_ERR, 0, "wrong del:%u", s->src_h_port);
@@ -3447,11 +3439,6 @@ process(char *packet, int pack_src)
                         tc_log_info(LOG_NOTICE, 0, "init for next from clt");
                         restore_buffered_next_session(s);
                     } else {
-#if (!TCPCOPY_SINGLE)
-                        send_router_info(s->online_addr, s->online_port,
-                                ip_header->saddr, htons(s->src_h_port),
-                                CLIENT_DEL);
-#endif
                         session_rel_dynamic_mem(s);
                         if (!hash_del(sessions_table, s->hash_key)) {
                             tc_log_info(LOG_ERR, 0, "wrong del:%u",
