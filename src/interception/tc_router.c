@@ -36,7 +36,7 @@ get_route_key(uint32_t ip, uint16_t port)
 void
 router_add(uint32_t ip, uint16_t port, int fd)
 {
-    int           index, remainder;
+    int           i, existed = 0, max, index, remainder;
     uint32_t      key;
     route_slot_t *slot;
 
@@ -49,8 +49,27 @@ router_add(uint32_t ip, uint16_t port, int fd)
     table->cache[index].fd  = (uint16_t) fd; 
 
     slot = table->slots + index;
-    slot->items[slot->write_index] = table->cache[index];
-    slot->write_index = (slot->write_index + 1) % ROUTE_ARRAY_SIZE;
+
+    max = ROUTE_ARRAY_SIZE;
+    if (slot->total_valid < ROUTE_ARRAY_SIZE) {
+        max = slot->total_valid;
+    }
+
+    for (i = 0; i < max; i++) {
+        if (slot->items[i].key == remainder) {
+            slot->items[i].fd = fd;
+            existed = 1;
+            break;
+        }
+    }
+
+    if (!existed) {
+        if (slot->total_valid < ROUTE_ARRAY_SIZE) {
+            slot->total_valid++;
+        }
+        slot->items[slot->write_index] = table->cache[index];
+        slot->write_index = (slot->write_index + 1) % ROUTE_ARRAY_SIZE;
+    }
 
     delay_table_send(get_key(ip, port), fd);
 

@@ -9,7 +9,8 @@ typedef struct route_item_s {
 }route_item_t;
 
 typedef struct route_slot_s {
-    uint32_t     write_index;
+    uint32_t     write_index:16;
+    uint32_t     total_valid:16;
     route_item_t items[ROUTE_ARRAY_SIZE];
 }route_slot_t;
 
