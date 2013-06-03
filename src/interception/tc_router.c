@@ -117,6 +117,12 @@ router_add(uint32_t ip, uint16_t port, int fd)
             existed = 1;
             break;
         }
+
+#if 1
+        if (slot->items[i].timestamp == 0) {
+            tc_log_info(LOG_WARN, 0, "visit 0 in add");
+        }
+#endif
     }
 
     if (!existed) {
@@ -151,6 +157,12 @@ router_get(uint32_t key)
             router_update_adjust(slot, i);
             break;
         }
+#if 1
+        if (slot->items[i].timestamp == 0) {
+            tc_log_info(LOG_WARN, 0, "visit 0 in get");
+        }
+#endif
+ 
     }
 
     if (i < ROUTE_ARRAY_SIZE) {
