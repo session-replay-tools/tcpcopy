@@ -171,7 +171,7 @@ router_get(uint32_t key)
  
     }
 
-    if (i < ROUTE_ARRAY_SIZE) {
+    if (i < slot->num) {
         table->cache[index].key = remainder;
         table->cache[index].fd  = fd;
         return fd;
