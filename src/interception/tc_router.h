@@ -6,16 +6,20 @@
 typedef struct route_item_s {
     uint16_t key;
     uint16_t fd;
+    time_t   timestamp;
 }route_item_t;
 
 typedef struct route_slot_s {
-    uint32_t     write_index:16;
-    uint32_t     total_valid:16;
+    uint32_t     num:6;
+    uint32_t     total_visit:26;
     route_item_t items[ROUTE_ARRAY_SIZE];
 }route_slot_t;
 
 
 typedef struct route_table_s {
+    uint64_t     hit;
+    uint64_t     missed;
+    uint64_t     lost;
     route_item_t cache[ROUTE_SLOTS];
     route_slot_t slots[ROUTE_SLOTS];
 }route_table_t;

@@ -2,8 +2,6 @@
 #include <intercept.h>
 
 static route_table_t  *table = NULL;
-static uint64_t        fd_null_cnt = 0;
-
 
 /* initiate router table */
 int
@@ -32,11 +30,44 @@ get_route_key(uint32_t ip, uint16_t port)
 }
 
 
+static void router_adjust(route_slot_t *slot, int key, int fd) {
+    int          i, max;
+    route_item_t item, tmp;
+
+    max = slot->num;
+    if (max > 0) {
+        item = slot->items[0];
+        if (max == 1) {
+            slot->items[1] = item;
+        }
+    }
+
+    slot->items[0].key = key;
+    slot->items[0].fd = fd;
+    slot->items[0].timestamp = tc_current_time_sec;
+
+
+    for (i = 1; i < max; i = (i << 1) + 1) {
+        if (slot->items[i].timestamp > slot->items[i + 1].timestamp) {
+            ++i;
+        }
+
+        /* TODO needs to be optimized */ 
+        tmp = slot->items[i];
+        slot->items[i] = item;
+        item = tmp;
+    }
+    
+    if (slot->num < ROUTE_ARRAY_SIZE) {
+        slot->num++;
+    }
+}
+
 /* add item to the router table */
 void
 router_add(uint32_t ip, uint16_t port, int fd)
 {
-    int           i, existed = 0, max, index, remainder;
+    int           index, remainder;
     uint32_t      key;
     route_slot_t *slot;
 
@@ -50,26 +81,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
     slot = table->slots + index;
 
-    max = ROUTE_ARRAY_SIZE;
-    if (slot->total_valid < ROUTE_ARRAY_SIZE) {
-        max = slot->total_valid;
-    }
-
-    for (i = 0; i < max; i++) {
-        if (slot->items[i].key == remainder) {
-            slot->items[i].fd = fd;
-            existed = 1;
-            break;
-        }
-    }
-
-    if (!existed) {
-        if (slot->total_valid < ROUTE_ARRAY_SIZE) {
-            slot->total_valid++;
-        }
-        slot->items[slot->write_index] = table->cache[index];
-        slot->write_index = (slot->write_index + 1) % ROUTE_ARRAY_SIZE;
-    }
+    router_adjust(slot, remainder, fd);
 
     delay_table_send(get_key(ip, port), fd);
 
@@ -85,21 +97,27 @@ router_get(uint32_t key)
     remainder = key & ROUTE_KEY_LOW_MASK;
 
     if (table->cache[index].key == remainder) {
+        table->hit++;
         return (int) table->cache[index].fd;
     }
 
     slot = table->slots + index;
     for (i = 0; i < ROUTE_ARRAY_SIZE; i++) {
         if (slot->items[i].key == remainder) {
+            table->missed++;
             fd = (int) slot->items[i].fd;
+            router_adjust(slot, remainder, fd);
             break;
         }
     }
 
     if (i < ROUTE_ARRAY_SIZE) {
-        table->cache[index] = slot->items[i];
+        table->cache[index].key = remainder;
+        table->cache[index].fd  = fd;
         return fd;
     }
+    
+    table->lost++;
 
     return -1;
 
@@ -171,7 +189,6 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
             return;
         }
         tc_log_debug0(LOG_DEBUG, 0, "fd is null");
-        fd_null_cnt++;
         delay_table_add(key, &msg);
         return ;
     }
@@ -205,7 +222,8 @@ router_destroy()
 {
     if (table != NULL) {
         tc_log_info(LOG_NOTICE, 0, "destroy router table");
-        tc_log_info(LOG_NOTICE, 0, "fd null counter:%llu", fd_null_cnt);
+        tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
+                table->hit, table->missed, table->lost);
         free(table);
         table = NULL;
     }
