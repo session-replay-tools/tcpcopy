@@ -94,6 +94,8 @@ router_add(uint32_t ip, uint16_t port, int fd)
     uint32_t      key;
     route_slot_t *slot;
 
+    table->total_sessions++;
+
     key = get_route_key(ip, port);
 
     index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
@@ -120,7 +122,8 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
 #if 1
         if (slot->items[i].timestamp == 0) {
-            tc_log_info(LOG_WARN, 0, "visit 0 in add");
+            tc_log_info(LOG_WARN, 0, "visit 0 in add:%d,valid:%d",
+                    i, max);
         }
 #endif
     }
@@ -141,6 +144,7 @@ router_get(uint32_t key)
     int           i, fd = 0, index, remainder;
     route_slot_t *slot;
 
+    table->searched++;
     index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
     remainder = key & ROUTE_KEY_LOW_MASK;
 
@@ -150,16 +154,18 @@ router_get(uint32_t key)
     }
 
     slot = table->slots + index;
-    for (i = 0; i < ROUTE_ARRAY_SIZE; i++) {
+    for (i = 0; i < slot->num; i++) {
         if (slot->items[i].key == remainder) {
             table->missed++;
             fd = (int) slot->items[i].fd;
             router_update_adjust(slot, i);
             break;
         }
+        table->extra_compared++;
 #if 1
         if (slot->items[i].timestamp == 0) {
-            tc_log_info(LOG_WARN, 0, "visit 0 in get");
+            tc_log_info(LOG_WARN, 0, "visit 0 in get:%d, valid:%d",
+                    i, slot->num);
         }
 #endif
  
@@ -274,6 +280,10 @@ void router_stat()
 {
     tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
             table->hit, table->missed, table->lost);
+    tc_log_info(LOG_NOTICE, 0, 
+            "search:%llu,extra compared:%llu,all sessions:%llu", 
+            table->searched, table->extra_compared, table->total_sessions);
+
 }
 
 /* destroy router table */
@@ -281,9 +291,14 @@ void
 router_destroy()
 {
     if (table != NULL) {
-        tc_log_info(LOG_NOTICE, 0, "destroy router table");
+
         tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
                 table->hit, table->missed, table->lost);
+        tc_log_info(LOG_NOTICE, 0, 
+            "search:%llu,extra compared:%llu,all sessions:%llu", 
+            table->searched, table->extra_compared, table->total_sessions);
+
+        tc_log_info(LOG_NOTICE, 0, "destroy router table");
         free(table);
         table = NULL;
     }

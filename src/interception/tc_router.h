@@ -20,6 +20,9 @@ typedef struct route_table_s {
     uint64_t     hit;
     uint64_t     missed;
     uint64_t     lost;
+    uint64_t     extra_compared;
+    uint64_t     searched;
+    uint64_t     total_sessions;
     route_item_t cache[ROUTE_SLOTS];
     route_slot_t slots[ROUTE_SLOTS];
 }route_table_t;
