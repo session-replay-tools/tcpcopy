@@ -29,9 +29,27 @@ get_route_key(uint32_t ip, uint16_t port)
     return value;
 }
 
+static inline void router_update_adjust(route_slot_t *slot, int child) 
+{
+    int          parent;
+    route_item_t tmp;
 
-static void router_adjust(route_slot_t *slot, int key, int fd) {
-    int          i, max;
+    if (child < 1) {
+        return;
+    }
+
+    parent = (child - 1) / 2;
+    tmp = slot->items[parent];
+    slot->items[parent] = slot->items[child];
+    slot->items[child] = tmp;
+
+    return;
+}
+
+
+static void router_add_adjust(route_slot_t *slot, int key, int fd) 
+{
+    int          i, max, depth;
     route_item_t item, tmp;
 
     max = slot->num;
@@ -46,7 +64,7 @@ static void router_adjust(route_slot_t *slot, int key, int fd) {
     slot->items[0].fd = fd;
     slot->items[0].timestamp = tc_current_time_sec;
 
-
+    depth = 1;
     for (i = 1; i < max; i = (i << 1) + 1) {
         if (slot->items[i].timestamp > slot->items[i + 1].timestamp) {
             ++i;
@@ -56,8 +74,13 @@ static void router_adjust(route_slot_t *slot, int key, int fd) {
         tmp = slot->items[i];
         slot->items[i] = item;
         item = tmp;
+        depth++;
     }
     
+    if (depth < ROUTE_ARRAY_DEPTH) {
+        slot->items[max] = item;
+    }
+
     if (slot->num < ROUTE_ARRAY_SIZE) {
         slot->num++;
     }
@@ -67,7 +90,7 @@ static void router_adjust(route_slot_t *slot, int key, int fd) {
 void
 router_add(uint32_t ip, uint16_t port, int fd)
 {
-    int           index, remainder;
+    int           i, max, existed, index, remainder;
     uint32_t      key;
     route_slot_t *slot;
 
@@ -81,7 +104,26 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
     slot = table->slots + index;
 
-    router_adjust(slot, remainder, fd);
+    existed = 0;
+    max = ROUTE_ARRAY_SIZE;
+    if (slot->num < ROUTE_ARRAY_SIZE) {
+        max = slot->num;
+    }
+
+    for (i = 0; i < max; i++) {
+        if (slot->items[i].key == remainder) {
+            slot->items[i].fd = fd;
+            slot->items[i].timestamp = tc_current_time_sec;
+            existed = 1;
+            break;
+        }
+    }
+
+    if (!existed) {
+        router_add_adjust(slot, remainder, fd);
+    } else {
+        router_update_adjust(slot, i);
+    }
 
     delay_table_send(get_key(ip, port), fd);
 
@@ -106,7 +148,7 @@ router_get(uint32_t key)
         if (slot->items[i].key == remainder) {
             table->missed++;
             fd = (int) slot->items[i].fd;
-            router_adjust(slot, remainder, fd);
+            router_update_adjust(slot, i);
             break;
         }
     }
@@ -215,6 +257,12 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
 
 }
 
+
+void router_stat()
+{
+    tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
+            table->hit, table->missed, table->lost);
+}
 
 /* destroy router table */
 void
