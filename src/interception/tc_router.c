@@ -49,14 +49,17 @@ static inline void router_update_adjust(route_slot_t *slot, int child)
 
 static void router_add_adjust(route_slot_t *slot, int key, int fd) 
 {
-    int          i, max, depth;
+    int          i, max, depth, tail_need_save;
     route_item_t item, tmp;
 
+    tail_need_save = 0;
     max = slot->num;
     if (max > 0) {
         item = slot->items[0];
         if (max == 1) {
             slot->items[1] = item;
+        } else {
+            tail_need_save = 1;
         }
     }
 
@@ -75,9 +78,12 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
         slot->items[i] = item;
         item = tmp;
         depth++;
+        if (item.timestamp == 0) {
+            tail_need_save = 0;
+        }
     }
     
-    if (depth < ROUTE_ARRAY_DEPTH) {
+    if (tail_need_save && depth < ROUTE_ARRAY_DEPTH) {
         slot->items[max] = item;
     }
 
