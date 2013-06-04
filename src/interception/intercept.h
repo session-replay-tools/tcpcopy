@@ -47,7 +47,6 @@ typedef struct xcopy_srv_settings {
 
 #endif
 
-    int                  timeout;
     int                  router_fd;
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */

@@ -290,6 +290,10 @@ void router_stat()
 void
 router_destroy()
 {
+#if 1
+    int i, stat[16];
+#endif
+
     if (table != NULL) {
 
         tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
@@ -298,6 +302,21 @@ router_destroy()
             "search:%llu,extra compared:%llu,all sessions:%llu", 
             table->searched, table->extra_compared, table->total_sessions);
 
+#if 1
+        memset(stat, 0, sizeof(int) * 16);
+        for (i = 0; i <  ROUTE_SLOTS; i++) {
+            if (table->slots[i].num > 0) {
+                tc_log_info(LOG_NOTICE, 0, "items in %d slot:%d",
+                        i, table->slots[i].num);
+            }
+            stat[table->slots[i].num]++;
+        }
+        
+        for (i = 0; i < 16; i++) {
+            tc_log_info(LOG_NOTICE, 0, "items in %d stat:%d",
+                    i, stat[i]);
+        }
+#endif
         tc_log_info(LOG_NOTICE, 0, "destroy router table");
         free(table);
         table = NULL;

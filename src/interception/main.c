@@ -241,9 +241,6 @@ read_args(int argc, char **argv) {
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
                 break;
-            case 't':
-                srv_settings.timeout = (size_t) atoi(optarg);
-                break;
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
             case 'i':
@@ -427,9 +424,6 @@ set_details()
 
 #endif
 
-    if (srv_settings.timeout == 0) {
-        srv_settings.timeout = DEFAULT_TIMEOUT;
-    }
     /* daemonize */
     if (srv_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
