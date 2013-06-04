@@ -123,12 +123,13 @@ router_add(uint32_t ip, uint16_t port, int fd)
             break;
         }
 
-#if 1
+#if 0
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in add visit %d null timestamp,all:%d",
                     i + 1, max);
         }
 #endif
+
     }
 
     if (!existed) {
@@ -165,7 +166,7 @@ router_get(uint32_t key)
             break;
         }
         table->extra_compared++;
-#if 1
+#if 0
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in get, visit %d null timestamp, all:%d",
                     i + 1, slot->num);
@@ -293,9 +294,7 @@ void router_stat()
 void
 router_destroy()
 {
-#if 1
-    int i, stat[16];
-#endif
+    int i, stat[ROUTE_ARRAY_ACTIVE_NUM_RANGE];
 
     if (table != NULL) {
 
@@ -305,21 +304,16 @@ router_destroy()
             "search:%llu,extra compared:%llu,all sessions:%llu", 
             table->searched, table->extra_compared, table->total_sessions);
 
-#if 1
-        memset(stat, 0, sizeof(int) * 16);
+        memset(stat, 0, sizeof(int) * ROUTE_ARRAY_ACTIVE_NUM_RANGE);
         for (i = 0; i <  ROUTE_SLOTS; i++) {
-            if (table->slots[i].num > 0) {
-                tc_log_info(LOG_NOTICE, 0, "items in %d slot:%d",
-                        i, table->slots[i].num);
-            }
             stat[table->slots[i].num]++;
         }
-        
-        for (i = 0; i < 16; i++) {
-            tc_log_info(LOG_NOTICE, 0, "items in %d stat:%d",
+
+        for (i = 0; i < ROUTE_ARRAY_ACTIVE_NUM_RANGE; i++) {
+            tc_log_info(LOG_NOTICE, 0, "array has %d items and its stat:%d",
                     i, stat[i]);
         }
-#endif
+
         tc_log_info(LOG_NOTICE, 0, "destroy router table");
         free(table);
         table = NULL;
