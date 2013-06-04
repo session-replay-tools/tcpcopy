@@ -582,7 +582,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
             *num = (int) ntohs(*(uint16_t *) buffer);
             if (*num > COMB_MAX_NUM) {
                 tc_log_info(LOG_WARN, 0, "num:%d larger than threshold", *num);
-                break;
+                return TC_ERROR;
             }
             read_num = 1;
             len = ((*num) * MSG_SERVER_SIZE) + len;
