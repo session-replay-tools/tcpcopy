@@ -49,14 +49,13 @@ static inline void router_update_adjust(route_slot_t *slot, int child)
 
 static void router_add_adjust(route_slot_t *slot, int key, int fd) 
 {
-    int          i, max, depth, tail_need_save;
+    int          i, tail_need_save;
     route_item_t item, tmp;
 
     tail_need_save = 0;
-    max = slot->num;
-    if (max > 0) {
+    if (slot->num > 0) {
         item = slot->items[0];
-        if (max == 1) {
+        if (slot->num == 1) {
             slot->items[1] = item;
         } else {
             tail_need_save = 1;
@@ -67,8 +66,7 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
     slot->items[0].fd = fd;
     slot->items[0].timestamp = tc_current_time_sec;
 
-    depth = 1;
-    for (i = 1; i < max; i = (i << 1) + 1) {
+    for (i = 1; i < slot->num; i = (i << 1) + 1) {
         if (slot->items[i].timestamp > slot->items[i + 1].timestamp) {
             ++i;
         }
@@ -77,14 +75,13 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
         tmp = slot->items[i];
         slot->items[i] = item;
         item = tmp;
-        depth++;
-        if (item.timestamp == 0) {
+        if (item.timestamp == 0 || i == ROUTE_ARRAY_MAX_INDEX) {
             tail_need_save = 0;
         }
     }
     
-    if (tail_need_save && depth < ROUTE_ARRAY_DEPTH) {
-        slot->items[max] = item;
+    if (tail_need_save) {
+        slot->items[slot->num] = item;
     }
 
     if (slot->num < ROUTE_ARRAY_SIZE) {
