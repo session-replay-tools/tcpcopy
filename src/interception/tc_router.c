@@ -75,16 +75,16 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
         tmp = slot->items[i];
         slot->items[i] = item;
         item = tmp;
-        if (item.timestamp == 0 || i == ROUTE_ARRAY_MAX_INDEX) {
+        if (item.timestamp == 0) {
             tail_need_save = 0;
         }
     }
-    
-    if (tail_need_save) {
-        slot->items[slot->num] = item;
-    }
 
     if (slot->num < ROUTE_ARRAY_SIZE) {
+        if (tail_need_save) {
+            slot->items[slot->num] = item;
+        }
+
         slot->num++;
     }
 }
@@ -125,8 +125,8 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
 #if 1
         if (slot->items[i].timestamp == 0) {
-            tc_log_info(LOG_WARN, 0, "visit 0 in add:%d,valid:%d",
-                    i, max);
+            tc_log_info(LOG_WARN, 0, "in add visit %d null timestamp,all:%d",
+                    i + 1, max);
         }
 #endif
     }
@@ -167,8 +167,8 @@ router_get(uint32_t key)
         table->extra_compared++;
 #if 1
         if (slot->items[i].timestamp == 0) {
-            tc_log_info(LOG_WARN, 0, "visit 0 in get:%d, valid:%d",
-                    i, slot->num);
+            tc_log_info(LOG_WARN, 0, "in get, visit %d null timestamp, all:%d",
+                    i + 1, slot->num);
         }
 #endif
  
