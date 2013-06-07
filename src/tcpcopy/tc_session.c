@@ -951,7 +951,7 @@ send_reserved_packets(session_t *s)
 #endif
     uint16_t          size_ip, cont_len;
 #if (TCPCOPY_PAPER)
-    uint32_t          cur_ack, srv_sk_buf_s;
+    uint32_t          cur_ack;
 #else
     uint32_t          cur_ack, cur_seq, diff, srv_sk_buf_s;
 #endif
@@ -968,6 +968,7 @@ send_reserved_packets(session_t *s)
         return count;
     }
 
+#if (!TCPCOPY_PAPER) 
     srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq;
 
     tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
@@ -976,6 +977,7 @@ send_reserved_packets(session_t *s)
         s->sm.delay_sent_flag = 1;
         return count;
     }
+#endif
 
     list = s->unsend_packets;
     if (list == NULL) {
@@ -1050,6 +1052,7 @@ send_reserved_packets(session_t *s)
                 break;
             }
 
+#if (!TCPCOPY_PAPER) 
             srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq + cont_len;
             if (srv_sk_buf_s > s->srv_window) {
                 tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
@@ -1057,7 +1060,7 @@ send_reserved_packets(session_t *s)
                 s->sm.delay_sent_flag = 1;
                 break;
             }
-#if (TCPCOPY_PAPER) 
+#else
             if (s->sm.recv_client_close) {
                 tc_log_debug1(LOG_DEBUG, 0, "sending req when clt close:%u",
                                 s->src_h_port);
@@ -1262,6 +1265,11 @@ is_session_dead(session_t *s)
         if (packs_unsend > 5) {
             return true;
         }
+#if (TCPCOPY_PAPER)
+        if (!s->sm.candidate_response_waiting && packs_unsend > 0) {
+            return true;
+        }
+#endif
     }
 
     return false;
@@ -2099,7 +2107,10 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
         s->vir_next_seq = ack;
     } else if (before(ack, s->vir_next_seq)) {
 
+#if (!TCPCOPY_PAPER)
+        /* it will not be true for paper mode */
         s->sm.resp_slow = 1;
+#endif
         /* if ack from test server is less than what we expect */
         tc_log_debug3(LOG_DEBUG, 0, "bak_ack less than vir_next_seq:%u,%u,p:%u",
                 ack, s->vir_next_seq, s->src_h_port);
@@ -2972,7 +2983,9 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 {
     int       is_new_req = 0;
     uint16_t  cont_len;
+#if (!TCPCOPY_PAPER)
     uint32_t  srv_sk_buf_s;
+#endif
 
     tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
@@ -3089,6 +3102,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
             return;
         }
 
+#if (!TCPCOPY_PAPER)
         srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq  + cont_len;
         if (srv_sk_buf_s > s->srv_window) {
             tc_log_debug3(LOG_DEBUG, 0, "wait,srv_sk_buf_s:%u, win:%u, p:%u",
@@ -3097,6 +3111,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
             save_packet(s->unsend_packets, ip_header, tcp_header);
             return;
         }
+#endif
 
         /* check if the packet is to be saved for later use */
         if (s->sm.candidate_response_waiting) {
