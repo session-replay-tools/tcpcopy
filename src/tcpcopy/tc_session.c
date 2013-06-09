@@ -3386,9 +3386,14 @@ process(char *packet, int pack_src)
                     } else {
                         s->next_sess_packs = link_list_create();
                     }
-                    save_packet(s->next_sess_packs, ip_header, tcp_header);
-                    tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
-                    return true;
+                    if (s->next_sess_packs != NULL) {
+                        save_packet(s->next_sess_packs, ip_header, tcp_header);
+                        tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
+                        return true;
+                    } else {
+                        tc_log_debug0(LOG_DEBUG, 0, "buffer the new session failed");
+                        return false;            
+                    }
                 }
             } else {
                 /* create a new session */
