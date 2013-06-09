@@ -6,11 +6,10 @@ int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, 
         int snap_len, int buf_size, char *pcap_filter)
 {
-#if (!HAVE_PCAP_CREATE)
-    int         fd;
-#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
     int         fd, status;
-#endif
+#pragma GCC diagnostic pop
     char        ebuf[PCAP_ERRBUF_SIZE]; 
     struct      bpf_program fp;
     bpf_u_int32 net, netmask;      
