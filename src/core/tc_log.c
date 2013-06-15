@@ -21,6 +21,40 @@ static tc_log_level_t tc_log_levels[] = {
 };
 
 int
+tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
+{
+    int i;
+
+    /*
+     * Attention for vsnprintf: http://lwn.net/Articles/69419/
+     */
+    i = vsnprintf(buf, size, fmt, args);
+
+    if (i <= 0) {
+        return 0;
+    }
+
+    if (i < size) {
+        return i;
+    }
+
+    return size - 1;
+}
+
+int
+tc_scnprintf(char *buf, size_t size, const char *fmt, ...)
+{
+    va_list args;
+    int i;
+
+    va_start(args, fmt);
+    i = tc_vscnprintf(buf, size, fmt, args);
+    va_end(args);
+
+    return i;
+}
+
+int
 tc_log_init(const char *file)
 {
     log_fd = open((file == NULL ? "error.log" : file),
@@ -46,8 +80,8 @@ tc_log_end()
 void
 tc_log_info(int level, int err, const char *fmt, ...)
 {
-    char            buffer[2048], *p;
-    size_t          n;
+    char            buffer[LOG_MAX_LEN], *p;
+    size_t          n, len;
     va_list         args;
     tc_log_level_t *ll;
 
@@ -69,23 +103,24 @@ tc_log_info(int level, int err, const char *fmt, ...)
     p = tc_cpymem(p, ll->level, ll->len);
     *p++ = ' ';
 
+    n = len = TC_ERR_LOG_TIME_LEN + ll->len + 2;
     va_start(args, fmt);
-    n = vsprintf(p, fmt, args);
+    len += tc_vscnprintf(p, LOG_MAX_LEN - n, fmt, args);
     va_end(args);
 
-    if (n < 0) {
+    if (len <= n) {
         return;
     }
 
-    p += n;
+    p = buffer + len;
 
     if (err > 0) {
-        n = sprintf(p, " (%s)", strerror(err));
-        if (n < 0) {
+        len += tc_scnprintf(p, LOG_MAX_LEN - len, " (%s)", strerror(err));
+        if (len < (p - buffer)) {
             return;
         }
 
-        p += n;
+        p = buffer + len;
     }
 
     *p++ = '\n';
