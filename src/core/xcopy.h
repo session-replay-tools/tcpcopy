@@ -44,6 +44,9 @@
 #if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
 #include <pcap.h>
 #endif
+#if (TCPCOPY_MYSQL_NO_SKIP)
+#include <openssl/evp.h>
+#endif
 
 #if (INTERCEPT_ADVANCED)
 #define TCPCOPY_DR 1
@@ -77,7 +80,9 @@
 #define TCPCOPY_MYSQL_BASIC 1
 #endif
 
+#define TCPCOPY_DIGEST 1
 #define TCPCOPY_MYSQL_ADVANCED 1
+#define MYSQL_SHA1 "sha1"
 
 #endif
 
@@ -348,6 +353,9 @@ inline int before(uint32_t seq1, uint32_t seq2);
 #include <tc_log.h>
 #include <tc_msg.h>
 #include <tc_socket.h>
+#if (TCPCOPY_DIGEST)
+#include <tc_evp.h>
+#endif
 
 
 #endif /* XCOPY_H_INCLUDED */

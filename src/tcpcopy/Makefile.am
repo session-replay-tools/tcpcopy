@@ -25,6 +25,7 @@ tcpcopy_SOURCES=\
 tcpcopy_LDADD=\
                ../core/libcore.a\
                ../util/libutil.a\
+               ../digest/libdigest.a\
                ../mysql/libmysql.a\
                ../event/libevent.a\
                ../communication/libcommunication.a\

@@ -761,6 +761,13 @@ main(int argc, char **argv)
         return -1;
     }
 
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    tc_init_digests();
+    if (!tc_init_sha1()) {
+        return -1;
+    }
+#endif
+
     ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
     if (ret == TC_EVENT_ERROR) {
         tc_log_info(LOG_ERR, 0, "event loop init failed");

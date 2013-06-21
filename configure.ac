@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([TCPCopy], [0.8.0], [wangbin579@gmail.com], [tcpcopy])
+AC_INIT([TCPCopy], [0.9.0], [wangbin579@gmail.com], [tcpcopy])
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 AM_INIT_AUTOMAKE
@@ -248,11 +248,15 @@ if test "x$enable_pcap" = "xyes";then
     LIBS="-lpcap"
 fi
 
+if test "x$enable_mysql" = "xyes";then
+    LIBS="$LIBS -lssl"
+fi
+
 if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
 fi
 
-CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
+CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
 
 AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
 AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])
@@ -263,6 +267,7 @@ Makefile
 src/Makefile
 src/core/Makefile
 src/util/Makefile
+src/digest/Makefile
 src/mysql/Makefile
 src/interception/Makefile
 src/communication/Makefile

@@ -171,6 +171,11 @@ tcp_copy_release_resources()
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
+#if (TCPCOPY_DIGEST)
+    tc_destroy_sha1();
+    tc_destroy_digests();
+#endif
+
 #if (!TCPCOPY_DR)
     address_release();
 #endif
