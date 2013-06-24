@@ -2474,15 +2474,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
      */
     if (cont_len > 0) {
 
-        if (s->sm.src_closed) {
-#if (TCPCOPY_MYSQL_BASIC)
-            tc_log_info(LOG_INFO, 0, "try to solve the obstacle");
-#endif
-            /* try to solve the obstacle */ 
-            send_faked_rst(s, ip_header, tcp_header);
-            return;
-        }
-
         if (s->sm.status < SEND_REQ) {
             if (!s->sm.resp_greet_received) {
                 s->sm.resp_greet_received = 1;
@@ -2562,15 +2553,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             tc_log_debug1(LOG_DEBUG, 0, "send delayed cont:%u", s->src_h_port);
             s->sm.delay_sent_flag = 0;
             send_reserved_packets(s);
-            return;
-        }
-
-        if (s->sm.src_closed && !s->sm.dst_closed) {
-#if (TCPCOPY_MYSQL_BASIC)
-            tc_log_info(LOG_INFO, 0, "no content in pack");
-#endif
-            send_faked_rst(s, ip_header, tcp_header);
-            s->sm.sess_over = 1;
             return;
         }
     }
