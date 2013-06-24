@@ -76,6 +76,7 @@ tc_process_server_msg(tc_event_t *rev)
     {
         tc_log_info(LOG_ERR, 0, "Recv socket(%d)error", rev->fd);
         tc_log_info(LOG_ERR, 0, "server may be closed or");
+        tc_log_info(LOG_ERR, 0, "backend TCP/IP kernel memeory is too low or");
         tc_log_info(LOG_ERR, 0, 
                 "the version of intercept may not be equal to the version of tcpcopy");
 #if (TCPCOPY_DR)
