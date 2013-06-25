@@ -67,8 +67,34 @@ AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpc
 
 if test "x$advanced" = "xfalse";then
     AC_MSG_CHECKING([for the kernel version])
-    major=`uname -r | cut -d. -f1`;
-    minor=`uname -r | cut -d. -f2`;
+
+    AC_TRY_RUN([
+        #include <stdlib.h>
+        #include <stdio.h>
+        #include <linux/version.h>
+        int main (void) {
+            FILE *fp = fopen ("linuxinfo", "w");
+            if (!fp) return 1;
+            #if defined(LINUX_VERSION_CODE)
+               fprintf (fp, "%d.%d\n", LINUX_VERSION_CODE >> 16, (LINUX_VERSION_CODE >> 8) & 0xFF);
+            #else
+               fprintf (fp, "0.0\n"); 
+            #endif
+               fclose (fp);
+               return 0;
+        }
+        ], [
+             major=`cat linuxinfo | cut -d'.' -f1`
+             minor=`cat linuxinfo | cut -d'.' -f2`
+        ], [
+             major="0"
+             minor="0"
+        ], [
+             major="0"
+             minor="0"
+        ])
+
+    rm -f linuxinfo
 
     if test $major -gt 3; then
         enable_nfqueue=yes
