@@ -67,7 +67,8 @@ AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpc
 
 if test "x$advanced" = "xfalse";then
     AC_MSG_CHECKING([for the kernel version])
-
+    AC_CHECK_HEADERS([linux/version.h], [], 
+                     [AC_MSG_ERROR([linux/version.h not found.])], [])
     AC_TRY_RUN([
         #include <stdlib.h>
         #include <stdio.h>
