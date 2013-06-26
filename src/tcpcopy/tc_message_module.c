@@ -74,8 +74,10 @@ tc_process_server_msg(tc_event_t *rev)
     if (tc_socket_cmb_recv(rev->fd, &num, (char *) aggr_resp) == TC_ERROR)
 #endif
     {
+        tc_log_info(LOG_ERR, 0, "Recv socket(%d)error", rev->fd);
+        tc_log_info(LOG_ERR, 0, "server may be closed or");
         tc_log_info(LOG_ERR, 0, 
-                    "Recv socket(%d)error, server may be closed", rev->fd);
+                "the version of intercept may not be equal to the version of tcpcopy");
 #if (TCPCOPY_DR)
 
         for (i = 0; i < clt_settings.real_servers.num; i++) {

@@ -144,12 +144,14 @@ retrieve_target_addresses(char *raw_transfer,
     if (transfer->mappings == NULL) {
         return -1;
     }
+    memset(transfer->mappings, 0, transfer->num * sizeof(ip_port_pair_t *));
 
     for (i = 0; i < transfer->num; i++) {
         transfer->mappings[i] = malloc(sizeof(ip_port_pair_t));
         if (transfer->mappings[i] == NULL) {
             return -1;
         }
+        memset(transfer->mappings[i], 0, sizeof(ip_port_pair_t));
     }
 
     p = raw_transfer;
@@ -184,10 +186,7 @@ usage(void)
     printf("-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
-    printf("-t <num>       set the router item timeout limit. The default value is 120 sec.\n"
-           "               It should be set larger when connections are idle longer than \n"
-           "               the default value\n"
-           "-P <file>      save PID in <file>, only used with -d option\n"
+    printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
@@ -238,9 +237,6 @@ read_args(int argc, char **argv) {
 #endif
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
-                break;
-            case 't':
-                srv_settings.timeout = (size_t) atoi(optarg);
                 break;
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
@@ -293,7 +289,6 @@ read_args(int argc, char **argv) {
                         break;
 
                     case 'p':
-                    case 't':
                     case 's':
                         fprintf(stderr, "intercept: option -%c require a number\n", 
                                 optopt);
@@ -425,9 +420,6 @@ set_details()
 
 #endif
 
-    if (srv_settings.timeout == 0) {
-        srv_settings.timeout = DEFAULT_TIMEOUT;
-    }
     /* daemonize */
     if (srv_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
@@ -463,9 +455,6 @@ output_for_debug()
 #if (TCPCOPY_MYSQL_NO_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_NO_SKIP mode for intercept");
 #endif
-#if (INTERCEPT_THREAD)
-    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_THREAD mode");
-#endif
 #if (INTERCEPT_NFQUEUE)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_NFQUEUE mode");
 #endif
@@ -488,7 +477,7 @@ output_for_debug()
 static int 
 set_timer()
 {
-    if (tc_time_set_timer(COMBINED_TIMER_INTERVAL) == TC_ERROR) {
+    if (tc_time_set_timer(INTERCEPT_TIMER_INTERVAL) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "set timer error");
         return -1;
     } 

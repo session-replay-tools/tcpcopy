@@ -265,7 +265,7 @@ tc_nl_socket_init()
 
     mode_data = NLMSG_DATA(nl_header);
     mode_data->value = IPQ_COPY_PACKET;
-    mode_data->range = 65536;
+    mode_data->range = RESP_MAX_USEFUL_SIZE;
 
     if (sendto(fd, (void *) nl_header, nl_header->nlmsg_len, 0,
                (struct sockaddr *) &addr, sizeof(struct sockaddr_nl)) == -1)
@@ -355,7 +355,7 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
     }
 
     tc_log_info(LOG_NOTICE, 0, "setting copy_packet mode");
-    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, 0xffff) < 0) {
+    if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, RESP_MAX_USEFUL_SIZE) < 0) {
         tc_log_info(LOG_ERR, errno, "can't set packet_copy mode");
         return TC_INVALID_SOCKET;
     }
@@ -587,7 +587,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
             *num = (int) ntohs(*(uint16_t *) buffer);
             if (*num > COMB_MAX_NUM) {
                 tc_log_info(LOG_WARN, 0, "num:%d larger than threshold", *num);
-                break;
+                return TC_ERROR;
             }
             read_num = 1;
             len = ((*num) * MSG_SERVER_SIZE) + len;

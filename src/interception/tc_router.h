@@ -3,17 +3,35 @@
 
 #include <xcopy.h> 
 
-void router_init(size_t size, int timeout);
-void route_delete_obsolete(time_t cur_time);
+typedef struct route_item_s {
+    uint16_t key;
+    uint16_t fd;
+    time_t   timestamp;
+}route_item_t;
 
-#if (INTERCEPT_THREAD)
-void router_update(int main_router_fd, tc_ip_header_t *ip_header, int len);
-#else
-void router_update(int main_router_fd, tc_ip_header_t *ip_header);
-#endif
+typedef struct route_slot_s {
+    uint32_t     num:6;
+    uint32_t     total_visit:26;
+    route_item_t items[ROUTE_ARRAY_SIZE];
+}route_slot_t;
+
+
+typedef struct route_table_s {
+    uint64_t     hit;
+    uint64_t     missed;
+    uint64_t     lost;
+    uint64_t     extra_compared;
+    uint64_t     searched;
+    uint64_t     total_sessions;
+    route_item_t cache[ROUTE_SLOTS];
+    route_slot_t slots[ROUTE_SLOTS];
+}route_table_t;
+
+int router_init();
 
 void router_add(uint32_t, uint16_t, int);
-void router_del(uint32_t, uint16_t);
+void router_update(int main_router_fd, tc_ip_header_t *ip_header);
+void router_stat();
 void router_destroy();
 
 #endif /* TC_ROUTER_INCLUDED */

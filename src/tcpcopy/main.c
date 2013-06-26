@@ -401,14 +401,12 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
         clt_settings.lo_tf_ip = ip_port->online_ip;
     }
 
-#if (TCPCOPY_OFFLINE)
     if (ip_port->target_ip == LOCALHOST) {
         clt_settings.target_localhost = 1;
         tc_log_info(LOG_WARN, 0, "target host is 127.0.0.1");
         tc_log_info(LOG_WARN, 0, 
                 "only client requests from localhost are valid");
     }
-#endif
 
 #if (TCPCOPY_PCAP)
     if (clt_settings.user_filter == NULL && ip_port->online_ip == 0) {
@@ -455,12 +453,15 @@ retrieve_target_addresses(char *raw_transfer,
     if (transfer->mappings == NULL) {
         return -1;
     }
+    memset(transfer->mappings, 0 , 
+            transfer->num * sizeof(ip_port_pair_mapping_t *));
 
     for (i = 0; i < transfer->num; i++) {
         transfer->mappings[i] = malloc(sizeof(ip_port_pair_mapping_t));
         if (transfer->mappings[i] == NULL) {
             return -1;
         }
+        memset(transfer->mappings[i], 0, sizeof(ip_port_pair_mapping_t));
     }
 
     p = raw_transfer;

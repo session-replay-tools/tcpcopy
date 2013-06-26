@@ -6,8 +6,8 @@
 
 #define FAKE_IP_DATAGRAM_LEN 40
 #define FAKE_SYN_IP_DATAGRAM_LEN 44
-#define IP_HEADER_LEN 20
-#define TCP_HEADER_MIN_LEN 20
+#define IP_HEADER_LEN sizeof(tc_ip_header_t)
+#define TCP_HEADER_MIN_LEN sizeof(tc_tcp_header_t)
 
 /* global functions */
 void init_for_sessions();
@@ -50,6 +50,7 @@ typedef struct sess_state_machine_s{
     /* This indicates if the session intercepted the syn packets from client
      * or it has faked the syn packets */
     uint32_t req_syn_ok:1;
+    uint32_t record_ack_before_fin:1;
     /* flag that avoids using the first handshake ack seq */
     uint32_t req_valid_last_ack_sent:1;
     /*
@@ -155,6 +156,7 @@ typedef struct session_s{
     uint32_t req_last_cont_sent_seq;
     /* last ack sequence of client packet which is sent to bakend */
     uint32_t req_last_ack_sent_seq;
+    uint32_t req_ack_before_fin;
     /* last client content packet's ack sequence which is captured */
     uint32_t req_cont_last_ack_seq;
     /* current client content packet's ack seq which is captured */

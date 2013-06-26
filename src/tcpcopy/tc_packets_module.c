@@ -65,7 +65,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
     int         fd;
 #if (TCPCOPY_PCAP)
     int         i = 0;
-    bool        work;
+    bool        work = false;
     char        ebuf[PCAP_ERRBUF_SIZE];
     devices_t  *devices;
     pcap_if_t  *alldevs, *d;
@@ -114,7 +114,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
         }
     }
 
-    if (work == false) {
+    if (!work) {
         tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
         return TC_ERROR;
     }
@@ -291,7 +291,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         if (replica_num > 1) {
             packet_valid = process_packet(true, packet, recv_len);
             replicate_packs(packet, recv_len, replica_num);
-        }else{
+        } else {
             packet_valid = process_packet(false, packet, recv_len);
         }
     }
@@ -352,7 +352,6 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
     if (is_packet_needed((const char *) packet)) {
 
         replica_num = clt_settings.replica_num;
-        packet_num = 1;
         ip_header   = (tc_ip_header_t *) packet;
 
         if (LOCALHOST == ip_header->saddr) {

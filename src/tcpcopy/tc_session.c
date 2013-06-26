@@ -80,7 +80,6 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
     uint16_t        size_ip, size_tcp, tot_len, cont_len;
     unsigned char  *payload;
 
-    size_ip   = ip_header->ihl << 2;
     tot_len   = ntohs(ip_header->tot_len);
     size_ip   = ip_header->ihl << 2;
     size_tcp  = tcp_header->doff << 2;
@@ -423,10 +422,6 @@ session_rel_dynamic_mem(session_t *s)
 
         /* send the last rst packet to backend */
         send_faked_passive_rst(s);
-#if (!TCPCOPY_SINGLE)
-        send_router_info(s->online_addr, s->online_port, s->src_addr,
-                htons(s->src_h_port), CLIENT_DEL);
-#endif
         s->sm.sess_over = 1;
     }
 
@@ -956,7 +951,7 @@ send_reserved_packets(session_t *s)
 #endif
     uint16_t          size_ip, cont_len;
 #if (TCPCOPY_PAPER)
-    uint32_t          cur_ack, cur_seq, srv_sk_buf_s;
+    uint32_t          cur_ack;
 #else
     uint32_t          cur_ack, cur_seq, diff, srv_sk_buf_s;
 #endif
@@ -973,6 +968,7 @@ send_reserved_packets(session_t *s)
         return count;
     }
 
+#if (!TCPCOPY_PAPER) 
     srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq;
 
     tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
@@ -981,6 +977,7 @@ send_reserved_packets(session_t *s)
         s->sm.delay_sent_flag = 1;
         return count;
     }
+#endif
 
     list = s->unsend_packets;
     if (list == NULL) {
@@ -1006,12 +1003,12 @@ send_reserved_packets(session_t *s)
         ip_header  = (tc_ip_header_t *) ((char *) data);
         size_ip    = ip_header->ihl << 2;
         tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
-        cur_seq    = ntohl(tcp_header->seq);
 
         tc_log_debug_trace(LOG_DEBUG, 0, RESERVED_CLIENT_FLAG,
                 ip_header, tcp_header);
 
 #if (!TCPCOPY_PAPER)
+        cur_seq    = ntohl(tcp_header->seq);
         if (after(cur_seq, s->vir_next_seq)) {
 
             /* We need to wait for previous packet */
@@ -1055,6 +1052,7 @@ send_reserved_packets(session_t *s)
                 break;
             }
 
+#if (!TCPCOPY_PAPER) 
             srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq + cont_len;
             if (srv_sk_buf_s > s->srv_window) {
                 tc_log_debug3(LOG_DEBUG, 0, "srv_sk_buf_s:%u, window:%u, p:%u",
@@ -1062,7 +1060,7 @@ send_reserved_packets(session_t *s)
                 s->sm.delay_sent_flag = 1;
                 break;
             }
-#if (TCPCOPY_PAPER) 
+#else
             if (s->sm.recv_client_close) {
                 tc_log_debug1(LOG_DEBUG, 0, "sending req when clt close:%u",
                                 s->src_h_port);
@@ -1108,24 +1106,49 @@ send_reserved_packets(session_t *s)
             need_pause    = true;
         } else if (tcp_header->fin) {
 
+            s->sm.recv_client_close = 1;
+
             if (s->sm.resp_slow) {
+                tc_log_debug1(LOG_DEBUG, 0, "resp slow:%u", s->src_h_port);
                 break;
             }
 
             if (s->sm.candidate_response_waiting) {
+                tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
                 break;
             }
             need_pause = true;
-            if (s->req_last_ack_sent_seq == ntohl(tcp_header->ack_seq)) {
+            cur_ack = ntohl(tcp_header->ack_seq);
+            tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
+                    cur_ack, s->req_ack_before_fin, s->src_h_port);
+            if (s->req_ack_before_fin == cur_ack) {
                 /* active close from client */
                 s->sm.src_closed = 1;
                 s->sm.status |= CLIENT_FIN;
+                tc_log_debug1(LOG_DEBUG, 0, "active close from client:%u", 
+                        s->src_h_port);
             } else {
                 /* server active close */
+                tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
+                        s->src_h_port);
                 omit_transfer = true;
             }
         } else if (cont_len == 0) {
 
+            tc_log_debug1(LOG_DEBUG, 0, "cont len 0:%u", s->src_h_port);
+            if (!s->sm.recv_client_close) {
+                cur_ack = ntohl(tcp_header->ack_seq);
+                tc_log_debug3(LOG_DEBUG, 0, "ack:%u, record:%u, p:%u", 
+                        cur_ack, s->req_ack_before_fin, s->src_h_port);
+                if (!s->sm.record_ack_before_fin) {
+                    s->sm.record_ack_before_fin = 1;
+                    s->req_ack_before_fin = cur_ack;
+                    tc_log_debug1(LOG_DEBUG, 0, "record:%u", s->src_h_port);
+                } else if (after(cur_ack, s->req_ack_before_fin)) {
+                    s->req_ack_before_fin = cur_ack;
+                    tc_log_debug1(LOG_DEBUG, 0, "record:%u", s->src_h_port);
+                }
+            }
 #if (!TCPCOPY_PAPER)
             /* waiting the response pack or the sec handshake pack */
             if (s->sm.candidate_response_waiting
@@ -1242,6 +1265,11 @@ is_session_dead(session_t *s)
         if (packs_unsend > 5) {
             return true;
         }
+#if (TCPCOPY_PAPER)
+        if (!s->sm.candidate_response_waiting && packs_unsend > 0) {
+            return true;
+        }
+#endif
     }
 
     return false;
@@ -2079,7 +2107,10 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
         s->vir_next_seq = ack;
     } else if (before(ack, s->vir_next_seq)) {
 
+#if (!TCPCOPY_PAPER)
+        /* it will not be true for paper mode */
         s->sm.resp_slow = 1;
+#endif
         /* if ack from test server is less than what we expect */
         tc_log_debug3(LOG_DEBUG, 0, "bak_ack less than vir_next_seq:%u,%u,p:%u",
                 ack, s->vir_next_seq, s->src_h_port);
@@ -2270,14 +2301,16 @@ mysql_process_greet(session_t *s, tc_ip_header_t *ip_header,
 {
 #if (TCPCOPY_MYSQL_ADVANCED)
     int            ret; 
+    uint16_t       size_tcp; 
     unsigned char *payload;
 #endif
 
     tc_log_info(LOG_NOTICE, 0, "recv greeting from back:%u", s->src_h_port);
 
 #if (TCPCOPY_MYSQL_ADVANCED) 
+    size_tcp = tcp_header->doff << 2;
     s->sm.mysql_sec_auth_checked  = 0;
-    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
     memset(s->mysql_scramble, 0, SCRAMBLE_LENGTH + 1);
     ret = parse_handshake_init_cont(payload, cont_len, s->mysql_scramble);
     tc_log_info(LOG_WARN, 0, "scram:%s,p:%u", s->mysql_scramble, s->src_h_port);
@@ -2303,12 +2336,14 @@ static void
 mysql_check_need_sec_auth(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
+    uint16_t       size_tcp;
     unsigned char *payload;
 
     tc_log_info(LOG_NOTICE, 0, "check if it needs second auth:%u",
                 s->src_h_port);
 
-    payload = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
+    size_tcp = tcp_header->doff << 2;
+    payload = (unsigned char *) ((char *) tcp_header + size_tcp);
 
      /* check if it is the last data packet */
     if (is_last_data_packet(payload)) {
@@ -2330,9 +2365,6 @@ void
 process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-#if (TCPCOPY_PAPER)
-    long      base_rtt;
-#endif
     time_t    current;
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
     uint32_t  ack, seq;
@@ -2491,10 +2523,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         if (s->resp_unack_time == 0) {
             s->resp_unack_time = tc_milliscond_time();
         } else {
-            base_rtt = s->max_rtt;
-            if (s->unsend_packets->size > 8) {
-                base_rtt = s->rtt;
-            }
             if ((tc_milliscond_time() - s->resp_unack_time) > s->max_rtt) {
                 send_faked_ack(s, ip_header, tcp_header, true);
             }
@@ -2630,6 +2658,7 @@ process_client_fin(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
     s->sm.recv_client_close = 1;
+
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
         tc_log_debug1(LOG_DEBUG, 0, "fin has content:%u", s->src_h_port);
@@ -2954,7 +2983,9 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
 {
     int       is_new_req = 0;
     uint16_t  cont_len;
+#if (!TCPCOPY_PAPER)
     uint32_t  srv_sk_buf_s;
+#endif
 
     tc_log_debug_trace(LOG_DEBUG, 0, CLIENT_FLAG, ip_header, tcp_header);
 
@@ -3016,6 +3047,13 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
         }
     }
 
+    if (!s->sm.recv_client_close) {
+        s->req_ack_before_fin = ntohl(tcp_header->ack_seq);
+        s->sm.record_ack_before_fin = 1;
+        tc_log_debug2(LOG_DEBUG, 0, "record:%u, p:%u",
+                s->req_ack_before_fin, s->src_h_port);
+    }
+
     /* if not receiving syn packet */ 
     if (!s->sm.req_syn_ok) {
         s->sm.req_halfway_intercepted = 1;
@@ -3064,6 +3102,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
             return;
         }
 
+#if (!TCPCOPY_PAPER)
         srv_sk_buf_s = s->vir_next_seq - s->resp_last_ack_seq  + cont_len;
         if (srv_sk_buf_s > s->srv_window) {
             tc_log_debug3(LOG_DEBUG, 0, "wait,srv_sk_buf_s:%u, win:%u, p:%u",
@@ -3072,6 +3111,7 @@ process_client_packet(session_t *s, tc_ip_header_t *ip_header,
             save_packet(s->unsend_packets, ip_header, tcp_header);
             return;
         }
+#endif
 
         /* check if the packet is to be saved for later use */
         if (s->sm.candidate_response_waiting) {
@@ -3170,14 +3210,12 @@ is_packet_needed(const char *packet)
     /* filter the packets we do care about */
     if (LOCAL == check_pack_src(&(clt_settings.transfer), 
                 ip_header->daddr, tcp_header->dest, CHECK_DEST)) {
-#if (TCPCOPY_OFFLINE)
         if (clt_settings.target_localhost) {
             if (ip_header->saddr != LOCALHOST) {
                 tc_log_info(LOG_WARN, 0, "not localhost source ip address");
                 return is_needed;
             }
         }
-#endif
         header_len = size_tcp + size_ip;
         if (tot_len >= header_len) {
 
@@ -3340,10 +3378,6 @@ process(char *packet, int pack_src)
                     tc_log_info(LOG_NOTICE, 0, "init for next sess from bak");
                     restore_buffered_next_session(s);
                 } else {
-#if (!TCPCOPY_SINGLE)
-                    send_router_info(s->online_addr, s->online_port,
-                            ip_header->daddr, tcp_header->dest, CLIENT_DEL);
-#endif
                     session_rel_dynamic_mem(s);
                     if (!hash_del(sessions_table, s->hash_key)) {
                         tc_log_info(LOG_ERR, 0, "wrong del:%u", s->src_h_port);
@@ -3425,11 +3459,6 @@ process(char *packet, int pack_src)
                         tc_log_info(LOG_NOTICE, 0, "init for next from clt");
                         restore_buffered_next_session(s);
                     } else {
-#if (!TCPCOPY_SINGLE)
-                        send_router_info(s->online_addr, s->online_port,
-                                ip_header->saddr, htons(s->src_h_port),
-                                CLIENT_DEL);
-#endif
                         session_rel_dynamic_mem(s);
                         if (!hash_del(sessions_table, s->hash_key)) {
                             tc_log_info(LOG_ERR, 0, "wrong del:%u",

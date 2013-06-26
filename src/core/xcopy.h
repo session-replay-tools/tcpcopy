@@ -49,10 +49,6 @@
 #define TCPCOPY_DR 1
 #endif
 
-#if (INTERCEPT_NFQUEUE)
-#undef INTERCEPT_THREAD
-#endif
-
 #if (TCPCOPY_PCAP)
 #undef TCPCOPY_OFFLINE
 #endif
@@ -128,6 +124,24 @@
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 #define MAX_CONNECTION_NUM 16
+
+#if (!INTERCEPT_MILLION_SUPPORT)
+#define ROUTE_SLOTS 65536
+#define ROUTE_ARRAY_SIZE 15
+#define ROUTE_ARRAY_DEPTH 4
+#define ROUTE_KEY_HIGH_MASK 0xFFFF0000
+#define ROUTE_KEY_LOW_MASK 0x0000FFFF
+#define ROUTE_KEY_SHIFT 16
+#else
+#define ROUTE_SLOTS 1048576
+#define ROUTE_ARRAY_SIZE 31
+#define ROUTE_ARRAY_DEPTH 5
+#define ROUTE_KEY_HIGH_MASK 0x3FFFFC00
+#define ROUTE_KEY_LOW_MASK  0x000003FF
+#define ROUTE_KEY_SHIFT 22
+#endif
+
+#define ROUTE_ARRAY_ACTIVE_NUM_RANGE (ROUTE_ARRAY_SIZE + 1)
 
 #if (INTERCEPT_COMBINED)
 #define COMB_MAX_NUM 20
@@ -216,18 +230,6 @@ typedef struct udphdr tc_udp_header_t;
 #define RESP_MAX_USEFUL_SIZE RESP_HEADER_SIZE
 #endif
 
-#if (INTERCEPT_THREAD)
-
-/* constants for intercept pool */
-#define POOL_SHIFT 24
-#define POOL_SIZE (1 << POOL_SHIFT) 
-#define POOL_MASK (POOL_SIZE - 1)
-#define POOL_MAX_ADDR (POOL_SIZE - RESP_MAX_USEFUL_SIZE - sizeof(int))
-#define NL_POOL_SIZE 65536
-#define NL_POOL_MASK (NL_POOL_SIZE - 1)
-
-#endif
-
 /* bool constants */
 #if (HAVE_STDBOOL_H)
 #include <stdbool.h>
@@ -273,8 +275,8 @@ enum packet_classification{
  *  static header size: 14 bytes          
  */ 
 struct ethernet_hdr {
-    uint8_t ether_dhost[ETHER_ADDR_LEN];
-    uint8_t ether_shost[ETHER_ADDR_LEN];
+    uint8_t  ether_dhost[ETHER_ADDR_LEN];
+    uint8_t  ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
 #endif 
@@ -300,8 +302,8 @@ typedef struct device_s{
 }device_t;
 
 typedef struct devices_s{
-    int             device_num;
-    device_t        device[MAX_DEVICE_NUM];
+    int       device_num;
+    device_t  device[MAX_DEVICE_NUM];
 }devices_t;
 #endif
 
@@ -318,9 +320,9 @@ typedef struct connections_s{
 #endif
 
 #if (INTERCEPT_COMBINED)
-#define COMBINED_TIMER_INTERVAL 1
+#define INTERCEPT_TIMER_INTERVAL 1
 #else
-#define COMBINED_TIMER_INTERVAL 100
+#define INTERCEPT_TIMER_INTERVAL 100
 #endif
 
 /* global functions */

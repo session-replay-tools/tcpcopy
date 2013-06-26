@@ -64,7 +64,6 @@ new_crypt(char *result, const char *password, char *message)
     }
 
     seed1 = ((seed1 * 3) + seed2) % max;
-    seed2 = (seed1 + seed2 + 33) % max;
 
     d = (double) seed1 / (double) max;
     b = (char) floor(d * 31);

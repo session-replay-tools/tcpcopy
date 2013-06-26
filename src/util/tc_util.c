@@ -203,7 +203,7 @@ set_wscale(tc_tcp_header_t *tcp_header)
         opt[1] = 4;
         bcopy((void *) &wscale, (void *) (opt + 2), sizeof(wscale));
         tcp_header->doff = (sizeof(tc_tcp_header_t) + 4) >> 2;
-    }
+    } 
 
     return;
 }

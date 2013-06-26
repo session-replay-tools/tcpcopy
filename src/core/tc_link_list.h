@@ -8,12 +8,12 @@ typedef struct link_node_s
     struct link_node_s *prev;
     struct link_node_s *next;
     void     *data;
-    uint32_t key;
+    uint32_t  key;
 }link_node_t, link_node, *p_link_node;
 
 typedef struct link_list_s{
-    link_node head;
     int size;
+    link_node head;
 }link_list_t, link_list;
 
 

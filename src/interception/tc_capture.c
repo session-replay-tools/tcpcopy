@@ -1,7 +1,4 @@
 #include <xcopy.h>
-#if (INTERCEPT_THREAD)
-#include <pthread.h>
-#endif
 #include <intercept.h>
 
 static uint64_t        tot_copy_resp_packs = 0; 
@@ -74,7 +71,6 @@ tc_msg_event_process(tc_event_t *rev)
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
                           ntohs(msg.client_port));
-            router_del(msg.client_ip, msg.client_port);
             break;
     }
 
@@ -86,8 +82,9 @@ interception_output_stat(tc_event_timer_t *evt)
 {
     tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
             tot_copy_resp_packs, tot_resp_packs);
-#if (!TCPCOPY_SINGLE)  
-    route_delete_obsolete(tc_time());
+#if (!TCPCOPY_SINGLE)
+    router_stat();
+    delay_table_delete_obsolete(tc_time());
 #endif
     evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
@@ -98,29 +95,6 @@ interception_push(tc_event_timer_t *evt)
 {
     send_buffered_packets(tc_time());
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
-}
-#endif
-
-#if (INTERCEPT_THREAD)
-static void *
-interception_process_msg(void *tid)
-{
-    int             len;
-    char            resp[65536];
-    tc_ip_header_t *ip_hdr;
-
-    for (;;) {
-
-        ip_hdr = get_resp_ip_hdr_from_pool(resp, &len); 
-        if (ip_hdr == NULL) {
-            tc_log_info(LOG_WARN, 0, "ip header is null");
-        }
-
-        router_update(srv_settings.router_fd, ip_hdr, len);
-
-    }
-
-    return NULL;
 }
 #endif
 
@@ -187,11 +161,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 
     tot_copy_resp_packs++;
 
-#if (INTERCEPT_THREAD)
-    put_resp_header_to_pool(ip_header);
-#else
     router_update(srv_settings.router_fd, ip_header);
-#endif
     return TC_OK;
 
 }
@@ -203,7 +173,7 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
 {
     pcap_t        *pcap;
     unsigned char *ip_data; 
-    int            l2_len, ip_pack_len;
+    int            l2_len;
     
     if (pkt_hdr->len < ETHERNET_HDR_LEN) {
         tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
@@ -211,7 +181,6 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
     }
     pcap = (pcap_t *)args;
     ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
-    ip_pack_len = pkt_hdr->len - l2_len;
     resp_dispose((tc_ip_header_t *) ip_data);
 }
 #endif
@@ -291,7 +260,7 @@ sniff_init(tc_event_loop_t *event_loop)
 {
 #if (TCPCOPY_PCAP)
     int         i = 0;
-    bool        work;
+    bool        work = false;
     char        ebuf[PCAP_ERRBUF_SIZE];
     devices_t  *devices;
     pcap_if_t  *alldevs, *d;
@@ -336,7 +305,7 @@ sniff_init(tc_event_loop_t *event_loop)
         }
     }
 
-    if (work == false) {
+    if (!work) {
         tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
         return TC_ERROR;
     }
@@ -368,12 +337,12 @@ int
 interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 {
     int         fd;
-#if (INTERCEPT_THREAD)
-    pthread_t   thread;
-#endif
     tc_event_t *ev;
 
-    router_init(srv_settings.hash_size, srv_settings.timeout);
+    delay_table_init(srv_settings.hash_size);
+    if (router_init() != TC_OK) {
+        return TC_ERROR;
+    }
 
     /* init the listening socket */
     if ((fd = tc_socket_init()) == TC_INVALID_SOCKET) {
@@ -401,12 +370,6 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
         return TC_ERROR;
     }
 
-#if (INTERCEPT_THREAD)
-    tc_pool_init();
-    pthread_create(&thread, NULL, interception_process_msg, NULL);
-
-#endif
-
     return TC_OK;
 }
 
@@ -419,6 +382,7 @@ interception_over()
     release_combined_resouces();
 #endif
     router_destroy();
+    delay_table_destroy();
 
     if (srv_settings.targets.mappings != NULL) {
         for (i = 0; i < srv_settings.targets.num; i++) {

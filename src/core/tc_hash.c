@@ -68,6 +68,7 @@ hash_create(size_t size)
     ht->size  = size;
     ht->lists = (link_list **) calloc(size, sizeof(link_list *));
     if (ht->lists == NULL) {
+        free(ht);
         tc_log_info(LOG_ERR, errno, "can't calloc memory for hash lists");
         return NULL;
     }
