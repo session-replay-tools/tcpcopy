@@ -48,6 +48,7 @@
 #include <openssl/evp.h>
 #endif
 
+#define TCPCOPY_PCAP_SEND 1
 #if (INTERCEPT_ADVANCED)
 #define TCPCOPY_DR 1
 #endif

@@ -701,6 +701,10 @@ settings_init()
     clt_settings.percentage = 0;
     clt_settings.par_connections = 3;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    
+    clt_settings.if_name = "eth1";
+    clt_settings.dmac = "00:14:38:A7:35:A2";
+    clt_settings.smac = "00:17:A4:3F:43:54";
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
 

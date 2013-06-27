@@ -204,6 +204,10 @@ tcp_copy_release_resources()
         tc_raw_socket_out = -1;
     }
 
+#if (TCPCOPY_PCAP_SEND)
+    tc_pcap_over();
+#endif
+
     if (clt_settings.transfer.mappings != NULL) {
 
         for (i = 0; i < clt_settings.transfer.num; i++) {

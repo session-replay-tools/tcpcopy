@@ -73,12 +73,17 @@ tc_packets_init(tc_event_loop_t *event_loop)
     tc_event_t *ev;
 #endif
 
+#if (!TCPCOPY_PCAP_SEND)
     /* init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     } else {
         tc_raw_socket_out = fd;
     }
+#else
+    tc_pcap_send_init(clt_settings.if_name, clt_settings.smac, 
+            clt_settings.dmac, clt_settings.mtu);
+#endif
 
 #if (TCPCOPY_PCAP)
     devices = &(clt_settings.devices);
@@ -437,15 +442,22 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 int
 tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
 {
+#if (!TCPCOPY_PCAP_SEND)
     int  fd;
+#endif
     char ebuf[PCAP_ERRBUF_SIZE];
 
+#if (!TCPCOPY_PCAP_SEND)
     /* init the raw socket to send */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCKET) {
         return TC_ERROR;
     } else {
         tc_raw_socket_out = fd;
     }
+#else
+    tc_pcap_send_init(clt_settings.if_name, clt_settings.smac, 
+            clt_settings.dmac, clt_settings.mtu);
+#endif
 
     if (pcap_file == NULL) {
         return TC_ERROR;

@@ -181,6 +181,111 @@ tc_raw_socket_out_init()
     return fd;
 }
 
+#if (TCPCOPY_PCAP_SEND)
+static unsigned char 
+char_to_data(const char ch)
+{
+    switch(ch)
+    {
+        case '0': return 0;
+        case '1': return 1;
+        case '2': return 2;
+        case '3': return 3;
+        case '4': return 4;
+        case '5': return 5;
+        case '6': return 6;
+        case '7': return 7;
+        case '8': return 8;
+        case '9': return 9;
+        case 'a': 
+        case 'A': return 10;
+        case 'b': 
+        case 'B': return 11;
+        case 'c':
+        case 'C': return 12;
+        case 'd': 
+        case 'D': return 13;
+        case 'e': 
+        case 'E': return 14;
+        case 'f':
+        case 'F': return 15;
+    }
+
+    return 0;
+}
+
+/* TODO needs to support multiple hdrs for multiple servers */
+static struct ethernet_hdr hdr;
+static pcap_t *pcap= NULL;
+
+int
+tc_pcap_send_init(char *if_name, char *smac, char *dmac, int mtu)
+{
+    int           i;
+    char         *p, pcap_errbuf[PCAP_ERRBUF_SIZE];
+    unsigned char ether_dhost[ETHER_ADDR_LEN];
+    unsigned char ether_shost[ETHER_ADDR_LEN];
+
+    p = smac;
+    for (i = 0; i < ETHER_ADDR_LEN; ++i) {
+        ether_shost[i]  = char_to_data(*p++) << 4;
+        ether_shost[i] += char_to_data(*p++);
+        p++;
+    }
+
+    p = dmac;
+    for (i = 0; i < ETHER_ADDR_LEN; ++i) {
+        ether_dhost[i]  = char_to_data(*p++) << 4;
+        ether_dhost[i] += char_to_data(*p++);
+        p++;
+    }
+    
+    memcpy(hdr.ether_dhost, ether_dhost, ETHER_ADDR_LEN);
+    memcpy(hdr.ether_shost, ether_shost, ETHER_ADDR_LEN);
+    hdr.ether_type = htons(ETH_P_IP);
+
+    pcap_errbuf[0] = '\0';
+    pcap= pcap_open_live(if_name, mtu + sizeof(struct ethernet_hdr), 
+            0, 0, pcap_errbuf);
+    if (pcap_errbuf[0] != '\0') {
+        tc_log_info(LOG_ERR, errno, "pcap open %s, failed:%s", 
+                if_name, pcap_errbuf);
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+
+static int
+tc_pcap_send(char *buffer, size_t len)
+{
+    int  send_len;
+    char frame[1514], pcap_errbuf[PCAP_ERRBUF_SIZE];
+
+    pcap_errbuf[0]='\0';
+
+    memcpy(frame, &hdr, sizeof(struct ethernet_hdr));
+    memcpy(frame + sizeof(struct ethernet_hdr), buffer, len);
+
+    send_len = pcap_inject(pcap, frame, sizeof(struct ethernet_hdr) + len);
+    if (send_len == -1) {
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+
+int tc_pcap_over()
+{
+    if (pcap != NULL) {
+        pcap_close(pcap);
+        pcap = NULL;
+    }
+     
+    return TC_OK;
+}
+#endif
+
 /*
  * send the ip packet to the remote test server
  * (It will not go through ip fragmentation)
@@ -217,6 +322,12 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
                         fd, len);
             return TC_ERROR;
         }
+        
+    } else {
+
+#if (TCPCOPY_PCAP_SEND)
+        tc_pcap_send(buf, len);
+#endif
     }
 
     return TC_OK;

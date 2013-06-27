@@ -27,6 +27,11 @@ int tc_raw_socket_in_init(int type);
 int tc_raw_socket_out_init();
 int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);
 
+#if (TCPCOPY_PCAP_SEND)
+int tc_pcap_send_init(char *if_name, char *smac, char *dmac, int mtu);
+int tc_pcap_over();
+#endif
+
 #if (!INTERCEPT_NFQUEUE)
 int tc_nl_socket_init();
 int tc_nl_socket_recv(int fd, char *buffer, size_t len);
