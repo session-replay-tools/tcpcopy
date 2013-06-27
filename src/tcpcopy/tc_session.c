@@ -151,6 +151,11 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *data)
     tcp_header->check = tcpcsum((unsigned char *) ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
 
+#if (TCPCOPY_PCAP_SEND)
+    ip_header->check = 0;
+    ip_header->check = csum((unsigned short *) ip_header,size_ip);
+#endif
+
     tc_log_trace(LOG_NOTICE, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
 
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
@@ -235,6 +240,11 @@ wrap_send_ip_packet(session_t *s, unsigned char *data, bool client)
     tcp_header->check = 0;
     tcp_header->check = tcpcsum((unsigned char *) ip_header,
             (unsigned short *) tcp_header, (int) (tot_len - size_ip));
+
+#if (TCPCOPY_PCAP_SEND)
+    ip_header->check = 0;
+    ip_header->check = csum((unsigned short *) ip_header,size_ip);
+#endif
 
     tc_log_debug_trace(LOG_DEBUG, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
 
