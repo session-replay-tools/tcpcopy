@@ -237,6 +237,14 @@ if test "x$enable_paper" = "xyes";then
     AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
 fi
 
+AC_ARG_ENABLE(dlinject, AS_HELP_STRING([--enable-dlinject],[run tcpcopy at pcap sending mode]),,dlinject=no)
+if test "x$enable_dlinject" = "xyes";then
+    AC_DEFINE(TCPCOPY_PCAP_SEND, 1, [Define if --enable-dlinject])
+    AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+fi
+
+
 AC_ARG_ENABLE(udp,AS_HELP_STRING([--enable-udp],[turn on udpcopy]),
                [case "${enableval}" in
                    yes) udp=true 
@@ -272,6 +280,10 @@ if test "x$enable_offline" = "xyes";then
 fi
 
 if test "x$enable_pcap" = "xyes";then
+    LIBS="-lpcap"
+fi
+
+if test "x$enable_dlinject" = "xyes";then
     LIBS="-lpcap"
 fi
 

@@ -41,14 +41,13 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || TCPCOPY_PCAP_SEND)
 #include <pcap.h>
 #endif
 #if (TCPCOPY_MYSQL_NO_SKIP)
 #include <openssl/evp.h>
 #endif
 
-#define TCPCOPY_PCAP_SEND 1
 #if (INTERCEPT_ADVANCED)
 #define TCPCOPY_DR 1
 #endif
@@ -264,7 +263,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED || TCPCOPY_PCAP_SEND)
 #define ETHER_ADDR_LEN 0x6
 
 #ifndef ETHERTYPE_VLAN
