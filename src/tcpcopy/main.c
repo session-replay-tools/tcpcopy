@@ -68,6 +68,13 @@ usage(void)
            "               Ethernet interface.\n");
     printf("-F <filter>    user filter\n");
 #endif
+#if (TCPCOPY_PCAP_SEND)
+    printf("-o <device,>   The name of the interface to send.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
+    printf("-D <mac>       destination mac address\n");
+    printf("-L <mac>       local mac address\n");
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
            "               pass the user authentication of the target mysql server. The format\n"
@@ -143,6 +150,11 @@ read_args(int argc, char **argv)
          "i:" /* <device,> */
          "F:" /* <filter> */
 #endif
+#if (TCPCOPY_PCAP_SEND)
+         "o:" /* <device,> */
+         "D:" /* <mac,> */
+         "L:" /* <mac,> */
+#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql */
 #endif
@@ -180,6 +192,17 @@ read_args(int argc, char **argv)
                 break;
             case 'I':
                 clt_settings.interval = atoi(optarg);
+                break;
+#endif
+#if (TCPCOPY_PCAP_SEND)
+            case 'o':
+                clt_settings.output_if_name = optarg;
+                break;
+            case 'D':
+                clt_settings.dmac = optarg;
+                break;
+            case 'L':
+                clt_settings.smac = optarg;
                 break;
 #endif
 #if (TCPCOPY_PCAP)
@@ -269,6 +292,17 @@ read_args(int argc, char **argv)
                                 optopt);
                         break;
 #endif
+#if (TCPCOPY_PCAP_SEND)
+                    case 'o':
+                        fprintf(stderr, "tcpcopy: option -%c require a device name\n",
+                                optopt);
+                        break;
+                    case 'L':
+                    case 'D':
+                        fprintf(stderr, "tcpcopy: option -%c require a string mac address\n",
+                                optopt);
+                        break;
+#endif
 #if (TCPCOPY_DR)
                     case 's':
                         fprintf(stderr, "tcpcopy: option -%c require an ip address list\n",
@@ -278,6 +312,7 @@ read_args(int argc, char **argv)
 
                     case 'n':
                     case 'f':
+                    case 'C':
                     case 'm':
                     case 'M':
                     case 'S':
@@ -625,6 +660,21 @@ set_details()
     }
 #endif
 
+#if (TCPCOPY_PCAP_SEND)
+    if (clt_settings.output_if_name != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "output device:%s", 
+                clt_settings.output_if_name);
+    }
+    if (clt_settings.dmac != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "dest mac:%s", 
+                clt_settings.dmac);
+    }
+    if (clt_settings.smac != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "source mac:%s", 
+                clt_settings.smac);
+    }
+#endif
+
 #if (TCPCOPY_PCAP)
     if (clt_settings.raw_device != NULL) {
         tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
@@ -702,9 +752,11 @@ settings_init()
     clt_settings.par_connections = 3;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
     
-    clt_settings.if_name = "eth1";
-    clt_settings.dmac = "00:14:38:A7:35:A2";
-    clt_settings.smac = "00:17:A4:3F:43:54";
+#if (TCPCOPY_PCAP_SEND)
+    clt_settings.output_if_name = NULL;
+    clt_settings.dmac = NULL;
+    clt_settings.smac = NULL;
+#endif
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
 

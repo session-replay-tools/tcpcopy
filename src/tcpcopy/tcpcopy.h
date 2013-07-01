@@ -57,7 +57,7 @@ typedef struct xcopy_clt_settings {
     uint64_t      interval;             /* accelerated times */
 #endif
 #if (TCPCOPY_PCAP_SEND)
-    char         *if_name;
+    char         *output_if_name;
     char         *smac;
     char         *dmac;
 #endif

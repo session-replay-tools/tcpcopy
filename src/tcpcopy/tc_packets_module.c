@@ -81,7 +81,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
         tc_raw_socket_out = fd;
     }
 #else
-    tc_pcap_send_init(clt_settings.if_name, clt_settings.smac, 
+    tc_pcap_send_init(clt_settings.output_if_name, clt_settings.smac, 
             clt_settings.dmac, clt_settings.mtu);
 #endif
 
@@ -455,7 +455,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
         tc_raw_socket_out = fd;
     }
 #else
-    tc_pcap_send_init(clt_settings.if_name, clt_settings.smac, 
+    tc_pcap_send_init(clt_settings.output_if_name, clt_settings.smac, 
             clt_settings.dmac, clt_settings.mtu);
 #endif
 
