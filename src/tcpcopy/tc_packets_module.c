@@ -3,7 +3,7 @@
 #include <tcpcopy.h>
 
 #if (TCPCOPY_OFFLINE)
-static bool           read_pcap_over= false;
+static bool           read_pcap_over = false;
 static uint64_t       accumulated_diff = 0, adj_v_pack_diff = 0;
 static struct timeval first_pack_time, last_v_pack_time,
                       last_pack_time, base_time, cur_time;
@@ -18,9 +18,11 @@ static int tc_process_pcap_socket_packet(tc_event_t *rev);
 #else
 static int tc_process_raw_socket_packet(tc_event_t *rev);
 #endif
-static bool process_packet(bool backup, char *packet, int length);
-static void replicate_packs(char *packet, int length, int replica_num);
-static int dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag);
+static bool process_packet(bool backup, unsigned char *frame, int frame_len);
+static void replicate_packs(unsigned char *frame, int frame_len, 
+        int replica_num);
+static int dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len, 
+        int *p_valid_flag);
 
 #if (TCPCOPY_OFFLINE)
 static void tc_process_offline_packet(tc_event_timer_t *evt);
@@ -157,7 +159,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 static void
 pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
-        unsigned char *packet)
+        unsigned char *frame)
 {
     int                  l2_len, ip_pack_len;
     pcap_t              *pcap;
@@ -169,16 +171,22 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         return;
     }
 
-    ether = (struct ethernet_hdr *) packet;
+    ether = (struct ethernet_hdr *) frame;
     if (ntohs(ether->ether_type) != ETH_P_IP) {
         return;
     }
 
     pcap = (pcap_t *)args;
     ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+
+    if (l2_len != ETHERNET_HDR_LEN) {
+        tc_log_info(LOG_ERR, 0, "l2 len is %d", l2_len);
+        return;
+    }
+
     ip_pack_len = pkt_hdr->len - l2_len;
 
-    dispose_packet((char *) ip_data, ip_pack_len, NULL);
+    dispose_packet(frame, pkt_hdr->len, ip_pack_len, NULL);
 }
 
 static int
@@ -196,12 +204,13 @@ tc_process_pcap_socket_packet(tc_event_t *rev)
 static int
 tc_process_raw_socket_packet(tc_event_t *rev)
 {
-    int  recv_len;
-    char recv_buf[RECV_BUF_SIZE];
+    int  recv_len, frame_len;
+    unsigned char frame[ETHERNET_HDR_LEN + IP_RECV_BUF_SIZE];
 
     for ( ;; ) {
 
-        recv_len = recvfrom(rev->fd, recv_buf, RECV_BUF_SIZE, 0, NULL, NULL);
+        recv_len = recvfrom(rev->fd, frame + ETHERNET_HDR_LEN, 
+                IP_RECV_BUF_SIZE, 0, NULL, NULL);
 
         if (recv_len == -1) {
             if (errno == EAGAIN) {
@@ -217,7 +226,8 @@ tc_process_raw_socket_packet(tc_event_t *rev)
             return TC_ERROR;
         }
 
-        if (dispose_packet(recv_buf, recv_len, NULL) == TC_ERROR) {
+        frame_len = ETHERNET_HDR_LEN + recv_len;
+        if (dispose_packet(frame, frame_len, recv_len, NULL) == TC_ERROR) {
             return TC_ERROR;
         }
     }
@@ -227,17 +237,17 @@ tc_process_raw_socket_packet(tc_event_t *rev)
 #endif
 
 static bool
-process_packet(bool backup, char *packet, int length)
+process_packet(bool backup, unsigned char *frame, int frame_len)
 {
-    char tmp_packet[RECV_BUF_SIZE];
+    unsigned char tmp[IP_RECV_BUF_SIZE + ETHERNET_HDR_LEN];
 
     if (!backup) {
-        return process(packet, LOCAL);
+        return process_in(frame, LOCAL);
 
     } else {
-        memcpy(tmp_packet, packet, length);
+        memcpy(tmp, frame, frame_len);
 
-        return process(tmp_packet, LOCAL);
+        return process_in(tmp, LOCAL);
     }
 }
 
@@ -245,14 +255,16 @@ process_packet(bool backup, char *packet, int length)
 
 #if (TCPCOPY_UDP)
 static void
-replicate_packs(char *packet, int length, int replica_num)
+replicate_packs(unsigned char *frame, int frame_len, int replica_num)
 {
     int              i;
     uint32_t         size_ip;
     uint16_t         orig_port, addition, dest_port, rand_port;
+    unsigned char   *packet;
     tc_ip_header_t  *ip_header;
     tc_udp_header_t *udp_header;
 
+    packet     = frame + ETHERNET_HDR_LEN;
     ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
     udp_header = (tc_udp_header_t *) ((char *) ip_header + size_ip);
@@ -268,21 +280,22 @@ replicate_packs(char *packet, int length, int replica_num)
         tc_log_debug2(LOG_DEBUG, 0, "new port:%u,add:%u", dest_port, addition);
 
         udp_header->source = htons(dest_port);
-        process_packet(true, packet, length);
+        process_packet(true, frame, frame_len);
     }
 }
 
 static int
-dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
+dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len, 
+        int *p_valid_flag)
 {
     int             replica_num;
-    char           *packet;
     bool            packet_valid = false;
+    unsigned char  *packet;
     tc_ip_header_t *ip_header;
 
-    packet = recv_buf;
+    packet = frame + ETHERNET_HDR_LEN;
 
-    if (is_packet_needed((const char *) packet)) {
+    if (is_packet_needed(packet)) {
 
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
@@ -294,10 +307,10 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         }
 
         if (replica_num > 1) {
-            packet_valid = process_packet(true, packet, recv_len);
-            replicate_packs(packet, recv_len, replica_num);
+            packet_valid = process_packet(true, frame, frame_len);
+            replicate_packs(frame, frame_len, replica_num);
         } else {
-            packet_valid = process_packet(false, packet, recv_len);
+            packet_valid = process_packet(false, frame, frame_len);
         }
     }
 
@@ -312,14 +325,16 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 
 /* replicate packets for multiple-copying */
 static void
-replicate_packs(char *packet, int length, int replica_num)
+replicate_packs(unsigned char *frame, int frame_len, int replica_num)
 {
     int               i;
     uint16_t          orig_port, addition, dest_port, rand_port;
     uint32_t          size_ip;
+    unsigned char    *packet;
     tc_tcp_header_t  *tcp_header;
     tc_ip_header_t   *ip_header;
     
+    packet     = frame + ETHERNET_HDR_LEN;
     ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
@@ -333,28 +348,30 @@ replicate_packs(char *packet, int length, int replica_num)
         addition   = (((i << 1) - 1) << 5) + rand_port;
         dest_port  = get_appropriate_port(orig_port, addition);
         tcp_header->source = htons(dest_port);
-        process_packet(true, packet, length);
+        process_packet(true, frame, frame_len);
 
         tc_log_debug2(LOG_DEBUG, 0, "new port:%u,add:%u", dest_port, addition);
     }
 }
 
 static int
-dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
+dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len,
+        int *p_valid_flag)
 {
     int              replica_num, i, last, packet_num, max_payload,
                      index, payload_len;
-    char            *packet, tmp_buf[RECV_BUF_SIZE];
+    char             *p, buf[ETHERNET_HDR_LEN + IP_RECV_BUF_SIZE];
     bool             packet_valid = false;
     uint16_t         id, size_ip, size_tcp, tot_len, cont_len, 
                      pack_len = 0, head_len;
     uint32_t         seq;
+    unsigned char   *packet;
     tc_ip_header_t  *ip_header;
     tc_tcp_header_t *tcp_header;
 
-    packet = recv_buf;
+    packet = frame + ETHERNET_HDR_LEN;
 
-    if (is_packet_needed((const char *) packet)) {
+    if (is_packet_needed(packet)) {
 
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
@@ -368,14 +385,14 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
         /* 
          * If the packet length is larger than MTU, we split it. 
          */
-        if (recv_len > clt_settings.mtu) {
+        if (ip_recv_len > clt_settings.mtu) {
 
             /* calculate number of packets */
             size_ip     = ip_header->ihl << 2;
             tot_len     = ntohs(ip_header -> tot_len);
-            if (tot_len != recv_len) {
+            if (tot_len != ip_recv_len) {
                 tc_log_info(LOG_WARN, 0, "packet len:%u, recv len:%u",
-                            tot_len, recv_len);
+                            tot_len, ip_recv_len);
                 return TC_ERROR;
             }
 
@@ -392,7 +409,7 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
 #if (TCPCOPY_DEBUG)
             tc_log_trace(LOG_NOTICE, 0, CLIENT_FLAG, ip_header, tcp_header);
 #endif
-            tc_log_debug1(LOG_DEBUG, 0, "recv:%d, more than MTU", recv_len);
+            tc_log_debug1(LOG_DEBUG, 0, "recv:%d, more than MTU", ip_recv_len);
             index = head_len;
 
             for (i = 0 ; i < packet_num; i++) {
@@ -405,27 +422,32 @@ dispose_packet(char *recv_buf, int recv_len, int *p_valid_flag)
                 payload_len = pack_len - head_len;
                 ip_header->tot_len = htons(pack_len);
                 ip_header->id = id++;
+                p = buf + ETHERNET_HDR_LEN;
                 /* copy header here */
-                memcpy(tmp_buf, recv_buf, head_len);
+                memcpy(p, (char *) packet, head_len);
+                p +=  head_len;
                 /* copy payload here */
-                memcpy(tmp_buf + head_len, recv_buf + index, payload_len);
+                memcpy(p, (char *) (packet + index), payload_len);
                 index = index + payload_len;
                 if (replica_num > 1) {
-                    packet_valid = process_packet(true, tmp_buf, pack_len);
-                    replicate_packs(tmp_buf, pack_len, replica_num);
+                    packet_valid = process_packet(true, (unsigned char *) buf,
+                            ETHERNET_HDR_LEN + pack_len);
+                    replicate_packs((unsigned char *) buf, 
+                            ETHERNET_HDR_LEN + pack_len, replica_num);
                 } else {
-                    packet_valid = process_packet(false, tmp_buf, pack_len);
+                    packet_valid = process_packet(false, (unsigned char *) buf,
+                            ETHERNET_HDR_LEN + pack_len);
                 }
             }
         } else {
 
             if (replica_num > 1) {
 
-                packet_valid = process_packet(true, packet, recv_len);
-                replicate_packs(packet, recv_len, replica_num);
+                packet_valid = process_packet(true, frame, frame_len);
+                replicate_packs(frame, frame_len, replica_num);
             } else {
 
-                packet_valid = process_packet(false, packet, recv_len);
+                packet_valid = process_packet(false, frame, frame_len);
             }
         }
     }
@@ -538,7 +560,7 @@ send_packets_from_pcap(int first)
     int                 l2_len, ip_pack_len, p_valid_flag = 0;
     bool                stop;
     pcap_t             *pcap;
-    unsigned char      *pkt_data, *ip_data;
+    unsigned char      *pkt_data, *frame, *ip_data;
     struct pcap_pkthdr  pkt_hdr;  
 
     pcap = clt_settings.pcap;
@@ -561,15 +583,24 @@ send_packets_from_pcap(int first)
                 tc_log_info(LOG_WARN, 0, "truncated packets,drop");
             } else {
 
-                ip_data = get_ip_data(clt_settings.pcap, pkt_data, pkt_hdr.len, &l2_len);
+                ip_data = get_ip_data(clt_settings.pcap, pkt_data, 
+                        pkt_hdr.len, &l2_len);
+                if (l2_len < ETHERNET_HDR_LEN) {
+                    tc_log_info(LOG_WARN, 0, "l2 len is %d", l2_len);
+                    continue;
+                }
+
                 last_pack_time = pkt_hdr.ts;
                 if (ip_data != NULL) {
                     clt_settings.pcap_time = last_pack_time.tv_sec * 1000 + 
                         last_pack_time.tv_usec / 1000; 
 
                     ip_pack_len = pkt_hdr.len - l2_len;
-                    dispose_packet((char *) ip_data, ip_pack_len, 
-                            &p_valid_flag);
+                    tc_log_debug2(LOG_DEBUG, 0, "frame len:%d, ip len:%d",
+                            pkt_hdr.len, ip_pack_len);
+                    frame = ip_data - ETHERNET_HDR_LEN;
+                    dispose_packet(frame, ip_pack_len + ETHERNET_HDR_LEN,
+                            ip_pack_len, &p_valid_flag);
                     if (p_valid_flag) {
 
                         tc_log_debug0(LOG_DEBUG, 0, "valid flag for packet");

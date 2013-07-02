@@ -29,6 +29,7 @@ int tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip);
 
 #if (TCPCOPY_PCAP_SEND)
 int tc_pcap_send_init(char *if_name, char *smac, char *dmac, int mtu);
+int tc_pcap_send(unsigned char *frame, size_t len);
 int tc_pcap_over();
 #endif
 

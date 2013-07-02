@@ -108,16 +108,21 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 }
 
 unsigned char *
-copy_ip_packet(tc_ip_header_t *ip_header)
+cp_fr_ip_pack(tc_ip_header_t *ip_header)
 {
-    uint16_t       tot_len = ntohs(ip_header->tot_len);
-    unsigned char *data    = (unsigned char *) malloc(tot_len);
+    int            frame_len;
+    uint16_t       tot_len;
+    unsigned char *frame;
+    
+    tot_len   = ntohs(ip_header->tot_len);
+    frame_len = ETHERNET_HDR_LEN + tot_len;
+    frame     = (unsigned char *) malloc(frame_len);
 
-    if (data != NULL) {    
-        memcpy(data, ip_header, tot_len);
+    if (frame != NULL) {    
+        memcpy(frame + ETHERNET_HDR_LEN, ip_header, tot_len);
     }    
 
-    return data;
+    return frame;
 }
 
 inline bool

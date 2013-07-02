@@ -115,12 +115,12 @@ tc_process_server_msg(tc_event_t *rev)
     }
 
 #if (!TCPCOPY_COMBINED)
-    process((char *) &msg, REMOTE);
+    process_out((unsigned char *) &msg);
 #else
     tc_log_debug1(LOG_DEBUG, 0, "resp packets:%d", num);
     p = aggr_resp + sizeof(uint16_t);
     for (k = 0; k < num; k++) {
-        process((char *) p, REMOTE);
+        process_out(p);
         p = p + MSG_SERVER_SIZE;
     }
 #endif

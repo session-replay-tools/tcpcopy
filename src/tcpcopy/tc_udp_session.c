@@ -21,7 +21,7 @@ destroy_for_sessions()
  * filter udp packets 
  */
 bool
-is_packet_needed(const char *packet)
+is_packet_needed(unsigned char *packet)
 {
     bool             is_needed = false;
     uint16_t         size_ip, size_udp, tot_len;
@@ -85,7 +85,7 @@ void
 ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 {
     int             ret, max_pack_no, index, i;
-    char            tmp_buf[RECV_BUF_SIZE];
+    char            *p, buf[IP_RECV_BUF_SIZE + ETHERNET_HDR_LEN];
     uint16_t        offset, size_ip, tot_len,
                     remainder, payload_len;
     tc_ip_header_t *tmp_ip_header;
@@ -93,8 +93,9 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
 
+    p = buf + ETHERNET_HDR_LEN;
     /* dispose the first packet here */
-    memcpy(tmp_buf, (char *) ip_header, size_ip);
+    memcpy(p, (char *) ip_header, size_ip);
     offset = clt_settings.mtu - size_ip;
     if (offset % 8 != 0) {
         offset = offset / 8;
@@ -102,11 +103,12 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
     }
     payload_len = offset;
 
-    tmp_ip_header = (tc_ip_header_t *) tmp_buf;
+    tmp_ip_header = (tc_ip_header_t *) p;
     tmp_ip_header->frag_off = htons(0x2000);
 
     index  = size_ip;
-    memcpy(tmp_buf + size_ip, ((char *) ip_header) + index, payload_len);
+    p += size_ip;
+    memcpy(p, ((char *) ip_header) + index, payload_len);
     index      = index + payload_len;
     remainder  = tot_len - size_ip - payload_len;
     ret = tc_raw_socket_send(tc_raw_socket_out, tmp_ip_header, 
@@ -123,9 +125,10 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 
     for (i = 0; i <= max_pack_no; i++) {
 
-        memcpy(tmp_buf, (char *) ip_header, size_ip);
+        p = buf + ETHERNET_HDR_LEN;
+        memcpy(p, (char *) ip_header, size_ip);
 
-        tmp_ip_header = (tc_ip_header_t *) tmp_buf;
+        tmp_ip_header = (tc_ip_header_t *) p;
         tmp_ip_header->frag_off = htons(offset >> 3);
 
         if (i == max_pack_no) {
@@ -135,7 +138,8 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
             remainder = remainder - payload_len;
         }
 
-        memcpy(tmp_buf + size_ip, ((char *) ip_header) + index, payload_len);
+        p += size_ip;
+        memcpy(p, ((char *) ip_header) + index, payload_len);
         index     = index + payload_len;
         offset    = offset + payload_len;
 

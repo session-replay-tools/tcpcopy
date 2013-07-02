@@ -185,30 +185,16 @@ tc_raw_socket_out_init()
 static unsigned char 
 char_to_data(const char ch)
 {
-    switch(ch)
-    {
-        case '0': return 0;
-        case '1': return 1;
-        case '2': return 2;
-        case '3': return 3;
-        case '4': return 4;
-        case '5': return 5;
-        case '6': return 6;
-        case '7': return 7;
-        case '8': return 8;
-        case '9': return 9;
-        case 'a': 
-        case 'A': return 10;
-        case 'b': 
-        case 'B': return 11;
-        case 'c':
-        case 'C': return 12;
-        case 'd': 
-        case 'D': return 13;
-        case 'e': 
-        case 'E': return 14;
-        case 'f':
-        case 'F': return 15;
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+    
+    if (ch >= 'A' && ch <= 'Z') {
+        return ch - 'A' + 10;
     }
 
     return 0;
@@ -256,18 +242,17 @@ tc_pcap_send_init(char *if_name, char *smac, char *dmac, int mtu)
     return TC_OK;
 }
 
-static int
-tc_pcap_send(char *buffer, size_t len)
+int
+tc_pcap_send(unsigned char *frame, size_t len)
 {
-    int  send_len;
-    char frame[1514], pcap_errbuf[PCAP_ERRBUF_SIZE];
+    int   send_len;
+    char  pcap_errbuf[PCAP_ERRBUF_SIZE];
 
     pcap_errbuf[0]='\0';
 
-    memcpy(frame, &hdr, sizeof(struct ethernet_hdr));
-    memcpy(frame + sizeof(struct ethernet_hdr), buffer, len);
+    memcpy(frame, &hdr, ETHERNET_HDR_LEN);
 
-    send_len = pcap_inject(pcap, frame, sizeof(struct ethernet_hdr) + len);
+    send_len = pcap_inject(pcap, frame, len);
     if (send_len == -1) {
         return TC_ERROR;
     }
@@ -323,15 +308,11 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
             return TC_ERROR;
         }
         
-    } else {
-
-#if (TCPCOPY_PCAP_SEND)
-        tc_pcap_send(buf, len);
-#endif
-    }
+    } 
 
     return TC_OK;
 }
+
 
 #if (!INTERCEPT_ADVANCED)
 

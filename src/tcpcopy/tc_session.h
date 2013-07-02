@@ -12,8 +12,9 @@
 /* global functions */
 void init_for_sessions();
 void destroy_for_sessions();
-bool process(char *packet, int pack_src);
-bool is_packet_needed(const char *packet);
+bool process_in(unsigned char *frame, int pack_src);
+bool process_out(unsigned char *packet);
+bool is_packet_needed(unsigned char *packet);
 void tc_interval_dispose(tc_event_timer_t *evt);
 void output_stat();
 

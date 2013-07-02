@@ -90,7 +90,7 @@
 #define COPY_FROM_LINK_LAYER 1
 
 /* raw socket receiving buffer size */
-#define RECV_BUF_SIZE 65536
+#define IP_RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 65535
 #define MAX_FILTER_LENGH 4096 
 
