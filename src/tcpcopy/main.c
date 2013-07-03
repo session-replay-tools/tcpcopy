@@ -72,8 +72,6 @@ usage(void)
     printf("-o <device,>   The name of the interface to send.  This is usually a driver\n"
            "               name followed by a unit number,for example eth0 for the first\n"
            "               Ethernet interface.\n");
-    printf("-D <mac>       destination mac address\n");
-    printf("-L <mac>       local mac address\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -152,8 +150,6 @@ read_args(int argc, char **argv)
 #endif
 #if (TCPCOPY_PCAP_SEND)
          "o:" /* <device,> */
-         "D:" /* <mac,> */
-         "L:" /* <mac,> */
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql */
@@ -197,12 +193,6 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_PCAP_SEND)
             case 'o':
                 clt_settings.output_if_name = optarg;
-                break;
-            case 'D':
-                clt_settings.dmac = optarg;
-                break;
-            case 'L':
-                clt_settings.smac = optarg;
                 break;
 #endif
 #if (TCPCOPY_PCAP)
@@ -297,11 +287,6 @@ read_args(int argc, char **argv)
                         fprintf(stderr, "tcpcopy: option -%c require a device name\n",
                                 optopt);
                         break;
-                    case 'L':
-                    case 'D':
-                        fprintf(stderr, "tcpcopy: option -%c require a string mac address\n",
-                                optopt);
-                        break;
 #endif
 #if (TCPCOPY_DR)
                     case 's':
@@ -388,11 +373,36 @@ output_for_debug(int argc, char **argv)
 
 }
 
-static void
-parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
+
+static unsigned char 
+char_to_data(const char ch)
 {
-    char    *seq, *ip_s, *port_s;
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+
+    if (ch >= 'A' && ch <= 'Z') {
+        return ch - 'A' + 10;
+    }
+
+    return 0;
+}
+
+static int 
+parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port, 
+        unsigned char *mac)
+{
+    int      i, len;
+    char    *p, *seq, *before_mac, *ip_s, *port_s;
     uint16_t tmp_port;
+
+    if ((before_mac = strchr(addr, '@')) != NULL) {
+        *before_mac = '\0';
+    }
 
     if ((seq = strchr(addr, ':')) == NULL) {
         tc_log_info(LOG_NOTICE, 0, "set global port for tcpcopy");
@@ -409,6 +419,26 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 
     tmp_port = atoi(port_s);
     *port = htons(tmp_port);
+
+    if (before_mac != NULL) {
+        p = before_mac + 1;
+        len = strlen(p);
+        
+        if (len < ETHER_ADDR_STR_LEN) {
+            tc_log_info(LOG_WARN, 0, "mac address is too short:%d", len);
+            return -1;
+        }
+
+        for (i = 0; i < ETHER_ADDR_LEN; ++i) {
+            mac[i]  = char_to_data(*p++) << 4;
+            mac[i] += char_to_data(*p++);
+            p++;
+        }   
+
+        *before_mac = '@';
+    }
+
+    return 0;
 }
 
 /*
@@ -431,8 +461,10 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     addr1 = addr;
     addr2 = seq + 1;
 
-    parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port);
-    parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port);
+    parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port,
+            ip_port->src_mac);
+    parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port,
+            ip_port->dst_mac);
 
     if (clt_settings.lo_tf_ip == 0) {
         clt_settings.lo_tf_ip = ip_port->online_ip;
@@ -667,14 +699,6 @@ set_details()
         tc_log_info(LOG_NOTICE, 0, "output device:%s", 
                 clt_settings.output_if_name);
     }
-    if (clt_settings.dmac != NULL) {
-        tc_log_info(LOG_NOTICE, 0, "dest mac:%s", 
-                clt_settings.dmac);
-    }
-    if (clt_settings.smac != NULL) {
-        tc_log_info(LOG_NOTICE, 0, "source mac:%s", 
-                clt_settings.smac);
-    }
 #endif
 
 #if (TCPCOPY_PCAP)
@@ -756,8 +780,6 @@ settings_init()
     
 #if (TCPCOPY_PCAP_SEND)
     clt_settings.output_if_name = NULL;
-    clt_settings.dmac = NULL;
-    clt_settings.smac = NULL;
 #endif
 
     tc_raw_socket_out = TC_INVALID_SOCKET;

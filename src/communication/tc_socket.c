@@ -182,56 +182,16 @@ tc_raw_socket_out_init()
 }
 
 #if (TCPCOPY_PCAP_SEND)
-static unsigned char 
-char_to_data(const char ch)
-{
-    if (ch >= '0' && ch <= '9') {
-        return ch - '0';
-    }
 
-    if (ch >= 'a' && ch <= 'f') {
-        return ch - 'a' + 10;
-    }
-    
-    if (ch >= 'A' && ch <= 'Z') {
-        return ch - 'A' + 10;
-    }
-
-    return 0;
-}
-
-/* TODO needs to support multiple hdrs for multiple servers */
-static struct ethernet_hdr hdr;
-static pcap_t *pcap= NULL;
+static pcap_t *pcap = NULL;
 
 int
-tc_pcap_send_init(char *if_name, char *smac, char *dmac, int mtu)
+tc_pcap_send_init(char *if_name, int mtu)
 {
-    int           i;
-    char         *p, pcap_errbuf[PCAP_ERRBUF_SIZE];
-    unsigned char ether_dhost[ETHER_ADDR_LEN];
-    unsigned char ether_shost[ETHER_ADDR_LEN];
-
-    p = smac;
-    for (i = 0; i < ETHER_ADDR_LEN; ++i) {
-        ether_shost[i]  = char_to_data(*p++) << 4;
-        ether_shost[i] += char_to_data(*p++);
-        p++;
-    }
-
-    p = dmac;
-    for (i = 0; i < ETHER_ADDR_LEN; ++i) {
-        ether_dhost[i]  = char_to_data(*p++) << 4;
-        ether_dhost[i] += char_to_data(*p++);
-        p++;
-    }
-    
-    memcpy(hdr.ether_dhost, ether_dhost, ETHER_ADDR_LEN);
-    memcpy(hdr.ether_shost, ether_shost, ETHER_ADDR_LEN);
-    hdr.ether_type = htons(ETH_P_IP);
+    char  pcap_errbuf[PCAP_ERRBUF_SIZE];
 
     pcap_errbuf[0] = '\0';
-    pcap= pcap_open_live(if_name, mtu + sizeof(struct ethernet_hdr), 
+    pcap = pcap_open_live(if_name, mtu + sizeof(struct ethernet_hdr), 
             0, 0, pcap_errbuf);
     if (pcap_errbuf[0] != '\0') {
         tc_log_info(LOG_ERR, errno, "pcap open %s, failed:%s", 
@@ -249,8 +209,6 @@ tc_pcap_send(unsigned char *frame, size_t len)
     char  pcap_errbuf[PCAP_ERRBUF_SIZE];
 
     pcap_errbuf[0]='\0';
-
-    memcpy(frame, &hdr, ETHERNET_HDR_LEN);
 
     send_len = pcap_inject(pcap, frame, len);
     if (send_len == -1) {

@@ -265,6 +265,7 @@ enum packet_classification{
 
 #if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED || TCPCOPY_PCAP_SEND)
 #define ETHER_ADDR_LEN 0x6
+#define ETHER_ADDR_STR_LEN 17
 
 #ifndef ETHERTYPE_VLAN
 #define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */

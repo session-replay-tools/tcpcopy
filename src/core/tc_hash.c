@@ -73,7 +73,7 @@ hash_create(size_t size)
         return NULL;
     }
 
-    for (i=0; i < size; i++) {
+    for (i = 0; i < size; i++) {
         ht->lists[i] = link_list_create();
     }
 

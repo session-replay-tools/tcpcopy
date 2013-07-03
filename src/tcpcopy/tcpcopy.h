@@ -6,10 +6,12 @@
 
 typedef struct {
     /* online ip from the client perspective */
-    uint32_t online_ip;
-    uint32_t target_ip;
-    uint16_t online_port;
-    uint16_t target_port;
+    uint32_t      online_ip;
+    uint32_t      target_ip;
+    uint16_t      online_port;
+    uint16_t      target_port;
+    unsigned char src_mac[ETHER_ADDR_LEN];
+    unsigned char dst_mac[ETHER_ADDR_LEN];
 } ip_port_pair_mapping_t;
 
 
@@ -58,8 +60,6 @@ typedef struct xcopy_clt_settings {
 #endif
 #if (TCPCOPY_PCAP_SEND)
     char         *output_if_name;
-    char         *smac;
-    char         *dmac;
 #endif
 #if (TCPCOPY_PCAP)
     char         *raw_device;

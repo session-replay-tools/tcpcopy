@@ -188,7 +188,9 @@ typedef struct session_s{
     /* mysql executed times for COM_QUERY(in COM_STMT_PREPARE situation) */
     uint32_t mysql_execute_times:8;
 #endif
- 
+    unsigned char *src_mac;
+    unsigned char *dst_mac;
+
     link_list *unsend_packets;
     link_list *next_sess_packs;
     link_list *unack_packets;

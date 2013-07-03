@@ -98,6 +98,14 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
     return true;
 }
 
+static inline void
+fill_frame(struct ethernet_hdr *hdr, session_t *s)
+{
+    memcpy(hdr->ether_shost, s->src_mac, ETHER_ADDR_LEN);
+    memcpy(hdr->ether_dhost, s->dst_mac, ETHER_ADDR_LEN);
+    hdr->ether_type = htons(ETH_P_IP); 
+}
+
 /*
  * it is called by fast retransmit
  */
@@ -163,6 +171,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *frame)
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
 #else
+    fill_frame((struct ethernet_hdr *) frame, s);
     ret = tc_pcap_send(frame, tot_len + ETHERNET_HDR_LEN);
 #endif
 
@@ -280,6 +289,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
 #else
+    fill_frame((struct ethernet_hdr *) frame, s);
     ret = tc_pcap_send(frame, tot_len + ETHERNET_HDR_LEN);
 #endif
 
@@ -728,6 +738,8 @@ session_create(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
             s->online_addr, s->online_port);
     s->dst_addr      = test->target_ip;
     s->dst_port      = test->target_port;
+    s->src_mac       = test->src_mac;
+    s->dst_mac       = test->dst_mac;
 
     return s;
 }
@@ -2409,7 +2421,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if ( tcp_header->rst) {
         s->sm.reset_sent = 1;
-        s->sm.sess_over= 1;
+        s->sm.sess_over = 1;
         tc_log_debug1(LOG_DEBUG, 0, "reset from back:%u", s->src_h_port);
         return;
     }
