@@ -89,6 +89,8 @@
 #define COPY_FROM_IP_LAYER 0
 #define COPY_FROM_LINK_LAYER 1
 
+#define ETHER_ADDR_LEN 0x6
+
 /* raw socket receiving buffer size */
 #define IP_RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 65535
@@ -263,8 +265,6 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED || TCPCOPY_PCAP_SEND)
-#define ETHER_ADDR_LEN 0x6
 #define ETHER_ADDR_STR_LEN 17
 
 #ifndef ETHERTYPE_VLAN
@@ -285,7 +285,6 @@ struct ethernet_hdr {
     uint8_t  ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
-#endif 
 
 /* receiving buffer size for response */
 #define CAPTURE_RESP_HEADER_MAX_LEN 120

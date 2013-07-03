@@ -64,7 +64,9 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
 int
 tc_packets_init(tc_event_loop_t *event_loop)
 {
+#if (!TCPCOPY_PCAP_SEND)
     int         fd;
+#endif
 #if (TCPCOPY_PCAP)
     int         i = 0;
     bool        work = false;
@@ -176,7 +178,7 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
     }
 
     pcap = (pcap_t *)args;
-    ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+    ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len);
 
     if (l2_len != ETHERNET_HDR_LEN) {
         tc_log_info(LOG_ERR, 0, "l2 len is %d", l2_len);
