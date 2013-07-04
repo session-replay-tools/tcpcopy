@@ -50,9 +50,10 @@ static inline void router_update_adjust(route_slot_t *slot, int child)
 static void router_add_adjust(route_slot_t *slot, int key, int fd) 
 {
     int          i, tail_need_save;
-    route_item_t item, tmp;
+    route_item_t item = {0, 0, 0}, tmp;
 
     tail_need_save = 0;
+
     if (slot->num > 0) {
         item = slot->items[0];
         if (slot->num == 1) {
@@ -123,7 +124,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
             break;
         }
 
-#if 0
+#if 1
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in add visit %d null timestamp,all:%d",
                     i + 1, max);
@@ -166,7 +167,7 @@ router_get(uint32_t key)
             break;
         }
         table->extra_compared++;
-#if 0
+#if 1
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in get, visit %d null timestamp, all:%d",
                     i + 1, slot->num);

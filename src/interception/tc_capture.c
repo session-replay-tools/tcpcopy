@@ -169,7 +169,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 #if (TCPCOPY_PCAP)
 static void 
 pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
-        unsigned char *packet)
+        unsigned char *frame)
 {
     pcap_t        *pcap;
     unsigned char *ip_data; 
@@ -179,8 +179,8 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
         return;
     }
-    pcap = (pcap_t *)args;
-    ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+    pcap = (pcap_t *) args;
+    ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len);
     resp_dispose((tc_ip_header_t *) ip_data);
 }
 #endif

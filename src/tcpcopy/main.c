@@ -1,6 +1,8 @@
 /*
  *  TCPCopy
- *  An online replication tool for TCP based applications
+ *  A request replication tool for TCP based applications 
+ *  Or
+ *  A TCP stream replay tool(from client side)
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.

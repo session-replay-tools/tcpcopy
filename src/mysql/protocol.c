@@ -135,7 +135,6 @@ parse_handshake_init_cont(unsigned char *payload, size_t length,
     p   = p + len + 1;
     /* skip thread_id */
     p  += 4;
-    str = (char *) p;
     count = p - payload + 8;
     if (count > length) {
         tc_log_info(LOG_ERR, 0, "payload len is too short for init:%u,%u",

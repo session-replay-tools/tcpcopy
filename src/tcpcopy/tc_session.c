@@ -98,14 +98,6 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
     return true;
 }
 
-static inline void
-fill_frame(struct ethernet_hdr *hdr, session_t *s)
-{
-    memcpy(hdr->ether_shost, s->src_mac, ETHER_ADDR_LEN);
-    memcpy(hdr->ether_dhost, s->dst_mac, ETHER_ADDR_LEN);
-    hdr->ether_type = htons(ETH_P_IP); 
-}
-
 /*
  * it is called by fast retransmit
  */
@@ -171,7 +163,7 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *frame)
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
 #else
-    fill_frame((struct ethernet_hdr *) frame, s);
+    fill_frame((struct ethernet_hdr *) frame, s->src_mac, s->dst_mac);
     ret = tc_pcap_send(frame, tot_len + ETHERNET_HDR_LEN);
 #endif
 
@@ -289,7 +281,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
     ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, tot_len,
                              ip_header->daddr);
 #else
-    fill_frame((struct ethernet_hdr *) frame, s);
+    fill_frame((struct ethernet_hdr *) frame, s->src_mac, s->dst_mac);
     ret = tc_pcap_send(frame, tot_len + ETHERNET_HDR_LEN);
 #endif
 
@@ -738,8 +730,10 @@ session_create(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
             s->online_addr, s->online_port);
     s->dst_addr      = test->target_ip;
     s->dst_port      = test->target_port;
+#if (TCPCOPY_PCAP_SEND)
     s->src_mac       = test->src_mac;
     s->dst_mac       = test->dst_mac;
+#endif
 
     return s;
 }
@@ -993,7 +987,11 @@ send_reserved_packets(session_t *s)
 #endif
     link_list        *list;
     p_link_node       ln, tmp_ln;
+#if (!TCPCOPY_MYSQL_BASIC) 
     unsigned char    *frame;
+#else
+    unsigned char    *frame, *p;
+#endif
     tc_ip_header_t   *ip_header;
     tc_tcp_header_t  *tcp_header;
 
@@ -1643,10 +1641,9 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     tc_tcp_header_t  *fir_tcp_header, *tmp_tcp_header;
 
 #if (TCPCOPY_MYSQL_ADVANCED)
-    void             *value;
     uint16_t          sec_cont_len = 0;
     uint64_t          key;
-    tc_ip_header_t   *sec_auth_packet = NULL, *sec_ip_header;
+    tc_ip_header_t   *sec_auth_packet = NULL, *sec_ip_header = NULL;
     tc_tcp_header_t  *sec_tcp_header  = NULL;
 #endif
 
@@ -1655,15 +1652,15 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
     fir_auth_pack = fir_auth_u_p;
 #if (TCPCOPY_MYSQL_ADVANCED)
     key   = get_key(ip_header->saddr, tcp_header->source);
-    value = hash_find(fir_auth_pack_table, key);
-    if (value != NULL) {
+    p = (unsigned char *) hash_find(fir_auth_pack_table, key);
+    if (p != NULL) {
         /* use the private first auth user packet */
-        fir_auth_pack = (tc_ip_header_t *) (value + ETHERNET_HDR_LEN);
+        fir_auth_pack = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
     }
 
-    value = hash_find(sec_auth_pack_table, key);
-    if (value != NULL) {
-        sec_auth_packet = (tc_ip_header_t *) (value + ETHERNET_HDR_LEN);
+    p = (unsigned char *) hash_find(sec_auth_pack_table, key);
+    if (p != NULL) {
+        sec_auth_packet = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
     }
 
 #endif
@@ -1708,7 +1705,8 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
         /* calculate the total content length */
         ln = link_list_first(list); 
         while (ln) {
-            tmp_ip_header = (tc_ip_header_t *) (ln->data + ETHERNET_HDR_LEN);
+            p = (unsigned char *) ln->data;
+            tmp_ip_header = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
             tmp_tcp_header = (tc_tcp_header_t *) ((char *) tmp_ip_header 
                     + IP_HDR_LEN(tmp_ip_header));
             tmp_cont_len = TCP_PAYLOAD_LENGTH(tmp_ip_header, tmp_tcp_header);
@@ -1746,7 +1744,8 @@ mysql_prepare_for_new_session(session_t *s, tc_ip_header_t *ip_header,
         /* insert prepare statements */
         ln = link_list_first(list); 
         while (ln) {
-            tmp_ip_header  = (tc_ip_header_t *) (ln->data + ETHERNET_HDR_LEN);
+            p = (unsigned char *) ln->data;
+            tmp_ip_header  = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
             p = cp_fr_ip_pack(tmp_ip_header);
             tmp_ip_header  = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
             tmp_tcp_header = (tc_tcp_header_t *) ((char *) tmp_ip_header 
@@ -3413,7 +3412,7 @@ process_out(unsigned char *packet)
 }
 
 bool
-process_in(unsigned char *frame, int pack_src)
+process_in(unsigned char *frame)
 {
 #if (!TCPCOPY_SINGLE)
     bool               result;

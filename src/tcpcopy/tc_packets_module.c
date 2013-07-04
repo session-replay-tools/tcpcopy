@@ -64,7 +64,7 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
 int
 tc_packets_init(tc_event_loop_t *event_loop)
 {
-#if (!TCPCOPY_PCAP_SEND)
+#if (!TCPCOPY_PCAP_SEND || !TCPCOPY_PCAP)
     int         fd;
 #endif
 #if (TCPCOPY_PCAP)
@@ -158,11 +158,14 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 #if (TCPCOPY_PCAP)
 
+/*
+ * only support ethernet frames
+ */
 static void
 pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         unsigned char *frame)
 {
-    int                  l2_len, ip_pack_len;
+    int                  l2_len, ip_pack_len, frame_len;
     pcap_t              *pcap;
     unsigned char       *ip_data; 
     struct ethernet_hdr *ether;
@@ -172,22 +175,30 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         return;
     }
 
-    ether = (struct ethernet_hdr *) frame;
-    if (ntohs(ether->ether_type) != ETH_P_IP) {
-        return;
-    }
-
-    pcap = (pcap_t *)args;
-    ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len);
+    pcap = (pcap_t *) args;
+    
+    frame_len = pkt_hdr->len;
+    l2_len    = get_l2_len(frame, frame_len, pcap_datalink(pcap));
 
     if (l2_len != ETHERNET_HDR_LEN) {
-        tc_log_info(LOG_ERR, 0, "l2 len is %d", l2_len);
-        return;
+        if (l2_len > ETHERNET_HDR_LEN) {
+           ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len); 
+           frame = ip_data - ETHERNET_HDR_LEN;
+           frame_len = frame_len - l2_len + ETHERNET_HDR_LEN;
+        } else {
+            tc_log_info(LOG_WARN, 0, "l2 len is %d", l2_len);
+            return;
+        }
+    } else {
+        ether = (struct ethernet_hdr *) frame;
+        if (ntohs(ether->ether_type) != ETH_P_IP) {
+            return;
+        }
     }
 
     ip_pack_len = pkt_hdr->len - l2_len;
 
-    dispose_packet(frame, pkt_hdr->len, ip_pack_len, NULL);
+    dispose_packet(frame, frame_len, ip_pack_len, NULL);
 }
 
 static int
@@ -243,12 +254,12 @@ process_packet(bool backup, unsigned char *frame, int frame_len)
     unsigned char tmp[IP_RECV_BUF_SIZE + ETHERNET_HDR_LEN];
 
     if (!backup) {
-        return process_in(frame, LOCAL);
 
+        return process_in(frame);
     } else {
         memcpy(tmp, frame, frame_len);
 
-        return process_in(tmp, LOCAL);
+        return process_in(tmp);
     }
 }
 

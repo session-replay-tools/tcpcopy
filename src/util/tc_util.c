@@ -241,13 +241,15 @@ void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet)
 {       
     int            sum;
     uint16_t       len;
+    unsigned char *ip_src;
 
     udp_packet->check = 0;
 
-    len  = ntohs(udp_packet->len);
-    sum  = do_checksum_math((u_int16_t *)&ip_header->saddr, 8);
-    sum += ntohs(IPPROTO_UDP + len);
-    sum += do_checksum_math((u_int16_t *)udp_packet, len);
+    len    = ntohs(udp_packet->len);
+    ip_src = (unsigned char *) (&ip_header->saddr);
+    sum    = do_checksum_math((u_int16_t *) ip_src, 8);
+    sum   += ntohs(IPPROTO_UDP + len);
+    sum   += do_checksum_math((u_int16_t *) udp_packet, len);
     udp_packet->check = CHECKSUM_CARRY(sum);
 
 }
@@ -332,7 +334,7 @@ construct_filter(int flag, uint32_t ip, uint16_t port, char *filter)
 
 #if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
 int
-get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
+get_l2_len(const unsigned char *frame, const int pkt_len, const int datalink)
 {
     struct ethernet_hdr *eth_hdr;
 
@@ -341,7 +343,7 @@ get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
             return 0;
             break;
         case DLT_EN10MB:
-            eth_hdr = (struct ethernet_hdr *) packet;
+            eth_hdr = (struct ethernet_hdr *) frame;
             switch (ntohs(eth_hdr->ether_type)) {
                 case ETHERTYPE_VLAN:
                     return 18;
@@ -371,13 +373,13 @@ static unsigned char pcap_ip_buf[65536];
 #endif
 
 unsigned char *
-get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len, 
+get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len, 
         int *p_l2_len)
 {
     int      l2_len;
     u_char  *ptr;
 
-    l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
+    l2_len    = get_l2_len(frame, pkt_len, pcap_datalink(pcap));
     *p_l2_len = l2_len;
 
     if (pkt_len <= l2_len) {
@@ -385,17 +387,27 @@ get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len,
     }
 #ifdef FORCE_ALIGN
     if (l2_len % 4 == 0) {
-        ptr = (&(packet)[l2_len]);
+        ptr = (&(frame)[l2_len]);
     } else {
         ptr = pcap_ip_buf;
-        memcpy(ptr, (&(packet)[l2_len]), pkt_len - l2_len);
+        memcpy(ptr, (&(frame)[l2_len]), pkt_len - l2_len);
     }
 #else
-    ptr = (&(packet)[l2_len]);
+    ptr = (&(frame)[l2_len]);
 #endif
 
     return ptr;
 
+}
+#endif
+
+#if (TCPCOPY_PCAP_SEND)
+inline void
+fill_frame(struct ethernet_hdr *hdr, unsigned char *smac, unsigned char *dmac)
+{
+    memcpy(hdr->ether_shost, smac, ETHER_ADDR_LEN);
+    memcpy(hdr->ether_dhost, dmac, ETHER_ADDR_LEN);
+    hdr->ether_type = htons(ETH_P_IP); 
 }
 #endif
 
