@@ -700,6 +700,9 @@ set_details()
     if (clt_settings.output_if_name != NULL) {
         tc_log_info(LOG_NOTICE, 0, "output device:%s", 
                 clt_settings.output_if_name);
+    } else {
+        tc_log_info(LOG_ERR, 0, "output device is null");
+        return -1;
     }
 #endif
 
