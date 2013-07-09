@@ -46,8 +46,8 @@ tc_log_end()
 void
 tc_log_info(int level, int err, const char *fmt, ...)
 {
+    int             n;
     char            buffer[2048], *p;
-    size_t          n;
     va_list         args;
     tc_log_level_t *ll;
 
