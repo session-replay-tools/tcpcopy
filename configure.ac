@@ -129,6 +129,7 @@ if test "x$enable_nfqueue" = "xyes";then
       [
         saved_LIBS="$LIBS"
         saved_LDFLAGS="$LDFLAGS"
+        saved_CPPFLAGS="$CPPFLAGS"
         nf_found=no
         for nfdir in $trynfqueuedir "" $prefix /usr/local
         do
@@ -144,6 +145,11 @@ if test "x$enable_nfqueue" = "xyes";then
                 [test -d "$nfdir/lib"],
                 [LDFLAGS="-L$nfdir/lib $LDFLAGS"],
                 [LDFLAGS="-L$nfdir $LDFLAGS"]
+              )
+              AS_IF(
+                [test -d "$nfdir/include"],
+                [CPPFLAGS="-I$nfdir/include $CPPFLAGS"],
+                [CPPFLAGS="-I$nfdir $CPPFLAGS"]
               )
             ]
           )
@@ -179,6 +185,7 @@ if test "x$enable_nfqueue" = "xyes";then
         done
         LIBS="$saved_LIBS"
         LDFLAGS="$saved_LDFLAGS"
+        CPPFLAGS="$saved_CPPFLAGS"
         AS_IF(
           [test $nf_found = no],
           [AC_MSG_ERROR([nfqueue required. Install libnetfilter_queue(download it from $LIBNFQUEUE_URL) or specify its path using --with-nfqueue=/dir/])]
@@ -198,6 +205,11 @@ if test "x$enable_nfqueue" = "xyes";then
             LDFLAGS="-L$ac_cv_nfqueue_dir $LDFLAGS"
             nf_libdir="$ac_cv_nfqueue_dir"
           ]
+        )
+        AS_IF(
+          [test -d "$ac_cv_nfqueue_dir/include"],
+          [CPPFLAGS="-I$ac_cv_nfqueue_dir/include $CPPFLAGS"]
+          [CPPFLAGS="-I$ac_cv_nfqueue_dir $CPPFLAGS"]
         )
       ]
     )
