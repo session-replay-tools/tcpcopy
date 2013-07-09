@@ -2,14 +2,92 @@
 #include <xcopy.h>
 
 #if (TCPCOPY_PCAP)
+
+#if (HAVE_PCAP_CREATE)
+static int
+tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
+{
+    int    status;
+    char   ebuf[PCAP_ERRBUF_SIZE]; 
+
+    *ebuf = '\0';
+
+    *pd = pcap_create(device, ebuf);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
+        return TC_ERROR;
+    }
+
+    status = pcap_set_snaplen(*pd, snap_len);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_snaplen error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_promisc(*pd, 0);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_timeout(*pd, 1000);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_buffer_size(*pd, buf_size);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_buffer_size error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
+
+    status = pcap_activate(*pd);
+    if (status < 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+
+    } else if (status > 0) {
+        tc_log_info(LOG_WARN, 0, "pcap activate warn:%s", 
+                pcap_statustostr(status));
+    }
+
+    return TC_OK;
+}
+
+#else
+static int 
+tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
+{
+    char   ebuf[PCAP_ERRBUF_SIZE]; 
+
+    *ebuf = '\0';
+
+    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, 0, "pcap_open_live error:%s", ebuf);
+        return TC_ERROR;
+
+    } else if (*ebuf) {
+        tc_log_info(LOG_WARN, 0, "pcap_open_live warn:%s", ebuf);
+    }
+
+    return TC_OK;
+}
+#endif
+
 int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, 
         int snap_len, int buf_size, char *pcap_filter)
 {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-    int         fd, status;
-#pragma GCC diagnostic pop
+    int         fd;
     char        ebuf[PCAP_ERRBUF_SIZE]; 
     struct      bpf_program fp;
     bpf_u_int32 net, netmask;      
@@ -21,61 +99,10 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 
     *ebuf = '\0';
-#if (HAVE_PCAP_CREATE)
-    *pd = pcap_create(device, ebuf);
-    if (*pd == NULL) {
-        tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
-        return TC_INVALID_SOCKET;
-    }
 
-    status = pcap_set_snaplen(*pd, snap_len);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_snaplen error:%s",
-                pcap_statustostr(status));
+    if (tc_pcap_open(pd, device, snap_len, buf_size) == TC_ERROR) {
         return TC_INVALID_SOCKET;
     }
-    
-    status = pcap_set_promisc(*pd, 0);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-    
-    status = pcap_set_timeout(*pd, 1000);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-    
-    status = pcap_set_buffer_size(*pd, buf_size);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_buffer_size error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-
-    tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
- 
-    status = pcap_activate(*pd);
-    if (status < 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    } else if (status > 0) {
-        tc_log_info(LOG_WARN, 0, "pcap activate warn:%s", 
-                pcap_statustostr(status));
-    }
-#else
-    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
-    if (*pd == NULL) {
-        tc_log_info(LOG_ERR, 0, "pcap_open_live error:%s", ebuf);
-        return TC_INVALID_SOCKET;
-    } else if (*ebuf) {
-        tc_log_info(LOG_WARN, 0, "pcap_open_live warn:%s", ebuf);
-    }
-#endif
 
     if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
         net = 0;
