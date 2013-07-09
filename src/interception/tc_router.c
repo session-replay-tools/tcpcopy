@@ -124,7 +124,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
             break;
         }
 
-#if 1
+#if 0
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in add visit %d null timestamp,all:%d",
                     i + 1, max);
