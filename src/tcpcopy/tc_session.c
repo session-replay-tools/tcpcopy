@@ -3425,7 +3425,8 @@ process(char *packet, int pack_src)
                         tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
                         return true;
                     } else {
-                        tc_log_debug0(LOG_DEBUG, 0, "buffer the new session failed");
+                        tc_log_debug0(LOG_DEBUG, 0, 
+                                "buffer the new session failed");
                         return false;            
                     }
                 }
