@@ -3461,8 +3461,12 @@ process_in(unsigned char *frame)
                 } else {
                     s->next_sess_packs = link_list_create();
                 }
-                save_packet(s->next_sess_packs, ip_header, tcp_header);
-                tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
+                if (s->next_sess_packs) {
+                    tc_log_debug0(LOG_DEBUG, 0, "buffer the new session");
+                    save_packet(s->next_sess_packs, ip_header, tcp_header);
+                } else {
+                    tc_log_info(LOG_WARN, 0, "buffer new session failed");
+                }
                 return true;
             }
         } else {
