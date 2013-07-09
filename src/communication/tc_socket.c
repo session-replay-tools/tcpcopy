@@ -6,11 +6,10 @@ int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, 
         int snap_len, int buf_size, char *pcap_filter)
 {
-#if (!HAVE_PCAP_CREATE)
-    int         fd;
-#else
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
     int         fd, status;
-#endif
+#pragma GCC diagnostic pop
     char        ebuf[PCAP_ERRBUF_SIZE]; 
     struct      bpf_program fp;
     bpf_u_int32 net, netmask;      
@@ -428,7 +427,13 @@ tc_socket_set_nonblocking(int fd)
     int flags;
 
     flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    if (flags < 0) {
+        return TC_ERROR;
+    }
+
+    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        return TC_ERROR;
+    }
 
     return TC_OK;
 }
