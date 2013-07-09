@@ -130,7 +130,7 @@ link_list_remove(link_list *l, p_link_node node)
 inline p_link_node
 link_list_first(link_list *l)
 {
-    if (l->head.next == &(l->head)) {
+    if (l == NULL || l->head.next == &(l->head)) {
         return NULL;
     }
 
@@ -140,7 +140,7 @@ link_list_first(link_list *l)
 inline p_link_node
 link_list_tail(link_list *l)
 {
-    if (l->head.next == &(l->head)) {
+    if (l == NULL || l->head.next == &(l->head)) {
         return NULL;
     }
 
