@@ -2712,6 +2712,7 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header, uint16_t cont_len)  
 {   
     bool           is_need_omit;
+    unsigned char *p;
 
 #if (!TCPCOPY_MYSQL_ADVANCED)
     unsigned char *payload, pack_number;
@@ -2762,7 +2763,8 @@ process_mysql_clt_auth_pack(session_t *s, tc_ip_header_t *ip_header,
 
         if (!s->sm.mysql_req_begin) {
             if (!fir_auth_u_p) {
-                fir_auth_u_p = (tc_ip_header_t *) cp_fr_ip_pack(ip_header);
+                p = cp_fr_ip_pack(ip_header);
+                fir_auth_u_p = (tc_ip_header_t *) (p + ETHERNET_HDR_LEN);
                 tc_log_info(LOG_NOTICE, 0, "fir auth is set");
             }
 
