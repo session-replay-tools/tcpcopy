@@ -4,6 +4,7 @@
 #include <xcopy.h>
 
 #define TC_ERR_LOG_TIME_LEN (sizeof("2012-07-31 12:35:00 +999") - 1)
+#define TC_ERR_LOG_TIME_STR_LEN (TC_ERR_LOG_TIME_LEN + 1)
 
 #define tc_time() tc_current_time_sec
 #define tc_milliscond_time() tc_current_time_msec 
