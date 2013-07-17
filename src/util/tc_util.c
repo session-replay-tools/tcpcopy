@@ -88,7 +88,6 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 
         pair = mappings[i];
         if (CHECK_DEST == src_flag) {
-            /* interested in INPUT raw socket */
             if (ip == pair->online_ip && port == pair->online_port) {
                 ret = LOCAL;
                 break;

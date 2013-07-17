@@ -734,6 +734,10 @@ session_create(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     s->src_mac       = test->src_mac;
     s->dst_mac       = test->dst_mac;
 #endif
+    if (s->src_addr == LOCALHOST && s->dst_addr != LOCALHOST) {
+        tc_log_info(LOG_WARN, 0, "src host localost but dst host not");
+        tc_log_info(LOG_WARN, 0, "use -c parameter to avoid this warning");
+    }
 
     return s;
 }
