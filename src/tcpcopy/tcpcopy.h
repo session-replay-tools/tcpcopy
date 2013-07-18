@@ -69,8 +69,7 @@ typedef struct xcopy_clt_settings {
 #endif
     uint16_t      rand_port_shifted;    /* random port shifted */
     uint16_t      srv_port;             /* server listening port */
-    uint32_t      lo_tf_ip;             /* ip address from localhost to
-                                           (localhost transfered ip) */
+    uint32_t      clt_tf_ip;            /* ip address from clt to target ip */
 #ifdef TCPCOPY_MYSQL_ADVANCED
     char             *user_pwd;         /* user password string for mysql */
 #endif

@@ -50,12 +50,12 @@ usage(void)
            "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
            "               copy requests from TCP port '80' on current server to the target port\n"
            "               '18080' of the target IP '192.168.0.2'.\n");
-    printf("-c <ip_addr>   change the localhost client IP to this IP address when sending to the\n"
+    printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
-           "               '192.168.0.1' when client IP is localhost.\n");
+           "               '192.168.0.1' \n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
@@ -179,7 +179,7 @@ read_args(int argc, char **argv)
                 clt_settings.raw_transfer = optarg;
                 break;
             case 'c':
-                clt_settings.lo_tf_ip = inet_addr(optarg);
+                clt_settings.clt_tf_ip = inet_addr(optarg);
                 break;
 #if (TCPCOPY_OFFLINE)
             case 'i':
@@ -467,10 +467,6 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
             ip_port->src_mac);
     parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port,
             ip_port->dst_mac);
-
-    if (clt_settings.lo_tf_ip == 0) {
-        clt_settings.lo_tf_ip = ip_port->online_ip;
-    }
 
     if (ip_port->target_ip == LOCALHOST) {
         clt_settings.target_localhost = 1;

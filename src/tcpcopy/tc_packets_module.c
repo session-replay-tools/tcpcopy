@@ -312,10 +312,8 @@ dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len,
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (LOCALHOST == ip_header->saddr) {
-            if (0 != clt_settings.lo_tf_ip) {
-                ip_header->saddr = clt_settings.lo_tf_ip;
-            }
+        if (clt_settings.clt_tf_ip != 0) {
+            ip_header->saddr = clt_settings.clt_tf_ip;
         }
 
         if (replica_num > 1) {
@@ -388,10 +386,8 @@ dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len,
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (LOCALHOST == ip_header->saddr) {
-            if (clt_settings.lo_tf_ip != 0) {
-                ip_header->saddr = clt_settings.lo_tf_ip;
-            }
+        if (clt_settings.clt_tf_ip != 0) {
+            ip_header->saddr = clt_settings.clt_tf_ip;
         }
 
         /* 
