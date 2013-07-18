@@ -2429,6 +2429,15 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         return;
     }
 
+    if (s->dst_addr != ip_header->saddr) {
+        tc_log_info(LOG_NOTICE, 0, "change dst ip address", s->src_h_port);
+        s->dst_addr = ip_header->saddr;
+    }
+
+    if (s->dst_port != tcp_header->source) {
+        s->dst_port = tcp_header->source;
+    }
+
     /* retrieve packet info */
     seq      = ntohl(tcp_header->seq);
     ack      = ntohl(tcp_header->ack_seq);
