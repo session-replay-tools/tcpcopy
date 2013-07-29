@@ -4,10 +4,15 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-#define FAKE_IP_DATAGRAM_LEN 40
-#define FAKE_SYN_IP_DATAGRAM_LEN 44
 #define IP_HEADER_LEN sizeof(tc_ip_header_t)
 #define TCP_HEADER_MIN_LEN sizeof(tc_tcp_header_t)
+
+#define FAKE_FRAME_LEN (60 + ETHERNET_HDR_LEN)
+#define FAKE_MIN_IP_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_MIN_VALUE << 2))
+#define FAKE_IP_TS_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_TS_VALUE << 2))
+#define FAKE_SYN_IP_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_MSS_VALUE << 2))
+#define FAKE_SYN_IP_TS_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_WS_TS_VALUE << 2))
+
 
 /* global functions */
 void init_for_sessions();
@@ -59,6 +64,7 @@ typedef struct sess_state_machine_s{
      * including backend already closed
      */
     uint32_t req_halfway_intercepted:1;
+    uint32_t timestamped:1;
     /* This indicates if the syn packets from backend is received */
     uint32_t resp_syn_received:1;
     /* session candidate erased flag */
@@ -113,6 +119,8 @@ typedef struct session_s{
     /* online ip address(network byte order) */
     uint32_t online_addr;
     uint32_t srv_window;
+    uint32_t ts_ec_r;
+    uint32_t ts_value;
     uint16_t wscale;
     /* orginal src or client port(network byte order, never changed) */
     uint16_t orig_src_port;

@@ -98,6 +98,49 @@ trim_packet(session_t *s, tc_ip_header_t *ip_header,
     return true;
 }
 
+static void 
+update_timestamp(session_t *s, tc_tcp_header_t *tcp_header)
+{
+    uint32_t       ts;
+    unsigned int   opt, opt_len;
+    unsigned char *p, *end;
+
+    p = ((unsigned char *) tcp_header) + TCP_HEADER_MIN_LEN;
+    end =  ((unsigned char *) tcp_header) + (tcp_header->doff << 2);  
+    while (p < end) {
+        opt = p[0];
+        switch (opt) {
+            case TCPOPT_TIMESTAMP:
+                if ((p + 1) >= end) {
+                    return;
+                }
+                opt_len = p[1];
+                if ((p + opt_len) <= end) {
+                    ts = htonl(s->ts_ec_r);
+                    tc_log_debug2(LOG_DEBUG, 0, "set ts reply:%u,p:%u", 
+                            s->ts_ec_r, s->src_h_port);
+                    bcopy((void *) &ts, (void *) (p + 6), sizeof(ts));
+                }
+                return;
+            case TCPOPT_NOP:
+                p = p + 1; 
+                break;
+            case TCPOPT_EOL:
+                return;
+            default:
+                if ((p + 1) >= end) {
+                    return;
+                }
+                opt_len = p[1];
+                p += opt_len;
+                break;
+        }    
+    }
+
+    return;
+}
+
+
 /*
  * it is called by fast retransmit
  */
@@ -119,6 +162,10 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *frame)
     ip_header  = (tc_ip_header_t *) p;
     size_ip    = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) (p + size_ip);
+
+    if (s->sm.timestamped) {
+        update_timestamp(s, tcp_header);
+    }
 
     /* set the destination ip and port */
     ip_header->daddr = s->dst_addr;
@@ -201,6 +248,10 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
     if (client) {
         s->req_last_ack_sent_seq = ntohl(tcp_header->ack_seq);
         s->sm.req_valid_last_ack_sent = 1;
+    }
+
+    if (s->sm.timestamped) {
+        update_timestamp(s, tcp_header);
     }
 
     /* set the destination ip and port */
@@ -300,12 +351,7 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     ip_header->version  = 4;
     /* The header length is the number of 32-bit words in the header */
     ip_header->ihl      = IP_HEADER_LEN/4;
-    /*
-     * The total length field is the total length of 
-     * the IP datagram in bytes.
-     * Default:FAKE_IP_DATAGRAM_LEN
-     */
-    ip_header->tot_len  = htons(FAKE_IP_DATAGRAM_LEN);
+
     /* don't fragment */
     ip_header->frag_off = htons(IP_DF); 
     /* 
@@ -315,8 +361,6 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
     ip_header->ttl      = 64; 
     /* TCP packet */
     ip_header->protocol = IPPROTO_TCP;
-    /* the TCP header length(the number of 32-bit words in the header) */
-    tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     /* window size(you may feel strange here) */
     tcp_header->window  = htons(65535); 
 }
@@ -328,21 +372,24 @@ fill_pro_common_header(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
 static void
 send_faked_passive_rst(session_t *s)
 {
-    unsigned char    *p, frame[FAKE_IP_DATAGRAM_LEN + ETHERNET_HDR_LEN];
+    unsigned char    *p, frame[FAKE_FRAME_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
 
     tc_log_debug1(LOG_DEBUG, 0, "send_faked_passive_rst:%u", s->src_h_port);
 
+    memset(frame, 0, FAKE_FRAME_LEN);
     p = frame + ETHERNET_HDR_LEN;
-    memset(p, 0, FAKE_IP_DATAGRAM_LEN);
 
     f_ip_header  = (tc_ip_header_t *) p;
     f_tcp_header = (tc_tcp_header_t *) (p + IP_HEADER_LEN);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
+    f_ip_header->tot_len  = htons(FAKE_MIN_IP_DATAGRAM_LEN);
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = s->src_addr;
+
+    f_tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
     f_tcp_header->source  = htons(s->src_h_port);
     f_tcp_header->rst     = 1;
     f_tcp_header->ack     = 1;
@@ -1774,21 +1821,21 @@ static void
 send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-    unsigned char   *p, frame[ETHERNET_HDR_LEN + FAKE_SYN_IP_DATAGRAM_LEN];
+    unsigned char   *p, frame[FAKE_FRAME_LEN];
     unsigned char   *opt;
     u_short          mss;
     tc_ip_header_t  *f_ip_header;
     tc_tcp_header_t *f_tcp_header;
 
+    memset(frame, 0, FAKE_FRAME_LEN);
     p = frame + ETHERNET_HDR_LEN;
-    memset(p, 0, FAKE_SYN_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) p;
     f_tcp_header = (tc_tcp_header_t *) (p + IP_HEADER_LEN);
     opt = p + IP_HEADER_LEN + sizeof(tc_tcp_header_t);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
     f_ip_header->tot_len  = htons(FAKE_SYN_IP_DATAGRAM_LEN);
-    f_tcp_header->doff    = (FAKE_SYN_IP_DATAGRAM_LEN - IP_HEADER_LEN) / 4;
+    f_tcp_header->doff    = TCP_HEADER_DOFF_MSS_VALUE;
     /* For an Ethernet this implies an MSS of up to 1460 bytes.*/
     mss = clt_settings.mss;
     mss = htons(mss);
@@ -1824,6 +1871,26 @@ send_faked_syn(session_t *s, tc_ip_header_t *ip_header,
     s->sm.resp_syn_received = 0;
 }
 
+static void 
+fill_timestamp(session_t *s, tc_tcp_header_t *tcp_header)
+{
+    uint32_t         timestamp;
+    unsigned char   *opt, *p; 
+
+    p   = (unsigned char *) tcp_header;
+    opt = p + sizeof(tc_tcp_header_t);
+    opt[0] = 1;
+    opt[1] = 1;
+    opt[2] = 8;
+    opt[3] = 10;
+    timestamp = htonl(s->ts_value);
+    bcopy((void *) &timestamp, (void *) (opt + 4), sizeof(timestamp));
+    timestamp = htonl(s->ts_ec_r);
+    bcopy((void *) &timestamp, (void *) (opt + 8), sizeof(timestamp));
+    tc_log_debug3(LOG_DEBUG, 0, "fill ts:%u,%u,p:%u", 
+            s->ts_value, s->ts_ec_r, s->src_h_port);
+}
+
 
 /*
  * send faked syn ack packet(the third handshake packet) to back 
@@ -1832,15 +1899,26 @@ static void
 send_faked_third_handshake(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
-    unsigned char    *p, frame[ETHERNET_HDR_LEN + FAKE_IP_DATAGRAM_LEN];
+    unsigned char    *p, frame[FAKE_FRAME_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
  
+    memset(frame, 0, FAKE_FRAME_LEN);
     p = frame + ETHERNET_HDR_LEN;
-    memset(p, 0, FAKE_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) p;
     f_tcp_header = (tc_tcp_header_t *) (p + IP_HEADER_LEN);
     fill_pro_common_header(f_ip_header, f_tcp_header);
+
+    if (s->sm.timestamped) {
+        f_ip_header->tot_len  = htons(FAKE_IP_TS_DATAGRAM_LEN);
+        f_tcp_header->doff    = TCP_HEADER_DOFF_TS_VALUE;
+        /* fill options here */
+        fill_timestamp(s, f_tcp_header);
+    } else {
+        f_ip_header->tot_len  = htons(FAKE_MIN_IP_DATAGRAM_LEN);
+        f_tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
+    }
+
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = s->src_addr;
 
@@ -1872,14 +1950,24 @@ send_faked_ack(session_t *s, tc_ip_header_t *ip_header,
 {
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
-    unsigned char    *p, frame[ETHERNET_HDR_LEN + FAKE_IP_DATAGRAM_LEN];
+    unsigned char    *p, frame[FAKE_FRAME_LEN];
 
+    memset(frame, 0, FAKE_FRAME_LEN);
     p = frame + ETHERNET_HDR_LEN;
-    memset(p, 0, FAKE_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) p;
     f_tcp_header = (tc_tcp_header_t *) (p + IP_HEADER_LEN);
 
     fill_pro_common_header(f_ip_header, f_tcp_header);
+
+    if (s->sm.timestamped) {
+        f_ip_header->tot_len  = htons(FAKE_IP_TS_DATAGRAM_LEN);
+        f_tcp_header->doff    = TCP_HEADER_DOFF_TS_VALUE;
+        /* fill options here */
+        fill_timestamp(s, f_tcp_header);
+    } else {
+        f_ip_header->tot_len  = htons(FAKE_MIN_IP_DATAGRAM_LEN);
+        f_tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE;
+    }
 
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = ip_header->daddr;
@@ -1905,7 +1993,7 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {
     uint16_t          cont_len;
-    unsigned char     *p, frame[ETHERNET_HDR_LEN + FAKE_IP_DATAGRAM_LEN];
+    unsigned char     *p, frame[FAKE_FRAME_LEN];
     tc_ip_header_t   *f_ip_header;
     tc_tcp_header_t  *f_tcp_header;
 
@@ -1918,13 +2006,17 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
     tc_log_debug1(LOG_DEBUG, 0, "send faked rst:%u", s->src_h_port);
 #endif
 
+    memset(frame, 0, FAKE_FRAME_LEN);
     p = frame + ETHERNET_HDR_LEN;
-    memset(p, 0, FAKE_IP_DATAGRAM_LEN);
     f_ip_header  = (tc_ip_header_t *) p;
     f_tcp_header = (tc_tcp_header_t *) (p + IP_HEADER_LEN);
     fill_pro_common_header(f_ip_header, f_tcp_header);
+
+    f_ip_header->tot_len  = htons(FAKE_MIN_IP_DATAGRAM_LEN);
     f_ip_header->id       = htons(++s->req_ip_id);
     f_ip_header->saddr    = ip_header->daddr;
+
+    f_tcp_header->doff    = TCP_HEADER_DOFF_MIN_VALUE; 
     f_tcp_header->source  = tcp_header->dest;
     f_tcp_header->rst     = 1;
     f_tcp_header->ack     = 1;
@@ -2264,6 +2356,69 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
 }
 
 
+static void 
+retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
+{
+    unsigned int   opt, opt_len;
+    unsigned char *p, *end;
+
+    p = ((unsigned char *) tcp_header) + TCP_HEADER_MIN_LEN;
+    end =  ((unsigned char *) tcp_header) + (tcp_header->doff << 2);  
+    while (p < end) {
+        opt = p[0];
+        switch (opt) {
+            case TCPOPT_WSCALE:
+                if ((p + 1) >= end) {
+                    return;
+                }
+                opt_len = p[1];
+                if ((p + opt_len) > end) {
+                    return;
+                }
+                s->wscale = (uint16_t) p[2];
+                p += opt_len;
+            case TCPOPT_TIMESTAMP:
+                if ((p + 1) >= end) {
+                    return;
+                }
+                opt_len = p[1];
+                if ((p + opt_len) > end) {
+                    return;
+                }
+                if (direction == LOCAL) {
+                    s->ts_value = EXTRACT_32BITS(p + 2);
+                } else {
+                    s->ts_ec_r  = EXTRACT_32BITS(p + 2);
+                    s->ts_value = EXTRACT_32BITS(p + 6);
+                    if (tcp_header->syn) {
+                        s->sm.timestamped = 1;
+                        tc_log_debug1(LOG_DEBUG, 0, "timestamped,p=%u", 
+                                s->src_h_port);
+                    }
+                    tc_log_debug3(LOG_DEBUG, 0, 
+                            "get ts(client viewpoint):%u,%u,p:%u", 
+                            s->ts_value, s->ts_ec_r, s->src_h_port);
+                }
+                p += opt_len;
+            case TCPOPT_NOP:
+                p = p + 1; 
+                break;
+            case TCPOPT_EOL:
+                return;
+            default:
+                if ((p + 1) >= end) {
+                    return;
+                }
+                opt_len = p[1];
+                p += opt_len;
+                break;
+        }    
+    }
+
+    return;
+}
+
+
 static void
 process_back_syn(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
@@ -2278,7 +2433,7 @@ process_back_syn(session_t *s, tc_ip_header_t *ip_header,
             size_tcp, s->src_h_port);
 
     if (size_tcp > TCP_HEADER_MIN_LEN) {
-        s->wscale = retrieve_wscale(tcp_header);
+        retrieve_options(s, REMOTE, tcp_header);
         if (s->wscale > 0) {
             tc_log_debug2(LOG_DEBUG, 0, "wscale:%u, p:%u", 
                     s->wscale, s->src_h_port);
@@ -2429,15 +2584,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         return;
     }
 
-    if (s->dst_addr != ip_header->saddr) {
-        tc_log_info(LOG_NOTICE, 0, "change dst ip address", s->src_h_port);
-        s->dst_addr = ip_header->saddr;
-    }
-
-    if (s->dst_port != tcp_header->source) {
-        s->dst_port = tcp_header->source;
-    }
-
     /* retrieve packet info */
     seq      = ntohl(tcp_header->seq);
     ack      = ntohl(tcp_header->ack_seq);
@@ -2454,6 +2600,10 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
 
     if (s->wscale) {
         s->srv_window = s->srv_window << (s->wscale);
+    }
+
+    if (s->sm.timestamped) {
+        retrieve_options(s, REMOTE, tcp_header);
     }
 
     if (cont_len > 0) {

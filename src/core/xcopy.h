@@ -193,6 +193,9 @@
 
 /* constants for tcp */
 #define TCP_HEADER_DOFF_MIN_VALUE 5
+#define TCP_HEADER_DOFF_MSS_VALUE 6
+#define TCP_HEADER_DOFF_TS_VALUE 8
+#define TCP_HEADER_DOFF_WS_TS_VALUE 9
 
 /* results of obsolete checking */
 #define OBSOLETE 1

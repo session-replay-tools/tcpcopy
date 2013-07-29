@@ -291,7 +291,6 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
                         fd, len);
             return TC_ERROR;
         }
-        
     } 
 
     return TC_OK;

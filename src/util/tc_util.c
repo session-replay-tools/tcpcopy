@@ -166,52 +166,6 @@ tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
     return res; 
 }  
 
-
-uint16_t
-retrieve_wscale(tc_tcp_header_t *tcp_header)
-{
-    unsigned int opt, opt_len;
-    unsigned char *p, *end;
-
-    p = ((unsigned char *) tcp_header) + TCP_HEADER_MIN_LEN;
-    end =  ((unsigned char *) tcp_header) + (tcp_header->doff << 2);  
-    while (p < end) {
-        opt = p[0];
-        switch (opt) {
-            case TCPOPT_WSCALE:
-                return p[2];
-            case TCPOPT_NOP:
-                p = p + 1; 
-                break;
-            case TCPOPT_EOL:
-                return 0;
-            default:
-                opt_len = p[1];
-                p += opt_len;
-                break;
-        }    
-    }
-    return 0;
-}
-
-void
-set_wscale(tc_tcp_header_t *tcp_header)
-{
-    u_short        wscale;
-    unsigned char *opt;
-
-    opt = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
-    wscale = (u_short) retrieve_wscale(tcp_header);
-    if (wscale > 0) {
-        opt[0] = TCPOPT_WSCALE;
-        opt[1] = 4;
-        bcopy((void *) &wscale, (void *) (opt + 2), sizeof(wscale));
-        tcp_header->doff = (sizeof(tc_tcp_header_t) + 4) >> 2;
-    } 
-
-    return;
-}
-
 #if (TCPCOPY_UDP)
 static int
 do_checksum_math(u_int16_t *data, int len)
