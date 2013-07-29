@@ -94,5 +94,5 @@ Note:
     2) Tcpcopy may lose packets hence lose requests.
     3) Root privilege is required.
     4) To know more about tcpcopy, refer to the documents in the docs directory.
-    5) Check log files if you encounter some problems and feel free to report them to us(wangbin579@gmail.com).
+    5) Please open a new issue on http://github.com/wangbin579/tcpcopy if you encounter some problems. 
 
