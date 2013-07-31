@@ -230,7 +230,10 @@ typedef struct tcphdr tc_tcp_header_t;
 typedef struct udphdr tc_udp_header_t;
 #endif
 
-#define MAX_OPTION_LEN 20
+/* 
+ * the 40 bytes available for TCP options 
+ */
+#define MAX_OPTION_LEN 40
 #define TCPOPT_WSCALE 3
 
 #define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t) + MAX_OPTION_LEN)
