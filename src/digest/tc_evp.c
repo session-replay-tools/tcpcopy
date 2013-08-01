@@ -1,9 +1,10 @@
 #include <xcopy.h>
-
 #include "tc_evp.h"
-#include <openssl/evp.h>
 
 #if (TCPCOPY_DIGEST) 
+
+#include <openssl/evp.h>
+
 
 static const EVP_MD *md;
 static EVP_MD_CTX sha1_ctx;

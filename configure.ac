@@ -34,6 +34,8 @@ fi
 
 AC_ARG_ENABLE(mysql, AS_HELP_STRING([--enable-mysql],[run tcpcopy at mysql mode]),,mysql=no)
 if test "x$enable_mysql" = "xyes";then
+    AC_CHECK_HEADERS([openssl/evp.h], [], 
+                     [AC_MSG_ERROR([openssl/evp.h not found.])], [])
 	AC_DEFINE(TCPCOPY_MYSQL_NO_SKIP, 1, [Define if --enable-mysql])
 fi
 
