@@ -571,9 +571,9 @@ static int retrieve_real_servers()
             ip = inet_addr(p);
         } else {
             port_s = seq + 1;
-            ip = inet_addr(p);
             *seq = '\0';
-            port = htons(atoi(port_s));
+            ip = inet_addr(p);
+            port = atoi(port_s);
             *seq = ':';
         }
 

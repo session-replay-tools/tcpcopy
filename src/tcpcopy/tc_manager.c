@@ -270,7 +270,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         }
 
         tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",
-                ntohl(target_ip), clt_settings.srv_port);
+                target_ip, clt_settings.srv_port);
     }
 
 #else
@@ -295,7 +295,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 #endif
 
         tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
-                    ntohl(target_ip), clt_settings.srv_port);
+                    target_ip, clt_settings.srv_port);
     }
 
     /* init packets for processing */
