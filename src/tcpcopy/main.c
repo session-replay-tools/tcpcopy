@@ -553,8 +553,7 @@ retrieve_target_addresses(char *raw_transfer,
 static int retrieve_real_servers() 
 {
     int          count = 0;
-    char        *split, *p;
-    size_t       len;
+    char        *split, *p, *seq, *port_s;
     uint16_t     port;
     uint32_t     ip;
 
@@ -563,14 +562,24 @@ static int retrieve_real_servers()
     while (true) {
         split = strchr(p, ',');
         if (split != NULL) {
-            len = (size_t) (split - p);
-        } else {
-            len = strlen(p);
+            *split = '\0';
         }
 
-        *split = '\0';
-        parse_ip_port_pair(p, &ip, &port, NULL);
-        *split = ',';
+        if ((seq = strchr(p, ':')) == NULL) {
+            tc_log_info(LOG_NOTICE, 0, "set only ip for tcpcopy");
+            port  = 0;
+            ip = inet_addr(p);
+        } else {
+            port_s = seq + 1;
+            ip = inet_addr(p);
+            *seq = '\0';
+            port = htons(atoi(port_s));
+            *seq = ':';
+        }
+
+        if (split != NULL) {
+            *split = ',';
+        }
 
         clt_settings.real_servers.ips[count++] = ip;
         clt_settings.real_servers.ports[count++] = port;
