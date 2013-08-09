@@ -112,9 +112,9 @@ usage(void)
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
            "               The maximum value allowed is 16(default 3 connections since 0.8.0)\n");
 #if (TCPCOPY_DR)
-    printf("-s <iplist,>   real server ip addresses behind lvs\n"
+    printf("-s <iplist,>   real servers running intercept\n"
            "               Format:\n"
-           "               ip_addr1, ip_addr2 ...\n");
+           "               ip_addr1:port1, ip_addr2:port2, ...\n");
 #endif
     printf("-t <num>       set the session timeout limit. If tcpcopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
@@ -166,7 +166,7 @@ read_args(int argc, char **argv)
          "S:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
 #if (TCPCOPY_DR)
-         "s:" /* real server ip addresses behind lvs */
+         "s:" /* real servers running intercept*/
 #endif
          "l:" /* error log file */
          "P:" /* save PID in file */
@@ -233,7 +233,7 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_DR)
             case 's':
-                clt_settings.raw_rs_ip_list = optarg;
+                clt_settings.raw_rs_list = optarg;
                 break;
 #endif
             case 't':
@@ -553,13 +553,12 @@ retrieve_target_addresses(char *raw_transfer,
 static int retrieve_real_servers() 
 {
     int          count = 0;
-    char         tmp[32];
+    char        *split, *p;
     size_t       len;
-    uint32_t     address;
-    const char  *split, *p;
+    uint16_t     port;
+    uint32_t     ip;
 
-    memset(tmp, 0, 32);
-    p = clt_settings.raw_rs_ip_list;
+    p = clt_settings.raw_rs_list;
 
     while (true) {
         split = strchr(p, ',');
@@ -569,9 +568,12 @@ static int retrieve_real_servers()
             len = strlen(p);
         }
 
-        strncpy(tmp, p, len);
-        address = inet_addr(tmp);
-        clt_settings.real_servers.ips[count++] = address;
+        *split = '\0';
+        parse_ip_port_pair(p, &ip, &port, NULL);
+        *split = ',';
+
+        clt_settings.real_servers.ips[count++] = ip;
+        clt_settings.real_servers.ports[count++] = port;
 
         if (count == MAX_REAL_SERVERS) {
             tc_log_info(LOG_WARN, 0, "reach the limit for real servers");
@@ -584,7 +586,6 @@ static int retrieve_real_servers()
             p = split + 1;
         }
 
-        memset(tmp, 0, 32);
     }
 
     clt_settings.real_servers.num = count;
@@ -742,9 +743,9 @@ set_details()
 
 #if (TCPCOPY_DR)
     /* retrieve real server ip addresses  */
-    if (clt_settings.raw_rs_ip_list != NULL) {
+    if (clt_settings.raw_rs_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "s parameter:%s", 
-                clt_settings.raw_rs_ip_list);
+                clt_settings.raw_rs_list);
         retrieve_real_servers();
     } else {
         tc_log_info(LOG_WARN, 0, "no real server ip addresses");

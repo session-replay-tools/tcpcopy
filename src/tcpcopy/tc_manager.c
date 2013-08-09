@@ -230,6 +230,9 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
+#if (TCPCOPY_DR)
+    uint16_t                 target_port;
+#endif
     uint32_t                 target_ip;
     ip_port_pair_mapping_t  *pair, **mappings;
 
@@ -248,9 +251,13 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
         target_ip = clt_settings.real_servers.ips[i];
+        target_port = clt_settings.real_servers.ports[i];
+        if (target_port == 0) {
+            target_port = clt_settings.srv_port;
+        }
 
         for (j = 0; j < clt_settings.par_connections; j++) {
-            fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+            fd = tc_message_init(event_loop, target_ip, target_port);
             if (fd == TC_INVALID_SOCKET) {
                 return TC_ERROR;
             }

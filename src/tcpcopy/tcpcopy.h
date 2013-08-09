@@ -26,6 +26,7 @@ typedef struct real_ip_addr_s {
     int           active_num;
     short         active[MAX_REAL_SERVERS];
     uint32_t      ips[MAX_REAL_SERVERS];
+    uint16_t      ports[MAX_REAL_SERVERS];
     connections_t connections[MAX_REAL_SERVERS];
 } real_ip_addr_t;
 #endif
@@ -74,8 +75,8 @@ typedef struct xcopy_clt_settings {
     char             *user_pwd;         /* user password string for mysql */
 #endif
 #if (TCPCOPY_DR)
-    char             *raw_rs_ip_list;   /* raw ip list */
-    real_ip_addr_t    real_servers;     /* the real servers behind lvs */
+    char             *raw_rs_list;      /* raw real server list */
+    real_ip_addr_t    real_servers;     /* the intercept servers running intercept */
 #endif
     ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
                                            target_ip target_port */

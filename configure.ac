@@ -218,7 +218,7 @@ if test "x$enable_nfqueue" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode (such as lvs)]),,dr=no)
+AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing mode (such as lvs)]),,dr=no)
 if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
 fi
