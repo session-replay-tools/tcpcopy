@@ -112,7 +112,7 @@ usage(void)
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
            "               The maximum value allowed is 16(default 3 connections since 0.8.0)\n");
 #if (TCPCOPY_DR)
-    printf("-s <iplist,>   real servers running intercept\n"
+    printf("-s <server,>   intercept server list\n"
            "               Format:\n"
            "               ip_addr1:port1, ip_addr2:port2, ...\n");
 #endif
