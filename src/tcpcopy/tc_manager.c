@@ -230,11 +230,12 @@ int
 tcp_copy_init(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
+    uint32_t                 target_ip;
 #if (TCPCOPY_DR)
     uint16_t                 target_port;
-#endif
-    uint32_t                 target_ip;
+#else
     ip_port_pair_mapping_t  *pair, **mappings;
+#endif
 
     /* register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
@@ -275,7 +276,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
 #else
     address_init();
-#endif
 
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -283,7 +283,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         pair = mappings[i];
         target_ip = pair->target_ip;
 
-#if (!TCPCOPY_DR)
         for ( j = 0; j < clt_settings.par_connections; j++) {
             fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
             if (fd == TC_INVALID_SOCKET) {
@@ -292,11 +291,12 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
             address_add_sock(pair->online_ip, pair->online_port, fd);
         }
-#endif
 
         tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
                     target_ip, clt_settings.srv_port);
     }
+
+#endif
 
     /* init packets for processing */
 #if (TCPCOPY_OFFLINE)
