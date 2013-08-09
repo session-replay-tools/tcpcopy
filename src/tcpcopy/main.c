@@ -581,7 +581,7 @@ static int retrieve_real_servers()
             *split = ',';
         }
 
-        clt_settings.real_servers.ips[count++] = ip;
+        clt_settings.real_servers.ips[count] = ip;
         clt_settings.real_servers.ports[count++] = port;
 
         if (count == MAX_REAL_SERVERS) {
