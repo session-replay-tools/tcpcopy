@@ -57,7 +57,7 @@ if test "x$enable_pcap" = "xyes";then
                    )
 fi
 
-AC_ARG_ENABLE(millions,AS_HELP_STRING([--enable-millions],[Enable to support million connections]),
+AC_ARG_ENABLE(millions,AS_HELP_STRING([--enable-millions],[enable to support million connections]),
               [case "${enableval}" in
                yes) millions=true 
                AC_DEFINE(INTERCEPT_MILLION_SUPPORT, 1, [Define if --enable-millions])
@@ -67,7 +67,7 @@ AC_ARG_ENABLE(millions,AS_HELP_STRING([--enable-millions],[Enable to support mil
            esac],[millions=false])
 
 
-AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpcopy]),
+AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[turn on advanced tcpcopy]),
               [case "${enableval}" in
                yes) advanced=true 
                AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced])
