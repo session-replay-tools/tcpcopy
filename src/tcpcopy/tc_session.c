@@ -1395,16 +1395,28 @@ static void activate_dead_sessions()
 
 /* check if session is obsolete */
 static int
-check_session_obsolete(session_t *s, time_t cur, time_t threshold_time)
+check_session_obsolete(session_t *s, time_t cur, time_t threshold_time,
+        time_t keepalive_timeout)
 {
-    int threshold = 256, result, diff;  
+    int threshold = 256, result, diff;
     
     /* if not receiving response for a long time */
     if (s->resp_last_recv_cont_time < threshold_time) {
-        obs_cnt++;
-        tc_log_debug2(LOG_DEBUG, 0, "timeout, unsend number:%u,p:%u",
-                s->unsend_packets->size, s->src_h_port);
-        return OBSOLETE;
+        if (s->unsend_packets->size > 0) {
+            obs_cnt++;
+            tc_log_debug2(LOG_DEBUG, 0, "timeout, unsend number:%u,p:%u",
+                    s->unsend_packets->size, s->src_h_port);
+            return OBSOLETE;
+        } else if (s->resp_last_recv_cont_time < keepalive_timeout) {
+            obs_cnt++;
+            tc_log_debug1(LOG_DEBUG, 0, "session keepalive timeout ,p:%u",
+                    s->src_h_port);
+            return OBSOLETE;
+        } else {
+            tc_log_debug1(LOG_DEBUG, 0, "session keepalive,p:%u",
+                    s->src_h_port);
+            return NOT_YET_OBSOLETE;
+        }
     }
 
     diff = cur - s->resp_last_recv_cont_time;
@@ -1466,7 +1478,7 @@ clear_timeout_sessions()
 {
     int          result;
     size_t       i;           
-    time_t       current, threshold_time;
+    time_t       current, threshold_time, keepalive_timeout;
     link_list   *list;
     hash_node   *hn;
     session_t   *s;
@@ -1474,6 +1486,7 @@ clear_timeout_sessions()
 
     current = tc_time();
     threshold_time = current - clt_settings.session_timeout;
+    keepalive_timeout = current - clt_settings.session_keepalive_timeout;
 
     tc_log_info(LOG_NOTICE, 0, "session size:%u", sessions_table->total);
 
@@ -1496,7 +1509,8 @@ clear_timeout_sessions()
                     tc_log_info(LOG_WARN, 0, "wrong, del:%u", 
                             s->src_h_port);
                 }
-                result = check_session_obsolete(s, current, threshold_time);
+                result = check_session_obsolete(s, current, 
+                        threshold_time, keepalive_timeout);
                 if (OBSOLETE == result) {
                     hn->data = NULL;
                     /* release memory for session internals */
