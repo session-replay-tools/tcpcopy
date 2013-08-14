@@ -368,6 +368,9 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_PCAP_SEND)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP_SEND mode");
 #endif
+#if (TCPCOPY_MILLION_SUPPORT)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MILLION_SUPPORT mode");
+#endif
 #if (HAVE_PCAP_CREATE)
     tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true, new pap");
 #endif
@@ -666,6 +669,8 @@ set_details()
 
     clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
         SESSION_KEEPLIVE_TIMEOUT;
+    tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
+            clt_settings.session_keepalive_timeout);
 
     /* set the ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,

@@ -467,6 +467,9 @@ output_for_debug()
 #if (INTERCEPT_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_ADVANCED mode");
 #endif
+#if (INTERCEPT_MILLION_SUPPORT)
+    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_MILLION_SUPPORT mode");
+#endif
 #if (HAVE_PCAP_CREATE)
     tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true,new pcap");
 #endif
