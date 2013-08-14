@@ -46,7 +46,7 @@ typedef struct xcopy_clt_settings {
                                            If reaching this value, the session
                                            will be removed */
     unsigned int  session_keepalive_timeout:16;  
-    unsigned int target_localhost:1;
+    unsigned int  target_localhost:1;
 
     char         *raw_transfer;         /* online_ip online_port target_ip
                                            target_port string */
