@@ -1032,9 +1032,9 @@ send_reserved_packets(session_t *s)
 #endif
     uint16_t          size_ip, cont_len;
 #if (TCPCOPY_PAPER)
-    uint32_t          cur_ack;
+    uint32_t          cur_ack, server_closed_ack;
 #else
-    uint32_t          cur_ack, cur_seq, diff, srv_sk_buf_s;
+    uint32_t          cur_ack, server_closed_ack, cur_seq, diff, srv_sk_buf_s;
 #endif
     link_list        *list;
     p_link_node       ln, tmp_ln;
@@ -1206,7 +1206,10 @@ send_reserved_packets(session_t *s)
             cur_ack = ntohl(tcp_header->ack_seq);
             tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
                     cur_ack, s->req_ack_before_fin, s->src_h_port);
-            if (s->req_ack_before_fin == cur_ack) {
+            server_closed_ack = s->req_ack_before_fin + 1;
+            if (s->req_ack_before_fin == cur_ack || 
+                    after(cur_ack, server_closed_ack))
+            {
                 /* active close from client */
                 s->sm.src_closed = 1;
                 s->sm.status |= CLIENT_FIN;
