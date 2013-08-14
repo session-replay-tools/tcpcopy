@@ -1407,15 +1407,24 @@ check_session_obsolete(session_t *s, time_t cur, time_t threshold_time,
             tc_log_debug2(LOG_DEBUG, 0, "timeout, unsend number:%u,p:%u",
                     s->unsend_packets->size, s->src_h_port);
             return OBSOLETE;
-        } else if (s->resp_last_recv_cont_time < keepalive_timeout) {
-            obs_cnt++;
-            tc_log_debug1(LOG_DEBUG, 0, "session keepalive timeout ,p:%u",
-                    s->src_h_port);
-            return OBSOLETE;
-        } else {
-            tc_log_debug1(LOG_DEBUG, 0, "session keepalive,p:%u",
-                    s->src_h_port);
-            return NOT_YET_OBSOLETE;
+        }  else {
+            if (s->sm.status >= SEND_REQ) {
+                if (s->resp_last_recv_cont_time < keepalive_timeout) {
+                    obs_cnt++;
+                    tc_log_debug1(LOG_DEBUG, 0, "keepalive timeout ,p:%u", 
+                            s->src_h_port);
+                    return OBSOLETE;
+                } else {
+                    tc_log_debug1(LOG_DEBUG, 0, "session keepalive,p:%u",
+                            s->src_h_port);
+                    return NOT_YET_OBSOLETE;
+                }
+            } else {
+                obs_cnt++;
+                tc_log_debug1(LOG_DEBUG, 0, "wait timeout ,p:%u", 
+                        s->src_h_port);
+                return OBSOLETE;
+            }
         }
     }
 
