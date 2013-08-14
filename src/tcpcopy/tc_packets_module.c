@@ -4,6 +4,7 @@
 
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over = false;
+static time_t         read_pcap_over_time;
 static uint64_t       accumulated_diff = 0, adj_v_pack_diff = 0;
 static struct timeval first_pack_time, last_v_pack_time,
                       last_pack_time, base_time, cur_time;
@@ -512,7 +513,18 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
 static void
 tc_process_offline_packet(tc_event_timer_t *evt)
 {
-    send_packets_from_pcap(0);
+    int diff = 0;  
+
+    if (!read_pcap_over) {
+        send_packets_from_pcap(0);
+    } else {
+        diff = tc_time() - read_pcap_over_time;
+        if (diff > DEFAULT_SESSION_TIMEOUT) {
+            tc_over = SIGRTMAX;
+            tc_log_info(LOG_NOTICE, 0, "offline replay is complete");
+        }
+    }
+
     evt->msec = tc_current_time_msec;
 }
 
@@ -572,7 +584,7 @@ send_packets_from_pcap(int first)
 
     pcap = clt_settings.pcap;
 
-    if (pcap == NULL || read_pcap_over) {
+    if (pcap == NULL) {
         return;
     }
 
@@ -635,6 +647,7 @@ send_packets_from_pcap(int first)
             tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
             stop = true;
             read_pcap_over = true;
+            read_pcap_over_time = tc_time();
         }
     }
 }
