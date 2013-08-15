@@ -668,7 +668,7 @@ set_details()
     clt_settings.rand_port_shifted = rand_port;
 
     clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
-        SESSION_KEEPLIVE_TIMEOUT;
+        SESS_KEEPLIVE_ADD;
     tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
             clt_settings.session_keepalive_timeout);
 
