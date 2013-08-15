@@ -120,7 +120,7 @@ usage(void)
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by tcpcopy. When the response from the target server is\n"
            "               slow or the application protocol is context based, the value should \n"
-           "               be set larger. The default value is 60 seconds\n");
+           "               be set larger. The default value is 120 seconds\n");
     printf("-l <file>      save the log information in <file>\n"
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
