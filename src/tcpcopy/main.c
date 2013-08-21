@@ -48,7 +48,7 @@ usage(void)
            "               port number are segmented by ':' (colon), the sourcePort and the\n");
     printf("               targetIP are segmented by '-', and two 'transfer's are segmented by\n"
            "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
-           "               copy requests from TCP port '80' on current server to the target port\n"
+           "               copy requests from port '80' on current server to the target port\n"
            "               '18080' of the target IP '192.168.0.2'.\n");
     printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
