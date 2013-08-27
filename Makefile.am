@@ -1,5 +1,5 @@
 SUBDIRS = src
-EXTRA_DIST = README\
+EXTRA_DIST = README.md\
              COPYING\
              AUTHORS\
              ChangeLog\
