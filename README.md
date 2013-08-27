@@ -75,12 +75,12 @@ Two quick start options are available:
     --enable-debug      compile TCPCopy with debug support (saved in a log file)
     --enable-mysqlsgt   run TCPCopy at mysql skip-grant-tables mode(recommended)
     --enable-mysql      run TCPCopy at mysql mode
-	--enable-offline    run TCPCopy at offline mode
-	--enable-pcap       run TCPCopy at pcap mode
+    --enable-offline    run TCPCopy at offline mode
+    --enable-pcap       run TCPCopy at pcap mode
     --enable-udp        run TCPCopy at udp mode
-	--enable-nfqueue    run the TCPCopy server (intercept) at nfqueue mode
-	--enable-advanced   run TCPCopy at advanced mode (advanced archecture) 
-	--enable-dlinject   send packets at data link layer instead of IP layer
+    --enable-nfqueue    run the TCPCopy server (intercept) at nfqueue mode
+    --enable-advanced   run TCPCopy at advanced mode (advanced archecture) 
+    --enable-dlinject   send packets at the data link layer instead of the IP layer
     --enable-rlantency  add more lantency control
 
 ###Recommended use
