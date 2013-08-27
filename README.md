@@ -218,7 +218,7 @@ TCPCopy utilizes raw socket input interface by default to capture packets at the
 
 If you configure TCPCopy with "--enable-pcap", then TCPCopy could capture packets at the data link layer and could also filter packets in the kernel.
 
-###2. Send Interface
+###2. Sending Interface
 TCPCopy utilizes raw socket output interface by default to send packets at the network layer to a target server. The system kernel may encounter problems and not send all the packets successfully. For example, when the packet size is larger than MTU, raw socket output interface would refuse to send these large packets. In TCPCopy 0.5 or above versions, with our special processing, large packets are supported.
 
 If you configure TCPCopy with "--enable-dlinject", then TCPCopy could send packets at the data link layer to a target server.
