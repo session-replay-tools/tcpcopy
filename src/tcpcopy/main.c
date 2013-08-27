@@ -37,10 +37,11 @@ static void
 usage(void)
 {
     printf("tcpcopy " VERSION "\n");
+#if (!TCPCOPY_PCAP_SEND)
     printf("-x <transfer,> use <transfer,> to specify the IPs and ports of the source and target\n"
            "               servers. Suppose 'sourceIP' and 'sourcePort' are the IP and port \n"
-           "               number of the source server you want to copy from, 'targetIP' and \n"
-           "               'targetPort' are the IP and port number of the target server you want\n"
+           "               number of the source server you want to copy from, 'targetIP' and \n");
+    printf("               'targetPort' are the IP and port number of the target server you want\n"
            "               to send requests to, the format of <transfer,> could be as follows:\n"
            "               'sourceIP:sourcePort-targetIP:targetPort,...'. Most of the time,\n");
     printf("               sourceIP could be omitted and thus <transfer,> could also be:\n"
@@ -50,6 +51,15 @@ usage(void)
            "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
            "               copy requests from port '80' on current server to the target port\n"
            "               '18080' of the target IP '192.168.0.2'.\n");
+#else
+    printf("-x <transfer,> use <transfer,> to specify the IPs, ports and MAC addresses of\n"
+           "               the source and target. The format of <transfer,> could be as follow:\n");
+    printf("               'sourceIP:sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n"
+           "               Most of the time, sourceIP could be omitted and thus <transfer,> could\n"
+           "               also be: sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n");
+    printf("               Note that sourceMac is the MAC address of the interface where \n"
+           "               packets are going out\n");
+#endif
     printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
@@ -65,14 +75,14 @@ usage(void)
            "               in millisecond\n");
 #endif
 #if (TCPCOPY_PCAP)
-    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
-           "               name followed by a unit number,for example eth0 for the first\n"
+    printf("-i <device,>   The name of the interface to listen on. This is usually a driver\n"
+           "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
-    printf("-F <filter>    user filter\n");
+    printf("-F <filter>    user filter (same as pcap filter)\n");
 #endif
 #if (TCPCOPY_PCAP_SEND)
-    printf("-o <device,>   The name of the interface to send.  This is usually a driver\n"
-           "               name followed by a unit number,for example eth0 for the first\n"
+    printf("-o <device,>   The name of the interface to send. This is usually a driver\n"
+           "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)

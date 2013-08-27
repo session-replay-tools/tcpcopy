@@ -190,10 +190,10 @@ usage(void)
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
-    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
-            "              name followed by a unit number,for example eth0 for the first\n"
-            "              Ethernet interface.\n");
-    printf("-F <filter>    user filter\n");
+    printf("-i <device,>   The name of the interface to listen on.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
+    printf("-F <filter>    user filter(same as pcap filter)\n");
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif

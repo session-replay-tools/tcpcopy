@@ -244,9 +244,9 @@ if test "x$enable_combined" != "xno";then
     AC_DEFINE(INTERCEPT_COMBINED, 1, [Define if --enable-combined])
 fi
 
-AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode (only valid for high latency web applications)]),,paper=no)
-if test "x$enable_paper" = "xyes";then
-    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
+AC_ARG_ENABLE(rlantency, AS_HELP_STRING([--enable-rlantency],[run tcpcopy at reverse lantency mode (only valid for high latency web applications)]),,rlantency=no)
+if test "x$enable_rlantency" = "xyes";then
+    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-rlantency])
 fi
 
 AC_ARG_ENABLE(dlinject, AS_HELP_STRING([--enable-dlinject],[run tcpcopy at pcap sending mode]),,dlinject=no)

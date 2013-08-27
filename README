@@ -19,7 +19,7 @@ Scenarios:
        Do performance benchmark. For instance, you can use tcpcopy to compare the performance of Apache and Nginx.
 
 
-Usage:
+Traditional usage guide:
     1) Install
        a) git clone http://github.com/wangbin579/tcpcopy
        b) cd tcpcopy
@@ -44,12 +44,22 @@ Usage:
 
        b) on the source host (root privilege is required):
           sudo ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
- 
+
+
+Advanced usage guide:
+    1) Chinese References:
+       http://blog.csdn.net/wangbin579/article/details/8950282
+       http://blog.csdn.net/wangbin579/article/details/8994601
+       http://blog.csdn.net/wangbin579/article/details/10148247
+
+    2) English References:
+       TODO
+
 
 Example:
     Suppose there are two online hosts, 1.2.3.25 and 1.2.3.26. And 1.2.3.161 is the target host. Port 11311 is used as local server port and port 11511 is used as remote target server port. We use tcpcopy to test if 1.2.3.161 can process 2X requests than a host can serve.
 
-    Here we use tcpcopy to perform the above test task.
+    Here we use traditional tcpcopy to perform the above test task.
     
     1) on the target host (1.2.3.161, kernel 2.6.18)
        # modprobe ip_queue 
