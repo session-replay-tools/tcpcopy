@@ -20,11 +20,14 @@ router_init()
 }
 
 inline uint32_t
-get_route_key(uint32_t ip, uint16_t port)
+get_route_key(uint32_t clt_ip, uint16_t clt_port, 
+        uint32_t target_ip, uint16_t target_port)
 {
-    uint32_t value = port;
+    uint32_t value = clt_port;
 
-    value = (value << 16) + ip + port;
+    value = (value << 16) + clt_ip + clt_port;
+    value = value + target_ip + (target_port << 24) + 
+        (target_port << 8) + target_port;
 
     return value;
 }
@@ -90,9 +93,11 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
     }
 }
 
+
 /* add item to the router table */
 void
-router_add(uint32_t ip, uint16_t port, int fd)
+router_add(uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip, 
+        uint16_t target_port, int fd)
 {
     int           i, max, existed, index, remainder;
     uint32_t      key;
@@ -100,7 +105,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
 
     table->total_sessions++;
 
-    key = get_route_key(ip, port);
+    key = get_route_key(clt_ip, clt_port, target_ip, target_port);
 
     index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
     remainder = key & ROUTE_KEY_LOW_MASK;
@@ -139,7 +144,7 @@ router_add(uint32_t ip, uint16_t port, int fd)
         router_update_adjust(slot, i);
     }
 
-    delay_table_send(get_key(ip, port), fd);
+    delay_table_send(key, fd);
 
 }
 
@@ -233,7 +238,8 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     }
 #endif 
 #if (!TCPCOPY_SINGLE)
-    key = get_route_key(ip_header->daddr, tcp_header->dest);
+    key = get_route_key(ip_header->daddr, tcp_header->dest, 
+            ip_header->saddr, tcp_header->source);
     fd  = router_get(key);
     if (fd <= 0) {
         if (!tcp_header->syn) {

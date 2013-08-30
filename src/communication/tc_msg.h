@@ -11,6 +11,8 @@ struct msg_client_s {
     uint32_t  client_ip;
     uint16_t  client_port;
     uint16_t  type;
+    uint32_t  target_ip;
+    uint16_t  target_port;
 };
 
 struct msg_server_s {

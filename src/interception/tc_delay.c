@@ -3,7 +3,8 @@
 #include <intercept.h>
 
 static uint64_t     msg_item_cnt, msg_item_free_cnt, msg_item_destr_cnt,
-                    msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt;
+                    msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt, 
+                    msg_delay_sent_cnt;
 
 static hash_table  *table;
 
@@ -82,6 +83,7 @@ delay_table_init(size_t size)
     msg_item_destr_cnt = 0;
     msg_ls_cnt         = 0;
     msg_ls_destr_cnt   = 0;
+    msg_delay_sent_cnt = 0;
 }
 
 /* add message to delay table */
@@ -133,6 +135,7 @@ delay_table_send(uint64_t key, int fd)
 #else
         tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE);
 #endif
+        msg_delay_sent_cnt++;
 
         msg_item_free_cnt++;
         link_node_internal_free(first);
@@ -199,6 +202,9 @@ delay_table_destroy()
                 msg_item_destr_cnt, msg_item_free_cnt, msg_item_cnt);
         tc_log_info(LOG_NOTICE, 0, "create msg list:%llu,free:%llu,destr:%llu",
                 msg_ls_cnt, msg_ls_free_cnt, msg_ls_destr_cnt);
+        tc_log_info(LOG_NOTICE, 0, "delay actual sent:%llu", 
+                msg_delay_sent_cnt);
+
 
         hash_destroy(table);
         free(table);

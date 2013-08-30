@@ -414,10 +414,22 @@ static bool
 send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         uint16_t client_port, uint16_t type)
 {
-    int            i, fd;
-    bool           result = false;
-    msg_client_t   msg;
-    connections_t *connections;
+    int                      i, fd;
+    bool                     result = false;
+    msg_client_t             msg;
+    connections_t           *connections;
+    ip_port_pair_mapping_t  *test = NULL;
+
+    test = get_test_pair(&(clt_settings.transfer), local_ip, local_port);
+
+    memset(&msg, 0, sizeof(msg_client_t));
+    msg.client_ip = htonl(client_ip);
+    msg.client_port = htons(client_port);
+    msg.type = htons(type);
+    if (test != NULL) {
+        msg.target_ip = htonl(test->target_ip);
+        msg.target_port = htons(test->target_port);
+    }
 
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
@@ -434,11 +446,7 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
                     ntohl(local_ip), ntohs(local_port));
             continue;
         }
-
-        msg.client_ip = htonl(client_ip);
-        msg.client_port = htons(client_port);
-        msg.type = htons(type);
-
+        
         if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, "fd:%d, msg client send error:%u", 
                     fd, ntohs(client_port));
@@ -459,8 +467,9 @@ static bool
 send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         uint16_t client_port, uint16_t type)
 {
-    int            fd;
-    msg_client_t   msg;
+    int                      fd;
+    msg_client_t             msg;
+    ip_port_pair_mapping_t  *test = NULL;
 
     fd = address_find_sock(local_ip, local_port);
     if (fd == -1) {
@@ -469,9 +478,17 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         return false;
     }
 
+    test = get_test_pair(&(clt_settings.transfer), local_ip, local_port);
+
+    memset(&msg, 0, sizeof(msg_client_t));
     msg.client_ip = htonl(client_ip);
     msg.client_port = htons(client_port);
     msg.type = htons(type);
+
+    if (test != NULL) {
+        msg.target_ip = htonl(test->target_ip);
+        msg.target_port = htons(test->target_port);
+    }
 
     if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "msg client send error:%u", ntohs(client_port));

@@ -267,7 +267,7 @@ Here is an example.
 + 2012.11  version 0.6.3, fix fast retransmitting problem
 + 2012.11  version 0.6.5, support nfqueue
 + 2013.03  version 0.7.0, support lvs
-+ 2013.06  version 0.8.0, support new configure option with configure --enable-advanced and optimize intercept
++ 2013.06  version 0.8.0, support new configure option with "configure --enable-advanced" and optimize intercept
 + 2013.08  version 0.9.0, pcap injection is supported and GPLv2 code has been removed for mysql replay
 
 

@@ -63,13 +63,16 @@ tc_msg_event_process(tc_event_t *rev)
     msg.client_ip = ntohl(msg.client_ip);
     msg.client_port = ntohs(msg.client_port);
     msg.type = ntohs(msg.type);
+    msg.target_ip = ntohl(msg.target_ip);
+    msg.target_port = ntohs(msg.target_port);
 
     switch (msg.type) {
         case CLIENT_ADD:
             tot_router_items++;
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                           ntohs(msg.client_port));
-            router_add(msg.client_ip, msg.client_port, rev->fd);
+            router_add(msg.client_ip, msg.client_port, 
+                    msg.target_ip, msg.target_port, rev->fd);
             break;
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
