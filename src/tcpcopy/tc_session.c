@@ -429,6 +429,8 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
     if (test != NULL) {
         msg.target_ip = htonl(test->target_ip);
         msg.target_port = htons(test->target_port);
+    } else {
+        tc_log_info(LOG_WARN, 0, "target info null,p:%u",ntohs(client_port));
     }
 
     for (i = 0; i < clt_settings.real_servers.num; i++) {
@@ -488,6 +490,8 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
     if (test != NULL) {
         msg.target_ip = htonl(test->target_ip);
         msg.target_port = htons(test->target_port);
+    } else {
+        tc_log_info(LOG_WARN, 0, "target info null,p:%u",ntohs(client_port));
     }
 
     if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
