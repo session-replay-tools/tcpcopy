@@ -42,11 +42,11 @@ Figure 2 shows the architecture of using TCPCopy to do realistic testing of Inte
 
 ###Advanced architecture
 
-The difference between the advanced framework and the traditional framework is that the TCPCopy server (intercept) runs on a separate machine instead of the test server. Thus, the test tasks will not be influenced by the TCPCopy server (intercept).
+The difference between the advanced architecture and the traditional architecture is that the TCPCopy server (intercept) runs on a separate machine instead of the test server. Thus, the test tasks will not be influenced by the TCPCopy server (intercept).
 
 ![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/advanced_archicture.GIF)
 
-The advanced framework of TCPCopy can be seen in Figure 3. Assume the online server is running online services, the test server is used to do the test tasks and the assistant server is adopted to run the TCPCopy server (intercept). The only operation needed in the test server for TCPCopy is setting appropriate route commands to route response packets to the assistant server. The TCPCopy server (intercept) at the assistant server captures response packets at the data link layer and passes the response header to the TCPCopy client on the online server.  These changes lead to more realistic testing because the test task in the test server is no longer influenced by the TCPCopy server (intercept). Moreover, as the TCPCopy server (intercept) captures packets more efficiently at the data link layer and multiple instances of the TCPCopy server (intercept) could run concurrently, the processing ability of the TCPCopy server (intercept) is also enhanced.
+The advanced architecture of TCPCopy can be seen in Figure 3. Assume the online server is running online services, the test server is used to do the test tasks and the assistant server is adopted to run the TCPCopy server (intercept). The only operation needed in the test server for TCPCopy is setting appropriate route commands to route response packets to the assistant server. The TCPCopy server (intercept) at the assistant server captures response packets at the data link layer and passes the response header to the TCPCopy client on the online server.  These changes lead to more realistic testing because the test task in the test server is no longer influenced by the TCPCopy server (intercept). Moreover, as the TCPCopy server (intercept) captures packets more efficiently at the data link layer and multiple instances of the TCPCopy server (intercept) could run concurrently, the processing ability of the TCPCopy server (intercept) is also enhanced.
 
 ![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/advanced_usage.GIF)
 
@@ -241,7 +241,7 @@ There are also other reasons that cause TCPCopy not working, such as iptables se
 It is likely that the application on the target server could not process all the requests in time. On the one hand, bugs in the application may make the request not be responded for a long time. On the other hand, some protocols above TCP layer may only process the first request in the socket buffer and leave the remaining requests in the socket buffer unprocessed. 
 
 ###6. Netlink Socket Interface 
-The following problem only occurs in the traditional framework when IP Queue is used.
+The following problem only occurs in the traditional architecture when IP Queue is used.
 
 Packet loss also occurs when ip queue module transfers the response packet to the TCPCopy server (intercept) under a high-pressure situation. By using command "cat /proc/net/ip_queue", you can check the state of ip queue. 
 
