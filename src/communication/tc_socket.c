@@ -691,22 +691,28 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
 
 
 int
-tc_socket_send(int fd, char *buffer, size_t len)
+tc_socket_send(int fd, char *buffer, int len)
 {
     ssize_t send_len;
 
-    send_len = send(fd, (const void *) buffer, len, 0);
+    while (len > 0) {
+        send_len = send(fd, (const void *) buffer, len, 0);
 
-    if (-1 == send_len) {
-        tc_log_info(LOG_ERR, errno, "fd:%d", fd);
-        return TC_ERROR;
-    }
+        if (-1 == send_len) {
+            tc_log_info(LOG_ERR, errno, "fd:%d", fd);
+            return TC_ERROR;
+        }
 
-    tc_log_debug2(LOG_DEBUG, 0, "send len:%d, requested len:%d", send_len, len);
-    if (send_len != len) {
-        tc_log_info(LOG_ERR, 0, "fd:%d, send length:%ld, buffer size:%ld",
+        tc_log_debug2(LOG_DEBUG, 0, "send len:%d, requested len:%d", 
+                send_len, len);
+
+        if (send_len != len) {
+            tc_log_info(LOG_WARN, 0, "fd:%d, send len:%ld, buffer size:%ld",
                     fd, send_len, len);
-        return TC_ERROR;
+        }
+
+        buffer += send_len;
+        len -= send_len;
     }
 
     return TC_OK;

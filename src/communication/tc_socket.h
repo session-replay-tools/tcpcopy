@@ -62,7 +62,7 @@ int tc_socket_recv(int fd, char *buffer, ssize_t len);
 #if (TCPCOPY_COMBINED)
 int tc_socket_cmb_recv(int fd, int *num, char *buffer);
 #endif
-int tc_socket_send(int fd, char *buffer, size_t len);
+int tc_socket_send(int fd, char *buffer, int len);
 
 #endif /* TC_SOCKET_INCLUDED */
 

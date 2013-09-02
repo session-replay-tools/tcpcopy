@@ -69,17 +69,17 @@ typedef struct xcopy_clt_settings {
     char          filter[MAX_FILTER_LENGH];
     char         *user_filter;
 #endif
-    uint16_t      rand_port_shifted;    /* random port shifted */
-    uint16_t      srv_port;             /* server listening port */
-    uint32_t      clt_tf_ip;            /* ip address from clt to target ip */
+    uint16_t      rand_port_shifted;   /* random port shifted */
+    uint16_t      srv_port;            /* server listening port */
+    uint32_t      clt_tf_ip;           /* ip address from clt to target ip */
 #ifdef TCPCOPY_MYSQL_ADVANCED
-    char             *user_pwd;         /* user password string for mysql */
+    char         *user_pwd;            /* user password string for mysql */
 #endif
 #if (TCPCOPY_DR)
-    char             *raw_rs_list;      /* raw real server list */
-    real_ip_addr_t    real_servers;     /* the intercept servers running intercept */
+    char         *raw_rs_list;         /* raw real server list */
+    real_ip_addr_t  real_servers;      /* the intercept servers running intercept */
 #endif
-    ip_port_pair_mappings_t transfer;   /* transfered online_ip online_port
+    ip_port_pair_mappings_t transfer;  /* transfered online_ip online_port
                                            target_ip target_port */
     int           multiplex_io;
     int           sig;  
