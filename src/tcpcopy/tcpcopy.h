@@ -38,6 +38,9 @@ typedef struct xcopy_clt_settings {
     unsigned int  par_connections:8;    /* parallel connections */
     unsigned int  mss:16;               /* MSS sent to backend */
     unsigned int  do_daemonize:1;       /* daemon flag */
+#if (TCPCOPY_DR)
+    unsigned int  lonely:1;             /* Lonely for tcpcopy */
+#endif
     unsigned int  max_rss:21;           /* max memory allowed for tcpcopy */
 
     unsigned int  percentage:7;         /* percentage of the full flow that 
@@ -83,6 +86,7 @@ typedef struct xcopy_clt_settings {
                                            target_ip target_port */
     int           multiplex_io;
     int           sig;  
+    uint64_t      tries;  
 } xcopy_clt_settings;
 
 

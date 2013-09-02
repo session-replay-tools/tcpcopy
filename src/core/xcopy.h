@@ -327,6 +327,7 @@ typedef struct devices_s{
 typedef struct connections_s{
     int index; 
     int num;
+    int remained_num;
     int fds[MAX_CONNECTION_NUM];
 }connections_t;
 

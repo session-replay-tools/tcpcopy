@@ -103,6 +103,7 @@ address_release()
                     fd = connections->fds[j];
                     if (fd > 0) {
                         tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+                        connections->fds[j] = -1;
                         close(fd);
                     }
                 }
@@ -225,9 +226,9 @@ tcp_copy_over(const int sig)
     tc_over = sig;
 }
 
-/* initiate TCPCopy client */
-int
-tcp_copy_init(tc_event_loop_t *event_loop)
+
+static int
+connect_to_server(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
     uint32_t                 target_ip;
@@ -237,12 +238,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     ip_port_pair_mapping_t  *pair, **mappings;
 #endif
 
-    /* register some timer */
-    tc_event_timer_add(event_loop, 60000, check_resource_usage);
-    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
-
-    /* init session table */
-    init_for_sessions();
 
 #if (TCPCOPY_DR)
     /* 
@@ -257,6 +252,13 @@ tcp_copy_init(tc_event_loop_t *event_loop)
             target_port = clt_settings.srv_port;
         }
 
+        if (clt_settings.real_servers.active[i] != 0) {
+            continue;
+        }
+
+        clt_settings.real_servers.connections[i].num = 0;
+        clt_settings.real_servers.connections[i].remained_num = 0;
+
         for (j = 0; j < clt_settings.par_connections; j++) {
             fd = tc_message_init(event_loop, target_ip, target_port);
             if (fd == TC_INVALID_SOCKET) {
@@ -268,6 +270,7 @@ tcp_copy_init(tc_event_loop_t *event_loop)
             }
             clt_settings.real_servers.connections[i].fds[j] = fd;
             clt_settings.real_servers.connections[i].num++;
+            clt_settings.real_servers.connections[i].remained_num++;
         }
 
         tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",
@@ -275,7 +278,6 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     }
 
 #else
-    address_init();
 
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -297,6 +299,48 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     }
 
 #endif
+
+    return TC_OK;
+
+
+}
+
+#if (TCPCOPY_DR)
+static void 
+restore_work(tc_event_timer_t *evt) 
+{
+    connect_to_server(&event_loop);
+
+    evt->msec = tc_current_time_msec + 10000;
+
+    clt_settings.tries++;
+}
+#endif
+
+
+/* initiate TCPCopy client */
+int
+tcp_copy_init(tc_event_loop_t *event_loop)
+{
+
+    /* register some timer */
+    tc_event_timer_add(event_loop, 60000, check_resource_usage);
+    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
+
+#if (TCPCOPY_DR)
+    tc_event_timer_add(event_loop, 10000, restore_work);
+#endif
+
+    /* init session table */
+    init_for_sessions();
+
+#if (!TCPCOPY_DR)
+    address_init();
+#endif
+
+    if (connect_to_server(event_loop) == TC_ERROR) {
+        return TC_ERROR;
+    }
 
     /* init packets for processing */
 #if (TCPCOPY_OFFLINE)

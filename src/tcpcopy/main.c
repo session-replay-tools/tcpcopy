@@ -134,8 +134,11 @@ usage(void)
     printf("-l <file>      save the log information in <file>\n"
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
-    printf("-P <file>      save PID in <file>, only used with -d option\n"
-           "-h             print this help and exit\n"
+    printf("-P <file>      save PID in <file>, only used with -d option\n");
+#if (TCPCOPY_DR)
+    printf("-L             lonely for tcpcopy when intercept is closed\n");
+#endif
+    printf("-h             print this help and exit\n"
            "-v             version\n"
            "-d             run as a daemon\n");
 }
@@ -180,6 +183,9 @@ read_args(int argc, char **argv)
 #endif
          "l:" /* error log file */
          "P:" /* save PID in file */
+#if (TCPCOPY_DR)
+         "L"  /* lonely */
+#endif
          "h"  /* help, licence info */
          "v"  /* version */
          "d"  /* daemon mode */
@@ -258,6 +264,11 @@ read_args(int argc, char **argv)
             case 'd':
                 clt_settings.do_daemonize = 1;
                 break;
+#if (TCPCOPY_DR)
+            case 'L':
+                clt_settings.lonely = 1;
+                break;
+#endif 
             case 'p':
                 clt_settings.srv_port = atoi(optarg);
                 break;
@@ -832,7 +843,7 @@ set_timer()
 int
 main(int argc, char **argv)
 {
-    int ret;
+    int ret, is_continue = 1;
 
     settings_init();
 
@@ -877,23 +888,33 @@ main(int argc, char **argv)
     }
 #endif
 
-    ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
-    if (ret == TC_EVENT_ERROR) {
-        tc_log_info(LOG_ERR, 0, "event loop init failed");
-        return -1;
-    }
-
-    ret = tcp_copy_init(&event_loop);
-    if (ret == TC_ERROR) {
-        exit(EXIT_FAILURE);
-    }
-
     if (set_timer() == -1) {
         return -1;
     }
 
-    /* run now */
-    tc_event_process_cycle(&event_loop);
+    ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
+    if (ret == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "event loop init failed");
+        is_continue = 0;
+    } 
+
+    if (is_continue) {
+        ret = tcp_copy_init(&event_loop);
+        if (ret == TC_ERROR) {
+            is_continue = 0;
+        }   
+    }
+
+    if (is_continue) {
+        if (set_timer() == -1) {
+            is_continue = 0;
+        }   
+    }
+
+    if (is_continue) {
+        /* run now */
+        tc_event_process_cycle(&event_loop);
+    }
 
     tcp_copy_release_resources();
 

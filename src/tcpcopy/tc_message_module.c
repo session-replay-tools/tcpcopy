@@ -86,12 +86,15 @@ tc_process_server_msg(tc_event_t *rev)
             connections = &(clt_settings.real_servers.connections[i]);
             for (j = 0; j < connections->num; j++) {
                 if (connections->fds[j] == rev->fd) {
-                    tc_socket_close(rev->fd);
-                    tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-                    tc_event_del(rev->loop, rev, TC_EVENT_READ);
-                    connections->num--;
-
-                    if (connections->num == 0 && 
+                    if (connections->fds[j] > 0) {
+                        tc_socket_close(connections->fds[j]);
+                        connections->fds[j] = -1;
+                        tc_log_info(LOG_NOTICE, 0, "close sock:%d", 
+                                connections->fds[j]);
+                        tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                        connections->remained_num--;
+                    }
+                    if (connections->remained_num == 0 && 
                             clt_settings.real_servers.active[i]) 
                     {
                         clt_settings.real_servers.active[i] = 0;
@@ -105,11 +108,17 @@ tc_process_server_msg(tc_event_t *rev)
 
 
         if (clt_settings.real_servers.active_num == 0) {
-            return TC_ERR_EXIT;
+            if (clt_settings.lonely) {
+                return TC_OK;
+            } else {
+                return TC_ERR_EXIT;
+            }
         } else {
             return TC_OK;
         }
 #else 
+        tc_event_del(rev->loop, rev, TC_EVENT_READ);
+
         return TC_ERR_EXIT;
 #endif
     }
