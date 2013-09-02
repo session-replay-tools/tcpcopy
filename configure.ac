@@ -5,7 +5,7 @@ AC_PREREQ(2.59)
 AC_INIT([TCPCopy], [0.9.1], [wangbin579@gmail.com], [tcpcopy])
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
-AM_INIT_AUTOMAKE([foreign])
+AM_INIT_AUTOMAKE
 
 
 # Checks for programs.
