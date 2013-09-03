@@ -86,6 +86,8 @@
 
 #endif
 
+#define INTERNAL_VERSION 3
+
 #define COPY_FROM_IP_LAYER 0
 #define COPY_FROM_LINK_LAYER 1
 

@@ -452,8 +452,10 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, "fd:%d, msg client send error:%u", 
                     fd, ntohs(client_port));
-            clt_settings.real_servers.active[i] = 0;
-            clt_settings.real_servers.active_num--;
+            if (clt_settings.real_servers.active[i] != 0) {
+                clt_settings.real_servers.active[i] = 0;
+                clt_settings.real_servers.active_num--;
+            }
 
             continue;
         }

@@ -21,6 +21,10 @@ typedef struct ip_port_pairs_t{
 
 #endif
 
+typedef struct tunnel_basic_t{
+    unsigned int first_in:1;
+    unsigned int clt_msg_size:16;
+}tunnel_basic_t;
 
 typedef struct xcopy_srv_settings {
 #if (!INTERCEPT_ADVANCED)
@@ -51,6 +55,7 @@ typedef struct xcopy_srv_settings {
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
+    unsigned int         old:1;          /* old tcpcopy flag */
 #if (!INTERCEPT_ADVANCED)
     passed_ip_addr_t     passed_ips;     /* passed ip list */
 #endif

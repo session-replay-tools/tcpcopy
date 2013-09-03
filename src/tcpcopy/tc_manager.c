@@ -226,6 +226,21 @@ tcp_copy_over(const int sig)
     tc_over = sig;
 }
 
+static bool send_version(int fd) {
+    msg_client_t    msg;
+
+    memset(&msg, 0, sizeof(msg_client_t));
+    msg.client_ip = htonl(0);
+    msg.client_port = htons(0);
+    msg.type = htons(INTERNAL_VERSION);
+
+    if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+        tc_log_info(LOG_ERR, 0, "send version error:%d", fd);
+        return false;
+    }
+
+    return true;
+}
 
 static int
 connect_to_server(tc_event_loop_t *event_loop)
@@ -264,13 +279,20 @@ connect_to_server(tc_event_loop_t *event_loop)
             if (fd == TC_INVALID_SOCKET) {
                 return TC_ERROR;
             }
+
+            if (!send_version(fd)) {
+                return TC_ERROR;
+            }
+
             if (j == 0) {
                 clt_settings.real_servers.active_num++;
                 clt_settings.real_servers.active[i] = 1;
             }
+
             clt_settings.real_servers.connections[i].fds[j] = fd;
             clt_settings.real_servers.connections[i].num++;
             clt_settings.real_servers.connections[i].remained_num++;
+
         }
 
         tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",
@@ -291,7 +313,12 @@ connect_to_server(tc_event_loop_t *event_loop)
                 return TC_ERROR;
             }
 
+            if (!send_version(fd)) {
+                return TC_ERROR;
+            }
+
             address_add_sock(pair->online_ip, pair->online_port, fd);
+
         }
 
         tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
@@ -328,7 +355,9 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
 
 #if (TCPCOPY_DR)
-    tc_event_timer_add(event_loop, 10000, restore_work);
+    if (clt_settings.lonely) {
+        tc_event_timer_add(event_loop, 10000, restore_work);
+    }
 #endif
 
     /* init session table */

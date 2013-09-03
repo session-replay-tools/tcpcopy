@@ -1,11 +1,13 @@
 #include <xcopy.h>
 #include <intercept.h>
 
+
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
 #if (TCPCOPY_PCAP)
 static  pcap_t        *pcap_map[MAX_FD_NUM];
 #endif
+static tunnel_basic_t  tunnel[MAX_FD_NUM];
 
 static int tc_msg_event_process(tc_event_t *rev);
 
@@ -26,6 +28,8 @@ tc_msg_event_accept(tc_event_t *rev)
         tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
         return TC_ERROR;
     }
+
+    tunnel[fd].first_in = 1;
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
@@ -49,13 +53,55 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
+    int          fd, version;
     msg_client_t msg;
 
-    if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
-        tc_socket_close(rev->fd);
-        tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-        tc_event_del(rev->loop, rev, TC_EVENT_READ);
-        return TC_ERROR;
+    fd = rev->fd;
+
+    if (tunnel[fd].first_in) {
+        if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
+                TC_ERROR) 
+        {
+            tc_socket_close(fd);
+            tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
+            tc_event_del(rev->loop, rev, TC_EVENT_READ);
+            return TC_ERROR;
+        }
+
+        tunnel[fd].first_in = 0;
+
+        version = ntohs(msg.type);
+        if (msg.client_ip != 0 || msg.client_port != 0) {
+            tunnel[fd].clt_msg_size = MSG_CLIENT_MIN_SIZE;
+            srv_settings.old = 1;
+            tc_log_info(LOG_WARN, 0, "too old tcpcopy for intercept");
+        } else {
+            if (version != INTERNAL_VERSION) {
+                tc_log_info(LOG_WARN, 0, 
+                        "not compatible,tcpcopy:%d,intercept:%d",
+                        msg.type, INTERNAL_VERSION);
+            }
+            tunnel[fd].clt_msg_size = MSG_CLIENT_SIZE;
+            if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
+                        MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
+            {
+                tc_socket_close(fd);
+                tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
+                tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                return TC_ERROR;
+            }
+            return TC_OK;
+        }
+
+    } else {
+        if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
+                TC_ERROR) 
+        {
+            tc_socket_close(rev->fd);
+            tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
+            tc_event_del(rev->loop, rev, TC_EVENT_READ);
+            return TC_ERROR;
+        }
     }
 
     msg.client_ip = ntohl(msg.client_ip);
@@ -64,17 +110,23 @@ tc_msg_event_process(tc_event_t *rev)
     msg.target_ip = ntohl(msg.target_ip);
     msg.target_port = ntohs(msg.target_port);
 
-    switch (msg.type) {
-        case CLIENT_ADD:
-            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
-                          ntohs(msg.client_port));
-            router_add(msg.client_ip, msg.client_port, msg.target_ip, 
-                    msg.target_port, rev->fd);
-            break;
-        case CLIENT_DEL:
-            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
-                          ntohs(msg.client_port));
-            break;
+    if (msg.client_ip == 0 && msg.client_port == 0) {
+        /* check for tcpcopy and intercept version compatibility */
+    } else {
+        switch (msg.type) {
+            case CLIENT_ADD:
+                tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
+                        ntohs(msg.client_port));
+                router_add(srv_settings.old, msg.client_ip, msg.client_port, 
+                        msg.target_ip,  msg.target_port, rev->fd);
+                break;
+            case CLIENT_DEL:
+                tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
+                        ntohs(msg.client_port));
+                break;
+            default:
+                tc_log_info(LOG_WARN, 0, "unknown msg type:%u", msg.type);
+        }
     }
 
     return TC_OK;
@@ -164,7 +216,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 
     tot_copy_resp_packs++;
 
-    router_update(srv_settings.router_fd, ip_header);
+    router_update(srv_settings.old, srv_settings.router_fd, ip_header);
     return TC_OK;
 
 }

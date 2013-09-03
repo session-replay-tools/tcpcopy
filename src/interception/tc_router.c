@@ -19,20 +19,23 @@ router_init()
     return TC_OK;
 }
 
-inline uint32_t
-get_route_key(uint32_t clt_ip, uint16_t clt_port, 
+static uint32_t
+get_route_key(int old, uint32_t clt_ip, uint16_t clt_port, 
         uint32_t target_ip, uint16_t target_port)
 {
     uint32_t value = clt_port;
 
     value = (value << 16) + clt_ip + clt_port;
-    value = value + target_ip + (target_port << 24) + 
-        (target_port << 8) + target_port;
+    if (!old) {
+        value = value + target_ip + (target_port << 24) + 
+            (target_port << 8) + target_port;
+    }
 
     return value;
 }
 
-static inline void router_update_adjust(route_slot_t *slot, int child) 
+static void 
+router_update_adjust(route_slot_t *slot, int child) 
 {
     int          parent;
     route_item_t tmp;
@@ -96,7 +99,7 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
 
 /* add item to the router table */
 void
-router_add(uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip, 
+router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip, 
         uint16_t target_port, int fd)
 {
     int           i, max, existed, index, remainder;
@@ -105,7 +108,7 @@ router_add(uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
 
     table->total_sessions++;
 
-    key = get_route_key(clt_ip, clt_port, target_ip, target_port);
+    key = get_route_key(old, clt_ip, clt_port, target_ip, target_port);
 
     index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
     remainder = key & ROUTE_KEY_LOW_MASK;
@@ -195,7 +198,7 @@ router_get(uint32_t key)
 
 
 void
-router_update(int main_router_fd, tc_ip_header_t *ip_header)
+router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
 {
 #if (!TCPCOPY_SINGLE)
     int                     fd;
@@ -238,7 +241,7 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     }
 #endif 
 #if (!TCPCOPY_SINGLE)
-    key = get_route_key(ip_header->daddr, tcp_header->dest, 
+    key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
             ip_header->saddr, tcp_header->source);
     fd  = router_get(key);
     if (fd <= 0) {
