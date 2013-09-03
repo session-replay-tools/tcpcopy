@@ -942,7 +942,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
     if (s->sm.req_halfway_intercepted) { 
         if (!s->sm.resp_greet_received) {
             s->sm.need_resp_greet = 1;
-            tc_log_info(LOG_NOTICE, 0, "it should wait:%u", s->src_h_port);
+            tc_log_debug1(LOG_INFO, 0, "it should wait:%u", s->src_h_port);
             return true;
         }
         return false;
@@ -962,7 +962,7 @@ is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
         if (after(ack, s->req_last_ack_sent_seq) && seq == s->vir_next_seq) {
             s->sm.need_resp_greet = 1;
             if (!s->sm.resp_greet_received) {
-                tc_log_info(LOG_NOTICE, 0, "it should wait:%u", s->src_h_port);
+                tc_log_debug1(LOG_INFO, 0, "it should wait:%u", s->src_h_port);
                 /* It must wait for response */
                 return true;
             } else {
