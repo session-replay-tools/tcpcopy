@@ -104,7 +104,7 @@ address_release()
                     if (fd > 0) {
                         tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
                         connections->fds[j] = -1;
-                        close(fd);
+                        tc_socket_close(fd);
                     }
                 }
                 free(connections);
@@ -204,8 +204,8 @@ tcp_copy_release_resources()
 #endif
 
     if (tc_raw_socket_out > 0) {
-        close(tc_raw_socket_out);
-        tc_raw_socket_out = -1;
+        tc_socket_close(tc_raw_socket_out);
+        tc_raw_socket_out = TC_INVALID_SOCKET;
     }
 
 #if (TCPCOPY_PCAP_SEND)

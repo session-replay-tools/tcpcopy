@@ -39,7 +39,7 @@ int tc_select_destroy(tc_event_loop_t *loop)
     for (i = 0; i < io->last; i++) {
         event = io->evs[i];
         if (event->fd > 0) {
-            close(event->fd);
+            tc_socket_close(event->fd);
         }
         event->fd = -1;
         free(event);

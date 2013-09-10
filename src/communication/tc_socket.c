@@ -263,7 +263,8 @@ int tc_pcap_over()
 int
 tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
 {
-    ssize_t             send_len;
+    ssize_t             send_len, offset = 0, num_bytes;
+    const char         *ptr;
     struct sockaddr_in  dst_addr;
 
     if (fd > 0) {
@@ -272,6 +273,8 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
 
         dst_addr.sin_family = AF_INET;
         dst_addr.sin_addr.s_addr = ip;
+
+        ptr = buf;
 
         /*
          * The output packet will take a special path of IP layer
@@ -282,15 +285,28 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
          * which does general sk_buff cleaning, is called and an 
          * error EMSGSIZE is returned. 
          */
-        send_len = sendto(fd, buf, len, 0, (struct sockaddr *) &dst_addr,
-                          sizeof(dst_addr));
+        do {
+            num_bytes = len - offset;
+            send_len = sendto(fd, ptr + offset, num_bytes, 0, 
+                    (struct sockaddr *) &dst_addr, sizeof(dst_addr));
 
-        if (send_len == -1) {
-            tc_log_info(LOG_ERR, errno,
-                        "Raw socket(%d) send packet failed, packet len: %d",
-                        fd, len);
-            return TC_ERROR;
-        }
+            if (send_len == -1) {
+
+                if (errno == EINTR) {
+                    tc_log_info(LOG_NOTICE, errno, "raw fd:%d EINTR", fd);
+                } else if (errno == EAGAIN) {
+                    tc_log_info(LOG_NOTICE, errno, "raw fd:%d EAGAIN", fd);
+                } else {
+                    tc_log_info(LOG_ERR, errno, "raw fd:%d", fd);
+                    tc_socket_close(fd);
+                    return TC_ERROR;
+                }
+
+            }  else {
+                offset += send_len;
+            }
+
+        } while (offset < len);
     } 
 
     return TC_OK;
@@ -547,7 +563,7 @@ tc_socket_connect(int fd, uint32_t ip, uint16_t port)
     if (connect(fd, (struct sockaddr *) &remote_addr, len) == -1) {
         tc_log_info(LOG_ERR, errno, "Can not connect to remote server(%s:%d)",
                 inet_ntoa(remote_addr.sin_addr), port);
-        close(fd);
+        tc_socket_close(fd);
         return TC_ERROR;
     } else {
         tc_log_info(LOG_INFO, 0, "connect to remote server(%s:%d)",
@@ -697,27 +713,42 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
 int
 tc_socket_send(int fd, char *buffer, int len)
 {
-    ssize_t send_len;
+    ssize_t     send_len, offset = 0, num_bytes;
+    const char *ptr;
 
-    while (len > 0) {
-        send_len = send(fd, (const void *) buffer, len, 0);
-
-        if (-1 == send_len) {
-            tc_log_info(LOG_ERR, errno, "fd:%d", fd);
-            return TC_ERROR;
-        }
-
-        tc_log_debug2(LOG_DEBUG, 0, "send len:%d, requested len:%d", 
-                send_len, len);
-
-        if (send_len != len) {
-            tc_log_info(LOG_WARN, 0, "fd:%d, send len:%ld, buffer size:%ld",
-                    fd, send_len, len);
-        }
-
-        buffer += send_len;
-        len -= send_len;
+    if (len <= 0) {
+        return TC_OK;
     }
+
+    ptr = buffer;
+    num_bytes = len - offset;
+
+    do {
+
+        send_len = send(fd, ptr + offset, num_bytes, 0);
+
+        if (send_len == -1) {
+
+            if (errno == EINTR) {
+                tc_log_info(LOG_NOTICE, errno, "fd:%dEINTR", fd);
+            } else if (errno == EAGAIN) {
+                tc_log_info(LOG_NOTICE, errno, "fd:%d", fd);
+            } else {
+                tc_log_info(LOG_ERR, errno, "fd:%d", fd);
+                tc_socket_close(fd);
+                return TC_ERROR;
+            }
+
+        } else {
+
+            if (send_len != num_bytes) {
+                tc_log_info(LOG_WARN, 0, "fd:%d, slen:%ld, bsize:%ld",
+                        fd, send_len, num_bytes);
+            }
+
+            offset += send_len;
+        }
+    } while (offset < len);
 
     return TC_OK;
 }

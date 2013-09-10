@@ -3,12 +3,13 @@
 
 #if (INTERCEPT_COMBINED)
 static aggregation_t  *combined[MAX_FD_NUM];
+static int             fd_invalid[MAX_FD_NUM];
 static int             max_fd = 0;
 
-void 
+void
 buffer_and_send(int mfd, int fd, msg_server_t *msg)
 {
-    int                  is_send = 0, bytes;
+    int                  ret = TC_OK, is_send = 0, bytes;
     unsigned char       *p;
     aggregation_t       *aggr;
 
@@ -25,6 +26,10 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
     if (max_fd > MAX_FD_VALUE) {
         tc_log_info(LOG_WARN, 0, "fd is too large:%d", max_fd);
         max_fd = MAX_FD_VALUE;
+        return;
+    }
+
+    if (fd_invalid[fd]) {
         return;
     }
 
@@ -70,9 +75,9 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             bytes = aggr->cur_write - aggr->aggr_resp + sizeof(aggr->num);
             tc_log_debug1(LOG_DEBUG, 0, "send bytes:%d", bytes);
 #if (!TCPCOPY_SINGLE)
-            tc_socket_send(fd, (char *) p, bytes);
+            ret = tc_socket_send(fd, (char *) p, bytes);
 #else
-            tc_socket_send(mfd, (char *) p, bytes);
+            ret = tc_socket_send(mfd, (char *) p, bytes);
 #endif
             aggr->num = 0;
             aggr->cur_write = aggr->aggr_resp;
@@ -80,8 +85,13 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
 
         aggr->access_time = tc_current_time_sec;
         aggr->access_msec = tc_current_time_msec;
-    }
 
+        if (ret == TC_ERROR) {
+            fd_invalid[fd] = 1;
+            free(combined[fd]);
+            combined[fd] = NULL;
+        }
+    }
 }
 
 void

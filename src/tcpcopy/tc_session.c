@@ -218,6 +218,9 @@ wrap_retransmit_ip_packet(session_t *s, unsigned char *frame)
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
         tc_log_info(LOG_ERR, 0, "send to back error,tot_len is:%d,cont_len:%d",
                     tot_len,cont_len);
+#if (!TCPCOPY_PCAP_SEND)
+        tc_raw_socket_out = TC_INVALID_SOCKET;
+#endif
     }
 }
 
@@ -340,6 +343,9 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
         tc_log_trace(LOG_WARN, 0, TO_BAKEND_FLAG, ip_header, tcp_header);
         tc_log_info(LOG_ERR, 0, "send to back error,tot_len is:%d,cont_len:%d",
                     tot_len, cont_len);
+#if (!TCPCOPY_PCAP_SEND)
+        tc_raw_socket_out = TC_INVALID_SOCKET;
+#endif
     }
 }
 
