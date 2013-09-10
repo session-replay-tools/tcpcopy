@@ -30,6 +30,7 @@ tc_msg_event_accept(tc_event_t *rev)
     }
 
     tunnel[fd].first_in = 1;
+    set_fd_valid(fd, true); 
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
@@ -63,6 +64,7 @@ tc_msg_event_process(tc_event_t *rev)
                 TC_ERROR) 
         {
             tc_socket_close(fd);
+            set_fd_valid(fd, false);
             tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
             tc_event_del(rev->loop, rev, TC_EVENT_READ);
             return TC_ERROR;
@@ -86,6 +88,7 @@ tc_msg_event_process(tc_event_t *rev)
                         MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
             {
                 tc_socket_close(fd);
+                set_fd_valid(fd, false);
                 tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
                 tc_event_del(rev->loop, rev, TC_EVENT_READ);
                 return TC_ERROR;
@@ -98,6 +101,7 @@ tc_msg_event_process(tc_event_t *rev)
                 TC_ERROR) 
         {
             tc_socket_close(rev->fd);
+            set_fd_valid(fd, false);
             tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
             tc_event_del(rev->loop, rev, TC_EVENT_READ);
             return TC_ERROR;

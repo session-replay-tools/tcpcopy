@@ -3,8 +3,15 @@
 
 #if (INTERCEPT_COMBINED)
 static aggregation_t  *combined[MAX_FD_NUM];
-static int             fd_invalid[MAX_FD_NUM];
+static bool            fd_valid[MAX_FD_NUM];
 static int             max_fd = 0;
+
+void 
+set_fd_valid(int fd, bool valid) {
+    if (fd > 0) {
+        fd_valid[fd] = valid;
+    }
+}
 
 void
 buffer_and_send(int mfd, int fd, msg_server_t *msg)
@@ -29,7 +36,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         return;
     }
 
-    if (fd_invalid[fd]) {
+    if (!fd_valid[fd]) {
         return;
     }
 
@@ -87,7 +94,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         aggr->access_msec = tc_current_time_msec;
 
         if (ret == TC_ERROR) {
-            fd_invalid[fd] = 1;
+            fd_valid[fd] = false;
             free(combined[fd]);
             combined[fd] = NULL;
         }

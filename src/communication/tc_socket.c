@@ -730,9 +730,9 @@ tc_socket_send(int fd, char *buffer, int len)
         if (send_len == -1) {
 
             if (errno == EINTR) {
-                tc_log_info(LOG_NOTICE, errno, "fd:%dEINTR", fd);
+                tc_log_info(LOG_NOTICE, errno, "fd:%d EINTR", fd);
             } else if (errno == EAGAIN) {
-                tc_log_info(LOG_NOTICE, errno, "fd:%d", fd);
+                tc_log_info(LOG_NOTICE, errno, "fd:%d EAGAIN", fd);
             } else {
                 tc_log_info(LOG_ERR, errno, "fd:%d", fd);
                 tc_socket_close(fd);
