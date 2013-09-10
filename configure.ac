@@ -307,7 +307,7 @@ if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
 fi
 
-CFLAGS="-g -D_FILE_OFFSET_BITS=64 -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
+CFLAGS="-O2 -D_FILE_OFFSET_BITS=64 -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
 
 AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
 AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])
