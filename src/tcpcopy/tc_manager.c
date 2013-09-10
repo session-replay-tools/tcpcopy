@@ -197,7 +197,10 @@ tcp_copy_release_resources()
 #endif
 
 #if (TCPCOPY_OFFLINE)
-    pcap_close(clt_settings.pcap);
+    if (clt_settings.pcap != NULL) {
+        pcap_close(clt_settings.pcap);
+        clt_settings.pcap = NULL;
+    }
 #endif
 
     if (tc_raw_socket_out > 0) {
