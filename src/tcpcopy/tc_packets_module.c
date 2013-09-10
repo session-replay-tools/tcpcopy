@@ -158,10 +158,22 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
 
 #if (TCPCOPY_PCAP)
+static void 
+pcap_tunnel_retrieve(pcap_t *pcap, const struct pcap_pkthdr *pkt_hdr,
+        unsigned char *frame)
+{
+    int            l2_len = 0, ip_pack_len, frame_len;
+    unsigned char *ip_data, tunnel_frame[ETHERNET_HDR_LEN + IP_RECV_BUF_SIZE];
 
-/*
- * only support ethernet frames
- */
+    ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len); 
+    ip_pack_len = pkt_hdr->len - l2_len;
+
+    memcpy(tunnel_frame + ETHERNET_HDR_LEN, ip_data, ip_pack_len);
+    frame_len = ip_pack_len + ETHERNET_HDR_LEN;
+
+    dispose_packet(tunnel_frame, frame_len, ip_pack_len, NULL);
+}
+
 static void
 pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         unsigned char *frame)
@@ -186,6 +198,10 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
            ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len); 
            frame = ip_data - ETHERNET_HDR_LEN;
            frame_len = frame_len - l2_len + ETHERNET_HDR_LEN;
+        } else if (l2_len == 0) {
+            /* tunnel frames without ethernet header */
+            pcap_tunnel_retrieve(pcap, pkt_hdr, frame);
+            return;
         } else {
             tc_log_info(LOG_WARN, 0, "l2 len is %d", l2_len);
             return;
