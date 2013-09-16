@@ -148,7 +148,6 @@ int tc_select_polling(tc_event_loop_t *loop, long to)
 
     if (ret == -1) {
         if (errno == EINTR) {
-           //select return EINTR when a signal was caught
            return TC_EVENT_AGAIN;
         }
         return TC_EVENT_ERROR;
