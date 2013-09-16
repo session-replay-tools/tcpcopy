@@ -132,6 +132,10 @@ update_timestamp(session_t *s, tc_tcp_header_t *tcp_header)
                     return;
                 }
                 opt_len = p[1];
+                if (opt_len < 2) {
+                    tc_log_info(LOG_WARN, 0, "opt len:%d", opt_len);
+                    return;
+                }
                 p += opt_len;
                 break;
         }    

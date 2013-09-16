@@ -31,8 +31,6 @@ tc_msg_event_accept(tc_event_t *rev)
         return TC_ERROR;
     }
 
-    tunnel[fd].first_in = 1;
-
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
         tc_log_info(LOG_ERR, 0, "msg event create failed.");
@@ -42,6 +40,12 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
+    
+    tunnel[fd].first_in = 1;
+#if (INTERCEPT_COMBINED)
+    set_fd_valid(fd, true); 
+#endif
+
 #if (TCPCOPY_SINGLE)  
     if (srv_settings.router_fd > 0) {
         tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
@@ -66,10 +70,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
                 TC_ERROR) 
         {
-            tc_socket_close(fd);
-            set_fd_valid(fd, false);
-            tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
-            tc_event_del(rev->loop, rev, TC_EVENT_READ);
+            tc_intercept_close_fd(fd, rev);
             return TC_ERROR;
         }
 
@@ -90,10 +91,7 @@ tc_msg_event_process(tc_event_t *rev)
             if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
                         MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
             {
-                tc_socket_close(fd);
-                set_fd_valid(fd, false);
-                tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
-                tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                tc_intercept_close_fd(fd, rev);
                 return TC_ERROR;
             }
             return TC_OK;
@@ -103,10 +101,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
                 TC_ERROR) 
         {
-            tc_socket_close(rev->fd);
-            set_fd_valid(fd, false);
-            tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-            tc_event_del(rev->loop, rev, TC_EVENT_READ);
+            tc_intercept_close_fd(fd, rev);
             return TC_ERROR;
         }
     }

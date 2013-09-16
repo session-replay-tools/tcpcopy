@@ -67,6 +67,7 @@ extern xcopy_srv_settings srv_settings;
 #include <tc_util.h>
 #include <tc_combine.h>
 #include <tc_delay.h>
+#include <tc_server_common.h>
 #include <tc_interception.h>
 #include <tc_router.h>
 
