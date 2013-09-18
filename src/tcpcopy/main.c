@@ -58,7 +58,7 @@ usage(void)
            "               Most of the time, sourceIP could be omitted and thus <transfer,> could\n"
            "               also be: sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n");
     printf("               Note that sourceMac is the MAC address of the interface where \n"
-           "               packets are going out and targetMac is the next hop's Mac address.\n");
+           "               packets are going out and targetMac is the next hop's MAC address.\n");
 #endif
     printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
