@@ -58,21 +58,21 @@ usage(void)
            "               Most of the time, sourceIP could be omitted and thus <transfer,> could\n"
            "               also be: sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n");
     printf("               Note that sourceMac is the MAC address of the interface where \n"
-           "               packets are going out\n");
+           "               packets are going out and targetMac is the next hop's Mac address.\n");
 #endif
     printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
-           "               '192.168.0.1' \n");
+           "               '192.168.0.1'.\n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
-           "               enable-offline mode)\n");
+           "               enable-offline mode).\n");
     printf("-a <num>       accelerated times for offline replay\n");
     printf("-I <num>       set the threshold interval for offline replay acceleration\n"
-           "               in millisecond\n");
+           "               in millisecond.\n");
 #endif
 #if (TCPCOPY_PCAP)
     printf("-i <device,>   The name of the interface to listen on. This is usually a driver\n"
@@ -120,7 +120,7 @@ usage(void)
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
-           "               The maximum value allowed is 16(default 3 connections since 0.8.0)\n");
+           "               The maximum value allowed is 16(default 3 connections since 0.8.0).\n");
 #if (TCPCOPY_DR)
     printf("-s <server,>   intercept server list\n"
            "               Format:\n"
@@ -130,7 +130,7 @@ usage(void)
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by tcpcopy. When the response from the target server is\n"
            "               slow or the application protocol is context based, the value should \n"
-           "               be set larger. The default value is 120 seconds\n");
+           "               be set larger. The default value is 120 seconds.\n");
     printf("-l <file>      save the log information in <file>\n"
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
