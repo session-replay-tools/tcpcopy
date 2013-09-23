@@ -95,14 +95,12 @@ Two quick start options are available:
     3. Recommended use of mysql replay
     ./configure --enable-mysqlsgt  
     
-    It should be noticed that mysql in the test server needs to work in 
-    skip-grant-table mode
+    It should be noticed that mysql in the test server needs to work in skip-grant-table mode.
 
     4. Use of offline replay 
     ./configure --enable-offline  
     
-    TCPCopy also supports offline replay of TCP stream which reads packets 
-    from the pcap file
+    TCPCopy also supports offline replay of TCP stream which reads packets from the pcap file.
     
 
 ##Running TCPCopy
