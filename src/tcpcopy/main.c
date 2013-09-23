@@ -60,7 +60,7 @@ usage(void)
     printf("               Note that sourceMac is the MAC address of the interface where \n"
            "               packets are going out and targetMac is the next hop's MAC address.\n");
 #endif
-    printf("-c <ip_addr>   change the client IP to this IP address when sending to the\n"
+    printf("-c <ip_addr,>  change the client IP to one of IP addresses when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
@@ -79,6 +79,7 @@ usage(void)
            "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
     printf("-F <filter>    user filter (same as pcap filter)\n");
+    printf("-B <num>       buffer size for pcap capture in megabytes(default 16M)\n");
 #endif
 #if (TCPCOPY_PCAP_SEND)
     printf("-o <device,>   The name of the interface to send. This is usually a driver\n"
@@ -162,6 +163,7 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
          "F:" /* <filter> */
+         "B:" 
 #endif
 #if (TCPCOPY_PCAP_SEND)
          "o:" /* <device,> */
@@ -195,7 +197,7 @@ read_args(int argc, char **argv)
                 clt_settings.raw_transfer = optarg;
                 break;
             case 'c':
-                clt_settings.clt_tf_ip = inet_addr(optarg);
+                clt_settings.raw_clt_tf_ip = optarg;
                 break;
 #if (TCPCOPY_OFFLINE)
             case 'i':
@@ -220,6 +222,10 @@ read_args(int argc, char **argv)
             case 'F':
                 clt_settings.user_filter = optarg;
                 break;
+            case 'B':
+                clt_settings.buffer_size = 1024 * 1024 * atoi(optarg);
+                break;
+
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
@@ -233,7 +239,7 @@ read_args(int argc, char **argv)
                 clt_settings.factor = atoi(optarg);
                 break;
             case 'm':
-                clt_settings.max_rss = 1024*atoi(optarg);
+                clt_settings.max_rss = 1024 * atoi(optarg);
                 break;
             case 'C':
                 clt_settings.par_connections = atoi(optarg);
@@ -671,6 +677,48 @@ extract_filter()
 }
 #endif
 
+static int 
+retrieve_clt_tf_ips() 
+{
+    int          count = 0;
+    char        *split, *p;
+    uint32_t     ip;
+
+    p = clt_settings.raw_clt_tf_ip;
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            *split = '\0';
+        }
+
+        ip = inet_addr(p);
+
+        if (split != NULL) {
+            *split = ',';
+        }
+
+        clt_settings.clt_tf_ip[count++] = ip;
+
+        if (count == M_IP_NUM) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for clt_tf_ip");
+            break;
+        }
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+
+    }
+
+    clt_settings.clt_tf_ip_num = count;
+
+    return 1;
+}
+
+
 static int
 set_details()
 {
@@ -692,6 +740,13 @@ set_details()
         SESS_KEEPLIVE_ADD;
     tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
             clt_settings.session_keepalive_timeout);
+
+    if (clt_settings.raw_clt_tf_ip != NULL) {
+        /* print out raw_clt_tf_ip */
+        tc_log_info(LOG_NOTICE, 0, "raw_clt_tf_ip:%s", 
+                clt_settings.raw_clt_tf_ip);
+        retrieve_clt_tf_ips();
+    }
 
     /* set the ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
@@ -818,6 +873,9 @@ settings_init()
     clt_settings.par_connections = 3;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
     
+#if (TCPCOPY_PCAP)
+    clt_settings.buffer_size = TCPCOPY_PCAP_BUF_SIZE;
+#endif
 #if (TCPCOPY_PCAP_SEND)
     clt_settings.output_if_name = NULL;
 #endif

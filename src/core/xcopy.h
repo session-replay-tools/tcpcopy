@@ -102,6 +102,7 @@
 #define IP_RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 65535
 #define MAX_FILTER_LENGH 4096 
+#define M_IP_NUM 256
 
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 

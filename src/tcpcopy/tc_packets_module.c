@@ -2,6 +2,8 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
+uint32_t              ip_tf[65536];
+uint16_t              ip_tf_cnt = 0;
 #if (TCPCOPY_OFFLINE)
 static bool           read_pcap_over = false;
 static time_t         read_pcap_over_time;
@@ -33,6 +35,26 @@ static void send_packets_from_pcap(int first);
 #endif
 
 
+static uint16_t
+get_ip_key(uint32_t ip)
+{
+    uint32_t value = (ip >> 16) + ip;
+    return (uint16_t) value;
+}
+
+static uint32_t 
+get_tf_ip(uint16_t key) {
+
+    if (ip_tf[key] == 0) {
+        ip_tf[key] = clt_settings.clt_tf_ip[ip_tf_cnt++];
+        if (ip_tf_cnt >= clt_settings.clt_tf_ip_num) {
+            ip_tf_cnt = 0;
+        }
+    }
+
+    return ip_tf[key];
+}
+
 #if (TCPCOPY_PCAP)
 static int 
 tc_device_set(tc_event_loop_t *event_loop, device_t *device) 
@@ -41,7 +63,7 @@ tc_device_set(tc_event_loop_t *event_loop, device_t *device)
     tc_event_t *ev;
 
     fd = tc_pcap_socket_in_init(&(device->pcap), device->name,
-            PCAP_RECV_BUF_SIZE, TCPCOPY_PCAP_BUF_SIZE, clt_settings.filter);
+            PCAP_RECV_BUF_SIZE, clt_settings.buffer_size, clt_settings.filter);
     if (fd == TC_INVALID_SOCKET) {
         return TC_ERROR;
     }
@@ -329,8 +351,8 @@ dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len,
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (clt_settings.clt_tf_ip != 0) {
-            ip_header->saddr = clt_settings.clt_tf_ip;
+        if (clt_settings.clt_tf_ip_num > 0) {
+            ip_header->saddr = get_tf_ip(get_ip_key(ip_header->saddr));
         }
 
         if (replica_num > 1) {
@@ -403,8 +425,8 @@ dispose_packet(unsigned char *frame, int frame_len, int ip_recv_len,
         replica_num = clt_settings.replica_num;
         ip_header   = (tc_ip_header_t *) packet;
 
-        if (clt_settings.clt_tf_ip != 0) {
-            ip_header->saddr = clt_settings.clt_tf_ip;
+        if (clt_settings.clt_tf_ip_num > 0) {
+            ip_header->saddr = get_tf_ip(get_ip_key(ip_header->saddr));
         }
 
         /* 

@@ -67,6 +67,7 @@ typedef struct xcopy_clt_settings {
     char         *output_if_name;
 #endif
 #if (TCPCOPY_PCAP)
+    int           buffer_size;
     char         *raw_device;
     devices_t     devices;
     char          filter[MAX_FILTER_LENGH];
@@ -74,7 +75,9 @@ typedef struct xcopy_clt_settings {
 #endif
     uint16_t      rand_port_shifted;   /* random port shifted */
     uint16_t      srv_port;            /* server listening port */
-    uint32_t      clt_tf_ip;           /* ip address from clt to target ip */
+    char         *raw_clt_tf_ip;        
+    uint16_t      clt_tf_ip_num;       
+    uint32_t      clt_tf_ip[M_IP_NUM]; /* ip address from clt to target ip */
 #ifdef TCPCOPY_MYSQL_ADVANCED
     char         *user_pwd;            /* user password string for mysql */
 #endif
