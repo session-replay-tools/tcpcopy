@@ -85,17 +85,25 @@ Two quick start options are available:
 
 ###Recommended use
 
-1. Recommended use of TCPCopy with traditional architecture
-  - ./configure  
-2. Recommended use of TCPCopy with advanced architecture
-  - ./configure --enable-advanced                 for the TCPCopy client (tcpcopy)
-  - ./configure --enable-advanced --enable-pcap   for the TCPCopy server (intercept)
-3. Recommended use of mysql replay
-  - ./configure --enable-mysqlsgt  
-    It should be noticed that mysql in the test server needs to work in skip-grant-table mode
-4. Use of offline replay (TCPCopy also supports offline replay of TCP stream which reads packets from the pcap file)  
-  - ./configure --enable-offline  
+    1. Recommended use of TCPCopy with traditional architecture
+    ./configure  
+           
+    2. Recommended use of TCPCopy with advanced architecture
+    ./configure --enable-advanced                 #The TCPCopy client (tcpcopy)
+    ./configure --enable-advanced --enable-pcap   #The TCPCopy server (intercept)
 
+    3. Recommended use of mysql replay
+    ./configure --enable-mysqlsgt  
+    
+    It should be noticed that mysql in the test server needs to work in 
+    skip-grant-table mode
+
+    4. Use of offline replay 
+    ./configure --enable-offline  
+    
+    TCPCopy also supports offline replay of TCP stream which reads packets 
+    from the pcap file
+    
 
 ##Running TCPCopy
 
