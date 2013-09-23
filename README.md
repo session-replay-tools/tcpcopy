@@ -87,11 +87,17 @@ Two quick start options are available:
 
 1. Recommended use of TCPCopy with traditional architecture
   - ./configure  
+
 2. Recommended use of TCPCopy with advanced architecture
+  The TCPCopy client (tcpcopy):
+  - ./configure --enable-advanced  
+  The TCPCopy server (intercept):
   - ./configure --enable-advanced --enable-pcap  
+
 3. Recommended use of mysql replay
   - ./configure --enable-mysqlsgt  
     It should be noticed that mysql in the test server needs to work in skip-grant-table mode
+
 4. Use of offline replay (TCPCopy also supports offline replay of TCP stream which reads packets from the pcap file)  
   - ./configure --enable-offline  
 
@@ -123,8 +129,9 @@ Two quick start options are available:
 
 
 ###Advanced usage guide:
-	Assume TCPCopy with "./configure --enable-advanced --enable-pcap" is configured on the online
-	server and the assistant server.
+	Assume tcpcopy with "./configure --enable-advanced" is configured on the online
+	server and intercept with "./configure --enable-advanced --enable-pcap" is configured  
+	on the assistant server.
 
 	Run:
 	a) On the test server which runs test server applications (root privilege is required):
@@ -141,15 +148,16 @@ Two quick start options are available:
 
 	b) On the assistant server which runs intercept (the TCPCopy server) (root privilege is required):
 	  ./intercept -F <filter> -i <device,> 
+	  
+	  Note that the filter format is the same as the pcap filter.
+	  For example:
+	  ./intercept -i eth0 -F 'tcp and src port 80' –d
+	  Intercept will capture response packets of the TCP based application which listens on port 80 from 
+	  device eth0 
 	
 	c) On the online source server (root privilege is required):
-	  ./tcpcopy -x localServerPort-targetServerIP:targetServerPort -s <intercept server,> -i <device,> 
+	  ./tcpcopy -x localServerPort-targetServerIP:targetServerPort -s <intercept server,>  
 	  
-	Note that the filter format is the same as the pcap filter.
-	For example:
-	  ./intercept -i eth0 -F 'tcp and src port 80' –d
-	Intercept will capture response packets of the TCP based application which listens on port 80 from 
-	device eth0 
 
 
 
