@@ -753,7 +753,7 @@ session_init(session_t *s, int flag)
     s->resp_last_same_ack_num = 0;
 
 #if (TCPCOPY_MYSQL_BASIC)
-    s->sm.mysql_first_excution = 1;
+    s->sm.mysql_first_execution = 1;
     s->mysql_execute_times = 0;
 #endif
 }
@@ -2189,18 +2189,18 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
         command = payload[0];
 
         if (command == COM_STMT_PREPARE||
-                (s->sm.mysql_prepare_stat && s->sm.mysql_first_excution))
+                (s->sm.mysql_prepare_stat && s->sm.mysql_first_execution))
         {
             if (command == COM_STMT_PREPARE) {
                 s->sm.mysql_prepare_stat = 1;
             } else {
                 if (command == COM_QUERY && s->sm.mysql_prepare_stat) {
                     if (s->mysql_execute_times > 0) {
-                        s->sm.mysql_first_excution = 0;
+                        s->sm.mysql_first_execution = 0;
                     }
                     s->mysql_execute_times++;
                 }
-                if (!s->sm.mysql_first_excution) {
+                if (!s->sm.mysql_first_execution) {
                     return false;
                 }
             }

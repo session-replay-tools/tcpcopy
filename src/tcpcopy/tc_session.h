@@ -97,8 +97,8 @@ typedef struct sess_state_machine_s{
     uint32_t mysql_req_login_received:1;
     /* This indicates if the session has prepare statment */
     uint32_t mysql_prepare_stat:1;
-    /* This indicates if the first excution is met */
-    uint32_t mysql_first_excution:1;
+    /* This indicates if the first execution is met */
+    uint32_t mysql_first_execution:1;
 #endif
 
 }sess_state_machine_t;

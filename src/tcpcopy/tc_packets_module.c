@@ -125,6 +125,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
             }
 
             if (i >= MAX_DEVICE_NUM) {
+                pcap_freealldevs(alldevs);
                 tc_log_info(LOG_ERR, 0, "It has too many devices");
                 return TC_ERROR;
             }
@@ -132,6 +133,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
             strcpy(devices->device[i++].name, d->name);
         }
         devices->device_num = i;
+        pcap_freealldevs(alldevs);
     }
 
     for (i = 0; i < devices->device_num; i++) {

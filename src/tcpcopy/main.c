@@ -327,6 +327,13 @@ read_args(int argc, char **argv)
                     case 'n':
                     case 'f':
                     case 'C':
+#if (TCPCOPY_OFFLINE)
+                    case 'a':
+                    case 'I':
+#endif
+#if (TCPCOPY_PCAP)
+                    case 'B':
+#endif
                     case 'm':
                     case 'M':
                     case 'S':
