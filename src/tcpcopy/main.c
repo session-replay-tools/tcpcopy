@@ -774,6 +774,9 @@ set_details()
     } else if (clt_settings.par_connections > MAX_CONNECTION_NUM) {
         clt_settings.par_connections = MAX_CONNECTION_NUM;
     }
+#if (TCPCOPY_SINGLE)
+    clt_settings.par_connections = 1;
+#endif
     tc_log_info(LOG_NOTICE, 0, "parallel connections per target:%d",
             clt_settings.par_connections);
 
