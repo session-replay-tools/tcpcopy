@@ -365,6 +365,9 @@ output_for_debug(int argc, char **argv)
 {
     /* print out version info */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "intercept internal version:%d", 
+            INTERNAL_VERSION);
+
     /* print out target info */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
@@ -740,7 +743,7 @@ set_details()
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
-    rand_port = (int) ((rand_r(&seed)/(RAND_MAX + 1.0))*512);
+    rand_port = (int) ((rand_r(&seed) / (RAND_MAX + 1.0)) * 512);
     clt_settings.rand_port_shifted = rand_port;
 
     clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 

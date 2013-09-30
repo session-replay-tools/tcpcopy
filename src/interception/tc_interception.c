@@ -106,11 +106,11 @@ tc_msg_event_process(tc_event_t *rev)
         }
     }
 
-    msg.client_ip = ntohl(msg.client_ip);
-    msg.client_port = ntohs(msg.client_port);
+    msg.client_ip = msg.client_ip;
+    msg.client_port = msg.client_port;
     msg.type = ntohs(msg.type);
-    msg.target_ip = ntohl(msg.target_ip);
-    msg.target_port = ntohs(msg.target_port);
+    msg.target_ip = msg.target_ip;
+    msg.target_port = msg.target_port;
 
     switch (msg.type) {
         case CLIENT_ADD:

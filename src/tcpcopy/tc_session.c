@@ -421,27 +421,19 @@ send_faked_passive_rst(session_t *s)
 #if (TCPCOPY_DR)
 
 static bool
-send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
-        uint16_t client_port, uint16_t type)
+send_router_info(session_t *s, uint16_t type)
 {
     int                      i, fd;
     bool                     result = false;
     msg_client_t             msg;
     connections_t           *connections;
-    ip_port_pair_mapping_t  *test = NULL;
-
-    test = get_test_pair(&(clt_settings.transfer), local_ip, local_port);
 
     memset(&msg, 0, sizeof(msg_client_t));
-    msg.client_ip = htonl(client_ip);
-    msg.client_port = htons(client_port);
+    msg.client_ip = s->src_addr;
+    msg.client_port = s->faked_src_port;
     msg.type = htons(type);
-    if (test != NULL) {
-        msg.target_ip = htonl(test->target_ip);
-        msg.target_port = htons(test->target_port);
-    } else {
-        tc_log_info(LOG_WARN, 0, "target info null,p:%u",ntohs(client_port));
-    }
+    msg.target_ip = s->dst_addr;
+    msg.target_port = s->dst_port;
 
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
@@ -454,14 +446,12 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
         connections->index = (connections->index + 1) % connections->num;
 
         if (fd == -1) {
-            tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
-                    ntohl(local_ip), ntohs(local_port));
+            tc_log_info(LOG_WARN, 0, "sock invalid");
             continue;
         }
         
         if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
-            tc_log_info(LOG_ERR, 0, "fd:%d, msg client send error:%u", 
-                    fd, ntohs(client_port));
+            tc_log_info(LOG_ERR, 0, "fd:%d, msg client send error", fd);
             if (clt_settings.real_servers.active[i] != 0) {
                 clt_settings.real_servers.active[i] = 0;
                 clt_settings.real_servers.active_num--;
@@ -478,36 +468,26 @@ send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
 #else
 
 static bool
-send_router_info(uint32_t local_ip, uint16_t local_port, uint32_t client_ip,
-        uint16_t client_port, uint16_t type)
+send_router_info(session_t *s, uint16_t type)
 {
     int                      fd;
     msg_client_t             msg;
-    ip_port_pair_mapping_t  *test = NULL;
 
-    fd = address_find_sock(local_ip, local_port);
+    fd = address_find_sock(s->online_addr, s->online_port);
     if (fd == -1) {
-        tc_log_info(LOG_WARN, 0, "sock invalid,%u:%u",
-                ntohl(local_ip), ntohs(local_port));
+        tc_log_info(LOG_WARN, 0, "sock invalid");
         return false;
     }
 
-    test = get_test_pair(&(clt_settings.transfer), local_ip, local_port);
-
     memset(&msg, 0, sizeof(msg_client_t));
-    msg.client_ip = htonl(client_ip);
-    msg.client_port = htons(client_port);
+    msg.client_ip = s->src_addr;
+    msg.client_port = s->faked_src_port;
     msg.type = htons(type);
-
-    if (test != NULL) {
-        msg.target_ip = htonl(test->target_ip);
-        msg.target_port = htons(test->target_port);
-    } else {
-        tc_log_info(LOG_WARN, 0, "target info null,p:%u",ntohs(client_port));
-    }
+    msg.target_ip = s->dst_addr;
+    msg.target_port = s->dst_port;
 
     if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
-        tc_log_info(LOG_ERR, 0, "msg client send error:%u", ntohs(client_port));
+        tc_log_info(LOG_ERR, 0, "msg client send error");
         return false;
     }
 
@@ -801,18 +781,19 @@ session_create(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
 
     session_init(s, SESS_CREATE);
 
-    s->src_addr      = ip_header->saddr;
-    s->online_addr   = ip_header->daddr;
-    s->orig_src_port = tcp_header->source;
-    s->src_h_port    = ntohs(tcp_header->source);
-    s->online_port   = tcp_header->dest;
+    s->src_addr       = ip_header->saddr;
+    s->online_addr    = ip_header->daddr;
+    s->orig_src_port  = tcp_header->source;
+    s->faked_src_port = tcp_header->source;
+    s->src_h_port     = ntohs(tcp_header->source);
+    s->online_port    = tcp_header->dest;
     test = get_test_pair(&(clt_settings.transfer), 
             s->online_addr, s->online_port);
-    s->dst_addr      = test->target_ip;
-    s->dst_port      = test->target_port;
+    s->dst_addr       = test->target_ip;
+    s->dst_port       = test->target_port;
 #if (TCPCOPY_PCAP_SEND)
-    s->src_mac       = test->src_mac;
-    s->dst_mac       = test->dst_mac;
+    s->src_mac        = test->src_mac;
+    s->dst_mac        = test->dst_mac;
 #endif
     if (s->src_addr == LOCALHOST && s->dst_addr != LOCALHOST) {
         tc_log_info(LOG_WARN, 0, "src host localost but dst host not");
@@ -2143,8 +2124,7 @@ fake_syn(session_t *s, tc_ip_header_t *ip_header,
         
 #if (!TCPCOPY_SINGLE)
     /* send route info to backend */
-    result = send_router_info(ip_header->daddr, tcp_header->dest,
-            ip_header->saddr, tcp_header->source, CLIENT_ADD);
+    result = send_router_info(s, CLIENT_ADD);
     if (!result) {
         return;
     }
@@ -2501,7 +2481,6 @@ process_back_syn(session_t *s, tc_ip_header_t *ip_header,
 
     s->sm.resp_syn_received = 1;
     s->sm.status = SYN_CONFIRM;
-    s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + 1);
     s->sm.dst_closed  = 0;
     s->sm.reset_sent  = 0;
 
@@ -2534,8 +2513,7 @@ process_back_fin(session_t *s, tc_ip_header_t *ip_header,
     if (!s->sm.src_closed) {
         /* 
          * add seq here in order to keep the rst packet's ack correct
-         * because it sends two packets here and are all dependent 
-         * on this packet
+         * because it sends two packets here 
          */
         tcp_header->seq = htonl(ntohl(tcp_header->seq) + 1);
 #if (TCPCOPY_MYSQL_BASIC)
@@ -2678,7 +2656,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
         s->sm.vir_already_retransmit = 0;
         resp_cont_cnt++;
         s->resp_last_recv_cont_time = current;
-        s->vir_ack_seq = htonl(ntohl(tcp_header->seq) + cont_len);
+        s->vir_ack_seq = htonl(seq + cont_len);
     } else {
         s->vir_ack_seq = tcp_header->seq;
     }
@@ -2697,14 +2675,13 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     update_retransmission_packets(s);
 
      /* process syn, fin or ack packet here */
-    if ( tcp_header->syn) {
+    if (tcp_header->syn) {
 
+        s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
         if (!s->sm.resp_syn_received) {
             /* process syn packet */
             process_back_syn(s, ip_header, tcp_header);
-        } else {
-            s->vir_ack_seq = htonl(ntohl(s->vir_ack_seq) + 1);
-        }
+        } 
         return;
     } else if (tcp_header->fin) {
 
@@ -3240,7 +3217,7 @@ process_client_packet(session_t *s, unsigned char *frame,
     /* change source port for multiple copying, etc */
     if (s->sm.port_transfered != 0) {
         tcp_header->source = s->faked_src_port;
-    }
+    } 
 
     s->src_h_port = ntohs(tcp_header->source);
 
@@ -3702,8 +3679,7 @@ process_in(unsigned char *frame)
         }
 
 #if (!TCPCOPY_SINGLE)
-        result = send_router_info(ip_header->daddr, tcp_header->dest, 
-                ip_header->saddr, tcp_header->source, CLIENT_ADD);
+        result = send_router_info(s, CLIENT_ADD);
         if (result) {
             process_client_packet(s, frame, ip_header, tcp_header);
         }

@@ -102,29 +102,25 @@ tc_msg_event_process(tc_event_t *rev)
         }
     }
 
-    msg.client_ip = ntohl(msg.client_ip);
-    msg.client_port = ntohs(msg.client_port);
+    msg.client_ip = msg.client_ip;
+    msg.client_port = msg.client_port;
     msg.type = ntohs(msg.type);
-    msg.target_ip = ntohl(msg.target_ip);
-    msg.target_port = ntohs(msg.target_port);
+    msg.target_ip = msg.target_ip;
+    msg.target_port = msg.target_port;
 
-    if (msg.client_ip == 0 && msg.client_port == 0) {
-        /* check for tcpcopy and intercept version compatibility */
-    } else {
-        switch (msg.type) {
-            case CLIENT_ADD:
-                tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
-                        ntohs(msg.client_port));
-                router_add(srv_settings.old, msg.client_ip, msg.client_port, 
-                        msg.target_ip,  msg.target_port, rev->fd);
-                break;
-            case CLIENT_DEL:
-                tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
-                        ntohs(msg.client_port));
-                break;
-            default:
-                tc_log_info(LOG_WARN, 0, "unknown msg type:%u", msg.type);
-        }
+    switch (msg.type) {
+        case CLIENT_ADD:
+            tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
+                    ntohs(msg.client_port));
+            router_add(srv_settings.old, msg.client_ip, msg.client_port, 
+                    msg.target_ip,  msg.target_port, rev->fd);
+            break;
+        case CLIENT_DEL:
+            tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
+                    ntohs(msg.client_port));
+            break;
+        default:
+            tc_log_info(LOG_WARN, 0, "unknown msg type:%u", msg.type);
     }
 
     return TC_OK;

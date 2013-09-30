@@ -448,6 +448,8 @@ output_for_debug()
 {
     /* print out intercept version */
     tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "intercept internal version:%d", 
+            INTERNAL_VERSION);
     /* print out intercept working mode */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode for intercept");

@@ -245,14 +245,18 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
             ip_header->saddr, tcp_header->source);
     fd  = router_get(key);
     if (fd <= 0) {
-        if (!tcp_header->syn) {
+        if (tcp_header->syn || tcp_header->rst) {
+            if (tcp_header->rst) {
+                tc_log_info(LOG_NOTICE, 0, "reset from tcp");
+            } 
+            tc_log_debug0(LOG_DEBUG, 0, "fd is null");
+            delay_table_add(key, &msg);
+            return ;
+        } else {
             tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
             tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
             return;
         }
-        tc_log_debug0(LOG_DEBUG, 0, "fd is null");
-        delay_table_add(key, &msg);
-        return ;
     }
 #endif
 

@@ -642,8 +642,7 @@ send_packets_from_pcap(int first)
                 tc_log_info(LOG_WARN, 0, "truncated packets,drop");
             } else {
 
-                ip_data = get_ip_data(clt_settings.pcap, pkt_data, 
-                        pkt_hdr.len, &l2_len);
+                ip_data = get_ip_data(pcap, pkt_data, pkt_hdr.len, &l2_len);
                 if (l2_len < ETHERNET_HDR_LEN) {
                     tc_log_info(LOG_WARN, 0, "l2 len is %d", l2_len);
                     continue;
@@ -684,7 +683,7 @@ send_packets_from_pcap(int first)
             }
         } else {
 
-            tc_log_info(LOG_WARN, 0, "stop, null from pcap_next");
+            tc_log_info(LOG_NOTICE, 0, "stop, null from pcap_next");
             stop = true;
             read_pcap_over = true;
             read_pcap_over_time = tc_time();
