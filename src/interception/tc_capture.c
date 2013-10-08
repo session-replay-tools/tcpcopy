@@ -4,6 +4,7 @@
 
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
+static uint64_t        tot_router_items = 0; 
 #if (TCPCOPY_PCAP)
 static  pcap_t        *pcap_map[MAX_FD_NUM];
 #endif
@@ -110,10 +111,13 @@ tc_msg_event_process(tc_event_t *rev)
 
     switch (msg.type) {
         case CLIENT_ADD:
+#if (!TCPCOPY_SINGLE)
+            tot_router_items++;
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                     ntohs(msg.client_port));
             router_add(srv_settings.old, msg.client_ip, msg.client_port, 
                     msg.target_ip,  msg.target_port, rev->fd);
+#endif
             break;
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
@@ -129,8 +133,9 @@ tc_msg_event_process(tc_event_t *rev)
 void
 interception_output_stat(tc_event_timer_t *evt)
 {
-    tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
-            tot_copy_resp_packs, tot_resp_packs);
+    tc_log_info(LOG_NOTICE, 0, 
+            "total resp packs:%llu, all:%llu, route:%llu",
+            tot_copy_resp_packs, tot_resp_packs, tot_router_items);
 #if (!TCPCOPY_SINGLE)
     router_stat();
     delay_table_delete_obsolete(tc_time());

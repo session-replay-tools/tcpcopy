@@ -114,11 +114,13 @@ tc_msg_event_process(tc_event_t *rev)
 
     switch (msg.type) {
         case CLIENT_ADD:
+#if (!TCPCOPY_SINGLE)
             tot_router_items++;
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
                           ntohs(msg.client_port));
             router_add(srv_settings.old, msg.client_ip, msg.client_port, 
                     msg.target_ip, msg.target_port, fd);
+#endif
             break;
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
