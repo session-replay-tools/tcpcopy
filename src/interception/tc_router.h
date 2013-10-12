@@ -4,7 +4,11 @@
 #include <xcopy.h> 
 
 typedef struct route_item_s {
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint64_t key;
+#else
     uint16_t key;
+#endif
     uint16_t fd;
     time_t   timestamp;
 }route_item_t;

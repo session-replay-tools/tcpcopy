@@ -19,20 +19,39 @@ router_init()
     return TC_OK;
 }
 
-static uint32_t
+#if (INTERCEPT_MILLION_SUPPORT)
+static uint64_t
 get_route_key(int old, uint32_t clt_ip, uint16_t clt_port, 
         uint32_t target_ip, uint16_t target_port)
 {
-    uint32_t value = clt_port;
+    uint64_t value = clt_ip;
+    uint64_t l_clt_port = clt_port;
 
-    value = (value << 16) + clt_ip + clt_port;
+    value = (value << 16) + (l_clt_port << 48);
+
     if (!old) {
-        value = value + target_ip + (target_port << 24) + 
-            (target_port << 8) + target_port;
+        value = value + target_ip + target_port;
     }
 
     return value;
 }
+#else
+static uint32_t
+get_route_key(int old, uint32_t clt_ip, uint16_t clt_port, 
+        uint32_t target_ip, uint16_t target_port)
+{
+    uint32_t value  = clt_port;
+    uint32_t l_target_port = target_port;
+
+    value = (value << 16) + clt_ip + clt_port;
+    if (!old) {
+        value = value + target_ip + (l_target_port << 24) + 
+            (l_target_port << 8) + target_port;
+    }
+
+    return value;
+}
+#endif
 
 static void 
 router_update_adjust(route_slot_t *slot, int child) 
@@ -52,8 +71,11 @@ router_update_adjust(route_slot_t *slot, int child)
     return;
 }
 
-
+#if (INTERCEPT_MILLION_SUPPORT)
+static void router_add_adjust(route_slot_t *slot, uint64_t key, int fd) 
+#else
 static void router_add_adjust(route_slot_t *slot, int key, int fd) 
+#endif
 {
     int          i, tail_need_save;
     route_item_t item = {0, 0, 0}, tmp;
@@ -102,17 +124,31 @@ void
 router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip, 
         uint16_t target_port, int fd)
 {
-    int           i, max, existed, index, remainder;
-    uint32_t      key;
+    int           i, max, existed, index;
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint32_t      high_key, low_key;
+    uint64_t      key, remainder;
+#else
+    uint32_t      key, remainder;
+#endif
     route_slot_t *slot;
 
     table->total_sessions++;
 
     key = get_route_key(old, clt_ip, clt_port, target_ip, target_port);
+    tc_log_debug1(LOG_DEBUG, 0, "key:%llu", key);
 
-    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+#if (INTERCEPT_MILLION_SUPPORT)
+    high_key =(uint32_t) (key << 32);
+    low_key =(uint32_t) key;
+
+    index = (int) ((high_key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
+    remainder = high_key & ROUTE_KEY_LOW_MASK;
+    remainder = (remainder << 32) + low_key;
+#else
+    index = (int) ((key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
     remainder = key & ROUTE_KEY_LOW_MASK;
-
+#endif
     table->cache[index].key = remainder; 
     table->cache[index].fd  = (uint16_t) fd; 
 
@@ -151,15 +187,33 @@ router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
 
 }
 
-int
-router_get(uint32_t key)
+#if (INTERCEPT_MILLION_SUPPORT)
+static int router_get(uint64_t key)
+#else 
+static int router_get(uint32_t key)
+#endif
 {
+#if (INTERCEPT_MILLION_SUPPORT)
+    int           i, fd = 0, index;
+    uint32_t      high_key, low_key;
+    uint64_t      remainder;
+#else
     int           i, fd = 0, index, remainder;
+#endif
     route_slot_t *slot;
 
     table->searched++;
-    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+#if (INTERCEPT_MILLION_SUPPORT)
+    high_key =(uint32_t) (key << 32);
+    low_key =(uint32_t) key;
+
+    index = (int) ((high_key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
+    remainder = high_key & ROUTE_KEY_LOW_MASK;
+    remainder = (remainder << 32) + low_key;
+#else
+    index = (int) ((key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
     remainder = key & ROUTE_KEY_LOW_MASK;
+#endif
 
     if (table->cache[index].key == remainder) {
         table->hit++;
@@ -202,7 +256,11 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
 {
 #if (!TCPCOPY_SINGLE)
     int                     fd;
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint64_t                key;
+#else
     uint32_t                key;
+#endif
 #endif
     uint32_t                size_ip, size_tcp, tot_len;
     msg_server_t            msg;
