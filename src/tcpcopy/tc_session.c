@@ -403,7 +403,6 @@ send_faked_passive_rst(session_t *s)
     f_tcp_header->source  = htons(s->src_h_port);
     f_tcp_header->rst     = 1;
     f_tcp_header->ack     = 1;
-    f_tcp_header->ack_seq = s->vir_ack_seq;
 
     if (s->sm.fin_add_seq) {
         /* This is because of '++' in wrap_send_ip_packet */
@@ -1212,12 +1211,21 @@ send_reserved_packets(session_t *s)
                 break;
             }
 
-            if (s->sm.candidate_response_waiting) {
-                tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
-                break;
-            }
-            need_pause = true;
             cur_ack = ntohl(tcp_header->ack_seq);
+
+            if (s->sm.candidate_response_waiting) {
+                if (cur_ack != s->req_last_ack_sent_seq) {
+                    tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
+                    break;
+                } else {
+                    s->sm.candidate_response_waiting = 0;
+                    s->sm.req_no_resp = 1;
+                    tc_log_debug1(LOG_DEBUG, 0, "session continue:%u", 
+                            s->src_h_port);
+                }
+            }
+
+            need_pause = true;
             tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
                     cur_ack, s->req_ack_before_fin, s->src_h_port);
             server_closed_ack = s->req_ack_before_fin + 1;
@@ -1229,6 +1237,7 @@ send_reserved_packets(session_t *s)
                 s->sm.status |= CLIENT_FIN;
                 tc_log_debug1(LOG_DEBUG, 0, "active close from client:%u", 
                         s->src_h_port);
+                
             } else {
                 /* server active close */
                 tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
@@ -1971,7 +1980,6 @@ send_faked_third_handshake(session_t *s, tc_ip_header_t *ip_header,
     f_tcp_header->dest    = s->online_port;
 
     f_tcp_header->ack     = 1;
-    f_tcp_header->ack_seq = s->vir_ack_seq;
     f_tcp_header->seq     = tcp_header->ack_seq;
     
     tc_log_debug_trace(LOG_DEBUG, 0, FAKED_CLIENT_FLAG,
@@ -2013,7 +2021,6 @@ send_faked_ack(session_t *s, tc_ip_header_t *ip_header,
     f_ip_header->saddr    = ip_header->daddr;
     f_tcp_header->source  = tcp_header->dest;
     f_tcp_header->ack     = 1;
-    f_tcp_header->ack_seq = s->vir_ack_seq;
     if (active) {
         /* seq determined by session virtual next seq */
         f_tcp_header->seq = htonl(s->vir_next_seq);
@@ -2069,7 +2076,6 @@ send_faked_rst(session_t *s, tc_ip_header_t *ip_header,
         s->vir_ack_seq = tcp_header->seq;
     }
 
-    f_tcp_header->ack_seq = s->vir_ack_seq;
     f_tcp_header->seq = tcp_header->ack_seq;
     s->sm.unack_pack_omit_save_flag = 1;
     wrap_send_ip_packet(s, frame, false);
@@ -2789,8 +2795,8 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             return;
         }
 
-        if (s->sm.delay_sent_flag) {
-            tc_log_debug1(LOG_DEBUG, 0, "send delayed cont:%u", s->src_h_port);
+        if (s->sm.delay_sent_flag || s->sm.req_no_resp) {
+            tc_log_debug1(LOG_DEBUG, 0, "send delayed packets:%u", s->src_h_port);
             s->sm.delay_sent_flag = 0;
             send_reserved_packets(s);
             return;
@@ -2876,10 +2882,21 @@ process_client_fin(session_t *s, unsigned char *frame,
         tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)  
 {
     uint16_t cont_len;
+    uint32_t cur_ack;
 
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
     s->sm.recv_client_close = 1;
+
+    if (s->sm.candidate_response_waiting) {
+        cur_ack = ntohl(tcp_header->ack_seq);
+        if (cur_ack == s->req_last_ack_sent_seq) {
+            s->sm.candidate_response_waiting = 0;
+            s->sm.req_no_resp = 1;
+            tc_log_debug1(LOG_DEBUG, 0, "set candidate resp false :%u", 
+                    s->src_h_port);
+        }
+    }
 
     cont_len = TCP_PAYLOAD_LENGTH(ip_header, tcp_header);
     if (cont_len > 0) {
@@ -3523,7 +3540,7 @@ output_stat()
 
     if (run_time > 3) {
         if (resp_cont_cnt == 0) {
-            tc_log_info(LOG_WARN, 0, "no responses after %d secends",
+            tc_log_info(LOG_NOTICE, 0, "no responses after %d secends",
                         run_time);
         }
         if (sessions_table->total > 0) {

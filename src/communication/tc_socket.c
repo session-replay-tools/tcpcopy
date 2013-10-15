@@ -454,7 +454,7 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
 
     fd = nfq_fd(*h);
 
-    nfnl_rcvbufsiz(nfq_nfnlh(*h), 4096*4096);
+    nfnl_rcvbufsiz(nfq_nfnlh(*h), 16777216);
 
     return fd;
 }

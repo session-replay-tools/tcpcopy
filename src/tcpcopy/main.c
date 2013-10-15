@@ -365,7 +365,7 @@ output_for_debug(int argc, char **argv)
 {
     /* print out version info */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
-    tc_log_info(LOG_NOTICE, 0, "intercept internal version:%d", 
+    tc_log_info(LOG_NOTICE, 0, "tcpcopy internal version:%d", 
             INTERNAL_VERSION);
 
     /* print out target info */

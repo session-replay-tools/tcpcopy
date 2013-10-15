@@ -48,6 +48,7 @@ typedef struct sess_state_machine_s{
     uint32_t last_window_full:1;
     /* candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
+    uint32_t req_no_resp:1;
     uint32_t send_reserved_from_bak_payload:1;
     /* delay sent flag because of flow control */
     uint32_t delay_sent_flag:1;

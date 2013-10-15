@@ -113,8 +113,9 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
         if (tail_need_save) {
             slot->items[slot->num] = item;
         }
-
         slot->num++;
+    } else {
+        table->slot_full_cnt++;
     }
 }
 
@@ -136,7 +137,6 @@ router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
     table->total_sessions++;
 
     key = get_route_key(old, clt_ip, clt_port, target_ip, target_port);
-    tc_log_debug1(LOG_DEBUG, 0, "key:%llu", key);
 
 #if (INTERCEPT_MILLION_SUPPORT)
     high_key =(uint32_t) (key << 32);
@@ -149,6 +149,8 @@ router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
     index = (int) ((key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
     remainder = key & ROUTE_KEY_LOW_MASK;
 #endif
+    tc_log_debug3(LOG_DEBUG, 0, "key:%llu, index:%d, port:%u", 
+            key, index, ntohs(clt_port));
     table->cache[index].key = remainder; 
     table->cache[index].fd  = (uint16_t) fd; 
 
@@ -358,11 +360,12 @@ router_destroy()
 
     if (table != NULL) {
 
+        tc_log_info(LOG_NOTICE, 0, "session dropped:%llu,all sessions:%llu", 
+                table->slot_full_cnt, table->total_sessions);
         tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
                 table->hit, table->missed, table->lost);
-        tc_log_info(LOG_NOTICE, 0, 
-            "search:%llu,extra compared:%llu,all sessions:%llu", 
-            table->searched, table->extra_compared, table->total_sessions);
+        tc_log_info(LOG_NOTICE, 0, "search:%llu,extra compared:%llu", 
+            table->searched, table->extra_compared);
 
         memset(stat, 0, sizeof(int) * ROUTE_ARRAY_ACTIVE_NUM_RANGE);
         for (i = 0; i <  ROUTE_SLOTS; i++) {

@@ -21,6 +21,7 @@ typedef struct route_slot_s {
 
 
 typedef struct route_table_s {
+    uint64_t     slot_full_cnt;
     uint64_t     hit;
     uint64_t     missed;
     uint64_t     lost;
