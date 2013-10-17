@@ -2915,6 +2915,11 @@ process_client_fin(session_t *s, unsigned char *frame,
         }
 
     } else {
+
+        if (s->unsend_packets->size == 0) {
+            s->sm.req_no_resp = 1;
+        }
+
         save_packet(s->unsend_packets, ip_header, tcp_header);
     }
 
