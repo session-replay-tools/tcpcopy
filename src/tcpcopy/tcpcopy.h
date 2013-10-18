@@ -45,11 +45,11 @@ typedef struct xcopy_clt_settings {
 
     unsigned int  percentage:7;         /* percentage of the full flow that 
                                            will be tranfered to the backend */
-    unsigned int  session_timeout:16;   /* max value for session timeout.
+    unsigned int  target_localhost:1;
+    int           session_timeout;   /* max value for session timeout.
                                            If reaching this value, the session
                                            will be removed */
-    unsigned int  session_keepalive_timeout:16;  
-    unsigned int  target_localhost:1;
+    int           session_keepalive_timeout;  
 
     char         *raw_transfer;         /* online_ip online_port target_ip
                                            target_port string */

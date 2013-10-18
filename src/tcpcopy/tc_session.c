@@ -31,6 +31,8 @@ static uint64_t clt_cont_cnt         = 0;
 static uint64_t clt_packs_cnt        = 0;
 /* total client packets sent to backend */
 static uint64_t packs_sent_cnt       = 0;
+static uint64_t fin_sent_cnt         = 0;
+static uint64_t rst_sent_cnt         = 0;
 /* total client content packets sent to backend */
 static uint64_t con_packs_sent_cnt   = 0;
 /* total response packets */
@@ -275,9 +277,12 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
             s->sm.status = SYN_SENT;
             s->req_last_syn_seq = tcp_header->seq;
         } else {
+            fin_sent_cnt++;
             s->sm.fin_add_seq = 1;
         }
         s->vir_next_seq = s->vir_next_seq + 1;
+    } else if (tcp_header->rst) {
+        rst_sent_cnt++;
     }
 
     if (tcp_header->ack) {
@@ -1039,7 +1044,7 @@ send_reserved_packets(session_t *s)
 {
     int               count = 0, total_cont_sent = 0; 
     bool              need_pause = false, cand_pause = false,
-                      omit_transfer = false; 
+                      omit_transfer = false, need_check_who_close_first = true; 
 #if (TCPCOPY_PAPER)
     long              delay;
 #endif
@@ -1212,7 +1217,6 @@ send_reserved_packets(session_t *s)
             }
 
             cur_ack = ntohl(tcp_header->ack_seq);
-
             if (s->sm.candidate_response_waiting) {
                 if (cur_ack != s->req_last_ack_sent_seq) {
                     tc_log_debug1(LOG_DEBUG, 0, "wait resp:%u", s->src_h_port);
@@ -1222,27 +1226,34 @@ send_reserved_packets(session_t *s)
                     s->sm.req_no_resp = 1;
                     tc_log_debug1(LOG_DEBUG, 0, "session continue:%u", 
                             s->src_h_port);
+                    need_check_who_close_first = false;
+                    s->sm.src_closed = 1;
+                    s->sm.status |= CLIENT_FIN;
+                    tc_log_debug1(LOG_DEBUG, 0, "active close from clt:%u",
+                            s->src_h_port);
                 }
             }
 
             need_pause = true;
-            tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
-                    cur_ack, s->req_ack_before_fin, s->src_h_port);
-            server_closed_ack = s->req_ack_before_fin + 1;
-            if (s->req_ack_before_fin == cur_ack || 
-                    after(cur_ack, server_closed_ack))
-            {
-                /* active close from client */
-                s->sm.src_closed = 1;
-                s->sm.status |= CLIENT_FIN;
-                tc_log_debug1(LOG_DEBUG, 0, "active close from client:%u", 
-                        s->src_h_port);
-                
-            } else {
-                /* server active close */
-                tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
-                        s->src_h_port);
-                omit_transfer = true;
+            if (need_check_who_close_first) {
+                tc_log_debug3(LOG_DEBUG, 0, "cur ack:%u, record:%u, p:%u", 
+                        cur_ack, s->req_ack_before_fin, s->src_h_port);
+                server_closed_ack = s->req_ack_before_fin + 1;
+                if (s->req_ack_before_fin == cur_ack || 
+                        after(cur_ack, server_closed_ack))
+                {
+                    /* active close from client */
+                    s->sm.src_closed = 1;
+                    s->sm.status |= CLIENT_FIN;
+                    tc_log_debug1(LOG_DEBUG, 0, "active close from clt:%u",
+                            s->src_h_port);
+
+                } else {
+                    /* server active close */
+                    tc_log_debug1(LOG_DEBUG, 0, "server active close:%u", 
+                            s->src_h_port);
+                    omit_transfer = true;
+                }
             }
         } else if (cont_len == 0) {
 
@@ -2308,7 +2319,11 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
         }
 
         if (s->sm.src_closed && !tcp_header->fin) {
-            send_faked_ack(s, ip_header, tcp_header, true);
+            if (cont_len > 0) {
+                send_faked_ack(s, ip_header, tcp_header, true);
+            } else {
+                send_faked_rst(s, ip_header, tcp_header);
+            }
             return DISP_STOP;
         } else {
             /* simulaneous close */
@@ -2917,9 +2932,10 @@ process_client_fin(session_t *s, unsigned char *frame,
     } else {
 
         if (s->unsend_packets->size == 0) {
-            s->sm.req_no_resp = 1;
+            tc_log_debug1(LOG_DEBUG, 0, "fin,set delay send flag:%u", 
+                    s->src_h_port);
+            s->sm.delay_sent_flag = 1;
         }
-
         save_packet(s->unsend_packets, ip_header, tcp_header);
     }
 
@@ -3139,6 +3155,9 @@ check_wait_prev_packet(session_t *s, unsigned char *frame,
             /* retransmission packet from client */
             tc_log_debug1(LOG_DEBUG, 0, "retransmit from clt:%u",
                     s->src_h_port);
+            if (tcp_header->fin) {
+                s->sm.delay_sent_flag = 1;
+            }
             clt_con_retrans_cnt++;
         } else {
             diff = s->vir_next_seq - cur_seq;
@@ -3525,6 +3544,8 @@ output_stat()
             conn_cnt, resp_cnt, resp_cont_cnt);
     tc_log_info(LOG_NOTICE, 0, "send Packets:%llu,send content packets:%llu",
             packs_sent_cnt, con_packs_sent_cnt);
+    tc_log_info(LOG_NOTICE, 0, "send fin Packets:%llu,send reset packets:%llu",
+            fin_sent_cnt, rst_sent_cnt);
     tc_log_info(LOG_NOTICE, 0, "reconnect for closed :%llu,for no syn:%llu",
             recon_for_closed_cnt, recon_for_no_syn_cnt);
     tc_log_info(LOG_NOTICE, 0, "retransmit:%llu", retrans_cnt);

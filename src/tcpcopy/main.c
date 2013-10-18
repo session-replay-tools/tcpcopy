@@ -132,6 +132,7 @@ usage(void)
            "               be dropped by tcpcopy. When the response from the target server is\n"
            "               slow or the application protocol is context based, the value should \n"
            "               be set larger. The default value is 120 seconds.\n");
+    printf("-k <num>       set the session keepalive timeout limit.\n");
     printf("-l <file>      save the log information in <file>\n"
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
@@ -180,6 +181,7 @@ read_args(int argc, char **argv)
          "M:" /* MTU sent to backend */
          "S:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
+         "k:" /* set the session keepalive timeout limit */
 #if (TCPCOPY_DR)
          "s:" /* real servers running intercept*/
 #endif
@@ -261,6 +263,9 @@ read_args(int argc, char **argv)
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
                 break;
+            case 'k':
+                clt_settings.session_keepalive_timeout = atoi(optarg);
+                break;
             case 'h':
                 usage();
                 return -1;
@@ -338,6 +343,7 @@ read_args(int argc, char **argv)
                     case 'M':
                     case 'S':
                     case 't':
+                    case 'k':
                     case 'p':
                     case 'r':
                         fprintf(stderr, "tcpcopy: option -%c require a number\n",
@@ -746,10 +752,19 @@ set_details()
     rand_port = (int) ((rand_r(&seed) / (RAND_MAX + 1.0)) * 512);
     clt_settings.rand_port_shifted = rand_port;
 
-    clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
-        SESS_KEEPLIVE_ADD;
+    if (clt_settings.session_timeout < 0) {
+        clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    }
+    tc_log_info(LOG_NOTICE, 0, "session timeout:%d", 
+            clt_settings.session_timeout);
+
+    if (clt_settings.session_keepalive_timeout <= 0) {
+        clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
+            SESS_KEEPLIVE_ADD;
+    }
     tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
             clt_settings.session_keepalive_timeout);
+
 
     if (clt_settings.raw_clt_tf_ip != NULL) {
         /* print out raw_clt_tf_ip */
@@ -884,6 +899,7 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
+    clt_settings.session_keepalive_timeout = 0;
 #if (TCPCOPY_SINGLE)
     clt_settings.par_connections = 1;
 #else
