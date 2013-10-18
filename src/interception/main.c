@@ -255,7 +255,7 @@ read_args(int argc, char **argv) {
                 srv_settings.hash_size = (size_t) atoi(optarg);
                 break;
             case 'b':
-                srv_settings.binded_ip = optarg;
+                srv_settings.bound_ip = optarg;
                 break;
             case 'h':
                 usage();
@@ -440,7 +440,7 @@ settings_init(void)
 {
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
-    srv_settings.binded_ip = NULL;
+    srv_settings.bound_ip = NULL;
 }
 
 static void
@@ -528,7 +528,7 @@ main(int argc, char **argv)
         return -1;
     }
 
-    if (interception_init(&s_event_loop, srv_settings.binded_ip,
+    if (interception_init(&s_event_loop, srv_settings.bound_ip,
                           srv_settings.port) == TC_ERROR)
     {
         return -1;
