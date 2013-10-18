@@ -31,7 +31,7 @@ typedef struct xcopy_srv_settings {
     char                *raw_ip_list;    /* raw ip list */
 #endif
     char                *pid_file;       /* pid file */
-    char                *binded_ip;      /* binded ip for security */
+    char                *bound_ip;      /* bound ip for security */
     char                *log_path;       /* error log path */
 
 #if (INTERCEPT_NFQUEUE)   
