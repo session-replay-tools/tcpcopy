@@ -122,6 +122,13 @@ update_timestamp(session_t *s, tc_tcp_header_t *tcp_header)
                     tc_log_debug2(LOG_DEBUG, 0, "set ts reply:%u,p:%u", 
                             s->ts_ec_r, s->src_h_port);
                     bcopy((void *) &ts, (void *) (p + 6), sizeof(ts));
+                    ts = EXTRACT_32BITS(p + 2);
+                    if (ts < s->ts_value) {
+                        ts = htonl(s->ts_value);
+                        bcopy((void *) &ts, (void *) (p + 2), sizeof(ts));
+                    } else if (ts > s->ts_value) {
+                        s->ts_value = ts;
+                    }
                 }
                 return;
             case TCPOPT_NOP:
@@ -2419,6 +2426,7 @@ check_backend_ack(session_t *s, tc_ip_header_t *ip_header,
 static void 
 retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
 {
+    uint32_t       ts_value;
     unsigned int   opt, opt_len;
     unsigned char *p, *end;
 
@@ -2446,10 +2454,10 @@ retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
                     return;
                 }
                 if (direction == LOCAL) {
-                    s->ts_value = EXTRACT_32BITS(p + 2);
+                    ts_value = EXTRACT_32BITS(p + 2);
                 } else {
                     s->ts_ec_r  = EXTRACT_32BITS(p + 2);
-                    s->ts_value = EXTRACT_32BITS(p + 6);
+                    ts_value = EXTRACT_32BITS(p + 6);
                     if (tcp_header->syn) {
                         s->sm.timestamped = 1;
                         tc_log_debug1(LOG_DEBUG, 0, "timestamped,p=%u", 
@@ -2458,6 +2466,9 @@ retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
                     tc_log_debug3(LOG_DEBUG, 0, 
                             "get ts(client viewpoint):%u,%u,p:%u", 
                             s->ts_value, s->ts_ec_r, s->src_h_port);
+                }
+                if (ts_value > s->ts_value) {
+                    s->ts_value = ts_value;
                 }
                 p += opt_len;
             case TCPOPT_NOP:

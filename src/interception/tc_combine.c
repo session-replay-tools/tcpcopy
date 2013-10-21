@@ -37,6 +37,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
     }
 
     if (!fd_valid[fd]) {
+        tc_log_debug1(LOG_DEBUG, 0, "fd is not valid:%d", fd);
         return;
     }
 
@@ -61,6 +62,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             aggr->num = aggr->num + 1;
         } else {
             if (aggr->num == 0) {
+                tc_log_debug0(LOG_DEBUG, 0, "combined num is zero");
                 return;
             }
         }
