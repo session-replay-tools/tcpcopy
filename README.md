@@ -273,13 +273,15 @@ Here is an example.
 + 2012.07  version 0.5, support large packets (>MTU)
 + 2012.08  version 0.6, support offline replaying from pcap files to the target server
 + 2012.10  version 0.6.1, support intercept at multi-threading mode
-+ 2012.11  version 0.6.3, fix fast retransmitting problem
++ 2012.11  version 0.6.3, fix the fast retransmitting problem
 + 2012.11  version 0.6.5, support nfqueue
 + 2013.03  version 0.7.0, support lvs
 + 2013.06  version 0.8.0, support new configure option with "configure --enable-advanced" and optimize intercept
 + 2013.08  version 0.9.0, pcap injection is supported and GPLv2 code has been removed for mysql replay
-+ 2013.09  version 0.9.2, The compatibility check has been added and several bugs has been fixed.
-+ 2013.09  version 0.9.3, A new method has been added to solve the port confliction problem when using the ‘-c’ parameter.
++ 2013.09  version 0.9.2, the compatibility check has been added and several bugs has been fixed.
++ 2013.09  version 0.9.3, a new method has been added to solve the port confliction problem when using the ‘-c’ parameter.
++ 2013.10  version 0.9.5, fix many problems including the timestamp problem 
+
 
 
 ##Bugs and feature requests
