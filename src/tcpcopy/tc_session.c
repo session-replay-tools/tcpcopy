@@ -123,7 +123,7 @@ update_timestamp(session_t *s, tc_tcp_header_t *tcp_header)
                             s->ts_ec_r, s->src_h_port);
                     bcopy((void *) &ts, (void *) (p + 6), sizeof(ts));
                     ts = EXTRACT_32BITS(p + 2);
-                    if (before(ts, s->ts_value)) {
+                    if (ts < s->ts_value) {
                         tc_log_debug1(LOG_DEBUG, 0, "ts < history,p:%u",
                                 s->src_h_port);
                         ts = htonl(s->ts_value);
@@ -2469,7 +2469,7 @@ retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
                             "get ts(client viewpoint):%u,%u,p:%u", 
                             s->ts_value, s->ts_ec_r, s->src_h_port);
                 }
-                if (after(ts_value, s->ts_value)) {
+                if (ts_value > s->ts_value) {
                     tc_log_debug1(LOG_DEBUG, 0, "ts > history,p:%u",
                                 s->src_h_port);
                     s->ts_value = ts_value;
