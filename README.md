@@ -152,7 +152,7 @@ Two quick start options are available:
 	  
 	  Note that the filter format is the same as the pcap filter.
 	  For example:
-	  ./intercept -i eth0 -F 'tcp and src port 80' –d
+	  ./intercept -i eth0 -F 'tcp and src port 80' -d
 	  Intercept will capture response packets of the TCP based application which listens on port 80 
 	  from device eth0 
 	
