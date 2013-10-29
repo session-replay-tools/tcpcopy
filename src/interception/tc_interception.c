@@ -356,7 +356,8 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 #if (INTERCEPT_NFQUEUE)   
     /* init the nfq socket */
     if ((fd = tc_nfq_socket_init(&srv_settings.nfq_handler, 
-                    &srv_settings.nfq_q_handler, tc_nfq_process_packet)) 
+                    &srv_settings.nfq_q_handler, tc_nfq_process_packet, 
+                    srv_settings.max_queue_len)) 
             == TC_INVALID_SOCKET)
     {
         return TC_ERROR;

@@ -320,7 +320,7 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
     }
 #endif
 
-    tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+    tc_log_debug_trace(LOG_DEBUG, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
 #if (INTERCEPT_COMBINED)
 

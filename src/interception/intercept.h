@@ -37,6 +37,7 @@ typedef struct xcopy_srv_settings {
 #if (INTERCEPT_NFQUEUE)   
     struct nfq_handle   *nfq_handler;    /* NFQUEUE library handler */
     struct nfq_q_handle *nfq_q_handler;  /* NFQUEUE queue handler */
+    int                  max_queue_len;
 #endif
 
 #if (INTERCEPT_ADVANCED)

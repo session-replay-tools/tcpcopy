@@ -48,7 +48,7 @@ int tc_nl_socket_recv(int fd, char *buffer, size_t len);
 
 #else
 int tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
-        nfq_callback *cb);
+        nfq_callback *cb, int max_queue_len);
 int tc_nfq_socket_recv(int fd, char *buffer, size_t len, int *rv);
 #endif
 #endif

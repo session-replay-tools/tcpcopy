@@ -188,6 +188,10 @@ usage(void)
            "-l <file>      save log information in <file>\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
+#if (INTERCEPT_NFQUEUE) 
+    printf("-q <num>       set the maximal length of the nfnetlink queue if the kernel\n"
+           "               supports it.\n");
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
     printf("-i <device,>   The name of the interface to listen on.  This is usually a driver\n"
@@ -215,6 +219,9 @@ read_args(int argc, char **argv) {
          "t:" /* router item timeout */
          "s:" /* hash table size for intercept */
          "b:" /* binded ip address */
+#if (INTERCEPT_NFQUEUE) 
+         "q:" /* max queue length for nfqueue */
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
@@ -238,6 +245,11 @@ read_args(int argc, char **argv) {
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
                 break;
+#if (INTERCEPT_NFQUEUE) 
+            case 'q':
+                srv_settings.max_queue_len = atoi(optarg);
+                break;
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
             case 'i':
@@ -289,6 +301,9 @@ read_args(int argc, char **argv) {
                         break;
 
                     case 'p':
+#if (INTERCEPT_NFQUEUE)
+                    case 'q':
+#endif
                     case 's':
                         fprintf(stderr, "intercept: option -%c require a number\n", 
                                 optopt);
@@ -420,6 +435,12 @@ set_details()
 
 #endif
 
+#if (INTERCEPT_NFQUEUE)
+    if (srv_settings.max_queue_len <= 1024) {
+        srv_settings.max_queue_len = -1;
+    }
+#endif
+
     /* daemonize */
     if (srv_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
@@ -441,6 +462,9 @@ settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.bound_ip = NULL;
+#if (INTERCEPT_NFQUEUE)
+    srv_settings.max_queue_len = -1;
+#endif
 }
 
 static void
