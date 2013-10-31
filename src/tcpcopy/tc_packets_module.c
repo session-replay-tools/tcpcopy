@@ -571,12 +571,16 @@ tc_process_offline_packet(tc_event_timer_t *evt)
 static uint64_t
 timeval_diff(struct timeval *start, struct timeval *cur)
 {
-    uint64_t usec;
+    int64_t usec;
 
     usec  = (cur->tv_sec - start->tv_sec) * 1000000;
     usec += cur->tv_usec - start->tv_usec;
 
-    return usec;
+    if (usec < 0) {
+        return 0;
+    }
+
+    return (uint64_t) usec;
 }
 
 static bool
