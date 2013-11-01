@@ -10,8 +10,7 @@ typedef struct aggregation_s{
     unsigned char  aggr_resp[COMB_LENGTH];
 }aggregation_t;
 
-void set_fd_valid(int fd, bool valid);
-void buffer_and_send(int mfd, int fd, msg_server_t *msg);
+void buffer_and_send(int fd, msg_server_t *msg);
 void send_buffered_packets(time_t cur_time);
 void release_combined_resouces();
 #endif

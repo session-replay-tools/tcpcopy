@@ -131,9 +131,11 @@ delay_table_send(uint64_t key, int fd)
         msg = (first->data);
 
 #if (INTERCEPT_COMBINED)
-        buffer_and_send(fd, fd, msg);
+        buffer_and_send(fd, msg);
 #else
-        tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE);
+        if (tc_socket_send(fd, (char *) msg, MSG_SERVER_SIZE) == TC_ERROR) {
+            tc_intercept_close_tunnel(fd);
+        }
 #endif
         msg_delay_sent_cnt++;
 

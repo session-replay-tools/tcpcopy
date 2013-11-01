@@ -744,7 +744,6 @@ tc_socket_send(int fd, char *buffer, int len)
                 tc_log_info(LOG_NOTICE, errno, "fd:%d EAGAIN", fd);
             } else {
                 tc_log_info(LOG_ERR, errno, "fd:%d", fd);
-                tc_socket_close(fd);
                 return TC_ERROR;
             }
 

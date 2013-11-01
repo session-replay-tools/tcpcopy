@@ -3,28 +3,14 @@
 
 #if (INTERCEPT_COMBINED)
 static aggregation_t  *combined[MAX_FD_NUM];
-static bool            fd_valid[MAX_FD_NUM];
 static int             max_fd = 0;
 
-void 
-set_fd_valid(int fd, bool valid) {
-    if (fd > 0) {
-        fd_valid[fd] = valid;
-    }
-}
-
 void
-buffer_and_send(int mfd, int fd, msg_server_t *msg)
+buffer_and_send(int fd, msg_server_t *msg)
 {
     int                  ret = TC_OK, is_send = 0, bytes;
     unsigned char       *p;
     aggregation_t       *aggr;
-
-#if (TCPCOPY_SINGLE)
-    if (mfd == 0) {
-        return;
-    }
-#endif
 
     if (fd > max_fd) {
         max_fd = fd;
@@ -36,7 +22,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         return;
     }
 
-    if (!fd_valid[fd]) {
+    if (!srv_settings.tunnel[fd].fd_valid) {
         tc_log_debug1(LOG_DEBUG, 0, "fd is not valid:%d", fd);
         return;
     }
@@ -83,11 +69,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             p = (unsigned char *) (&(aggr->num));
             bytes = aggr->cur_write - aggr->aggr_resp + sizeof(aggr->num);
             tc_log_debug1(LOG_DEBUG, 0, "send bytes:%d", bytes);
-#if (!TCPCOPY_SINGLE)
             ret = tc_socket_send(fd, (char *) p, bytes);
-#else
-            ret = tc_socket_send(mfd, (char *) p, bytes);
-#endif
             aggr->num = 0;
             aggr->cur_write = aggr->aggr_resp;
         } 
@@ -96,7 +78,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         aggr->access_msec = tc_current_time_msec;
 
         if (ret == TC_ERROR) {
-            fd_valid[fd] = false;
+            tc_intercept_close_tunnel(fd);
             free(combined[fd]);
             combined[fd] = NULL;
         }
@@ -110,7 +92,7 @@ send_buffered_packets(time_t cur_time)
 
     for (i = 0; i <= max_fd; i++) {
         if (combined[i] != NULL) {
-            buffer_and_send(srv_settings.router_fd, i, NULL);
+            buffer_and_send(i, NULL);
         }
     }
 }

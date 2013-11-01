@@ -11,15 +11,14 @@ static uint32_t        seq = 1;
 static unsigned char   buffer[128];
 #endif
 
-static tunnel_basic_t  tunnel[MAX_FD_NUM];
-
 static int tc_msg_event_process(tc_event_t *rev);
 
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int         fd;
-    tc_event_t *ev;
+    int             fd;
+    tc_event_t     *ev;
+    tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
@@ -41,16 +40,15 @@ tc_msg_event_accept(tc_event_t *rev)
         return TC_ERROR;
     }
     
+    tunnel = srv_settings.tunnel;
+    tunnel[fd].ev = ev; 
     tunnel[fd].first_in = 1;
 #if (INTERCEPT_COMBINED)
-    set_fd_valid(fd, true); 
+    tunnel[fd].fd_valid = true;
 #endif
 
 #if (TCPCOPY_SINGLE)  
-    if (srv_settings.router_fd > 0) {
-        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
-    }
-    srv_settings.router_fd = fd;
+    tc_intercept_check_tunnel_for_single(fd);
 #endif
 
     return TC_OK;
@@ -59,13 +57,15 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    int          fd, version;
-    msg_client_t msg;
+    int             fd, version;
+    msg_client_t    msg;
+    tunnel_basic_t *tunnel;
 
     fd = rev->fd;
 
     memset(&msg, 0, sizeof(msg_client_t));
 
+    tunnel = srv_settings.tunnel;
     if (tunnel[fd].first_in) {
         if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
                 TC_ERROR) 
@@ -305,7 +305,7 @@ tc_nl_event_process(tc_event_t *rev)
         } else {
 
             tot_copy_resp_packs++;
-            router_update(srv_settings.old, srv_settings.router_fd, ip_hdr);
+            router_update(srv_settings.old, ip_hdr);
             /* drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }

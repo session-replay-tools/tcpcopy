@@ -22,6 +22,8 @@ typedef struct ip_port_pairs_t{
 #endif
 
 typedef struct tunnel_basic_t{
+    bool         fd_valid;
+    tc_event_t  *ev;
     unsigned int first_in:1;
     unsigned int clt_msg_size:16;
 }tunnel_basic_t;
@@ -52,13 +54,19 @@ typedef struct xcopy_srv_settings {
 
 #endif
 
-    int                  router_fd;
+    bool                 old;            /* old tcpcopy flag */
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
-    unsigned int         old:1;          /* old tcpcopy flag */
 #if (!INTERCEPT_ADVANCED)
     passed_ip_addr_t     passed_ips;     /* passed ip list */
+#endif
+    tunnel_basic_t       tunnel[MAX_FD_NUM];
+#if (TCPCOPY_SINGLE)
+    time_t               accepted_tunnel_time;
+    int                  s_fd_num;
+    int                  s_fd_index;
+    int                  s_router_fds[MAX_SINGLE_CONNECTION_NUM];
 #endif
 
 }xcopy_srv_settings;

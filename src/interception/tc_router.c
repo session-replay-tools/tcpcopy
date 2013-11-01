@@ -21,7 +21,7 @@ router_init()
 
 #if (INTERCEPT_MILLION_SUPPORT)
 static uint64_t
-get_route_key(int old, uint32_t clt_ip, uint16_t clt_port, 
+get_route_key(bool old, uint32_t clt_ip, uint16_t clt_port, 
         uint32_t target_ip, uint16_t target_port)
 {
     uint64_t value = clt_ip;
@@ -37,7 +37,7 @@ get_route_key(int old, uint32_t clt_ip, uint16_t clt_port,
 }
 #else
 static uint32_t
-get_route_key(int old, uint32_t clt_ip, uint16_t clt_port, 
+get_route_key(bool old, uint32_t clt_ip, uint16_t clt_port, 
         uint32_t target_ip, uint16_t target_port)
 {
     uint32_t value  = clt_port;
@@ -254,10 +254,10 @@ static int router_get(uint32_t key)
 
 
 void
-router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
+router_update(bool old, tc_ip_header_t *ip_header)
 {
-#if (!TCPCOPY_SINGLE)
     int                     fd;
+#if (!TCPCOPY_SINGLE)
 #if (INTERCEPT_MILLION_SUPPORT)
     uint64_t                key;
 #else
@@ -271,11 +271,7 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
     uint32_t                cont_len;
     unsigned char          *payload, *p;
 #endif
-#if (TCPCOPY_SINGLE)
-    if (main_router_fd == 0) {
-        return;
-    }
-#endif
+
     if (ip_header->protocol != IPPROTO_TCP) {
         tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
         return;
@@ -300,7 +296,13 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
         }
     }
 #endif 
-#if (!TCPCOPY_SINGLE)
+    
+#if (TCPCOPY_SINGLE)
+    fd = srv_settings.s_router_fds[srv_settings.s_fd_index];
+    srv_settings.s_fd_index = (srv_settings.s_fd_index + 1) % 
+        srv_settings.s_fd_num;
+
+#else
     key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
             ip_header->saddr, tcp_header->source);
     fd  = router_get(key);
@@ -323,20 +325,11 @@ router_update(int old, int main_router_fd, tc_ip_header_t *ip_header)
     tc_log_debug_trace(LOG_DEBUG, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
 #if (INTERCEPT_COMBINED)
-
-#if (!TCPCOPY_SINGLE)
-    buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+    buffer_and_send(fd, &msg);
 #else
-    buffer_and_send(main_router_fd, main_router_fd, &msg);
-#endif                       
-#else
-
-#if (!TCPCOPY_SINGLE)
-    tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
-#else
-    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
-#endif
-
+    if (tc_socket_send(fd, (char *) &msg, MSG_SERVER_SIZE) == TC_ERROR) {
+        tc_intercept_close_tunnel(fd);
+    }
 #endif
 
 }
