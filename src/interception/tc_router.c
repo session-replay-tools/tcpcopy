@@ -189,6 +189,7 @@ router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
 
 }
 
+#if (!TCPCOPY_SINGLE)
 #if (INTERCEPT_MILLION_SUPPORT)
 static int router_get(uint64_t key)
 #else 
@@ -251,6 +252,7 @@ static int router_get(uint32_t key)
     return -1;
 
 }
+#endif
 
 
 void

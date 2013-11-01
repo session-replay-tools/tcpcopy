@@ -197,7 +197,7 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
         } else {
 
             tot_copy_resp_packs++;
-            router_update(srv_settings.old, srv_settings.router_fd, ip_hdr);
+            router_update(srv_settings.old, ip_hdr);
 
             /* drop the packet */
             ret = nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
