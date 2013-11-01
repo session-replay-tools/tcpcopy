@@ -103,8 +103,11 @@ address_release()
                     fd = connections->fds[j];
                     if (fd > 0) {
                         tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
-                        connections->fds[j] = -1;
                         tc_socket_close(fd);
+                        tc_event_del(clt_settings.ev[fd]->loop, 
+                                clt_settings.ev[fd], TC_EVENT_READ);
+                        tc_event_destroy(clt_settings.ev[fd]);
+                        connections->fds[j] = -1;
                     }
                 }
                 free(connections);
@@ -169,16 +172,15 @@ tcp_copy_release_resources()
 
     destroy_for_sessions();
 
+#if (!TCPCOPY_DR)
+    address_release();
+#endif
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
 #if (TCPCOPY_DIGEST)
     tc_destroy_sha1();
     tc_destroy_digests();
-#endif
-
-#if (!TCPCOPY_DR)
-    address_release();
 #endif
 
     tc_log_end();

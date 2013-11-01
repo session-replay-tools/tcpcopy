@@ -2,26 +2,26 @@
 #include <intercept.h>
 
 void
-tc_intercept_close_fd(int fd, tc_event_t *rev)
+tc_intercept_release_tunnel(int fd, tc_event_t *rev)
 {
+    tc_log_info(LOG_NOTICE, 0, "release tunnel related resources, fd:%d", fd);
     tc_socket_close(fd);           
 #if (INTERCEPT_COMBINED)
-    if (fd > 0) {
-        srv_settings.tunnel[fd].fd_valid = false;
-    }
+    srv_settings.tunnel[fd].fd_valid = false;
+    free(srv_settings.tunnel[fd].combined);
+    srv_settings.tunnel[fd].combined = NULL;
 #endif
-    tc_log_info(LOG_NOTICE, 0, "close sock:%d", fd);
-    tc_event_del(rev->loop, rev, TC_EVENT_READ);
+    if (rev == NULL) {
+        tc_event_del(srv_settings.tunnel[fd].ev->loop, 
+                srv_settings.tunnel[fd].ev, TC_EVENT_READ);
+        tc_event_destroy(srv_settings.tunnel[fd].ev);
+        srv_settings.tunnel[fd].ev = NULL;
+    } else {
+        tc_event_del(rev->loop, rev, TC_EVENT_READ);
+        rev->events = TC_EVENT_NONE;
+    }
 }
 
-void
-tc_intercept_close_tunnel(int fd)
-{
-    tc_event_t *ev;
-
-    ev = srv_settings.tunnel[fd].ev;
-    tc_intercept_close_fd(fd, ev);
-}
 
 #if (TCPCOPY_SINGLE)  
 void tc_intercept_check_tunnel_for_single(int fd)
@@ -37,7 +37,7 @@ void tc_intercept_check_tunnel_for_single(int fd)
     if (diff > 3) {
         tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
         for (i = 0; i < srv_settings.s_fd_num; i++) {
-            tc_intercept_close_tunnel(fd);
+            tc_intercept_release_tunnel(fd, NULL);
         }
         srv_settings.s_fd_num = 0;
         srv_settings.s_fd_index = 0;
@@ -53,5 +53,17 @@ void tc_intercept_check_tunnel_for_single(int fd)
     }
 }
 #endif
+
+void 
+release_tunnel_resources()
+{
+    int i;
+
+    for (i = 0; i <= srv_settings.max_fd; i++) {
+        if (srv_settings.tunnel[i].fd_valid) {
+            tc_intercept_release_tunnel(i, NULL);
+        }   
+    }   
+}
 
 

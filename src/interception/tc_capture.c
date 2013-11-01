@@ -69,7 +69,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
 
@@ -90,7 +90,7 @@ tc_msg_event_process(tc_event_t *rev)
             if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
                         MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
             {
-                tc_intercept_close_fd(fd, rev);
+                tc_intercept_release_tunnel(fd, rev);
                 return TC_ERROR;
             }
             return TC_OK;
@@ -100,7 +100,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
     }
@@ -149,7 +149,7 @@ interception_output_stat(tc_event_timer_t *evt)
 void
 interception_push(tc_event_timer_t *evt)
 {
-    send_buffered_packets(tc_time());
+    send_buffered_packets();
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
 }
 #endif
@@ -437,9 +437,7 @@ void
 interception_over()
 {
     int i;
-#if (INTERCEPT_COMBINED)
-    release_combined_resouces();
-#endif
+
     router_destroy();
     delay_table_destroy();
 

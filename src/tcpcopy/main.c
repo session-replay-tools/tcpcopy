@@ -784,15 +784,11 @@ set_details()
         clt_settings.percentage = 0;
     }
 
-#if (TCPCOPY_SINGLE)
-    clt_settings.par_connections = 1;
-#else
     if (clt_settings.par_connections <= 0) {
         clt_settings.par_connections = 1;
     } else if (clt_settings.par_connections > MAX_CONNECTION_NUM) {
         clt_settings.par_connections = MAX_CONNECTION_NUM;
     }
-#endif
     tc_log_info(LOG_NOTICE, 0, "parallel connections per target:%d",
             clt_settings.par_connections);
 
@@ -900,11 +896,7 @@ settings_init()
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
     clt_settings.session_keepalive_timeout = 0;
-#if (TCPCOPY_SINGLE)
-    clt_settings.par_connections = 1;
-#else
     clt_settings.par_connections = 3;
-#endif
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
     
 #if (TCPCOPY_PCAP)

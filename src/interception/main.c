@@ -25,6 +25,7 @@ server_release_resources()
 {
     tc_log_info(LOG_WARN, 0, "sig %d received", tc_over); 
     tc_log_info(LOG_NOTICE, 0, "release_resources begin");
+    release_tunnel_resources();
     interception_over();
 
     tc_event_loop_finish(&s_event_loop);

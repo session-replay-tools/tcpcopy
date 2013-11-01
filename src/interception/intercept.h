@@ -21,11 +21,24 @@ typedef struct ip_port_pairs_t{
 
 #endif
 
+#if (INTERCEPT_COMBINED)
+typedef struct aggregation_s{
+    time_t         access_time;
+    long           access_msec;
+    unsigned char *cur_write;
+    uint16_t       num;
+    unsigned char  aggr_resp[COMB_LENGTH];
+}aggregation_t;
+#endif
+
 typedef struct tunnel_basic_t{
-    bool         fd_valid;
-    tc_event_t  *ev;
-    unsigned int first_in:1;
-    unsigned int clt_msg_size:16;
+    tc_event_t     *ev;
+#if (INTERCEPT_COMBINED)
+    aggregation_t  *combined;
+#endif
+    unsigned int    fd_valid:1;
+    unsigned int    first_in:1;
+    unsigned int    clt_msg_size:16; 
 }tunnel_basic_t;
 
 typedef struct xcopy_srv_settings {
@@ -62,11 +75,12 @@ typedef struct xcopy_srv_settings {
     passed_ip_addr_t     passed_ips;     /* passed ip list */
 #endif
     tunnel_basic_t       tunnel[MAX_FD_NUM];
+    int                  max_fd;
 #if (TCPCOPY_SINGLE)
     time_t               accepted_tunnel_time;
     int                  s_fd_num;
     int                  s_fd_index;
-    int                  s_router_fds[MAX_SINGLE_CONNECTION_NUM];
+    int                  s_router_fds[MAX_FD_NUM];
 #endif
 
 }xcopy_srv_settings;
