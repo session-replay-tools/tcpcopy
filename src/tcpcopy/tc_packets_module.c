@@ -559,7 +559,7 @@ tc_process_offline_packet(tc_event_timer_t *evt)
         send_packets_from_pcap(0);
     } else {
         diff = tc_time() - read_pcap_over_time;
-        if (diff > DEFAULT_SESSION_TIMEOUT) {
+        if (diff > OFFLINE_TAIL_TIMEOUT) {
             tc_over = SIGRTMAX;
             tc_log_info(LOG_NOTICE, 0, "offline replay is complete");
         }

@@ -4,10 +4,15 @@
 void
 tc_intercept_release_tunnel(int fd, tc_event_t *rev)
 {
+    if (!srv_settings.tunnel[fd].fd_valid) {
+        tc_log_info(LOG_WARN, 0, "already released, fd:%d", fd);
+        return;
+    }
+
     tc_log_info(LOG_NOTICE, 0, "release tunnel related resources, fd:%d", fd);
     tc_socket_close(fd);           
-#if (INTERCEPT_COMBINED)
     srv_settings.tunnel[fd].fd_valid = false;
+#if (INTERCEPT_COMBINED)
     free(srv_settings.tunnel[fd].combined);
     srv_settings.tunnel[fd].combined = NULL;
 #endif
@@ -26,7 +31,7 @@ tc_intercept_release_tunnel(int fd, tc_event_t *rev)
 #if (TCPCOPY_SINGLE)  
 void tc_intercept_check_tunnel_for_single(int fd)
 {
-    int i, diff;
+    int i, diff, old_fd;
 
     if (srv_settings.accepted_tunnel_time == 0) {
         srv_settings.accepted_tunnel_time = tc_current_time_sec;
@@ -37,7 +42,10 @@ void tc_intercept_check_tunnel_for_single(int fd)
     if (diff > 3) {
         tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
         for (i = 0; i < srv_settings.s_fd_num; i++) {
-            tc_intercept_release_tunnel(fd, NULL);
+            old_fd = srv_settings.s_router_fds[i];
+            if (srv_settings.tunnel[old_fd].fd_valid) {
+                tc_intercept_release_tunnel(old_fd, NULL);
+            }
         }
         srv_settings.s_fd_num = 0;
         srv_settings.s_fd_index = 0;

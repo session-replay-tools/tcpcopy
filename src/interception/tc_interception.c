@@ -30,6 +30,10 @@ tc_msg_event_accept(tc_event_t *rev)
         return TC_ERROR;
     }
 
+#if (TCPCOPY_SINGLE)  
+    tc_intercept_check_tunnel_for_single(fd);
+#endif   
+
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
         tc_log_info(LOG_ERR, 0, "msg event create failed.");
@@ -39,16 +43,12 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
-    
+ 
     tunnel = srv_settings.tunnel;
     tunnel[fd].ev = ev; 
     tunnel[fd].first_in = 1;
 #if (INTERCEPT_COMBINED)
     tunnel[fd].fd_valid = true;
-#endif
-
-#if (TCPCOPY_SINGLE)  
-    tc_intercept_check_tunnel_for_single(fd);
 #endif
 
     return TC_OK;

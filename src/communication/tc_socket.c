@@ -532,7 +532,7 @@ tc_socket_set_nonblocking(int fd)
         return TC_ERROR;
     }
 
-    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         return TC_ERROR;
     }
 
