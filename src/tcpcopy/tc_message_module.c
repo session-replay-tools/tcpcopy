@@ -111,7 +111,7 @@ tc_process_server_msg(tc_event_t *rev)
 
         if (clt_settings.real_servers.active_num == 0) {
             if (!clt_settings.lonely) {
-                tc_over = 1;
+                tc_over = SIGRTMAX;
             }
         } 
         return TC_OK;

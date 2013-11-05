@@ -300,9 +300,18 @@ router_update(bool old, tc_ip_header_t *ip_header)
 #endif 
     
 #if (TCPCOPY_SINGLE)
-    fd = srv_settings.s_router_fds[srv_settings.s_fd_index];
-    srv_settings.s_fd_index = (srv_settings.s_fd_index + 1) % 
-        srv_settings.s_fd_num;
+    if (srv_settings.s_fd_num > 0) {
+        fd = srv_settings.s_router_fds[srv_settings.s_fd_index];
+        if (fd <= 0) {
+            tc_log_info(LOG_WARN, 0, "fd is not valid");
+            return;
+        }
+        srv_settings.s_fd_index = (srv_settings.s_fd_index + 1) % 
+            srv_settings.s_fd_num;
+    } else {
+        tc_log_debug0(LOG_DEBUG, 0, "no valid fd for sending resp");
+        return;
+    }
 
 #else
     key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
