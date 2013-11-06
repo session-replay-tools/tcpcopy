@@ -48,9 +48,7 @@ tc_msg_event_accept(tc_event_t *rev)
     tunnel = srv_settings.tunnel;
     tunnel[fd].ev = ev;
     tunnel[fd].first_in = 1;
-#if (INTERCEPT_COMBINED)
-    tunnel[fd].fd_valid = true;
-#endif
+    tunnel[fd].fd_valid = 1;
 
     return TC_OK;
 }

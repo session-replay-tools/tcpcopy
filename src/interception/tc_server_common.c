@@ -11,7 +11,7 @@ tc_intercept_release_tunnel(int fd, tc_event_t *rev)
 
     tc_log_info(LOG_NOTICE, 0, "release tunnel related resources, fd:%d", fd);
     tc_socket_close(fd);           
-    srv_settings.tunnel[fd].fd_valid = false;
+    srv_settings.tunnel[fd].fd_valid = 0;
 #if (INTERCEPT_COMBINED)
     free(srv_settings.tunnel[fd].combined);
     srv_settings.tunnel[fd].combined = NULL;
