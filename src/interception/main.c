@@ -28,6 +28,8 @@ server_release_resources()
     release_tunnel_resources();
     interception_over();
 
+    finally_release_obsolete_events();
+
     tc_event_loop_finish(&s_event_loop);
 
     tc_log_info(LOG_NOTICE, 0, "release_resources end except log file");

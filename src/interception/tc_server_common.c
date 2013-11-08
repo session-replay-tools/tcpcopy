@@ -13,17 +13,24 @@ tc_intercept_release_tunnel(int fd, tc_event_t *rev)
     tc_socket_close(fd);           
     srv_settings.tunnel[fd].fd_valid = 0;
 #if (INTERCEPT_COMBINED)
-    free(srv_settings.tunnel[fd].combined);
-    srv_settings.tunnel[fd].combined = NULL;
+    if (srv_settings.tunnel[fd].combined != NULL) {
+        free(srv_settings.tunnel[fd].combined);
+        srv_settings.tunnel[fd].combined = NULL;
+    } else {
+        tc_log_info(LOG_NOTICE, 0, "crazy here, combined is null, fd:%d", fd);
+    }
 #endif
     if (rev == NULL) {
-        tc_event_del(srv_settings.tunnel[fd].ev->loop, 
-                srv_settings.tunnel[fd].ev, TC_EVENT_READ);
-        tc_event_destroy(srv_settings.tunnel[fd].ev);
-        srv_settings.tunnel[fd].ev = NULL;
+        if (srv_settings.tunnel[fd].ev == NULL) {
+            tc_log_info(LOG_NOTICE, 0, "crazy here, ev is null, fd:%d", fd);
+        } else {
+            tc_event_del(srv_settings.tunnel[fd].ev->loop, 
+                    srv_settings.tunnel[fd].ev, TC_EVENT_READ);
+            tc_event_destroy(srv_settings.tunnel[fd].ev, 1);
+            srv_settings.tunnel[fd].ev = NULL;
+        }
     } else {
         tc_event_del(rev->loop, rev, TC_EVENT_READ);
-        rev->events = TC_EVENT_NONE;
     }
 }
 

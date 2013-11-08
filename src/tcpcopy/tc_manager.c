@@ -106,7 +106,7 @@ address_release()
                         tc_socket_close(fd);
                         tc_event_del(clt_settings.ev[fd]->loop, 
                                 clt_settings.ev[fd], TC_EVENT_READ);
-                        tc_event_destroy(clt_settings.ev[fd]);
+                        tc_event_destroy(clt_settings.ev[fd], 0);
                         connections->fds[j] = -1;
                     }
                 }
