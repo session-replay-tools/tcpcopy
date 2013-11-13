@@ -578,7 +578,7 @@ timeval_diff(struct timeval *start, struct timeval *cur)
     usec += cur->tv_usec - start->tv_usec;
 
     if (usec < 0) {
-        tc_log_info(LOG_NOTICE, 0, "usec is less than 0:%llu", usec);
+        tc_log_info(LOG_NOTICE, 0, "usec is less than 0:%lld", usec);
         return 0;
     }
 
