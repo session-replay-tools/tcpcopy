@@ -573,10 +573,12 @@ timeval_diff(struct timeval *start, struct timeval *cur)
 {
     int64_t usec;
 
-    usec  = (cur->tv_sec - start->tv_sec) * 1000000;
+    usec  = cur->tv_sec - start->tv_sec;
+    usec  = usec * 1000000;
     usec += cur->tv_usec - start->tv_usec;
 
     if (usec < 0) {
+        tc_log_info(LOG_NOTICE, 0, "usec is less than 0:%llu", usec);
         return 0;
     }
 
