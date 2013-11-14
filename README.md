@@ -265,22 +265,23 @@ Here is an example.
 
 
 ##Release History
-+ 2011.09  version 0.1, TCPCopy released
-+ 2011.11  version 0.2, fix some bugs
-+ 2011.12  version 0.3, support mysql copy 
-+ 2012.04  version 0.3.5, add support for multiple copies of the source request
-+ 2012.05  version 0.4, fix some bugs 
-+ 2012.07  version 0.5, support large packets (>MTU)
-+ 2012.08  version 0.6, support offline replaying from pcap files to the target server
-+ 2012.10  version 0.6.1, support intercept at multi-threading mode
-+ 2012.11  version 0.6.3, fix the fast retransmitting problem
-+ 2012.11  version 0.6.5, support nfqueue
-+ 2013.03  version 0.7.0, support lvs
-+ 2013.06  version 0.8.0, support new configure option with "configure --enable-advanced" and optimize intercept
-+ 2013.08  version 0.9.0, pcap injection is supported and GPLv2 code has been removed for mysql replay
-+ 2013.09  version 0.9.2, the compatibility check has been added and several bugs has been fixed.
-+ 2013.09  version 0.9.3, a new method has been added to solve the port confliction problem when using the ‘-c’ parameter.
-+ 2013.10  version 0.9.5, fix many problems including the timestamp problem 
++ 2011.09  v0.1    TCPCopy released
++ 2011.11  v0.2    fix some bugs
++ 2011.12  v0.3    support mysql copy 
++ 2012.04  v0.3.5  add support for multiple copies of the source request
++ 2012.05  v0.4    fix some bugs 
++ 2012.07  v0.5    support large packets (>MTU)
++ 2012.08  v0.6    support offline replaying from pcap files to the target server
++ 2012.10  v0.6.1  support intercept at multi-threading mode
++ 2012.11  v0.6.3  fix the fast retransmitting problem
++ 2012.11  v0.6.5  support nfqueue
++ 2013.03  v0.7.0  support lvs
++ 2013.06  v0.8.0  support new configure option with "configure --enable-advanced" and optimize intercept
++ 2013.08  v0.9.0  support pcap injection, remove GPLv2 code for mysql replay and fix some bugs
++ 2013.09  v0.9.2  add the compatibility check and fix several bugs.
++ 2013.09  v0.9.3  solve the port confliction problem with the '-c' parameter.
++ 2013.10  v0.9.5  fix many problems including the timestamp problem 
++ 2013.11  v0.9.6  support setting the maximal length of the nfnetlink queue and fix some bugs
 
 
 
