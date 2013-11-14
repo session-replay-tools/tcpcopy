@@ -121,7 +121,7 @@ usage(void)
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
-           "               The maximum value allowed is 16(default 3 connections since 0.8.0).\n");
+           "               The maximum value allowed is 16(default 2 connections).\n");
 #if (TCPCOPY_DR)
     printf("-s <server,>   intercept server list\n"
            "               Format:\n"
@@ -896,7 +896,7 @@ settings_init()
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
     clt_settings.session_keepalive_timeout = 0;
-    clt_settings.par_connections = 3;
+    clt_settings.par_connections = 2;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
     
 #if (TCPCOPY_PCAP)
