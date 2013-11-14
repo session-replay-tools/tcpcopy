@@ -279,7 +279,6 @@ Here is an example.
 + 2013.06  v0.8.0  support new configure option with "configure --enable-advanced" and optimize intercept
 + 2013.08  v0.9.0  support pcap injection, remove GPLv2 code for mysql replay and fix some bugs
 + 2013.09  v0.9.2  add the compatibility check and fix several bugs.
-+ 2013.09  v0.9.3  solve the port confliction problem with the '-c' parameter.
 + 2013.10  v0.9.5  fix many problems including the timestamp problem 
 + 2013.11  v0.9.6  support setting the maximal length of the nfnetlink queue and fix some bugs
 
