@@ -19,17 +19,42 @@ router_init()
     return TC_OK;
 }
 
-inline uint32_t
-get_route_key(uint32_t ip, uint16_t port)
+#if (INTERCEPT_MILLION_SUPPORT)
+static uint64_t
+get_route_key(bool old, uint32_t clt_ip, uint16_t clt_port, 
+        uint32_t target_ip, uint16_t target_port)
 {
-    uint32_t value = port;
+    uint64_t value = clt_ip;
+    uint64_t l_clt_port = clt_port;
 
-    value = (value << 16) + ip + port;
+    value = (value << 16) + (l_clt_port << 48);
+
+    if (!old) {
+        value = value + target_ip + target_port;
+    }
 
     return value;
 }
+#else
+static uint32_t
+get_route_key(bool old, uint32_t clt_ip, uint16_t clt_port, 
+        uint32_t target_ip, uint16_t target_port)
+{
+    uint32_t value  = clt_port;
+    uint32_t l_target_port = target_port;
 
-static inline void router_update_adjust(route_slot_t *slot, int child) 
+    value = (value << 16) + clt_ip + clt_port;
+    if (!old) {
+        value = value + target_ip + (l_target_port << 24) + 
+            (l_target_port << 8) + target_port;
+    }
+
+    return value;
+}
+#endif
+
+static void 
+router_update_adjust(route_slot_t *slot, int child) 
 {
     int          parent;
     route_item_t tmp;
@@ -46,13 +71,17 @@ static inline void router_update_adjust(route_slot_t *slot, int child)
     return;
 }
 
-
+#if (INTERCEPT_MILLION_SUPPORT)
+static void router_add_adjust(route_slot_t *slot, uint64_t key, int fd) 
+#else
 static void router_add_adjust(route_slot_t *slot, int key, int fd) 
+#endif
 {
     int          i, tail_need_save;
-    route_item_t item, tmp;
+    route_item_t item = {0, 0, 0}, tmp;
 
     tail_need_save = 0;
+
     if (slot->num > 0) {
         item = slot->items[0];
         if (slot->num == 1) {
@@ -84,26 +113,44 @@ static void router_add_adjust(route_slot_t *slot, int key, int fd)
         if (tail_need_save) {
             slot->items[slot->num] = item;
         }
-
         slot->num++;
+    } else {
+        table->slot_full_cnt++;
     }
 }
 
+
 /* add item to the router table */
 void
-router_add(uint32_t ip, uint16_t port, int fd)
+router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip, 
+        uint16_t target_port, int fd)
 {
-    int           i, max, existed, index, remainder;
-    uint32_t      key;
+    int           i, max, existed, index;
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint32_t      high_key, low_key;
+    uint64_t      key, remainder;
+#else
+    uint32_t      key, remainder;
+#endif
     route_slot_t *slot;
 
     table->total_sessions++;
 
-    key = get_route_key(ip, port);
+    key = get_route_key(old, clt_ip, clt_port, target_ip, target_port);
 
-    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+#if (INTERCEPT_MILLION_SUPPORT)
+    high_key =(uint32_t) (key << 32);
+    low_key =(uint32_t) key;
+
+    index = (int) ((high_key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
+    remainder = high_key & ROUTE_KEY_LOW_MASK;
+    remainder = (remainder << 32) + low_key;
+#else
+    index = (int) ((key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
     remainder = key & ROUTE_KEY_LOW_MASK;
-
+#endif
+    tc_log_debug3(LOG_DEBUG, 0, "key:%llu, index:%d, port:%u", 
+            key, index, ntohs(clt_port));
     table->cache[index].key = remainder; 
     table->cache[index].fd  = (uint16_t) fd; 
 
@@ -138,19 +185,38 @@ router_add(uint32_t ip, uint16_t port, int fd)
         router_update_adjust(slot, i);
     }
 
-    delay_table_send(get_key(ip, port), fd);
+    delay_table_send(key, fd);
 
 }
 
-int
-router_get(uint32_t key)
+#if (!TCPCOPY_SINGLE)
+#if (INTERCEPT_MILLION_SUPPORT)
+static int router_get(uint64_t key)
+#else 
+static int router_get(uint32_t key)
+#endif
 {
+#if (INTERCEPT_MILLION_SUPPORT)
+    int           i, fd = 0, index;
+    uint32_t      high_key, low_key;
+    uint64_t      remainder;
+#else
     int           i, fd = 0, index, remainder;
+#endif
     route_slot_t *slot;
 
     table->searched++;
-    index = (key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT;
+#if (INTERCEPT_MILLION_SUPPORT)
+    high_key =(uint32_t) (key << 32);
+    low_key =(uint32_t) key;
+
+    index = (int) ((high_key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
+    remainder = high_key & ROUTE_KEY_LOW_MASK;
+    remainder = (remainder << 32) + low_key;
+#else
+    index = (int) ((key & ROUTE_KEY_HIGH_MASK) >> ROUTE_KEY_SHIFT);
     remainder = key & ROUTE_KEY_LOW_MASK;
+#endif
 
     if (table->cache[index].key == remainder) {
         table->hit++;
@@ -166,7 +232,7 @@ router_get(uint32_t key)
             break;
         }
         table->extra_compared++;
-#if 0
+#if 1
         if (slot->items[i].timestamp == 0) {
             tc_log_info(LOG_WARN, 0, "in get, visit %d null timestamp, all:%d",
                     i + 1, slot->num);
@@ -186,28 +252,28 @@ router_get(uint32_t key)
     return -1;
 
 }
+#endif
 
 
 void
-router_update(int main_router_fd, tc_ip_header_t *ip_header)
+router_update(bool old, tc_ip_header_t *ip_header)
 {
-#if (!TCPCOPY_SINGLE)
     int                     fd;
+#if (!TCPCOPY_SINGLE)
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint64_t                key;
+#else
     uint32_t                key;
 #endif
-    uint32_t                size_ip, size_tcp, new_size_tcp,
-                            tot_len, new_tot_len;
+#endif
+    uint32_t                size_ip, size_tcp, tot_len;
     msg_server_t            msg;
     tc_tcp_header_t        *tcp_header;
 #if (TCPCOPY_MYSQL_ADVANCED)
     uint32_t                cont_len;
     unsigned char          *payload, *p;
 #endif
-#if (TCPCOPY_SINGLE)
-    if (main_router_fd == 0) {
-        return;
-    }
-#endif
+
     if (ip_header->protocol != IPPROTO_TCP) {
         tc_log_info(LOG_INFO, 0, "this is not a tcp packet");
         return;
@@ -219,62 +285,62 @@ router_update(int main_router_fd, tc_ip_header_t *ip_header)
     tot_len  = ntohs(ip_header->tot_len);
 
     memset(&msg, 0, sizeof(struct msg_server_s));
-    new_size_tcp = size_tcp;
-    if (size_tcp > TCP_HEADER_MIN_LEN) {
-        if (tcp_header->syn) {
-            set_wscale(tcp_header);
-        } else {
-            tcp_header->doff = (sizeof(tc_tcp_header_t)) >> 2; 
-        }
-        new_size_tcp = tcp_header->doff << 2;
-        new_tot_len = tot_len - (size_tcp - new_size_tcp);
-        ip_header->tot_len = htons(new_tot_len);
-    }
     memcpy((void *) &(msg.ip_header), ip_header, sizeof(tc_ip_header_t));
-    memcpy((void *) &(msg.tcp_header), tcp_header, new_size_tcp);
+    memcpy((void *) &(msg.tcp_header), tcp_header, size_tcp);
 
 #if (TCPCOPY_MYSQL_ADVANCED)
     cont_len = tot_len - size_ip - size_tcp;
     if (cont_len > 0) {
         payload = (unsigned char *) ((char *) tcp_header + size_tcp);
         if (cont_len <= MAX_PAYLOAD_LEN) {
-            p = ((unsigned char *) &(msg.tcp_header)) + new_size_tcp;
+            p = ((unsigned char *) &(msg.tcp_header)) + size_tcp;
             memcpy((void *) p, payload, cont_len);
         }
     }
 #endif 
-#if (!TCPCOPY_SINGLE)
-    key = get_route_key(ip_header->daddr, tcp_header->dest);
+    
+#if (TCPCOPY_SINGLE)
+    if (srv_settings.s_fd_num > 0) {
+        fd = srv_settings.s_router_fds[srv_settings.s_fd_index];
+        if (fd <= 0) {
+            tc_log_info(LOG_WARN, 0, "fd is not valid");
+            return;
+        }
+        srv_settings.s_fd_index = (srv_settings.s_fd_index + 1) % 
+            srv_settings.s_fd_num;
+    } else {
+        tc_log_debug0(LOG_DEBUG, 0, "no valid fd for sending resp");
+        return;
+    }
+
+#else
+    key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
+            ip_header->saddr, tcp_header->source);
     fd  = router_get(key);
     if (fd <= 0) {
-        if (!tcp_header->syn) {
+        if (tcp_header->syn || tcp_header->rst) {
+            if (tcp_header->rst) {
+                tc_log_info(LOG_NOTICE, 0, "reset from tcp");
+            } 
+            tc_log_debug0(LOG_DEBUG, 0, "fd is null");
+            delay_table_add(key, &msg);
+            return ;
+        } else {
             tc_log_info(LOG_NOTICE, 0, "fd is null after session is created");
             tc_log_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
             return;
         }
-        tc_log_debug0(LOG_DEBUG, 0, "fd is null");
-        delay_table_add(key, &msg);
-        return ;
     }
 #endif
 
-    tc_log_debug_trace(LOG_NOTICE, 0,  BACKEND_FLAG, ip_header, tcp_header);
+    tc_log_debug_trace(LOG_DEBUG, 0,  BACKEND_FLAG, ip_header, tcp_header);
 
 #if (INTERCEPT_COMBINED)
-
-#if (!TCPCOPY_SINGLE)
-    buffer_and_send(main_router_fd, (int) (long) fd, &msg);
+    buffer_and_send(fd, &msg);
 #else
-    buffer_and_send(main_router_fd, main_router_fd, &msg);
-#endif                       
-#else
-
-#if (!TCPCOPY_SINGLE)
-    tc_socket_send((int) (long) fd, (char *) &msg, MSG_SERVER_SIZE);
-#else
-    tc_socket_send(main_router_fd, (char *) &msg, MSG_SERVER_SIZE);
-#endif
-
+    if (tc_socket_send(fd, (char *) &msg, MSG_SERVER_SIZE) == TC_ERROR) {
+        tc_intercept_release_tunnel(fd, NULL);
+    }
 #endif
 
 }
@@ -298,11 +364,12 @@ router_destroy()
 
     if (table != NULL) {
 
+        tc_log_info(LOG_NOTICE, 0, "session dropped:%llu,all sessions:%llu", 
+                table->slot_full_cnt, table->total_sessions);
         tc_log_info(LOG_NOTICE, 0, "cache hit:%llu,missed:%llu,lost:%llu", 
                 table->hit, table->missed, table->lost);
-        tc_log_info(LOG_NOTICE, 0, 
-            "search:%llu,extra compared:%llu,all sessions:%llu", 
-            table->searched, table->extra_compared, table->total_sessions);
+        tc_log_info(LOG_NOTICE, 0, "search:%llu,extra compared:%llu", 
+            table->searched, table->extra_compared);
 
         memset(stat, 0, sizeof(int) * ROUTE_ARRAY_ACTIVE_NUM_RANGE);
         for (i = 0; i <  ROUTE_SLOTS; i++) {

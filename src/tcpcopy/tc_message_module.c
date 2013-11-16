@@ -42,9 +42,12 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
         return TC_INVALID_SOCKET;
     }
 
+    clt_settings.ev[fd] = ev;
+
     if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_INVALID_SOCKET;
     }
+
 
     return fd;
 }
@@ -76,6 +79,7 @@ tc_process_server_msg(tc_event_t *rev)
     {
         tc_log_info(LOG_ERR, 0, "Recv socket(%d)error", rev->fd);
         tc_log_info(LOG_ERR, 0, "server may be closed or");
+        tc_log_info(LOG_ERR, 0, "backend TCP/IP kernel memeory is too low or");
         tc_log_info(LOG_ERR, 0, 
                 "the version of intercept may not be equal to the version of tcpcopy");
 #if (TCPCOPY_DR)
@@ -85,12 +89,15 @@ tc_process_server_msg(tc_event_t *rev)
             connections = &(clt_settings.real_servers.connections[i]);
             for (j = 0; j < connections->num; j++) {
                 if (connections->fds[j] == rev->fd) {
-                    tc_socket_close(rev->fd);
-                    tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-                    tc_event_del(rev->loop, rev, TC_EVENT_READ);
-                    connections->num--;
-
-                    if (connections->num == 0 && 
+                    if (connections->fds[j] > 0) {
+                        tc_socket_close(connections->fds[j]);
+                        tc_log_info(LOG_NOTICE, 0, "close sock:%d", 
+                                connections->fds[j]);
+                        tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                        connections->fds[j] = -1;
+                        connections->remained_num--;
+                    }
+                    if (connections->remained_num == 0 && 
                             clt_settings.real_servers.active[i]) 
                     {
                         clt_settings.real_servers.active[i] = 0;
@@ -102,24 +109,26 @@ tc_process_server_msg(tc_event_t *rev)
             }
         }
 
-
         if (clt_settings.real_servers.active_num == 0) {
-            return TC_ERR_EXIT;
-        } else {
-            return TC_OK;
-        }
+            if (!clt_settings.lonely) {
+                tc_over = SIGRTMAX;
+            }
+        } 
+        return TC_OK;
 #else 
+        tc_event_del(rev->loop, rev, TC_EVENT_READ);
+
         return TC_ERR_EXIT;
 #endif
     }
 
 #if (!TCPCOPY_COMBINED)
-    process((char *) &msg, REMOTE);
+    process_out((unsigned char *) &msg);
 #else
     tc_log_debug1(LOG_DEBUG, 0, "resp packets:%d", num);
     p = aggr_resp + sizeof(uint16_t);
     for (k = 0; k < num; k++) {
-        process((char *) p, REMOTE);
+        process_out(p);
         p = p + MSG_SERVER_SIZE;
     }
 #endif

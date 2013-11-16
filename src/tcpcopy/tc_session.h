@@ -4,16 +4,22 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-#define FAKE_IP_DATAGRAM_LEN 40
-#define FAKE_SYN_IP_DATAGRAM_LEN 44
 #define IP_HEADER_LEN sizeof(tc_ip_header_t)
 #define TCP_HEADER_MIN_LEN sizeof(tc_tcp_header_t)
+
+#define FAKE_FRAME_LEN (60 + ETHERNET_HDR_LEN)
+#define FAKE_MIN_IP_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_MIN_VALUE << 2))
+#define FAKE_IP_TS_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_TS_VALUE << 2))
+#define FAKE_SYN_IP_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_MSS_VALUE << 2))
+#define FAKE_SYN_IP_TS_DATAGRAM_LEN (IP_HEADER_LEN + (TCP_HEADER_DOFF_WS_TS_VALUE << 2))
+
 
 /* global functions */
 void init_for_sessions();
 void destroy_for_sessions();
-bool process(char *packet, int pack_src);
-bool is_packet_needed(const char *packet);
+bool process_in(unsigned char *frame);
+bool process_out(unsigned char *packet);
+bool is_packet_needed(unsigned char *packet);
 void tc_interval_dispose(tc_event_timer_t *evt);
 void output_stat();
 
@@ -42,6 +48,7 @@ typedef struct sess_state_machine_s{
     uint32_t last_window_full:1;
     /* candidate response waiting flag */
     uint32_t candidate_response_waiting:1;
+    uint32_t req_no_resp:1;
     uint32_t send_reserved_from_bak_payload:1;
     /* delay sent flag because of flow control */
     uint32_t delay_sent_flag:1;
@@ -58,6 +65,7 @@ typedef struct sess_state_machine_s{
      * including backend already closed
      */
     uint32_t req_halfway_intercepted:1;
+    uint32_t timestamped:1;
     /* This indicates if the syn packets from backend is received */
     uint32_t resp_syn_received:1;
     /* session candidate erased flag */
@@ -90,8 +98,8 @@ typedef struct sess_state_machine_s{
     uint32_t mysql_req_login_received:1;
     /* This indicates if the session has prepare statment */
     uint32_t mysql_prepare_stat:1;
-    /* This indicates if the first excution is met */
-    uint32_t mysql_first_excution:1;
+    /* This indicates if the first execution is met */
+    uint32_t mysql_first_execution:1;
 #endif
 
 }sess_state_machine_t;
@@ -112,6 +120,8 @@ typedef struct session_s{
     /* online ip address(network byte order) */
     uint32_t online_addr;
     uint32_t srv_window;
+    uint32_t ts_ec_r;
+    uint32_t ts_value;
     uint16_t wscale;
     /* orginal src or client port(network byte order, never changed) */
     uint16_t orig_src_port;
@@ -187,7 +197,9 @@ typedef struct session_s{
     /* mysql executed times for COM_QUERY(in COM_STMT_PREPARE situation) */
     uint32_t mysql_execute_times:8;
 #endif
- 
+    unsigned char *src_mac;
+    unsigned char *dst_mac;
+
     link_list *unsend_packets;
     link_list *next_sess_packs;
     link_list *unack_packets;

@@ -33,13 +33,15 @@ int tc_select_destroy(tc_event_loop_t *loop)
     int                       i;
     tc_event_t               *event;
     tc_select_multiplex_io_t *io;
-    
+
     io = loop->io;
 
     for (i = 0; i < io->last; i++) {
         event = io->evs[i];
         if (event->fd > 0) {
-            close(event->fd);
+            tc_log_info(LOG_NOTICE, 0, "tc_select_destroy, close fd:%d", 
+                    event->fd);
+            tc_socket_close(event->fd);
         }
         event->fd = -1;
         free(event);
@@ -73,7 +75,7 @@ int tc_select_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
     } else {
         return TC_EVENT_ERROR;
     }
-        
+
     if (io->max_fd != -1 && ev->fd > io->max_fd) {
         io->max_fd = ev->fd;
     }
@@ -147,6 +149,9 @@ int tc_select_polling(tc_event_loop_t *loop, long to)
                  &timeout);
 
     if (ret == -1) {
+        if (errno == EINTR) {
+           return TC_EVENT_AGAIN;
+        }
         return TC_EVENT_ERROR;
     }
 

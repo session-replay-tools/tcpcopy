@@ -1,6 +1,8 @@
 /*
  *  TCPCopy
- *  An online replication tool for TCP based applications
+ *  A request replication tool for TCP based applications 
+ *  Or
+ *  A TCP stream replay tool(from client side)
  *
  *  Copyright 2011 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.
@@ -35,10 +37,11 @@ static void
 usage(void)
 {
     printf("tcpcopy " VERSION "\n");
+#if (!TCPCOPY_PCAP_SEND)
     printf("-x <transfer,> use <transfer,> to specify the IPs and ports of the source and target\n"
            "               servers. Suppose 'sourceIP' and 'sourcePort' are the IP and port \n"
-           "               number of the source server you want to copy from, 'targetIP' and \n"
-           "               'targetPort' are the IP and port number of the target server you want\n"
+           "               number of the source server you want to copy from, 'targetIP' and \n");
+    printf("               'targetPort' are the IP and port number of the target server you want\n"
            "               to send requests to, the format of <transfer,> could be as follows:\n"
            "               'sourceIP:sourcePort-targetIP:targetPort,...'. Most of the time,\n");
     printf("               sourceIP could be omitted and thus <transfer,> could also be:\n"
@@ -46,27 +49,42 @@ usage(void)
            "               port number are segmented by ':' (colon), the sourcePort and the\n");
     printf("               targetIP are segmented by '-', and two 'transfer's are segmented by\n"
            "               ',' (comma). For example, './tcpcopy -x 80-192.168.0.2:18080' would\n"
-           "               copy requests from TCP port '80' on current server to the target port\n"
+           "               copy requests from port '80' on current server to the target port\n"
            "               '18080' of the target IP '192.168.0.2'.\n");
-    printf("-c <ip_addr>   change the localhost client IP to this IP address when sending to the\n"
+#else
+    printf("-x <transfer,> use <transfer,> to specify the IPs, ports and MAC addresses of\n"
+           "               the source and target. The format of <transfer,> could be as follow:\n");
+    printf("               'sourceIP:sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n"
+           "               Most of the time, sourceIP could be omitted and thus <transfer,> could\n"
+           "               also be: sourcePort@sourceMac-targetIP:targetPort@targetMac,...'.\n");
+    printf("               Note that sourceMac is the MAC address of the interface where \n"
+           "               packets are going out and targetMac is the next hop's MAC address.\n");
+#endif
+    printf("-c <ip_addr,>  change the client IP to one of IP addresses when sending to the\n"
            "               target server. For example,\n"
            "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
-           "               '192.168.0.1' when client IP is localhost.\n");
+           "               '192.168.0.1'.\n");
 #if (TCPCOPY_OFFLINE)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
-           "               enable-offline mode)\n");
+           "               enable-offline mode).\n");
     printf("-a <num>       accelerated times for offline replay\n");
     printf("-I <num>       set the threshold interval for offline replay acceleration\n"
-           "               in millisecond\n");
+           "               in millisecond.\n");
 #endif
 #if (TCPCOPY_PCAP)
-    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
-           "               name followed by a unit number,for example eth0 for the first\n"
+    printf("-i <device,>   The name of the interface to listen on. This is usually a driver\n"
+           "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
-    printf("-F <filter>    user filter\n");
+    printf("-F <filter>    user filter (same as pcap filter)\n");
+    printf("-B <num>       buffer size for pcap capture in megabytes(default 16M)\n");
+#endif
+#if (TCPCOPY_PCAP_SEND)
+    printf("-o <device,>   The name of the interface to send. This is usually a driver\n"
+           "               name followed by a unit number, for example eth0 for the first\n"
+           "               Ethernet interface.\n");
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
@@ -103,22 +121,26 @@ usage(void)
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
-           "               The maximum value allowed is 16(default 3 connections since 0.8.0)\n");
+           "               The maximum value allowed is 16(default 2 connections).\n");
 #if (TCPCOPY_DR)
-    printf("-s <iplist,>   real server ip addresses behind lvs\n"
+    printf("-s <server,>   intercept server list\n"
            "               Format:\n"
-           "               ip_addr1, ip_addr2 ...\n");
+           "               ip_addr1:port1, ip_addr2:port2, ...\n");
 #endif
     printf("-t <num>       set the session timeout limit. If tcpcopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by tcpcopy. When the response from the target server is\n"
            "               slow or the application protocol is context based, the value should \n"
-           "               be set larger. The default value is 60 seconds\n");
+           "               be set larger. The default value is 120 seconds.\n");
+    printf("-k <num>       set the session keepalive timeout limit.\n");
     printf("-l <file>      save the log information in <file>\n"
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
-    printf("-P <file>      save PID in <file>, only used with -d option\n"
-           "-h             print this help and exit\n"
+    printf("-P <file>      save PID in <file>, only used with -d option\n");
+#if (TCPCOPY_DR)
+    printf("-L             lonely for tcpcopy when intercept is closed\n");
+#endif
+    printf("-h             print this help and exit\n"
            "-v             version\n"
            "-d             run as a daemon\n");
 }
@@ -142,6 +164,10 @@ read_args(int argc, char **argv)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
          "F:" /* <filter> */
+         "B:" 
+#endif
+#if (TCPCOPY_PCAP_SEND)
+         "o:" /* <device,> */
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
          "u:" /* user password pair for mysql */
@@ -155,11 +181,15 @@ read_args(int argc, char **argv)
          "M:" /* MTU sent to backend */
          "S:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
+         "k:" /* set the session keepalive timeout limit */
 #if (TCPCOPY_DR)
-         "s:" /* real server ip addresses behind lvs */
+         "s:" /* real servers running intercept*/
 #endif
          "l:" /* error log file */
          "P:" /* save PID in file */
+#if (TCPCOPY_DR)
+         "L"  /* lonely */
+#endif
          "h"  /* help, licence info */
          "v"  /* version */
          "d"  /* daemon mode */
@@ -169,7 +199,7 @@ read_args(int argc, char **argv)
                 clt_settings.raw_transfer = optarg;
                 break;
             case 'c':
-                clt_settings.lo_tf_ip = inet_addr(optarg);
+                clt_settings.raw_clt_tf_ip = optarg;
                 break;
 #if (TCPCOPY_OFFLINE)
             case 'i':
@@ -182,6 +212,11 @@ read_args(int argc, char **argv)
                 clt_settings.interval = atoi(optarg);
                 break;
 #endif
+#if (TCPCOPY_PCAP_SEND)
+            case 'o':
+                clt_settings.output_if_name = optarg;
+                break;
+#endif
 #if (TCPCOPY_PCAP)
             case 'i':
                 clt_settings.raw_device = optarg;
@@ -189,6 +224,10 @@ read_args(int argc, char **argv)
             case 'F':
                 clt_settings.user_filter = optarg;
                 break;
+            case 'B':
+                clt_settings.buffer_size = 1024 * 1024 * atoi(optarg);
+                break;
+
 #endif
 #if (TCPCOPY_MYSQL_ADVANCED)
             case 'u':
@@ -202,7 +241,7 @@ read_args(int argc, char **argv)
                 clt_settings.factor = atoi(optarg);
                 break;
             case 'm':
-                clt_settings.max_rss = 1024*atoi(optarg);
+                clt_settings.max_rss = 1024 * atoi(optarg);
                 break;
             case 'C':
                 clt_settings.par_connections = atoi(optarg);
@@ -218,11 +257,14 @@ read_args(int argc, char **argv)
                 break;
 #if (TCPCOPY_DR)
             case 's':
-                clt_settings.raw_rs_ip_list = optarg;
+                clt_settings.raw_rs_list = optarg;
                 break;
 #endif
             case 't':
                 clt_settings.session_timeout = atoi(optarg);
+                break;
+            case 'k':
+                clt_settings.session_keepalive_timeout = atoi(optarg);
                 break;
             case 'h':
                 usage();
@@ -233,6 +275,11 @@ read_args(int argc, char **argv)
             case 'd':
                 clt_settings.do_daemonize = 1;
                 break;
+#if (TCPCOPY_DR)
+            case 'L':
+                clt_settings.lonely = 1;
+                break;
+#endif 
             case 'p':
                 clt_settings.srv_port = atoi(optarg);
                 break;
@@ -269,6 +316,12 @@ read_args(int argc, char **argv)
                                 optopt);
                         break;
 #endif
+#if (TCPCOPY_PCAP_SEND)
+                    case 'o':
+                        fprintf(stderr, "tcpcopy: option -%c require a device name\n",
+                                optopt);
+                        break;
+#endif
 #if (TCPCOPY_DR)
                     case 's':
                         fprintf(stderr, "tcpcopy: option -%c require an ip address list\n",
@@ -278,10 +331,19 @@ read_args(int argc, char **argv)
 
                     case 'n':
                     case 'f':
+                    case 'C':
+#if (TCPCOPY_OFFLINE)
+                    case 'a':
+                    case 'I':
+#endif
+#if (TCPCOPY_PCAP)
+                    case 'B':
+#endif
                     case 'm':
                     case 'M':
                     case 'S':
                     case 't':
+                    case 'k':
                     case 'p':
                     case 'r':
                         fprintf(stderr, "tcpcopy: option -%c require a number\n",
@@ -309,6 +371,9 @@ output_for_debug(int argc, char **argv)
 {
     /* print out version info */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "tcpcopy internal version:%d", 
+            INTERNAL_VERSION);
+
     /* print out target info */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
 
@@ -343,19 +408,49 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_ADVANCED mode");
 #endif
+#if (TCPCOPY_PCAP_SEND)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP_SEND mode");
+#endif
+#if (TCPCOPY_MILLION_SUPPORT)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MILLION_SUPPORT mode");
+#endif
 #if (HAVE_PCAP_CREATE)
     tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true, new pap");
 #endif
 
 
-
 }
 
-static void
-parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
+
+static unsigned char 
+char_to_data(const char ch)
 {
-    char    *seq, *ip_s, *port_s;
+    if (ch >= '0' && ch <= '9') {
+        return ch - '0';
+    }
+
+    if (ch >= 'a' && ch <= 'f') {
+        return ch - 'a' + 10;
+    }
+
+    if (ch >= 'A' && ch <= 'Z') {
+        return ch - 'A' + 10;
+    }
+
+    return 0;
+}
+
+static int 
+parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port, 
+        unsigned char *mac)
+{
+    int      i, len;
+    char    *p, *seq, *before_mac, *ip_s, *port_s;
     uint16_t tmp_port;
+
+    if ((before_mac = strchr(addr, '@')) != NULL) {
+        *before_mac = '\0';
+    }
 
     if ((seq = strchr(addr, ':')) == NULL) {
         tc_log_info(LOG_NOTICE, 0, "set global port for tcpcopy");
@@ -372,6 +467,26 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port)
 
     tmp_port = atoi(port_s);
     *port = htons(tmp_port);
+
+    if (before_mac != NULL) {
+        p = before_mac + 1;
+        len = strlen(p);
+        
+        if (len < ETHER_ADDR_STR_LEN) {
+            tc_log_info(LOG_WARN, 0, "mac address is too short:%d", len);
+            return -1;
+        }
+
+        for (i = 0; i < ETHER_ADDR_LEN; ++i) {
+            mac[i]  = char_to_data(*p++) << 4;
+            mac[i] += char_to_data(*p++);
+            p++;
+        }   
+
+        *before_mac = '@';
+    }
+
+    return 0;
 }
 
 /*
@@ -394,12 +509,10 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     addr1 = addr;
     addr2 = seq + 1;
 
-    parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port);
-    parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port);
-
-    if (clt_settings.lo_tf_ip == 0) {
-        clt_settings.lo_tf_ip = ip_port->online_ip;
-    }
+    parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port,
+            ip_port->src_mac);
+    parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port,
+            ip_port->dst_mac);
 
     if (ip_port->target_ip == LOCALHOST) {
         clt_settings.target_localhost = 1;
@@ -486,25 +599,36 @@ retrieve_target_addresses(char *raw_transfer,
 static int retrieve_real_servers() 
 {
     int          count = 0;
-    char         tmp[32];
-    size_t       len;
-    uint32_t     address;
-    const char  *split, *p;
+    char        *split, *p, *seq, *port_s;
+    uint16_t     port;
+    uint32_t     ip;
 
-    memset(tmp, 0, 32);
-    p = clt_settings.raw_rs_ip_list;
+    p = clt_settings.raw_rs_list;
 
     while (true) {
         split = strchr(p, ',');
         if (split != NULL) {
-            len = (size_t) (split - p);
-        } else {
-            len = strlen(p);
+            *split = '\0';
         }
 
-        strncpy(tmp, p, len);
-        address = inet_addr(tmp);
-        clt_settings.real_servers.ips[count++] = address;
+        if ((seq = strchr(p, ':')) == NULL) {
+            tc_log_info(LOG_NOTICE, 0, "set only ip for tcpcopy");
+            port  = 0;
+            ip = inet_addr(p);
+        } else {
+            port_s = seq + 1;
+            *seq = '\0';
+            ip = inet_addr(p);
+            port = atoi(port_s);
+            *seq = ':';
+        }
+
+        if (split != NULL) {
+            *split = ',';
+        }
+
+        clt_settings.real_servers.ips[count] = ip;
+        clt_settings.real_servers.ports[count++] = port;
 
         if (count == MAX_REAL_SERVERS) {
             tc_log_info(LOG_WARN, 0, "reach the limit for real servers");
@@ -517,7 +641,6 @@ static int retrieve_real_servers()
             p = split + 1;
         }
 
-        memset(tmp, 0, 32);
     }
 
     clt_settings.real_servers.num = count;
@@ -570,6 +693,48 @@ extract_filter()
 }
 #endif
 
+static int 
+retrieve_clt_tf_ips() 
+{
+    int          count = 0;
+    char        *split, *p;
+    uint32_t     ip;
+
+    p = clt_settings.raw_clt_tf_ip;
+
+    while (true) {
+        split = strchr(p, ',');
+        if (split != NULL) {
+            *split = '\0';
+        }
+
+        ip = inet_addr(p);
+
+        if (split != NULL) {
+            *split = ',';
+        }
+
+        clt_settings.clt_tf_ip[count++] = ip;
+
+        if (count == M_IP_NUM) {
+            tc_log_info(LOG_WARN, 0, "reach the limit for clt_tf_ip");
+            break;
+        }
+
+        if (split == NULL) {
+            break;
+        } else {
+            p = split + 1;
+        }
+
+    }
+
+    clt_settings.clt_tf_ip_num = count;
+
+    return 1;
+}
+
+
 static int
 set_details()
 {
@@ -584,8 +749,29 @@ set_details()
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
-    rand_port = (int) ((rand_r(&seed)/(RAND_MAX + 1.0))*512);
+    rand_port = (int) ((rand_r(&seed) / (RAND_MAX + 1.0)) * 512);
     clt_settings.rand_port_shifted = rand_port;
+
+    if (clt_settings.session_timeout < 0) {
+        clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    }
+    tc_log_info(LOG_NOTICE, 0, "session timeout:%d", 
+            clt_settings.session_timeout);
+
+    if (clt_settings.session_keepalive_timeout <= 0) {
+        clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
+            SESS_KEEPLIVE_ADD;
+    }
+    tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
+            clt_settings.session_keepalive_timeout);
+
+
+    if (clt_settings.raw_clt_tf_ip != NULL) {
+        /* print out raw_clt_tf_ip */
+        tc_log_info(LOG_NOTICE, 0, "raw_clt_tf_ip:%s", 
+                clt_settings.raw_clt_tf_ip);
+        retrieve_clt_tf_ips();
+    }
 
     /* set the ip port pair mapping according to settings */
     if (retrieve_target_addresses(clt_settings.raw_transfer,
@@ -622,6 +808,16 @@ set_details()
 
     if (clt_settings.interval > 0) {
         clt_settings.interval = clt_settings.interval * 1000;
+    }
+#endif
+
+#if (TCPCOPY_PCAP_SEND)
+    if (clt_settings.output_if_name != NULL) {
+        tc_log_info(LOG_NOTICE, 0, "output device:%s", 
+                clt_settings.output_if_name);
+    } else {
+        tc_log_info(LOG_ERR, 0, "output device is null");
+        return -1;
     }
 #endif
 
@@ -665,9 +861,9 @@ set_details()
 
 #if (TCPCOPY_DR)
     /* retrieve real server ip addresses  */
-    if (clt_settings.raw_rs_ip_list != NULL) {
+    if (clt_settings.raw_rs_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "s parameter:%s", 
-                clt_settings.raw_rs_ip_list);
+                clt_settings.raw_rs_list);
         retrieve_real_servers();
     } else {
         tc_log_info(LOG_WARN, 0, "no real server ip addresses");
@@ -699,8 +895,16 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
-    clt_settings.par_connections = 3;
+    clt_settings.session_keepalive_timeout = 0;
+    clt_settings.par_connections = 2;
     clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    
+#if (TCPCOPY_PCAP)
+    clt_settings.buffer_size = TCPCOPY_PCAP_BUF_SIZE;
+#endif
+#if (TCPCOPY_PCAP_SEND)
+    clt_settings.output_if_name = NULL;
+#endif
 
     tc_raw_socket_out = TC_INVALID_SOCKET;
 
@@ -723,7 +927,7 @@ set_timer()
 int
 main(int argc, char **argv)
 {
-    int ret;
+    int ret, is_continue = 1;
 
     settings_init();
 
@@ -761,23 +965,40 @@ main(int argc, char **argv)
         return -1;
     }
 
-    ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
-    if (ret == TC_EVENT_ERROR) {
-        tc_log_info(LOG_ERR, 0, "event loop init failed");
+#if (TCPCOPY_MYSQL_ADVANCED) 
+    tc_init_digests();
+    if (!tc_init_sha1()) {
         return -1;
     }
-
-    ret = tcp_copy_init(&event_loop);
-    if (ret == TC_ERROR) {
-        exit(EXIT_FAILURE);
-    }
+#endif
 
     if (set_timer() == -1) {
         return -1;
     }
 
-    /* run now */
-    tc_event_process_cycle(&event_loop);
+    ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
+    if (ret == TC_EVENT_ERROR) {
+        tc_log_info(LOG_ERR, 0, "event loop init failed");
+        is_continue = 0;
+    } 
+
+    if (is_continue) {
+        ret = tcp_copy_init(&event_loop);
+        if (ret == TC_ERROR) {
+            is_continue = 0;
+        }   
+    }
+
+    if (is_continue) {
+        if (set_timer() == -1) {
+            is_continue = 0;
+        }   
+    }
+
+    if (is_continue) {
+        /* run now */
+        tc_event_process_cycle(&event_loop);
+    }
 
     tcp_copy_release_resources();
 

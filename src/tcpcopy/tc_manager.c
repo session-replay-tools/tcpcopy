@@ -103,7 +103,11 @@ address_release()
                     fd = connections->fds[j];
                     if (fd > 0) {
                         tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
-                        close(fd);
+                        tc_socket_close(fd);
+                        tc_event_del(clt_settings.ev[fd]->loop, 
+                                clt_settings.ev[fd], TC_EVENT_READ);
+                        tc_event_destroy(clt_settings.ev[fd], 0);
+                        connections->fds[j] = -1;
                     }
                 }
                 free(connections);
@@ -168,11 +172,15 @@ tcp_copy_release_resources()
 
     destroy_for_sessions();
 
+#if (!TCPCOPY_DR)
+    address_release();
+#endif
     tc_event_loop_finish(&event_loop);
     tc_log_info(LOG_NOTICE, 0, "tc_event_loop_finish over");
 
-#if (!TCPCOPY_DR)
-    address_release();
+#if (TCPCOPY_DIGEST)
+    tc_destroy_sha1();
+    tc_destroy_digests();
 #endif
 
     tc_log_end();
@@ -191,13 +199,20 @@ tcp_copy_release_resources()
 #endif
 
 #if (TCPCOPY_OFFLINE)
-    pcap_close(clt_settings.pcap);
+    if (clt_settings.pcap != NULL) {
+        pcap_close(clt_settings.pcap);
+        clt_settings.pcap = NULL;
+    }
 #endif
 
     if (tc_raw_socket_out > 0) {
-        close(tc_raw_socket_out);
-        tc_raw_socket_out = -1;
+        tc_socket_close(tc_raw_socket_out);
+        tc_raw_socket_out = TC_INVALID_SOCKET;
     }
+
+#if (TCPCOPY_PCAP_SEND)
+    tc_pcap_over();
+#endif
 
     if (clt_settings.transfer.mappings != NULL) {
 
@@ -216,20 +231,33 @@ tcp_copy_over(const int sig)
     tc_over = sig;
 }
 
-/* initiate TCPCopy client */
-int
-tcp_copy_init(tc_event_loop_t *event_loop)
+static bool send_version(int fd) {
+    msg_client_t    msg;
+
+    memset(&msg, 0, sizeof(msg_client_t));
+    msg.client_ip = htonl(0);
+    msg.client_port = htons(0);
+    msg.type = htons(INTERNAL_VERSION);
+
+    if (tc_socket_send(fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
+        tc_log_info(LOG_ERR, 0, "send version error:%d", fd);
+        return false;
+    }
+
+    return true;
+}
+
+static int
+connect_to_server(tc_event_loop_t *event_loop)
 {
     int                      i, j, fd;
     uint32_t                 target_ip;
+#if (TCPCOPY_DR)
+    uint16_t                 target_port;
+#else
     ip_port_pair_mapping_t  *pair, **mappings;
+#endif
 
-    /* register some timer */
-    tc_event_timer_add(event_loop, 60000, check_resource_usage);
-    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
-
-    /* init session table */
-    init_for_sessions();
 
 #if (TCPCOPY_DR)
     /* 
@@ -239,27 +267,44 @@ tcp_copy_init(tc_event_loop_t *event_loop)
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
         target_ip = clt_settings.real_servers.ips[i];
+        target_port = clt_settings.real_servers.ports[i];
+        if (target_port == 0) {
+            target_port = clt_settings.srv_port;
+        }
+
+        if (clt_settings.real_servers.active[i] != 0) {
+            continue;
+        }
+
+        clt_settings.real_servers.connections[i].num = 0;
+        clt_settings.real_servers.connections[i].remained_num = 0;
 
         for (j = 0; j < clt_settings.par_connections; j++) {
-            fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
+            fd = tc_message_init(event_loop, target_ip, target_port);
             if (fd == TC_INVALID_SOCKET) {
                 return TC_ERROR;
             }
+
+            if (!send_version(fd)) {
+                return TC_ERROR;
+            }
+
             if (j == 0) {
                 clt_settings.real_servers.active_num++;
                 clt_settings.real_servers.active[i] = 1;
             }
+
             clt_settings.real_servers.connections[i].fds[j] = fd;
             clt_settings.real_servers.connections[i].num++;
+            clt_settings.real_servers.connections[i].remained_num++;
+
         }
 
         tc_log_info(LOG_NOTICE, 0, "add dr tunnels for exchanging info:%u:%u",
-                ntohl(target_ip), clt_settings.srv_port);
+                target_ip, target_port);
     }
 
 #else
-    address_init();
-#endif
 
     mappings = clt_settings.transfer.mappings;
     for (i = 0; i < clt_settings.transfer.num; i++) {
@@ -267,19 +312,68 @@ tcp_copy_init(tc_event_loop_t *event_loop)
         pair = mappings[i];
         target_ip = pair->target_ip;
 
-#if (!TCPCOPY_DR)
         for ( j = 0; j < clt_settings.par_connections; j++) {
             fd = tc_message_init(event_loop, target_ip, clt_settings.srv_port);
             if (fd == TC_INVALID_SOCKET) {
                 return TC_ERROR;
             }
 
+            if (!send_version(fd)) {
+                return TC_ERROR;
+            }
+
             address_add_sock(pair->online_ip, pair->online_port, fd);
+
         }
-#endif
 
         tc_log_info(LOG_NOTICE, 0, "add tunnels for exchanging info:%u:%u",
-                    ntohl(target_ip), clt_settings.srv_port);
+                    target_ip, clt_settings.srv_port);
+    }
+
+#endif
+
+    return TC_OK;
+
+
+}
+
+#if (TCPCOPY_DR)
+static void 
+restore_work(tc_event_timer_t *evt) 
+{
+    connect_to_server(&event_loop);
+
+    evt->msec = tc_current_time_msec + 10000;
+
+    clt_settings.tries++;
+}
+#endif
+
+
+/* initiate TCPCopy client */
+int
+tcp_copy_init(tc_event_loop_t *event_loop)
+{
+
+    /* register some timer */
+    tc_event_timer_add(event_loop, 60000, check_resource_usage);
+    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
+
+#if (TCPCOPY_DR)
+    if (clt_settings.lonely) {
+        tc_event_timer_add(event_loop, 10000, restore_work);
+    }
+#endif
+
+    /* init session table */
+    init_for_sessions();
+
+#if (!TCPCOPY_DR)
+    address_init();
+#endif
+
+    if (connect_to_server(event_loop) == TC_ERROR) {
+        return TC_ERROR;
     }
 
     /* init packets for processing */

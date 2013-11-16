@@ -1,19 +1,23 @@
 #include <xcopy.h>
 #include <intercept.h>
 
+
 static uint64_t        tot_copy_resp_packs = 0; 
 static uint64_t        tot_resp_packs = 0; 
+static uint64_t        tot_router_items = 0; 
 #if (TCPCOPY_PCAP)
 static  pcap_t        *pcap_map[MAX_FD_NUM];
 #endif
 
 static int tc_msg_event_process(tc_event_t *rev);
 
+
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int         fd;
-    tc_event_t *ev;
+    int             fd;
+    tc_event_t     *ev;
+    tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
@@ -27,6 +31,10 @@ tc_msg_event_accept(tc_event_t *rev)
         return TC_ERROR;
     }
 
+#if (TCPCOPY_SINGLE)  
+    tc_intercept_check_tunnel_for_single(fd);
+#endif   
+
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
         tc_log_info(LOG_ERR, 0, "Msg event create failed.");
@@ -36,12 +44,11 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
-#if (TCPCOPY_SINGLE)  
-    if (srv_settings.router_fd > 0) {
-        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
-    }
-    srv_settings.router_fd = fd;
-#endif
+
+    tunnel = srv_settings.tunnel;
+    tunnel[fd].ev = ev;
+    tunnel[fd].first_in = 1;
+    tunnel[fd].fd_valid = 1;
 
     return TC_OK;
 }
@@ -49,29 +56,75 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    msg_client_t msg;
+    int             fd, version;
+    msg_client_t    msg;
+    tunnel_basic_t *tunnel;
 
-    if (tc_socket_recv(rev->fd, (char *) &msg, MSG_CLIENT_SIZE) == TC_ERROR) {
-        tc_socket_close(rev->fd);
-        tc_log_info(LOG_NOTICE, 0, "close sock:%d", rev->fd);
-        tc_event_del(rev->loop, rev, TC_EVENT_READ);
-        return TC_ERROR;
+    fd = rev->fd;
+    tunnel = srv_settings.tunnel;
+
+    if (tunnel[fd].first_in) {
+        if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
+                TC_ERROR) 
+        {
+            tc_intercept_release_tunnel(fd, rev);
+            return TC_ERROR;
+        }
+
+        tunnel[fd].first_in = 0;
+
+        version = ntohs(msg.type);
+        if (msg.client_ip != 0 || msg.client_port != 0) {
+            tunnel[fd].clt_msg_size = MSG_CLIENT_MIN_SIZE;
+            srv_settings.old = 1;
+            tc_log_info(LOG_WARN, 0, "too old tcpcopy for intercept");
+        } else {
+            if (version != INTERNAL_VERSION) {
+                tc_log_info(LOG_WARN, 0, 
+                        "not compatible,tcpcopy:%d,intercept:%d",
+                        msg.type, INTERNAL_VERSION);
+            }
+            tunnel[fd].clt_msg_size = MSG_CLIENT_SIZE;
+            if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
+                        MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
+            {
+                tc_intercept_release_tunnel(fd, rev);
+                return TC_ERROR;
+            }
+            return TC_OK;
+        }
+
+    } else {
+        if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
+                TC_ERROR) 
+        {
+            tc_intercept_release_tunnel(fd, rev);
+            return TC_ERROR;
+        }
     }
 
-    msg.client_ip = ntohl(msg.client_ip);
-    msg.client_port = ntohs(msg.client_port);
+    msg.client_ip = msg.client_ip;
+    msg.client_port = msg.client_port;
     msg.type = ntohs(msg.type);
+    msg.target_ip = msg.target_ip;
+    msg.target_port = msg.target_port;
 
     switch (msg.type) {
         case CLIENT_ADD:
+#if (!TCPCOPY_SINGLE)
+            tot_router_items++;
             tc_log_debug1(LOG_DEBUG, 0, "add client router:%u",
-                          ntohs(msg.client_port));
-            router_add(msg.client_ip, msg.client_port, rev->fd);
+                    ntohs(msg.client_port));
+            router_add(srv_settings.old, msg.client_ip, msg.client_port, 
+                    msg.target_ip,  msg.target_port, rev->fd);
+#endif
             break;
         case CLIENT_DEL:
             tc_log_debug1(LOG_DEBUG, 0, "del client router:%u",
-                          ntohs(msg.client_port));
+                    ntohs(msg.client_port));
             break;
+        default:
+            tc_log_info(LOG_WARN, 0, "unknown msg type:%u", msg.type);
     }
 
     return TC_OK;
@@ -80,8 +133,9 @@ tc_msg_event_process(tc_event_t *rev)
 void
 interception_output_stat(tc_event_timer_t *evt)
 {
-    tc_log_info(LOG_NOTICE, 0, "total resp packets:%llu, all:%llu",
-            tot_copy_resp_packs, tot_resp_packs);
+    tc_log_info(LOG_NOTICE, 0, 
+            "total resp packs:%llu, all:%llu, route:%llu",
+            tot_copy_resp_packs, tot_resp_packs, tot_router_items);
 #if (!TCPCOPY_SINGLE)
     router_stat();
     delay_table_delete_obsolete(tc_time());
@@ -93,7 +147,7 @@ interception_output_stat(tc_event_timer_t *evt)
 void
 interception_push(tc_event_timer_t *evt)
 {
-    send_buffered_packets(tc_time());
+    send_buffered_packets();
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
 }
 #endif
@@ -161,7 +215,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 
     tot_copy_resp_packs++;
 
-    router_update(srv_settings.router_fd, ip_header);
+    router_update(srv_settings.old, ip_header);
     return TC_OK;
 
 }
@@ -169,7 +223,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 #if (TCPCOPY_PCAP)
 static void 
 pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
-        unsigned char *packet)
+        unsigned char *frame)
 {
     pcap_t        *pcap;
     unsigned char *ip_data; 
@@ -179,8 +233,8 @@ pcap_packet_callback(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         tc_log_info(LOG_ERR, 0, "recv len is less than:%d", ETHERNET_HDR_LEN);
         return;
     }
-    pcap = (pcap_t *)args;
-    ip_data = get_ip_data(pcap, packet, pkt_hdr->len, &l2_len);
+    pcap = (pcap_t *) args;
+    ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len);
     resp_dispose((tc_ip_header_t *) ip_data);
 }
 #endif
@@ -285,6 +339,7 @@ sniff_init(tc_event_loop_t *event_loop)
             }
 
             if (i >= MAX_DEVICE_NUM) {
+                pcap_freealldevs(alldevs);
                 tc_log_info(LOG_ERR, 0, "It has too many devices");
                 return TC_ERROR;
             }
@@ -292,6 +347,8 @@ sniff_init(tc_event_loop_t *event_loop)
             strcpy(devices->device[i++].name, d->name);
         }
         devices->device_num = i;
+
+        pcap_freealldevs(alldevs);
     }
 
     for (i = 0; i < devices->device_num; i++) {
@@ -378,9 +435,7 @@ void
 interception_over()
 {
     int i;
-#if (INTERCEPT_COMBINED)
-    release_combined_resouces();
-#endif
+
     router_destroy();
     delay_table_destroy();
 

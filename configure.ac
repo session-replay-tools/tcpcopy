@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([TCPCopy], [0.8.0], [wangbin579@gmail.com], [tcpcopy])
+AC_INIT([TCPCopy], [0.9.6], [wangbin579@gmail.com], [tcpcopy])
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 AM_INIT_AUTOMAKE
@@ -34,6 +34,8 @@ fi
 
 AC_ARG_ENABLE(mysql, AS_HELP_STRING([--enable-mysql],[run tcpcopy at mysql mode]),,mysql=no)
 if test "x$enable_mysql" = "xyes";then
+    AC_CHECK_HEADERS([openssl/evp.h], [], 
+                     [AC_MSG_ERROR([openssl/evp.h not found.])], [])
 	AC_DEFINE(TCPCOPY_MYSQL_NO_SKIP, 1, [Define if --enable-mysql])
 fi
 
@@ -55,7 +57,17 @@ if test "x$enable_pcap" = "xyes";then
                    )
 fi
 
-AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpcopy]),
+AC_ARG_ENABLE(millions,AS_HELP_STRING([--enable-millions],[enable to support million connections]),
+              [case "${enableval}" in
+               yes) millions=true 
+               AC_DEFINE(INTERCEPT_MILLION_SUPPORT, 1, [Define if --enable-millions])
+               AC_DEFINE(TCPCOPY_MILLION_SUPPORT, 1, [Define if --enable-millions]) ;;
+               no)  millions=false ;;
+               *)   AC_MSG_ERROR(bad value ${enableval} for --enable-millions) ;;
+           esac],[millions=false])
+
+
+AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[turn on advanced tcpcopy]),
               [case "${enableval}" in
                yes) advanced=true 
                AC_DEFINE(INTERCEPT_ADVANCED, 1, [Define if --enable-advanced])
@@ -67,8 +79,35 @@ AC_ARG_ENABLE(advanced,AS_HELP_STRING([--enable-advanced],[Turn on advanced tcpc
 
 if test "x$advanced" = "xfalse";then
     AC_MSG_CHECKING([for the kernel version])
-    major=`uname -r | cut -d. -f1`;
-    minor=`uname -r | cut -d. -f2`;
+    AC_CHECK_HEADERS([linux/version.h], [], 
+                     [AC_MSG_ERROR([linux/version.h not found.])], [])
+    AC_TRY_RUN([
+        #include <stdlib.h>
+        #include <stdio.h>
+        #include <linux/version.h>
+        int main (void) {
+            FILE *fp = fopen ("linuxinfo", "w");
+            if (!fp) return 1;
+            #if defined(LINUX_VERSION_CODE)
+               fprintf (fp, "%d.%d\n", LINUX_VERSION_CODE >> 16, (LINUX_VERSION_CODE >> 8) & 0xFF);
+            #else
+               fprintf (fp, "0.0\n"); 
+            #endif
+               fclose (fp);
+               return 0;
+        }
+        ], [
+             major=`cat linuxinfo | cut -d'.' -f1`
+             minor=`cat linuxinfo | cut -d'.' -f2`
+        ], [
+             major="0"
+             minor="0"
+        ], [
+             major="0"
+             minor="0"
+        ])
+
+    rm -f linuxinfo
 
     if test $major -gt 3; then
         enable_nfqueue=yes
@@ -189,7 +228,7 @@ if test "x$enable_nfqueue" = "xyes";then
 
 fi
 
-AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing  mode (such as lvs)]),,dr=no)
+AC_ARG_ENABLE(dr, AS_HELP_STRING([--enable-dr],[run tcpcopy at direct routing mode (such as lvs)]),,dr=no)
 if test "x$enable_dr" = "xyes";then
     AC_DEFINE(TCPCOPY_DR, 1, [Define if --enable-dr])
 fi
@@ -205,10 +244,18 @@ if test "x$enable_combined" != "xno";then
     AC_DEFINE(INTERCEPT_COMBINED, 1, [Define if --enable-combined])
 fi
 
-AC_ARG_ENABLE(paper, AS_HELP_STRING([--enable-paper],[run tcpcopy at paper mode (only valid for high latency web applications)]),,paper=no)
-if test "x$enable_paper" = "xyes";then
-    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-paper])
+AC_ARG_ENABLE(rlantency, AS_HELP_STRING([--enable-rlantency],[run tcpcopy at reverse lantency mode (only valid for high latency web applications)]),,rlantency=no)
+if test "x$enable_rlantency" = "xyes";then
+    AC_DEFINE(TCPCOPY_PAPER, 1, [Define if --enable-rlantency])
 fi
+
+AC_ARG_ENABLE(dlinject, AS_HELP_STRING([--enable-dlinject],[run tcpcopy at pcap sending mode]),,dlinject=no)
+if test "x$enable_dlinject" = "xyes";then
+    AC_DEFINE(TCPCOPY_PCAP_SEND, 1, [Define if --enable-dlinject])
+    AC_CHECK_HEADERS([pcap.h], [], 
+                     [AC_MSG_ERROR([pcap.h not found.])], [])
+fi
+
 
 AC_ARG_ENABLE(udp,AS_HELP_STRING([--enable-udp],[turn on udpcopy]),
                [case "${enableval}" in
@@ -248,11 +295,19 @@ if test "x$enable_pcap" = "xyes";then
     LIBS="-lpcap"
 fi
 
+if test "x$enable_dlinject" = "xyes";then
+    LIBS="-lpcap"
+fi
+
+if test "x$enable_mysql" = "xyes";then
+    LIBS="$LIBS -lssl"
+fi
+
 if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
 fi
 
-CFLAGS="-g -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../mysql -I../tcpcopy -I../util"
+CFLAGS="-g -D_FILE_OFFSET_BITS=64 -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
 
 AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
 AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])
@@ -263,6 +318,7 @@ Makefile
 src/Makefile
 src/core/Makefile
 src/util/Makefile
+src/digest/Makefile
 src/mysql/Makefile
 src/interception/Makefile
 src/communication/Makefile

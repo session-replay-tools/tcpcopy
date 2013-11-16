@@ -2,14 +2,92 @@
 #include <xcopy.h>
 
 #if (TCPCOPY_PCAP)
+
+#if (HAVE_PCAP_CREATE)
+static int
+tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
+{
+    int    status;
+    char   ebuf[PCAP_ERRBUF_SIZE]; 
+
+    *ebuf = '\0';
+
+    *pd = pcap_create(device, ebuf);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
+        return TC_ERROR;
+    }
+
+    status = pcap_set_snaplen(*pd, snap_len);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_snaplen error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_promisc(*pd, 0);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_timeout(*pd, 1000);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    status = pcap_set_buffer_size(*pd, buf_size);
+    if (status != 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_set_buffer_size error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+    }
+
+    tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
+
+    status = pcap_activate(*pd);
+    if (status < 0) {
+        tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",
+                pcap_statustostr(status));
+        return TC_ERROR;
+
+    } else if (status > 0) {
+        tc_log_info(LOG_WARN, 0, "pcap activate warn:%s", 
+                pcap_statustostr(status));
+    }
+
+    return TC_OK;
+}
+
+#else
+static int 
+tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
+{
+    char   ebuf[PCAP_ERRBUF_SIZE]; 
+
+    *ebuf = '\0';
+
+    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
+    if (*pd == NULL) {
+        tc_log_info(LOG_ERR, 0, "pcap_open_live error:%s", ebuf);
+        return TC_ERROR;
+
+    } else if (*ebuf) {
+        tc_log_info(LOG_WARN, 0, "pcap_open_live warn:%s", ebuf);
+    }
+
+    return TC_OK;
+}
+#endif
+
 int
 tc_pcap_socket_in_init(pcap_t **pd, char *device, 
         int snap_len, int buf_size, char *pcap_filter)
 {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-    int         fd, status;
-#pragma GCC diagnostic pop
+    int         fd;
     char        ebuf[PCAP_ERRBUF_SIZE]; 
     struct      bpf_program fp;
     bpf_u_int32 net, netmask;      
@@ -21,61 +99,10 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
     tc_log_info(LOG_NOTICE, 0, "pcap open,device:%s", device);
 
     *ebuf = '\0';
-#if (HAVE_PCAP_CREATE)
-    *pd = pcap_create(device, ebuf);
-    if (*pd == NULL) {
-        tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
-        return TC_INVALID_SOCKET;
-    }
 
-    status = pcap_set_snaplen(*pd, snap_len);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_snaplen error:%s",
-                pcap_statustostr(status));
+    if (tc_pcap_open(pd, device, snap_len, buf_size) == TC_ERROR) {
         return TC_INVALID_SOCKET;
     }
-    
-    status = pcap_set_promisc(*pd, 0);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-    
-    status = pcap_set_timeout(*pd, 1000);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-    
-    status = pcap_set_buffer_size(*pd, buf_size);
-    if (status != 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_set_buffer_size error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    }
-
-    tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
- 
-    status = pcap_activate(*pd);
-    if (status < 0) {
-        tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",
-                pcap_statustostr(status));
-        return TC_INVALID_SOCKET;
-    } else if (status > 0) {
-        tc_log_info(LOG_WARN, 0, "pcap activate warn:%s", 
-                pcap_statustostr(status));
-    }
-#else
-    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
-    if (*pd == NULL) {
-        tc_log_info(LOG_ERR, 0, "pcap_open_live error:%s", ebuf);
-        return TC_INVALID_SOCKET;
-    } else if (*ebuf) {
-        tc_log_info(LOG_WARN, 0, "pcap_open_live warn:%s", ebuf);
-    }
-#endif
 
     if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
         net = 0;
@@ -180,6 +207,54 @@ tc_raw_socket_out_init()
     return fd;
 }
 
+#if (TCPCOPY_PCAP_SEND)
+
+static pcap_t *pcap = NULL;
+
+int
+tc_pcap_send_init(char *if_name, int mtu)
+{
+    char  pcap_errbuf[PCAP_ERRBUF_SIZE];
+
+    pcap_errbuf[0] = '\0';
+    pcap = pcap_open_live(if_name, mtu + sizeof(struct ethernet_hdr), 
+            0, 0, pcap_errbuf);
+    if (pcap_errbuf[0] != '\0') {
+        tc_log_info(LOG_ERR, errno, "pcap open %s, failed:%s", 
+                if_name, pcap_errbuf);
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+
+int
+tc_pcap_send(unsigned char *frame, size_t len)
+{
+    int   send_len;
+    char  pcap_errbuf[PCAP_ERRBUF_SIZE];
+
+    pcap_errbuf[0]='\0';
+
+    send_len = pcap_inject(pcap, frame, len);
+    if (send_len == -1) {
+        return TC_ERROR;
+    }
+
+    return TC_OK;
+}
+
+int tc_pcap_over()
+{
+    if (pcap != NULL) {
+        pcap_close(pcap);
+        pcap = NULL;
+    }
+     
+    return TC_OK;
+}
+#endif
+
 /*
  * send the ip packet to the remote test server
  * (It will not go through ip fragmentation)
@@ -188,7 +263,8 @@ tc_raw_socket_out_init()
 int
 tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
 {
-    ssize_t             send_len;
+    ssize_t             send_len, offset = 0, num_bytes;
+    const char         *ptr;
     struct sockaddr_in  dst_addr;
 
     if (fd > 0) {
@@ -197,6 +273,8 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
 
         dst_addr.sin_family = AF_INET;
         dst_addr.sin_addr.s_addr = ip;
+
+        ptr = buf;
 
         /*
          * The output packet will take a special path of IP layer
@@ -207,19 +285,33 @@ tc_raw_socket_send(int fd, void *buf, size_t len, uint32_t ip)
          * which does general sk_buff cleaning, is called and an 
          * error EMSGSIZE is returned. 
          */
-        send_len = sendto(fd, buf, len, 0, (struct sockaddr *) &dst_addr,
-                          sizeof(dst_addr));
+        do {
+            num_bytes = len - offset;
+            send_len = sendto(fd, ptr + offset, num_bytes, 0, 
+                    (struct sockaddr *) &dst_addr, sizeof(dst_addr));
 
-        if (send_len == -1) {
-            tc_log_info(LOG_ERR, errno,
-                        "Raw socket(%d) send packet failed, packet len: %d",
-                        fd, len);
-            return TC_ERROR;
-        }
-    }
+            if (send_len == -1) {
+
+                if (errno == EINTR) {
+                    tc_log_info(LOG_NOTICE, errno, "raw fd:%d EINTR", fd);
+                } else if (errno == EAGAIN) {
+                    tc_log_info(LOG_NOTICE, errno, "raw fd:%d EAGAIN", fd);
+                } else {
+                    tc_log_info(LOG_ERR, errno, "raw fd:%d", fd);
+                    tc_socket_close(fd);
+                    return TC_ERROR;
+                }
+
+            }  else {
+                offset += send_len;
+            }
+
+        } while (offset < len);
+    } 
 
     return TC_OK;
 }
+
 
 #if (!INTERCEPT_ADVANCED)
 
@@ -322,7 +414,7 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
 
 int 
 tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
-        nfq_callback *cb)
+        nfq_callback *cb, int max_queue_len)
 {
     int fd;
 
@@ -360,9 +452,18 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
         return TC_INVALID_SOCKET;
     }
 
+    if (max_queue_len > 0) {
+        if (nfq_set_queue_maxlen((*qh), (uint32_t) max_queue_len)  < 0) {
+            tc_log_info(LOG_ERR, errno, "can't set queue max length:%d", 
+                    max_queue_len);
+            tc_log_info(LOG_WARN, 0, "unable to set queue maxlen");
+            tc_log_info(LOG_WARN, 0, "your kernel probably doesn't support it");
+        }
+    }
+
     fd = nfq_fd(*h);
 
-    nfnl_rcvbufsiz(nfq_nfnlh(*h), 4096*4096);
+    nfnl_rcvbufsiz(nfq_nfnlh(*h), 16777216);
 
     return fd;
 }
@@ -431,7 +532,7 @@ tc_socket_set_nonblocking(int fd)
         return TC_ERROR;
     }
 
-    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         return TC_ERROR;
     }
 
@@ -470,11 +571,15 @@ tc_socket_connect(int fd, uint32_t ip, uint16_t port)
 
     if (connect(fd, (struct sockaddr *) &remote_addr, len) == -1) {
         tc_log_info(LOG_ERR, errno, "Can not connect to remote server(%s:%d)",
-                    inet_ntoa(remote_addr.sin_addr), port);
+                inet_ntoa(remote_addr.sin_addr), port);
+        tc_socket_close(fd);
         return TC_ERROR;
-    }   
+    } else {
+        tc_log_info(LOG_INFO, 0, "connect to remote server(%s:%d)",
+                inet_ntoa(remote_addr.sin_addr), port);
+        return TC_OK;
+    }
 
-    return TC_OK;
 }
 
 int
@@ -615,23 +720,43 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
 
 
 int
-tc_socket_send(int fd, char *buffer, size_t len)
+tc_socket_send(int fd, char *buffer, int len)
 {
-    ssize_t send_len;
+    ssize_t     send_len, offset = 0, num_bytes;
+    const char *ptr;
 
-    send_len = send(fd, (const void *) buffer, len, 0);
-
-    if (-1 == send_len) {
-        tc_log_info(LOG_ERR, errno, "fd:%d", fd);
-        return TC_ERROR;
+    if (len <= 0) {
+        return TC_OK;
     }
 
-    tc_log_debug2(LOG_DEBUG, 0, "send len:%d, requested len:%d", send_len, len);
-    if (send_len != len) {
-        tc_log_info(LOG_ERR, 0, "fd:%d, send length:%ld, buffer size:%ld",
-                    fd, send_len, len);
-        return TC_ERROR;
-    }
+    ptr = buffer;
+    num_bytes = len - offset;
+
+    do {
+
+        send_len = send(fd, ptr + offset, num_bytes, 0);
+
+        if (send_len == -1) {
+
+            if (errno == EINTR) {
+                tc_log_info(LOG_NOTICE, errno, "fd:%d EINTR", fd);
+            } else if (errno == EAGAIN) {
+                tc_log_info(LOG_NOTICE, errno, "fd:%d EAGAIN", fd);
+            } else {
+                tc_log_info(LOG_ERR, errno, "fd:%d", fd);
+                return TC_ERROR;
+            }
+
+        } else {
+
+            if (send_len != num_bytes) {
+                tc_log_info(LOG_WARN, 0, "fd:%d, slen:%ld, bsize:%ld",
+                        fd, send_len, num_bytes);
+            }
+
+            offset += send_len;
+        }
+    } while (offset < len);
 
     return TC_OK;
 }

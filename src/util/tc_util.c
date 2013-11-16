@@ -88,7 +88,6 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 
         pair = mappings[i];
         if (CHECK_DEST == src_flag) {
-            /* interested in INPUT raw socket */
             if (ip == pair->online_ip && port == pair->online_port) {
                 ret = LOCAL;
                 break;
@@ -108,16 +107,21 @@ check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
 }
 
 unsigned char *
-copy_ip_packet(tc_ip_header_t *ip_header)
+cp_fr_ip_pack(tc_ip_header_t *ip_header)
 {
-    uint16_t       tot_len = ntohs(ip_header->tot_len);
-    unsigned char *data    = (unsigned char *) malloc(tot_len);
+    int            frame_len;
+    uint16_t       tot_len;
+    unsigned char *frame;
+    
+    tot_len   = ntohs(ip_header->tot_len);
+    frame_len = ETHERNET_HDR_LEN + tot_len;
+    frame     = (unsigned char *) malloc(frame_len);
 
-    if (data != NULL) {    
-        memcpy(data, ip_header, tot_len);
+    if (frame != NULL) {    
+        memcpy(frame + ETHERNET_HDR_LEN, ip_header, tot_len);
     }    
 
-    return data;
+    return frame;
 }
 
 inline bool
@@ -162,52 +166,6 @@ tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
     return res; 
 }  
 
-
-uint16_t
-retrieve_wscale(tc_tcp_header_t *tcp_header)
-{
-    unsigned int opt, opt_len;
-    unsigned char *p, *end;
-
-    p = ((unsigned char *) tcp_header) + TCP_HEADER_MIN_LEN;
-    end =  ((unsigned char *) tcp_header) + (tcp_header->doff << 2);  
-    while (p < end) {
-        opt = p[0];
-        switch (opt) {
-            case TCPOPT_WSCALE:
-                return p[2];
-            case TCPOPT_NOP:
-                p = p + 1; 
-                break;
-            case TCPOPT_EOL:
-                return 0;
-            default:
-                opt_len = p[1];
-                p += opt_len;
-                break;
-        }    
-    }
-    return 0;
-}
-
-void
-set_wscale(tc_tcp_header_t *tcp_header)
-{
-    u_short        wscale;
-    unsigned char *opt;
-
-    opt = (unsigned char *) ((char *) tcp_header + sizeof(tc_tcp_header_t));
-    wscale = (u_short) retrieve_wscale(tcp_header);
-    if (wscale > 0) {
-        opt[0] = TCPOPT_WSCALE;
-        opt[1] = 4;
-        bcopy((void *) &wscale, (void *) (opt + 2), sizeof(wscale));
-        tcp_header->doff = (sizeof(tc_tcp_header_t) + 4) >> 2;
-    } 
-
-    return;
-}
-
 #if (TCPCOPY_UDP)
 static int
 do_checksum_math(u_int16_t *data, int len)
@@ -236,13 +194,15 @@ void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet)
 {       
     int            sum;
     uint16_t       len;
+    unsigned char *ip_src;
 
     udp_packet->check = 0;
 
-    len  = ntohs(udp_packet->len);
-    sum  = do_checksum_math((u_int16_t *)&ip_header->saddr, 8);
-    sum += ntohs(IPPROTO_UDP + len);
-    sum += do_checksum_math((u_int16_t *)udp_packet, len);
+    len    = ntohs(udp_packet->len);
+    ip_src = (unsigned char *) (&ip_header->saddr);
+    sum    = do_checksum_math((u_int16_t *) ip_src, 8);
+    sum   += ntohs(IPPROTO_UDP + len);
+    sum   += do_checksum_math((u_int16_t *) udp_packet, len);
     udp_packet->check = CHECKSUM_CARRY(sum);
 
 }
@@ -327,7 +287,7 @@ construct_filter(int flag, uint32_t ip, uint16_t port, char *filter)
 
 #if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
 int
-get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
+get_l2_len(const unsigned char *frame, const int pkt_len, const int datalink)
 {
     struct ethernet_hdr *eth_hdr;
 
@@ -336,7 +296,7 @@ get_l2_len(const unsigned char *packet, const int pkt_len, const int datalink)
             return 0;
             break;
         case DLT_EN10MB:
-            eth_hdr = (struct ethernet_hdr *) packet;
+            eth_hdr = (struct ethernet_hdr *) frame;
             switch (ntohs(eth_hdr->ether_type)) {
                 case ETHERTYPE_VLAN:
                     return 18;
@@ -366,13 +326,13 @@ static unsigned char pcap_ip_buf[65536];
 #endif
 
 unsigned char *
-get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len, 
+get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len, 
         int *p_l2_len)
 {
     int      l2_len;
     u_char  *ptr;
 
-    l2_len    = get_l2_len(packet, pkt_len, pcap_datalink(pcap));
+    l2_len    = get_l2_len(frame, pkt_len, pcap_datalink(pcap));
     *p_l2_len = l2_len;
 
     if (pkt_len <= l2_len) {
@@ -380,17 +340,27 @@ get_ip_data(pcap_t *pcap, unsigned char *packet, const int pkt_len,
     }
 #ifdef FORCE_ALIGN
     if (l2_len % 4 == 0) {
-        ptr = (&(packet)[l2_len]);
+        ptr = (&(frame)[l2_len]);
     } else {
         ptr = pcap_ip_buf;
-        memcpy(ptr, (&(packet)[l2_len]), pkt_len - l2_len);
+        memcpy(ptr, (&(frame)[l2_len]), pkt_len - l2_len);
     }
 #else
-    ptr = (&(packet)[l2_len]);
+    ptr = (&(frame)[l2_len]);
 #endif
 
     return ptr;
 
+}
+#endif
+
+#if (TCPCOPY_PCAP_SEND)
+inline void
+fill_frame(struct ethernet_hdr *hdr, unsigned char *smac, unsigned char *dmac)
+{
+    memcpy(hdr->ether_shost, smac, ETHER_ADDR_LEN);
+    memcpy(hdr->ether_dhost, dmac, ETHER_ADDR_LEN);
+    hdr->ether_type = htons(ETH_P_IP); 
 }
 #endif
 

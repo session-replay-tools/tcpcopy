@@ -18,6 +18,7 @@
 #define tc_event_push_active_event(head, ev) \
     ev->next = head; head = ev; 
 
+
 typedef struct tc_event_loop_s tc_event_loop_t;
 typedef struct tc_event_s      tc_event_t;
 typedef struct tc_event_timer_s tc_event_timer_t;
@@ -75,10 +76,11 @@ int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events);
 
 tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
         tc_event_handler_pt writer);
-void tc_event_destroy(tc_event_t *ev);
+void tc_event_destroy(tc_event_t *ev, int delayed);
 
 int tc_event_timer_add(tc_event_loop_t *loop, long timer,
         tc_event_timer_handler_pt handler);
+void finally_release_obsolete_events();
 
 extern tc_atomic_t  tc_over;
 

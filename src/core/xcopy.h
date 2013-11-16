@@ -41,8 +41,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <getopt.h>
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP)
+#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || TCPCOPY_PCAP_SEND)
 #include <pcap.h>
+#endif
+#if (TCPCOPY_MYSQL_NO_SKIP)
+#include <openssl/evp.h>
 #endif
 
 #if (INTERCEPT_ADVANCED)
@@ -77,17 +80,29 @@
 #define TCPCOPY_MYSQL_BASIC 1
 #endif
 
+#define TCPCOPY_DIGEST 1
 #define TCPCOPY_MYSQL_ADVANCED 1
+#define MYSQL_SHA1 "sha1"
 
+#endif
+
+#define INTERNAL_EVOLUTION_VERSION 4 
+#if (INTERCEPT_ADVANCED)
+#define INTERNAL_VERSION (32768 + INTERNAL_EVOLUTION_VERSION)
+#else
+#define INTERNAL_VERSION INTERNAL_EVOLUTION_VERSION
 #endif
 
 #define COPY_FROM_IP_LAYER 0
 #define COPY_FROM_LINK_LAYER 1
 
+#define ETHER_ADDR_LEN 0x6
+
 /* raw socket receiving buffer size */
-#define RECV_BUF_SIZE 65536
+#define IP_RECV_BUF_SIZE 65536
 #define PCAP_RECV_BUF_SIZE 65535
 #define MAX_FILTER_LENGH 4096 
+#define M_IP_NUM 256
 
 /* max payload size per continuous send */
 #define MAX_SIZE_PER_CONTINUOUS_SEND 32768 
@@ -112,9 +127,16 @@
 #define DEFAULT_TIMEOUT 120
 #endif
 
-#define CHECK_INTERVAL  50
+#define CHECK_INTERVAL  1
 #define OUTPUT_INTERVAL  5000
-#define DEFAULT_SESSION_TIMEOUT 60
+#define DEFAULT_SESSION_TIMEOUT 120
+#define OFFLINE_TAIL_TIMEOUT 120 
+
+#if (TCPCOPY_MILLION_SUPPORT)
+#define SESS_KEEPLIVE_ADD 120
+#else
+#define SESS_KEEPLIVE_ADD 1200
+#endif
 
 #define MAX_UNSEND_THRESHOLD 32768
 
@@ -124,6 +146,7 @@
 #define MAX_FD_NUM    1024
 #define MAX_FD_VALUE  (MAX_FD_NUM-1)
 #define MAX_CONNECTION_NUM 16
+#define MAX_SINGLE_CONNECTION_NUM 256
 
 #if (!INTERCEPT_MILLION_SUPPORT)
 #define ROUTE_SLOTS 65536
@@ -136,9 +159,9 @@
 #define ROUTE_SLOTS 1048576
 #define ROUTE_ARRAY_SIZE 31
 #define ROUTE_ARRAY_DEPTH 5
-#define ROUTE_KEY_HIGH_MASK 0x3FFFFC00
-#define ROUTE_KEY_LOW_MASK  0x000003FF
-#define ROUTE_KEY_SHIFT 22
+#define ROUTE_KEY_HIGH_MASK 0xFFFFF000
+#define ROUTE_KEY_LOW_MASK  0x00000FFF
+#define ROUTE_KEY_SHIFT 12
 #endif
 
 #define ROUTE_ARRAY_ACTIVE_NUM_RANGE (ROUTE_ARRAY_SIZE + 1)
@@ -186,6 +209,9 @@
 
 /* constants for tcp */
 #define TCP_HEADER_DOFF_MIN_VALUE 5
+#define TCP_HEADER_DOFF_MSS_VALUE 6
+#define TCP_HEADER_DOFF_TS_VALUE 8
+#define TCP_HEADER_DOFF_WS_TS_VALUE 9
 
 /* results of obsolete checking */
 #define OBSOLETE 1
@@ -220,7 +246,10 @@ typedef struct tcphdr tc_tcp_header_t;
 typedef struct udphdr tc_udp_header_t;
 #endif
 
-#define MAX_OPTION_LEN 20
+/* 
+ * the 40 bytes available for TCP options 
+ */
+#define MAX_OPTION_LEN 40
 #define TCPOPT_WSCALE 3
 
 #define RESP_HEADER_SIZE (sizeof(tc_ip_header_t) + sizeof(tc_tcp_header_t) + MAX_OPTION_LEN)
@@ -258,8 +287,7 @@ enum packet_classification{
     UNKNOWN_FLAG
 };
 
-#if (TCPCOPY_OFFLINE || TCPCOPY_PCAP || INTERCEPT_ADVANCED)
-#define ETHER_ADDR_LEN 0x6
+#define ETHER_ADDR_STR_LEN 17
 
 #ifndef ETHERTYPE_VLAN
 #define ETHERTYPE_VLAN 0x8100  /* IEEE 802.1Q VLAN tagging */
@@ -279,7 +307,6 @@ struct ethernet_hdr {
     uint8_t  ether_shost[ETHER_ADDR_LEN];
     uint16_t ether_type;                 
 };
-#endif 
 
 /* receiving buffer size for response */
 #define CAPTURE_RESP_HEADER_MAX_LEN 120
@@ -310,6 +337,7 @@ typedef struct devices_s{
 typedef struct connections_s{
     int index; 
     int num;
+    int remained_num;
     int fds[MAX_CONNECTION_NUM];
 }connections_t;
 
@@ -348,6 +376,9 @@ inline int before(uint32_t seq1, uint32_t seq2);
 #include <tc_log.h>
 #include <tc_msg.h>
 #include <tc_socket.h>
+#if (TCPCOPY_DIGEST)
+#include <tc_evp.h>
+#endif
 
 
 #endif /* XCOPY_H_INCLUDED */

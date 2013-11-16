@@ -21,7 +21,7 @@ destroy_for_sessions()
  * filter udp packets 
  */
 bool
-is_packet_needed(const char *packet)
+is_packet_needed(unsigned char *packet)
 {
     bool             is_needed = false;
     uint16_t         size_ip, size_udp, tot_len;
@@ -82,10 +82,11 @@ tc_interval_dispose(tc_event_timer_t *evt)
 
 
 void
-ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
+ip_fragmentation(unsigned char *frame, tc_ip_header_t *ip_header, 
+        tc_udp_header_t *udp_header)
 {
     int             ret, max_pack_no, index, i;
-    char            tmp_buf[RECV_BUF_SIZE];
+    unsigned char  *p, buf[IP_RECV_BUF_SIZE + ETHERNET_HDR_LEN];
     uint16_t        offset, size_ip, tot_len,
                     remainder, payload_len;
     tc_ip_header_t *tmp_ip_header;
@@ -93,8 +94,10 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
 
+    p = buf;
     /* dispose the first packet here */
-    memcpy(tmp_buf, (char *) ip_header, size_ip);
+    memcpy(p, frame, ETHERNET_HDR_LEN + size_ip);
+    p = p + ETHERNET_HDR_LEN;
     offset = clt_settings.mtu - size_ip;
     if (offset % 8 != 0) {
         offset = offset / 8;
@@ -102,15 +105,21 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
     }
     payload_len = offset;
 
-    tmp_ip_header = (tc_ip_header_t *) tmp_buf;
+    tmp_ip_header = (tc_ip_header_t *) p;
     tmp_ip_header->frag_off = htons(0x2000);
 
     index  = size_ip;
-    memcpy(tmp_buf + size_ip, ((char *) ip_header) + index, payload_len);
+    p += size_ip;
+    memcpy(p, ((unsigned char *) ip_header) + index, payload_len);
     index      = index + payload_len;
     remainder  = tot_len - size_ip - payload_len;
+#if (!TCPCOPY_PCAP_SEND)
     ret = tc_raw_socket_send(tc_raw_socket_out, tmp_ip_header, 
             size_ip + payload_len, tmp_ip_header->daddr);
+#else
+    ret = tc_pcap_send(buf, ETHERNET_HDR_LEN + size_ip + payload_len);
+#endif
+ 
     if (ret == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "send to back error,packet size:%d",
                 size_ip + payload_len);
@@ -123,9 +132,10 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
 
     for (i = 0; i <= max_pack_no; i++) {
 
-        memcpy(tmp_buf, (char *) ip_header, size_ip);
+        p = buf + ETHERNET_HDR_LEN;
+        memcpy(p, (char *) ip_header, size_ip);
 
-        tmp_ip_header = (tc_ip_header_t *) tmp_buf;
+        tmp_ip_header = (tc_ip_header_t *) p;
         tmp_ip_header->frag_off = htons(offset >> 3);
 
         if (i == max_pack_no) {
@@ -135,12 +145,16 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
             remainder = remainder - payload_len;
         }
 
-        memcpy(tmp_buf + size_ip, ((char *) ip_header) + index, payload_len);
+        p += size_ip;
+        memcpy(p, ((char *) ip_header) + index, payload_len);
         index     = index + payload_len;
         offset    = offset + payload_len;
-
+#if (!TCPCOPY_PCAP_SEND)
         ret = tc_raw_socket_send(tc_raw_socket_out, tmp_ip_header, 
                 size_ip + payload_len, tmp_ip_header->daddr);
+#else
+        ret = tc_pcap_send(buf, ETHERNET_HDR_LEN + size_ip + payload_len);
+#endif
         if (ret == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, "send to back error,packet size:%d",
                     size_ip + payload_len);
@@ -150,18 +164,24 @@ ip_fragmentation(tc_ip_header_t *ip_header, tc_udp_header_t *udp_header)
     }
 }
 
+bool process_out(unsigned char *packet)
+{
+    return true;
+}
+
 /*
  * the main procedure for processing udp packets
  */
-bool process(char *packet, int pack_src)
+bool process_in(unsigned char *frame)
 {
     int                      ret;
     uint16_t                 size_ip, tot_len;
+    unsigned char           *packet;
     tc_ip_header_t          *ip_header;
     tc_udp_header_t         *udp_header;
     ip_port_pair_mapping_t  *test;
 
-
+    packet     = frame + ETHERNET_HDR_LEN;
     ip_header  = (tc_ip_header_t *) packet;
     size_ip    = ip_header->ihl << 2;
     tot_len    = ntohs(ip_header->tot_len);
@@ -171,17 +191,23 @@ bool process(char *packet, int pack_src)
             ip_header->daddr, udp_header->dest);
     ip_header->daddr = test->target_ip;
     udp_header->dest = test->target_port;
-
+#if (TCPCOPY_PCAP_SEND)
+    fill_frame((struct ethernet_hdr *) frame, test->src_mac, test->dst_mac);
+#endif
     udpcsum(ip_header, udp_header);
 
     /* check if it needs fragmentation */
     if (tot_len > clt_settings.mtu) {
 
-        ip_fragmentation(ip_header, udp_header);
+        ip_fragmentation(frame, ip_header, udp_header);
     } else {
 
+#if (!TCPCOPY_PCAP_SEND)
         ret = tc_raw_socket_send(tc_raw_socket_out, ip_header, 
                 tot_len, ip_header->daddr);
+#else
+        ret = tc_pcap_send(frame, tot_len + ETHERNET_HDR_LEN);
+#endif
         if (ret == TC_ERROR) {
             tc_log_info(LOG_ERR, 0, "send to back error,tot_len:%d", tot_len);
         }

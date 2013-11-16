@@ -25,7 +25,10 @@ server_release_resources()
 {
     tc_log_info(LOG_WARN, 0, "sig %d received", tc_over); 
     tc_log_info(LOG_NOTICE, 0, "release_resources begin");
+    release_tunnel_resources();
     interception_over();
+
+    finally_release_obsolete_events();
 
     tc_event_loop_finish(&s_event_loop);
 
@@ -188,12 +191,16 @@ usage(void)
            "-l <file>      save log information in <file>\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n"
            "-b <ip_addr>   interface to listen on (default: INADDR_ANY, all addresses)\n");
+#if (INTERCEPT_NFQUEUE) 
+    printf("-q <num>       set the maximal length of the nfnetlink queue if the kernel\n"
+           "               supports it.\n");
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
-    printf("-i <device,>   The name of the interface to Listen on.  This is usually a driver\n"
-            "              name followed by a unit number,for example eth0 for the first\n"
-            "              Ethernet interface.\n");
-    printf("-F <filter>    user filter\n");
+    printf("-i <device,>   The name of the interface to listen on.  This is usually a driver\n"
+           "               name followed by a unit number,for example eth0 for the first\n"
+           "               Ethernet interface.\n");
+    printf("-F <filter>    user filter(same as pcap filter)\n");
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif
@@ -215,6 +222,9 @@ read_args(int argc, char **argv) {
          "t:" /* router item timeout */
          "s:" /* hash table size for intercept */
          "b:" /* binded ip address */
+#if (INTERCEPT_NFQUEUE) 
+         "q:" /* max queue length for nfqueue */
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
          "i:" /* <device,> */
@@ -238,6 +248,11 @@ read_args(int argc, char **argv) {
             case 'p':
                 srv_settings.port = (uint16_t) atoi(optarg);
                 break;
+#if (INTERCEPT_NFQUEUE) 
+            case 'q':
+                srv_settings.max_queue_len = atoi(optarg);
+                break;
+#endif
 #if (INTERCEPT_ADVANCED)
 #if (TCPCOPY_PCAP)
             case 'i':
@@ -255,7 +270,7 @@ read_args(int argc, char **argv) {
                 srv_settings.hash_size = (size_t) atoi(optarg);
                 break;
             case 'b':
-                srv_settings.binded_ip = optarg;
+                srv_settings.bound_ip = optarg;
                 break;
             case 'h':
                 usage();
@@ -289,6 +304,9 @@ read_args(int argc, char **argv) {
                         break;
 
                     case 'p':
+#if (INTERCEPT_NFQUEUE)
+                    case 'q':
+#endif
                     case 's':
                         fprintf(stderr, "intercept: option -%c require a number\n", 
                                 optopt);
@@ -420,6 +438,12 @@ set_details()
 
 #endif
 
+#if (INTERCEPT_NFQUEUE)
+    if (srv_settings.max_queue_len <= 1024) {
+        srv_settings.max_queue_len = -1;
+    }
+#endif
+
     /* daemonize */
     if (srv_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
@@ -440,7 +464,10 @@ settings_init(void)
 {
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
-    srv_settings.binded_ip = NULL;
+    srv_settings.bound_ip = NULL;
+#if (INTERCEPT_NFQUEUE)
+    srv_settings.max_queue_len = -1;
+#endif
 }
 
 static void
@@ -448,6 +475,8 @@ output_for_debug()
 {
     /* print out intercept version */
     tc_log_info(LOG_NOTICE, 0, "intercept version:%s", VERSION);
+    tc_log_info(LOG_NOTICE, 0, "intercept internal version:%d", 
+            INTERNAL_VERSION);
     /* print out intercept working mode */
 #if (TCPCOPY_MYSQL_SKIP)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode for intercept");
@@ -466,6 +495,9 @@ output_for_debug()
 #endif
 #if (INTERCEPT_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_ADVANCED mode");
+#endif
+#if (INTERCEPT_MILLION_SUPPORT)
+    tc_log_info(LOG_NOTICE, 0, "INTERCEPT_MILLION_SUPPORT mode");
 #endif
 #if (HAVE_PCAP_CREATE)
     tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true,new pcap");
@@ -523,7 +555,7 @@ main(int argc, char **argv)
         return -1;
     }
 
-    if (interception_init(&s_event_loop, srv_settings.binded_ip,
+    if (interception_init(&s_event_loop, srv_settings.bound_ip,
                           srv_settings.port) == TC_ERROR)
     {
         return -1;

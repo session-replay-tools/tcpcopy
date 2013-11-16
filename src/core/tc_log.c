@@ -30,10 +30,6 @@ tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
      */
     i = vsnprintf(buf, size, fmt, args);
 
-    if (i <= 0) {
-        return 0;
-    }
-
     if (i < size) {
         return i;
     }
@@ -44,8 +40,8 @@ tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
 int
 tc_scnprintf(char *buf, size_t size, const char *fmt, ...)
 {
+    int     i;
     va_list args;
-    int i;
 
     va_start(args, fmt);
     i = tc_vscnprintf(buf, size, fmt, args);
@@ -80,8 +76,8 @@ tc_log_end()
 void
 tc_log_info(int level, int err, const char *fmt, ...)
 {
+    int             n, len;
     char            buffer[LOG_MAX_LEN], *p;
-    size_t          n, len;
     va_list         args;
     tc_log_level_t *ll;
 
@@ -108,7 +104,7 @@ tc_log_info(int level, int err, const char *fmt, ...)
     len += tc_vscnprintf(p, LOG_MAX_LEN - n, fmt, args);
     va_end(args);
 
-    if (len <= n) {
+    if (len < n) {
         return;
     }
 

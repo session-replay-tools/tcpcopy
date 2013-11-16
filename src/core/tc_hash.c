@@ -30,6 +30,7 @@ get_slot(uint64_t key, uint32_t size)
 static p_link_node
 hash_find_node(hash_table *table, uint64_t key)
 {
+    bool         first = true;
     hash_node   *hn;
     link_list   *l  = get_link_list(table, key);
     p_link_node  ln  = link_list_first(l);
@@ -43,12 +44,15 @@ hash_find_node(hash_table *table, uint64_t key)
         if (hn->key == key) {
             hn->access_time = tc_time();
             hn->visit_cnt++;
-            /* put the lastest item to the head of the linked list */
-            (void)link_list_remove(l, ln);
-            link_list_push(l, ln);
+            if (!first) {
+                /* put the lastest item to the head of the linked list */
+                link_list_remove(l, ln);
+                link_list_push(l, ln);
+            }
             return ln;
         }
         ln = link_list_get_next(l, ln);
+        first = false;
     }
 
     return NULL;
@@ -73,7 +77,7 @@ hash_create(size_t size)
         return NULL;
     }
 
-    for (i=0; i < size; i++) {
+    for (i = 0; i < size; i++) {
         ht->lists[i] = link_list_create();
     }
 

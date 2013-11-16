@@ -4,7 +4,11 @@
 #include <xcopy.h> 
 
 typedef struct route_item_s {
+#if (INTERCEPT_MILLION_SUPPORT)
+    uint64_t key;
+#else
     uint16_t key;
+#endif
     uint16_t fd;
     time_t   timestamp;
 }route_item_t;
@@ -17,6 +21,7 @@ typedef struct route_slot_s {
 
 
 typedef struct route_table_s {
+    uint64_t     slot_full_cnt;
     uint64_t     hit;
     uint64_t     missed;
     uint64_t     lost;
@@ -29,8 +34,8 @@ typedef struct route_table_s {
 
 int router_init();
 
-void router_add(uint32_t, uint16_t, int);
-void router_update(int main_router_fd, tc_ip_header_t *ip_header);
+void router_add(int, uint32_t, uint16_t, uint32_t, uint16_t, int);
+void router_update(bool old, tc_ip_header_t *ip_header);
 void router_stat();
 void router_destroy();
 
