@@ -747,6 +747,7 @@ tc_socket_send(int fd, char *buffer, int len)
             }
 
             offset += send_len;
+            num_bytes -= send_len;
         }
     } while (offset < len);
 
