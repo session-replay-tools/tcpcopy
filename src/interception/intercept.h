@@ -78,6 +78,7 @@ typedef struct xcopy_srv_settings {
     int                  max_fd;
 #if (TCPCOPY_SINGLE)
     time_t               accepted_tunnel_time;
+    bool                 conn_protected;
     int                  s_fd_num;
     int                  s_fd_index;
     int                  s_router_fds[MAX_FD_NUM];

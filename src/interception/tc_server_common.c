@@ -36,9 +36,10 @@ tc_intercept_release_tunnel(int fd, tc_event_t *rev)
 
 
 #if (TCPCOPY_SINGLE)  
-void tc_intercept_check_tunnel_for_single(int fd)
+bool  tc_intercept_check_tunnel_for_single(int fd)
 {
-    int i, diff, old_fd;
+    int  i, diff, old_fd;
+    bool previous_fd_valid = false; 
 
     if (srv_settings.accepted_tunnel_time == 0) {
         srv_settings.accepted_tunnel_time = tc_current_time_sec;
@@ -47,12 +48,18 @@ void tc_intercept_check_tunnel_for_single(int fd)
     diff = tc_current_time_sec - srv_settings.accepted_tunnel_time;
 
     if (diff > 3) {
-        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
+        tc_log_info(LOG_WARN, 0, "it does not support distributed clients");
         for (i = 0; i < srv_settings.s_fd_num; i++) {
             old_fd = srv_settings.s_router_fds[i];
             if (srv_settings.tunnel[old_fd].fd_valid) {
-                tc_intercept_release_tunnel(old_fd, NULL);
+                previous_fd_valid = true;
+                if (!srv_settings.conn_protected) {
+                    tc_intercept_release_tunnel(old_fd, NULL);
+                }
             }
+        }
+        if (srv_settings.conn_protected && previous_fd_valid) {
+            return false;
         }
         srv_settings.s_fd_num = 0;
         srv_settings.s_fd_index = 0;
@@ -66,6 +73,8 @@ void tc_intercept_check_tunnel_for_single(int fd)
         tc_log_info(LOG_WARN, 0, "reach the fd limit for single:%d", 
                 srv_settings.s_fd_num);
     }
+
+    return true;
 }
 #endif
 

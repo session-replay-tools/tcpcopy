@@ -28,11 +28,18 @@ tc_msg_event_accept(tc_event_t *rev)
 
     if (tc_socket_set_nodelay(fd) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
+        tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+        tc_socket_close(fd);
         return TC_ERROR;
     }
 
 #if (TCPCOPY_SINGLE)  
-    tc_intercept_check_tunnel_for_single(fd);
+    if (!tc_intercept_check_tunnel_for_single(fd)) {
+        tc_log_info(LOG_WARN, 0, "sth tries to connect to server.");
+        tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+        tc_socket_close(fd);
+        return TC_ERROR;
+    }
 #endif   
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
@@ -77,7 +84,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (msg.client_ip != 0 || msg.client_port != 0) {
             tunnel[fd].clt_msg_size = MSG_CLIENT_MIN_SIZE;
             srv_settings.old = 1;
-            tc_log_info(LOG_WARN, 0, "too old tcpcopy for intercept");
+            tc_log_info(LOG_WARN, 0, "client too old for intercept");
         } else {
             if (version != INTERNAL_VERSION) {
                 tc_log_info(LOG_WARN, 0, 

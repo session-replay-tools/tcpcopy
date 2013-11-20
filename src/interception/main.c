@@ -204,6 +204,9 @@ usage(void)
 #endif
     printf("-o <target>    set the target for capturing response packets.\n");
 #endif
+#if (TCPCOPY_SINGLE)
+    printf("-c             set connections protected\n");
+#endif
     printf("-v             intercept version\n"
            "-h             print this help and exit\n"
            "-d             run as a daemon\n");
@@ -234,6 +237,9 @@ read_args(int argc, char **argv) {
 #endif
          "h"  /* print this help and exit */
          "l:" /* error log file path */
+#if (TCPCOPY_SINGLE)
+         "c"
+#endif
          "P:" /* save PID in file */
          "v"  /* print version and exit*/
          "d"  /* daemon mode */
@@ -272,6 +278,11 @@ read_args(int argc, char **argv) {
             case 'b':
                 srv_settings.bound_ip = optarg;
                 break;
+#if (TCPCOPY_SINGLE)
+            case 'c':
+                srv_settings.conn_protected = true;
+                break;
+#endif
             case 'h':
                 usage();
                 return -1;
@@ -465,6 +476,9 @@ settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.bound_ip = NULL;
+#if (TCPCOPY_SINGLE)
+    srv_settings.conn_protected = false;
+#endif
 #if (INTERCEPT_NFQUEUE)
     srv_settings.max_queue_len = -1;
 #endif
