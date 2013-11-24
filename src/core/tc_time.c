@@ -53,8 +53,12 @@ tc_time_update()
     time_t          sec;
     struct tm       tm;
     struct timeval  tv;
+    int             status;
 
-    gettimeofday(&tv, NULL);
+    status = gettimeofday(&tv, NULL);
+    if (status < 0) {
+        tc_log_info(LOG_ERR, errno, "gettimeofday failed");
+    }
 
     sec = tv.tv_sec;
     msec = tv.tv_usec / 1000;
