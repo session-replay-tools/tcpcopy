@@ -49,11 +49,11 @@ tc_time_init()
 void
 tc_time_update()
 {
+    int             status;
     long            msec;
     time_t          sec;
     struct tm       tm;
     struct timeval  tv;
-    int             status;
 
     status = gettimeofday(&tv, NULL);
     if (status < 0) {

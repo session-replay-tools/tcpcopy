@@ -123,8 +123,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
         return TC_INVALID_SOCKET;
     }
 
-     /* free the memory used for the compiled filter */
-     pcap_freecode(&fp);
+    pcap_freecode(&fp);
 
     if (pcap_get_selectable_fd(*pd) == -1) {
         tc_log_info(LOG_ERR, 0, "pcap_get_selectable_fd fails"); 

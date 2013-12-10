@@ -457,5 +457,14 @@ interception_over()
         srv_settings.targets.mappings = NULL;
     }
 
+#if (TCPCOPY_PCAP)
+    for (i = 0; i < MAX_FD_NUM; i++) {
+        if (pcap_map[i] != NULL) {
+            pcap_close(pcap_map[i]);
+            pcap_map[i] = NULL;
+        }
+    }
+#endif
+
 }
 
