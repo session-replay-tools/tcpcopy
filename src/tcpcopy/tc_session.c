@@ -1419,8 +1419,6 @@ static void activate_dead_sessions()
     hash_node    *hn;
     p_link_node   ln;
 
-    tc_log_info(LOG_NOTICE, 0, "activate_dead_sessions");
-
     for (i = 0; i < sessions_table->size; i++) {
 
         list = sessions_table->lists[i];

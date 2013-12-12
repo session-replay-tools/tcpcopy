@@ -254,6 +254,7 @@ connect_to_server(tc_event_loop_t *event_loop)
     uint32_t                 target_ip;
 #if (TCPCOPY_DR)
     uint16_t                 target_port;
+    connections_t           *connections;
 #else
     ip_port_pair_mapping_t  *pair, **mappings;
 #endif
@@ -276,6 +277,21 @@ connect_to_server(tc_event_loop_t *event_loop)
             continue;
         }
 
+        /* release resources */
+        connections = &(clt_settings.real_servers.connections[i]);
+        for (j = 0; j < connections->num; j++) {
+             fd = connections->fds[j];
+             if (fd > 0) {
+                 tc_log_info(LOG_NOTICE, 0, "it close socket:%d", fd);
+                 tc_socket_close(fd);
+                 tc_event_del(clt_settings.ev[fd]->loop, 
+                         clt_settings.ev[fd], TC_EVENT_READ);
+                 tc_event_destroy(clt_settings.ev[fd], 0);
+                 connections->fds[j] = -1;
+             }
+        }
+
+        /* reinit resources */
         clt_settings.real_servers.connections[i].num = 0;
         clt_settings.real_servers.connections[i].remained_num = 0;
 
