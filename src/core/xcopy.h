@@ -52,10 +52,6 @@
 #define TCPCOPY_DR 1
 #endif
 
-#if (TCPCOPY_PCAP)
-#undef TCPCOPY_OFFLINE
-#endif
-
 #if (TCPCOPY_OFFLINE)
 #undef TCPCOPY_PCAP
 #endif
