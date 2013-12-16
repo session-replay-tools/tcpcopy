@@ -461,7 +461,7 @@ send_router_info(session_t *s, uint16_t type)
         connections->index = (connections->index + 1) % connections->num;
 
         if (fd == -1) {
-            tc_log_info(LOG_WARN, 0, "sock invalid");
+            tc_log_debug0(LOG_WARN, 0, "sock invalid");
             continue;
         }
         
@@ -490,7 +490,7 @@ send_router_info(session_t *s, uint16_t type)
 
     fd = address_find_sock(s->online_addr, s->online_port);
     if (fd == -1) {
-        tc_log_info(LOG_WARN, 0, "sock invalid");
+        tc_log_debug0(LOG_WARN, 0, "sock invalid");
         return false;
     }
 
