@@ -35,7 +35,7 @@ typedef struct route_table_s {
 int router_init();
 
 void router_add(int, uint32_t, uint16_t, uint32_t, uint16_t, int);
-void router_update(int old,int main_router_fd, tc_ip_header_t *ip_header);
+void router_update(bool old, tc_ip_header_t *ip_header);
 void router_stat();
 void router_destroy();
 

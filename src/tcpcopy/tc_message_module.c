@@ -42,9 +42,12 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
         return TC_INVALID_SOCKET;
     }
 
+    clt_settings.ev[fd] = ev;
+
     if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_INVALID_SOCKET;
     }
+
 
     return fd;
 }
@@ -88,10 +91,10 @@ tc_process_server_msg(tc_event_t *rev)
                 if (connections->fds[j] == rev->fd) {
                     if (connections->fds[j] > 0) {
                         tc_socket_close(connections->fds[j]);
-                        connections->fds[j] = -1;
                         tc_log_info(LOG_NOTICE, 0, "close sock:%d", 
                                 connections->fds[j]);
                         tc_event_del(rev->loop, rev, TC_EVENT_READ);
+                        connections->fds[j] = -1;
                         connections->remained_num--;
                     }
                     if (connections->remained_num == 0 && 
@@ -106,16 +109,12 @@ tc_process_server_msg(tc_event_t *rev)
             }
         }
 
-
         if (clt_settings.real_servers.active_num == 0) {
-            if (clt_settings.lonely) {
-                return TC_OK;
-            } else {
-                return TC_ERR_EXIT;
+            if (!clt_settings.lonely) {
+                tc_over = SIGRTMAX;
             }
-        } else {
-            return TC_OK;
-        }
+        } 
+        return TC_OK;
 #else 
         tc_event_del(rev->loop, rev, TC_EVENT_READ);
 

@@ -559,7 +559,7 @@ tc_process_offline_packet(tc_event_timer_t *evt)
         send_packets_from_pcap(0);
     } else {
         diff = tc_time() - read_pcap_over_time;
-        if (diff > DEFAULT_SESSION_TIMEOUT) {
+        if (diff > OFFLINE_TAIL_TIMEOUT) {
             tc_over = SIGRTMAX;
             tc_log_info(LOG_NOTICE, 0, "offline replay is complete");
         }
@@ -571,12 +571,18 @@ tc_process_offline_packet(tc_event_timer_t *evt)
 static uint64_t
 timeval_diff(struct timeval *start, struct timeval *cur)
 {
-    uint64_t usec;
+    int64_t usec;
 
-    usec  = (cur->tv_sec - start->tv_sec) * 1000000;
+    usec  = cur->tv_sec - start->tv_sec;
+    usec  = usec * 1000000;
     usec += cur->tv_usec - start->tv_usec;
 
-    return usec;
+    if (usec < 0) {
+        tc_log_info(LOG_NOTICE, 0, "usec is less than 0:%lld", usec);
+        return 0;
+    }
+
+    return (uint64_t) usec;
 }
 
 static bool

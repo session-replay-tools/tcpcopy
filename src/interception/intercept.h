@@ -21,9 +21,24 @@ typedef struct ip_port_pairs_t{
 
 #endif
 
+#if (INTERCEPT_COMBINED)
+typedef struct aggregation_s{
+    time_t         access_time;
+    long           access_msec;
+    unsigned char *cur_write;
+    uint16_t       num;
+    unsigned char  aggr_resp[COMB_LENGTH];
+}aggregation_t;
+#endif
+
 typedef struct tunnel_basic_t{
-    unsigned int first_in:1;
-    unsigned int clt_msg_size:16;
+    tc_event_t     *ev;
+#if (INTERCEPT_COMBINED)
+    aggregation_t  *combined;
+#endif
+    unsigned int    fd_valid:1;
+    unsigned int    first_in:1;
+    unsigned int    clt_msg_size:16; 
 }tunnel_basic_t;
 
 typedef struct xcopy_srv_settings {
@@ -37,6 +52,7 @@ typedef struct xcopy_srv_settings {
 #if (INTERCEPT_NFQUEUE)   
     struct nfq_handle   *nfq_handler;    /* NFQUEUE library handler */
     struct nfq_q_handle *nfq_q_handler;  /* NFQUEUE queue handler */
+    int                  max_queue_len;
 #endif
 
 #if (INTERCEPT_ADVANCED)
@@ -51,13 +67,20 @@ typedef struct xcopy_srv_settings {
 
 #endif
 
-    int                  router_fd;
+    bool                 old;            /* old tcpcopy flag */
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
-    unsigned int         old:1;          /* old tcpcopy flag */
 #if (!INTERCEPT_ADVANCED)
     passed_ip_addr_t     passed_ips;     /* passed ip list */
+#endif
+    tunnel_basic_t       tunnel[MAX_FD_NUM];
+    int                  max_fd;
+#if (TCPCOPY_SINGLE)
+    time_t               accepted_tunnel_time;
+    int                  s_fd_num;
+    int                  s_fd_index;
+    int                  s_router_fds[MAX_FD_NUM];
 #endif
 
 }xcopy_srv_settings;

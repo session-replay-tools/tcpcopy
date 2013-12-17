@@ -3,6 +3,8 @@
 
 tc_atomic_t  tc_over = 0;
 
+static tc_event_t *ev_mark[MAX_FD_NUM];
+
 static long tc_event_timer_find(tc_event_loop_t *loop);
 static void tc_event_timer_run(tc_event_loop_t *loop);
 
@@ -162,7 +164,7 @@ int tc_event_process_cycle(tc_event_loop_t *loop)
             }
 
             if (act_event->reg_evs == TC_EVENT_NONE) {
-                tc_event_destroy(act_event);
+                tc_event_destroy(act_event, 0);
             }
         }
     }
@@ -192,15 +194,49 @@ tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
     return ev;
 }
 
-void tc_event_destroy(tc_event_t *ev)
+static void tc_event_destroy_with_no_delay(tc_event_t *ev)
 {
+    tc_log_info(LOG_NOTICE, 0, "destroy event:%d", ev->fd);
+    ev_mark[ev->fd] = NULL;
     ev->loop = NULL;
     ev->read_handler = NULL;
     ev->write_handler = NULL;
-
     free(ev);
 }
 
+void tc_event_destroy(tc_event_t *ev, int delayed)
+{
+    tc_log_info(LOG_NOTICE, 0, "enter tc_event_destroy:%d", ev->fd);
+    if (ev->fd <= 0 || ev->fd >= MAX_FD_NUM) {
+        tc_log_info(LOG_ERR, 0, "fd is not valid");
+        return;
+    }
+
+    if (ev_mark[ev->fd] != NULL && ev != ev_mark[ev->fd]) {
+        tc_log_info(LOG_NOTICE, 0, "destroy previous event:%d", ev->fd);
+        tc_event_destroy_with_no_delay(ev_mark[ev->fd]);
+    }
+
+    if (delayed) {
+        tc_log_info(LOG_NOTICE, 0, "delayed destroy event:%d", ev->fd);
+        ev_mark[ev->fd] = ev;
+    } else {
+        tc_event_destroy_with_no_delay(ev);
+    }
+}
+
+void finally_release_obsolete_events()
+{
+    int i;
+
+    for (i = 0; i < MAX_FD_NUM; i++) {
+        if (ev_mark[i] != NULL) {
+            tc_log_info(LOG_NOTICE, 0, "destroy previous event:%d", ev_mark[i]->fd);
+            free(ev_mark[i]);
+            ev_mark[i] = NULL;
+        }
+    }
+}
 
 int tc_event_timer_add(tc_event_loop_t *loop, long msec,
         tc_event_timer_handler_pt handler)

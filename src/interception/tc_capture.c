@@ -8,15 +8,16 @@ static uint64_t        tot_router_items = 0;
 #if (TCPCOPY_PCAP)
 static  pcap_t        *pcap_map[MAX_FD_NUM];
 #endif
-static tunnel_basic_t  tunnel[MAX_FD_NUM];
 
 static int tc_msg_event_process(tc_event_t *rev);
+
 
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int         fd;
-    tc_event_t *ev;
+    int             fd;
+    tc_event_t     *ev;
+    tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
@@ -30,6 +31,10 @@ tc_msg_event_accept(tc_event_t *rev)
         return TC_ERROR;
     }
 
+#if (TCPCOPY_SINGLE)  
+    tc_intercept_check_tunnel_for_single(fd);
+#endif   
+
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
         tc_log_info(LOG_ERR, 0, "Msg event create failed.");
@@ -39,18 +44,11 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
-    
-    tunnel[fd].first_in = 1;
-#if (INTERCEPT_COMBINED)
-    set_fd_valid(fd, true); 
-#endif
 
-#if (TCPCOPY_SINGLE)  
-    if (srv_settings.router_fd > 0) {
-        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
-    }
-    srv_settings.router_fd = fd;
-#endif
+    tunnel = srv_settings.tunnel;
+    tunnel[fd].ev = ev;
+    tunnel[fd].first_in = 1;
+    tunnel[fd].fd_valid = 1;
 
     return TC_OK;
 }
@@ -58,16 +56,18 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    int          fd, version;
-    msg_client_t msg;
+    int             fd, version;
+    msg_client_t    msg;
+    tunnel_basic_t *tunnel;
 
     fd = rev->fd;
+    tunnel = srv_settings.tunnel;
 
     if (tunnel[fd].first_in) {
         if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
 
@@ -88,7 +88,7 @@ tc_msg_event_process(tc_event_t *rev)
             if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
                         MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
             {
-                tc_intercept_close_fd(fd, rev);
+                tc_intercept_release_tunnel(fd, rev);
                 return TC_ERROR;
             }
             return TC_OK;
@@ -98,7 +98,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
     }
@@ -147,7 +147,7 @@ interception_output_stat(tc_event_timer_t *evt)
 void
 interception_push(tc_event_timer_t *evt)
 {
-    send_buffered_packets(tc_time());
+    send_buffered_packets();
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
 }
 #endif
@@ -215,7 +215,7 @@ static int resp_dispose(tc_ip_header_t *ip_header)
 
     tot_copy_resp_packs++;
 
-    router_update(srv_settings.old, srv_settings.router_fd, ip_header);
+    router_update(srv_settings.old, ip_header);
     return TC_OK;
 
 }
@@ -435,9 +435,7 @@ void
 interception_over()
 {
     int i;
-#if (INTERCEPT_COMBINED)
-    release_combined_resouces();
-#endif
+
     router_destroy();
     delay_table_destroy();
 

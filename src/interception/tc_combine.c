@@ -2,46 +2,30 @@
 #include <intercept.h>
 
 #if (INTERCEPT_COMBINED)
-static aggregation_t  *combined[MAX_FD_NUM];
-static bool            fd_valid[MAX_FD_NUM];
-static int             max_fd = 0;
-
-void 
-set_fd_valid(int fd, bool valid) {
-    if (fd > 0) {
-        fd_valid[fd] = valid;
-    }
-}
 
 void
-buffer_and_send(int mfd, int fd, msg_server_t *msg)
+buffer_and_send(int fd, msg_server_t *msg)
 {
-    int                  ret = TC_OK, is_send = 0, bytes;
-    unsigned char       *p;
-    aggregation_t       *aggr;
+    int                ret = TC_OK, is_send = 0, bytes;
+    unsigned char     *p;
+    aggregation_t     *aggr;
 
-#if (TCPCOPY_SINGLE)
-    if (mfd == 0) {
-        return;
-    }
-#endif
-
-    if (fd > max_fd) {
-        max_fd = fd;
+    if (fd > srv_settings.max_fd) {
+        srv_settings.max_fd = fd;
     }
 
-    if (max_fd > MAX_FD_VALUE) {
-        tc_log_info(LOG_WARN, 0, "fd is too large:%d", max_fd);
-        max_fd = MAX_FD_VALUE;
+    if (srv_settings.max_fd > MAX_FD_VALUE) {
+        tc_log_info(LOG_WARN, 0, "fd is too large:%d", srv_settings.max_fd);
+        srv_settings.max_fd = MAX_FD_VALUE;
         return;
     }
 
-    if (!fd_valid[fd]) {
+    if (!srv_settings.tunnel[fd].fd_valid) {
         tc_log_debug1(LOG_DEBUG, 0, "fd is not valid:%d", fd);
         return;
     }
 
-    aggr = combined[fd];
+    aggr = srv_settings.tunnel[fd].combined;
     if (!aggr) {
         aggr = (aggregation_t *) malloc(sizeof(aggregation_t));
         if (aggr == NULL) {
@@ -50,7 +34,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             tc_log_info(LOG_INFO, 0, "malloc memory for fd:%d", fd);
             memset(aggr, 0, sizeof(aggregation_t));
             aggr->cur_write = aggr->aggr_resp;
-            combined[fd] = aggr;
+            srv_settings.tunnel[fd].combined = aggr;
         }
     }
 
@@ -62,7 +46,6 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             aggr->num = aggr->num + 1;
         } else {
             if (aggr->num == 0) {
-                tc_log_debug0(LOG_DEBUG, 0, "combined num is zero");
                 return;
             }
         }
@@ -83,11 +66,7 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
             p = (unsigned char *) (&(aggr->num));
             bytes = aggr->cur_write - aggr->aggr_resp + sizeof(aggr->num);
             tc_log_debug1(LOG_DEBUG, 0, "send bytes:%d", bytes);
-#if (!TCPCOPY_SINGLE)
             ret = tc_socket_send(fd, (char *) p, bytes);
-#else
-            ret = tc_socket_send(mfd, (char *) p, bytes);
-#endif
             aggr->num = 0;
             aggr->cur_write = aggr->aggr_resp;
         } 
@@ -96,35 +75,19 @@ buffer_and_send(int mfd, int fd, msg_server_t *msg)
         aggr->access_msec = tc_current_time_msec;
 
         if (ret == TC_ERROR) {
-            fd_valid[fd] = false;
-            free(combined[fd]);
-            combined[fd] = NULL;
+            tc_intercept_release_tunnel(fd, NULL);
         }
     }
 }
 
 void
-send_buffered_packets(time_t cur_time)
+send_buffered_packets()
 {
     int i;
 
-    for (i = 0; i <= max_fd; i++) {
-        if (combined[i] != NULL) {
-            buffer_and_send(srv_settings.router_fd, i, NULL);
-        }
-    }
-}
-
-void
-release_combined_resouces()
-{
-    int i;
-
-    for (i = 0; i <= max_fd; i++) {
-        if (combined[i] != NULL) {
-            free(combined[i]);
-            combined[i] = NULL;
-            tc_log_info(LOG_NOTICE, 0, "release resources for fd %d", i);
+    for (i = 0; i <= srv_settings.max_fd; i++) {
+        if (srv_settings.tunnel[i].fd_valid) {
+            buffer_and_send(i, NULL);
         }
     }
 }

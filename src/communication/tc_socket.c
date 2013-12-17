@@ -414,7 +414,7 @@ tc_nl_socket_recv(int fd, char *buffer, size_t len)
 
 int 
 tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
-        nfq_callback *cb)
+        nfq_callback *cb, int max_queue_len)
 {
     int fd;
 
@@ -450,6 +450,15 @@ tc_nfq_socket_init(struct nfq_handle **h, struct nfq_q_handle **qh,
     if (nfq_set_mode((*qh), NFQNL_COPY_PACKET, RESP_MAX_USEFUL_SIZE) < 0) {
         tc_log_info(LOG_ERR, errno, "can't set packet_copy mode");
         return TC_INVALID_SOCKET;
+    }
+
+    if (max_queue_len > 0) {
+        if (nfq_set_queue_maxlen((*qh), (uint32_t) max_queue_len)  < 0) {
+            tc_log_info(LOG_ERR, errno, "can't set queue max length:%d", 
+                    max_queue_len);
+            tc_log_info(LOG_WARN, 0, "unable to set queue maxlen");
+            tc_log_info(LOG_WARN, 0, "your kernel probably doesn't support it");
+        }
     }
 
     fd = nfq_fd(*h);
@@ -523,7 +532,7 @@ tc_socket_set_nonblocking(int fd)
         return TC_ERROR;
     }
 
-    if(fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+    if (fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
         return TC_ERROR;
     }
 
@@ -735,7 +744,6 @@ tc_socket_send(int fd, char *buffer, int len)
                 tc_log_info(LOG_NOTICE, errno, "fd:%d EAGAIN", fd);
             } else {
                 tc_log_info(LOG_ERR, errno, "fd:%d", fd);
-                tc_socket_close(fd);
                 return TC_ERROR;
             }
 
@@ -747,6 +755,7 @@ tc_socket_send(int fd, char *buffer, int len)
             }
 
             offset += send_len;
+            num_bytes -= send_len;
         }
     } while (offset < len);
 

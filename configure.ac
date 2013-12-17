@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([TCPCopy], [0.9.5], [wangbin579@gmail.com], [tcpcopy])
+AC_INIT([TCPCopy], [0.9.6], [wangbin579@gmail.com], [tcpcopy])
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 AM_INIT_AUTOMAKE

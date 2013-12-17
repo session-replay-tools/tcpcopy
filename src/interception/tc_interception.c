@@ -11,25 +11,30 @@ static uint32_t        seq = 1;
 static unsigned char   buffer[128];
 #endif
 
-static tunnel_basic_t  tunnel[MAX_FD_NUM];
-
 static int tc_msg_event_process(tc_event_t *rev);
 
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int         fd;
-    tc_event_t *ev;
+    int             fd;
+    tc_event_t     *ev;
+    tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
         tc_log_info(LOG_ERR, 0, "msg accept failed, from listen:%d", rev->fd);
         return TC_ERROR;
     }
 
+    tc_log_info(LOG_NOTICE, 0, "it adds fd:%d", fd);
+
     if (tc_socket_set_nodelay(fd) == TC_ERROR) {
         tc_log_info(LOG_ERR, 0, "Set no delay to socket(%d) failed.", rev->fd);
         return TC_ERROR;
     }
+
+#if (TCPCOPY_SINGLE)  
+    tc_intercept_check_tunnel_for_single(fd);
+#endif   
 
     ev = tc_event_create(fd, tc_msg_event_process, NULL);
     if (ev == NULL) {
@@ -40,18 +45,11 @@ tc_msg_event_accept(tc_event_t *rev)
     if (tc_event_add(rev->loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
         return TC_ERROR;
     }
-    
+ 
+    tunnel = srv_settings.tunnel;
+    tunnel[fd].ev = ev; 
     tunnel[fd].first_in = 1;
-#if (INTERCEPT_COMBINED)
-    set_fd_valid(fd, true); 
-#endif
-
-#if (TCPCOPY_SINGLE)  
-    if (srv_settings.router_fd > 0) {
-        tc_log_info(LOG_WARN, 0, "it does not support distributed tcpcopy");
-    }
-    srv_settings.router_fd = fd;
-#endif
+    tunnel[fd].fd_valid = 1;
 
     return TC_OK;
 }
@@ -59,18 +57,20 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    int          fd, version;
-    msg_client_t msg;
+    int             fd, version;
+    msg_client_t    msg;
+    tunnel_basic_t *tunnel;
 
     fd = rev->fd;
 
     memset(&msg, 0, sizeof(msg_client_t));
 
+    tunnel = srv_settings.tunnel;
     if (tunnel[fd].first_in) {
         if (tc_socket_recv(fd, (char *) &msg, MSG_CLIENT_MIN_SIZE) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
 
@@ -91,7 +91,7 @@ tc_msg_event_process(tc_event_t *rev)
             if (tc_socket_recv(fd, ((char *) &msg + MSG_CLIENT_MIN_SIZE), 
                         MSG_CLIENT_SIZE - MSG_CLIENT_MIN_SIZE) == TC_ERROR) 
             {
-                tc_intercept_close_fd(fd, rev);
+                tc_intercept_release_tunnel(fd, rev);
                 return TC_ERROR;
             }
             return TC_OK;
@@ -101,7 +101,7 @@ tc_msg_event_process(tc_event_t *rev)
         if (tc_socket_recv(fd, (char *) &msg, tunnel[fd].clt_msg_size) == 
                 TC_ERROR) 
         {
-            tc_intercept_close_fd(fd, rev);
+            tc_intercept_release_tunnel(fd, rev);
             return TC_ERROR;
         }
     }
@@ -150,7 +150,7 @@ interception_output_stat(tc_event_timer_t *evt)
 void
 interception_push(tc_event_timer_t *evt)
 {
-    send_buffered_packets(tc_time());
+    send_buffered_packets();
     evt->msec = tc_current_time_msec + CHECK_INTERVAL;
 }
 #endif
@@ -197,7 +197,7 @@ static int tc_nfq_process_packet(struct nfq_q_handle *qh,
         } else {
 
             tot_copy_resp_packs++;
-            router_update(srv_settings.old, srv_settings.router_fd, ip_hdr);
+            router_update(srv_settings.old, ip_hdr);
 
             /* drop the packet */
             ret = nfq_set_verdict(qh, id, NF_DROP, 0, NULL);
@@ -305,7 +305,7 @@ tc_nl_event_process(tc_event_t *rev)
         } else {
 
             tot_copy_resp_packs++;
-            router_update(srv_settings.old, srv_settings.router_fd, ip_hdr);
+            router_update(srv_settings.old, ip_hdr);
             /* drop the packet */
             dispose_netlink_packet(rev->fd, NF_DROP, packet_id);
         }
@@ -356,7 +356,8 @@ interception_init(tc_event_loop_t *event_loop, char *ip, uint16_t port)
 #if (INTERCEPT_NFQUEUE)   
     /* init the nfq socket */
     if ((fd = tc_nfq_socket_init(&srv_settings.nfq_handler, 
-                    &srv_settings.nfq_q_handler, tc_nfq_process_packet)) 
+                    &srv_settings.nfq_q_handler, tc_nfq_process_packet, 
+                    srv_settings.max_queue_len)) 
             == TC_INVALID_SOCKET)
     {
         return TC_ERROR;
@@ -413,10 +414,6 @@ interception_over()
         nfq_close(srv_settings.nfq_handler);
         srv_settings.nfq_handler = NULL;
     }
-#endif
-
-#if (INTERCEPT_COMBINED)
-    release_combined_resouces();
 #endif
 
 #if (!TCPCOPY_SINGLE)
