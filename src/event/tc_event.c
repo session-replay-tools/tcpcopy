@@ -256,7 +256,6 @@ static void tc_event_timer_run(tc_event_loop_t *loop)
 
     for (timer = loop->timers; timer; ) {
         if (timer->msec <= tc_current_time_msec && timer->handler) {
-            timer->handler(timer);
 
             if (timer->handler == NULL) {
                 if (prev) {
@@ -271,6 +270,8 @@ static void tc_event_timer_run(tc_event_loop_t *loop)
 
                 continue;
             }
+
+            timer->handler(timer);
         }
 
         prev = timer;
