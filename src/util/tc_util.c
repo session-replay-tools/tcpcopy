@@ -226,14 +226,12 @@ retrieve_devices(char *raw_device, devices_t *devices)
             len = strlen(p);
         }
 
-        strncpy(devices->device[count].name, p, len);
+        strncpy(devices->device[count++].name, p, len);
 
         if (count == MAX_DEVICE_NUM) {
             tc_log_info(LOG_WARN, 0, "reach the limit for devices");
             break;
         }
-
-        count++;
 
         if (split == NULL) {
             break;
