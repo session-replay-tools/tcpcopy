@@ -308,7 +308,7 @@ wrap_send_ip_packet(session_t *s, unsigned char *frame, bool client)
 
         s->sm.status = SEND_REQ;
         s->req_last_send_cont_time = tc_time();
-        s->req_last_cont_sent_seq  = htonl(tcp_header->seq);
+        s->req_last_cont_sent_seq  = ntohl(tcp_header->seq);
         s->vir_next_seq = s->vir_next_seq + cont_len;
         if (s->sm.unack_pack_omit_save_flag) {
             /*It must be a retransmission packet */
@@ -3219,6 +3219,9 @@ process_clt_afer_filtering(session_t *s, unsigned char *frame,
     }
 
 #if (!TCPCOPY_PAPER)
+    if (len > 0) {
+        tc_log_info(LOG_NOTICE, 0, "payload packet drop:%d", len);
+    }
     tc_log_debug1(LOG_DEBUG, 0, "drop packet:%u", s->src_h_port);
 #else
     /* this is for adding response latency(only valid for high latency) */
@@ -3435,7 +3438,8 @@ bool
 is_packet_needed(unsigned char *packet)
 {
     bool              is_needed = false;
-    uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, key;
+    uint16_t          size_ip, size_tcp, tot_len, cont_len, header_len, 
+                      key, frag_off;
 #if (TCPCOPY_MYSQL_ADVANCED)
     uint64_t          sess_key; 
     session_t        *s;
@@ -3455,6 +3459,13 @@ is_packet_needed(unsigned char *packet)
     size_ip   = ip_header->ihl << 2;
     if (size_ip < 20) {
         tc_log_info(LOG_WARN, 0, "Invalid IP header length: %d", size_ip);
+        return is_needed;
+    }
+
+    frag_off = ntohs(ip_header->frag_off);
+    if (frag_off != IP_DF) {
+        tc_log_info(LOG_WARN, 0, 
+                "frag_off is not IP_DF,use raw socket instead of pcap");
         return is_needed;
     }
 
@@ -3588,7 +3599,7 @@ tc_interval_dispose(tc_event_timer_t *evt)
     /* activate dead session */
     activate_dead_sessions();
 
-    evt->msec = tc_current_time_msec + 5000;
+    evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
 
 bool

@@ -77,7 +77,7 @@ tc_interval_dispose(tc_event_timer_t *evt)
 {
     output_stat();
 
-    evt->msec = tc_current_time_msec + 5000;
+    evt->msec = tc_current_time_msec + OUTPUT_INTERVAL;
 }
 
 
@@ -106,7 +106,7 @@ ip_fragmentation(unsigned char *frame, tc_ip_header_t *ip_header,
     payload_len = offset;
 
     tmp_ip_header = (tc_ip_header_t *) p;
-    tmp_ip_header->frag_off = htons(0x2000);
+    tmp_ip_header->frag_off = htons(IP_MF);
 
     index  = size_ip;
     p += size_ip;

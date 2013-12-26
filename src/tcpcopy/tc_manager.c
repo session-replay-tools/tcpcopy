@@ -359,7 +359,7 @@ restore_work(tc_event_timer_t *evt)
 {
     connect_to_server(&event_loop);
 
-    evt->msec = tc_current_time_msec + 10000;
+    evt->msec = tc_current_time_msec + RETRY_INTERVAL;
 
     clt_settings.tries++;
 }
@@ -373,11 +373,11 @@ tcp_copy_init(tc_event_loop_t *event_loop)
 
     /* register some timer */
     tc_event_timer_add(event_loop, 60000, check_resource_usage);
-    tc_event_timer_add(event_loop, 5000, tc_interval_dispose);
+    tc_event_timer_add(event_loop, OUTPUT_INTERVAL, tc_interval_dispose);
 
 #if (TCPCOPY_DR)
     if (clt_settings.lonely) {
-        tc_event_timer_add(event_loop, 10000, restore_work);
+        tc_event_timer_add(event_loop, RETRY_INTERVAL, restore_work);
     }
 #endif
 
