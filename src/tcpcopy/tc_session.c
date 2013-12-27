@@ -1624,6 +1624,7 @@ retransmit_packets(session_t *s, uint32_t expected_seq)
         cur_seq    = ntohl(tcp_header->seq);  
 
         if (!is_success) {
+            /* TODO needs to be optimized */
             if (cur_seq == expected_seq) {
                 /* fast retransmission */
                 is_success = true;
@@ -2538,11 +2539,6 @@ process_back_fin(session_t *s, tc_ip_header_t *ip_header,
         /* send the constructed reset packet to backend */
         send_faked_rst(s, ip_header, tcp_header);
     }
-    /* 
-     * Why session over in such situations?
-     * Just for releasing router info.
-     * Too many router info will slow the intercept program 
-     */
     s->sm.sess_over = 1;
 }
 
@@ -2758,7 +2754,6 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
 
 
 #if (!TCPCOPY_PAPER)
-        /* TODO Why mysql does not need this packet ? */
         send_faked_ack(s, ip_header, tcp_header, true);
 #else
         s->response_content_time = tc_milliscond_time();
@@ -3621,7 +3616,6 @@ process_out(unsigned char *packet)
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
 
-    /* when the packet comes from the targeted test machine */
     key = get_key(ip_header->daddr, tcp_header->dest);
     s = hash_find(sessions_table, key);
     if (s == NULL) {
@@ -3683,7 +3677,6 @@ process_in(unsigned char *frame)
     size_ip    = ip_header->ihl << 2;
     tcp_header = (tc_tcp_header_t *) ((char *) ip_header + size_ip);
 
-    /* when the packet comes from client */
     if (clt_settings.factor) {
         /* change client source port */
         tcp_header->source = get_port_from_shift(tcp_header->source,
