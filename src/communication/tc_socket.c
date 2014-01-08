@@ -639,11 +639,10 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
 
         if (n == -1) {
             if (errno == EAGAIN || errno == EINTR) {
-                if (cnt > MAX_RW_TRIES) {
-                    tc_log_info(LOG_ERR, 0, "recv timeout,fd:%d", fd);
-                    return TC_ERROR;
-                }
                 cnt++;
+                if (cnt % MAX_READ_LOG_TRIES == 0) {
+                    tc_log_info(LOG_ERR, 0, "recv tries:%d,fd:%d", cnt, fd);
+                }
                 continue;
             } else {
                 tc_log_info(LOG_NOTICE, errno, "return -1,fd:%d", fd);
@@ -682,11 +681,10 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
 
         if (n == -1) {
             if (errno == EAGAIN || errno == EINTR) {
-                if (cnt > MAX_RW_TRIES) {
-                    tc_log_info(LOG_ERR, 0, "recv timeout,fd:%d", fd);
-                    return TC_ERROR;
-                }
                 cnt++;
+                if (cnt % MAX_READ_LOG_TRIES == 0) {
+                    tc_log_info(LOG_ERR, 0, "recv tries:%d,fd:%d", cnt, fd);
+                }
                 continue;
             } else {
                 tc_log_info(LOG_NOTICE, errno, "return -1,fd:%d", fd);
@@ -753,7 +751,7 @@ tc_socket_send(int fd, char *buffer, int len)
 
         if (send_len == -1) {
 
-            if (cnt > MAX_RW_TRIES) {
+            if (cnt > MAX_WRITE_TRIES) {
                 tc_log_info(LOG_ERR, 0, "send timeout,fd:%d", fd);
                 return TC_ERROR;
             }
