@@ -526,8 +526,9 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
         if (ip_port->online_port == ip_port->target_port) 
         {
             tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
-            tc_log_info(LOG_WARN, 0, 
-                    "choose a different port or set filter or set device");
+            tc_log_info(LOG_ERR, 0, 
+                    "set pcap filter to capture online inbound packets");
+            return -1;
         }
     }
 #endif
@@ -581,13 +582,17 @@ retrieve_target_addresses(char *raw_transfer,
     i = 0;
     for ( ;; ) {
         if ((seq = strchr(p, ',')) == NULL) {
-            parse_target(transfer->mappings[i++], p);
+            if (parse_target(transfer->mappings[i++], p) == -1) {
+                return -1;
+            }
             break;
         } else {
             *seq = '\0';
-            parse_target(transfer->mappings[i++], p);
-            *seq = ',';
+            if (parse_target(transfer->mappings[i++], p) == -1) {
+                return -1;
+            }
 
+            *seq = ',';
             p = seq + 1;
         }
     }
