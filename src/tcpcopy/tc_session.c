@@ -2618,9 +2618,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
     uint16_t  size_ip, size_tcp, tot_len, cont_len;
     uint32_t  ack, seq;
 
-#if (TCPCOPY_MYSQL_BASIC)
     bool is_greet = false; 
-#endif
 
     resp_cnt++;
 
@@ -2730,9 +2728,7 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             if (!s->sm.resp_greet_received) {
                 s->sm.resp_greet_received = 1;
                 s->sm.need_resp_greet = 0;
-#if (TCPCOPY_MYSQL_BASIC)
                 is_greet = true;
-#endif
             }
         }
 
@@ -2779,20 +2775,17 @@ process_backend_packet(session_t *s, tc_ip_header_t *ip_header,
             /* busy now, don't transmit any more content */
             return;
         }
-#if (TCPCOPY_MYSQL_BASIC)
-        if (s->sm.candidate_response_waiting || is_greet)
-#else
-            if (s->sm.candidate_response_waiting)
-#endif
-            {
-                tc_log_debug0(LOG_DEBUG, 0, "receive back server's resp");
-                s->sm.candidate_response_waiting = 0;
-                s->sm.status = RECV_RESP;
-                s->sm.delay_sent_flag = 0;
-                s->sm.send_reserved_from_bak_payload = 1;
-                send_reserved_packets(s);
-                return;
-            }
+
+        if (s->sm.candidate_response_waiting || is_greet) {
+            tc_log_debug0(LOG_DEBUG, 0, "receive back server's resp");
+            s->sm.candidate_response_waiting = 0;
+            s->sm.status = RECV_RESP;
+            s->sm.delay_sent_flag = 0;
+            s->sm.send_reserved_from_bak_payload = 1;
+            send_reserved_packets(s);
+            return;
+        }
+
     } else {
         /* no content in packet */
 
@@ -2892,6 +2885,11 @@ process_client_fin(session_t *s, unsigned char *frame,
     tc_log_debug1(LOG_DEBUG, 0, "recv fin from clt:%u", s->src_h_port);
 
     s->sm.recv_client_close = 1;
+
+    if (s->sm.need_resp_greet) {
+        save_packet(s->unsend_packets, ip_header, tcp_header);
+        return DISP_STOP;
+    }
 
     if (s->sm.candidate_response_waiting) {
         cur_ack = ntohl(tcp_header->ack_seq);

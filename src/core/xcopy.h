@@ -229,6 +229,11 @@
 #define SCRAMBLE_LENGTH  20
 #define SHA1_HASH_SIZE   20
 #define MAX_PASSWORD_LEN 256
+/* 
+ * TODO
+ * the auth_plugin_data field in Initial Handshake Packet 
+ * can only carry 255 bytes max 
+ */ 
 #define MAX_PAYLOAD_LEN  128
 #endif
 
