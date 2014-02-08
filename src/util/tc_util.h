@@ -17,8 +17,8 @@
         (x = (x >> 16) + (x & 0xffff), (~(x + (x >> 16)) & 0xffff))
 #endif
 
-inline uint64_t get_key(uint32_t s_ip, uint16_t s_port);
-inline uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
+uint64_t get_key(uint32_t s_ip, uint16_t s_port);
+uint16_t get_appropriate_port(uint16_t orig_port, uint16_t add);
 uint16_t get_port_by_rand_addition(uint16_t orig_port);
 uint16_t get_port_from_shift(uint16_t orig_port, uint16_t rand_port,
         int shift_factor);
@@ -27,7 +27,7 @@ ip_port_pair_mapping_t *get_test_pair(ip_port_pair_mappings_t *target,
 int check_pack_src(ip_port_pair_mappings_t *target, uint32_t ip, 
         uint16_t port, int src_flag);
 unsigned char *cp_fr_ip_pack(tc_ip_header_t *ip_header);
-inline bool tcp_seq_before(uint32_t seq1, uint32_t seq2);
+bool tcp_seq_before(uint32_t seq1, uint32_t seq2);
 unsigned short csum (unsigned short *packet, int pack_len);
 unsigned short tcpcsum(unsigned char *iphdr, unsigned short *packet,
         int pack_len);
@@ -48,7 +48,7 @@ get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len,
 #endif
 
 #if (TCPCOPY_PCAP_SEND)
-inline void fill_frame(struct ethernet_hdr *hdr, 
+void fill_frame(struct ethernet_hdr *hdr, 
         unsigned char *smac, unsigned char *dmac);
 #endif
 

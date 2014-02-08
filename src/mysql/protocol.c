@@ -4,13 +4,6 @@
 #include "protocol.h"
 #include "password.h"
 
-static inline unsigned char
-char_val(unsigned char X)
-{
-    return (unsigned char) (X >= '0' && X <= '9' ? X-'0':
-            X >= 'A' && X <= 'Z' ? X - 'A' + 10 : X - 'a' + 10);
-}
-
 static void
 new_hash(uint64_t *result, const char *password)
 {

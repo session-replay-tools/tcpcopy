@@ -15,7 +15,7 @@ link_node_malloc(void *data)
     return p;
 }
 
-inline void
+void
 link_node_internal_free(p_link_node p)
 {
     if (p->data != NULL) {
@@ -63,7 +63,7 @@ link_list_clear(link_list *l)
 
 }
 
-inline void
+void
 link_list_append(link_list *l, p_link_node p)
 {
     p_link_node node;
@@ -101,7 +101,7 @@ link_list_append_by_order(link_list *l, p_link_node p)
 }
 
 
-inline void
+void
 link_list_push(link_list *l, p_link_node p)
 {
     p_link_node node;
@@ -114,7 +114,7 @@ link_list_push(link_list *l, p_link_node p)
     l->size++;
 }
 
-inline p_link_node
+p_link_node
 link_list_remove(link_list *l, p_link_node node)
 {
     p_link_node next, prev;
@@ -127,7 +127,7 @@ link_list_remove(link_list *l, p_link_node node)
     return node;
 }
 
-inline p_link_node
+p_link_node
 link_list_first(link_list *l)
 {
     if (l == NULL || l->head.next == &(l->head)) {
@@ -137,7 +137,7 @@ link_list_first(link_list *l)
     return l->head.next;
 }
 
-inline p_link_node
+p_link_node
 link_list_tail(link_list *l)
 {
     if (l == NULL || l->head.next == &(l->head)) {
@@ -147,7 +147,7 @@ link_list_tail(link_list *l)
     return l->head.prev;
 }
 
-inline p_link_node
+p_link_node
 link_list_pop_first(link_list *l)
 {
     p_link_node first = link_list_first(l);
@@ -159,7 +159,7 @@ link_list_pop_first(link_list *l)
     return link_list_remove(l, first);
 }
 
-inline p_link_node
+p_link_node
 link_list_pop_tail(link_list *l)
 {
     p_link_node tail = link_list_tail(l);
@@ -171,7 +171,7 @@ link_list_pop_tail(link_list *l)
     return link_list_remove(l, tail);
 }
 
-inline p_link_node
+p_link_node
 link_list_get_next(link_list *l, p_link_node p)
 {
     if (p->next == &(l->head)) {
@@ -181,7 +181,7 @@ link_list_get_next(link_list *l, p_link_node p)
     return p->next;
 } 
 
-inline bool
+bool
 link_list_is_empty(link_list *l)
 {
     if (l->head.next == &(l->head)) {

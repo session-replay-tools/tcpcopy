@@ -3,7 +3,7 @@
 #include <tcpcopy.h>
 
 
-inline uint64_t
+uint64_t
 get_key(uint32_t ip, uint16_t port)
 {
     uint64_t value = ((uint64_t) ip ) << 16;
@@ -13,7 +13,7 @@ get_key(uint32_t ip, uint16_t port)
     return value;
 }
 
-inline uint16_t
+uint16_t
 get_appropriate_port(uint16_t orig_port, uint16_t add)
 {
     uint16_t dest_port = orig_port;
@@ -124,7 +124,7 @@ cp_fr_ip_pack(tc_ip_header_t *ip_header)
     return frame;
 }
 
-inline bool
+bool
 tcp_seq_before(uint32_t seq1, uint32_t seq2)
 {
     return (int32_t)(seq1-seq2) < 0;
@@ -353,7 +353,7 @@ get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len,
 #endif
 
 #if (TCPCOPY_PCAP_SEND)
-inline void
+void
 fill_frame(struct ethernet_hdr *hdr, unsigned char *smac, unsigned char *dmac)
 {
     memcpy(hdr->ether_shost, smac, ETHER_ADDR_LEN);

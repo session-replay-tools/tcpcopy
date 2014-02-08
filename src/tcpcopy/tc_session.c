@@ -935,7 +935,7 @@ mysql_dispose_auth(session_t *s, tc_ip_header_t *ip_header,
  * If packet's syn and ack are not according to the tcp protocol,
  * it may be mistaken to be a greeting packet
  */
-static inline bool
+static bool
 is_wait_greet(session_t *s, tc_ip_header_t *ip_header,
         tc_tcp_header_t *tcp_header)
 {

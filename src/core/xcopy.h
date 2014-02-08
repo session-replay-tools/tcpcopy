@@ -360,7 +360,7 @@ typedef struct connections_s{
 
 /* global functions */
 int daemonize();
-inline int before(uint32_t seq1, uint32_t seq2);
+int before(uint32_t seq1, uint32_t seq2);
 
 #define after(seq2, seq1) before(seq1, seq2)
 

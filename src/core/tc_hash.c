@@ -19,7 +19,7 @@ hash_node_malloc(uint64_t key, void *data)
     return hn;
 }
 
-static inline uint32_t
+static uint32_t
 get_slot(uint64_t key, uint32_t size)
 {
     uint32_t trim_key = key & (0xFFFFFFFF);
@@ -86,7 +86,7 @@ hash_create(size_t size)
     return ht;
 }
 
-inline link_list *
+link_list *
 get_link_list(hash_table *table, uint64_t key)
 {
     uint32_t slot = get_slot(key, table->size);

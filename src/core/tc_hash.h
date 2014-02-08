@@ -21,7 +21,7 @@ typedef struct hash_table_s{
 }hash_table_t, hash_table;
 
 hash_table *hash_create(size_t size);
-inline link_list_t *get_link_list(hash_table *table, uint64_t key);
+link_list_t *get_link_list(hash_table *table, uint64_t key);
 void hash_set_timeout(hash_table*, int);
 bool hash_add(hash_table*, uint64_t, void *);
 void *hash_find(hash_table*, uint64_t);

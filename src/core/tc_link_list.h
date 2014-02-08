@@ -18,22 +18,22 @@ typedef struct link_list_s{
 
 
 p_link_node link_node_malloc(void *data);
-inline void link_node_internal_free(p_link_node p);
+void link_node_internal_free(p_link_node p);
 
 link_list *link_list_create();
 int link_list_clear(link_list *l);
-inline void link_list_append(link_list *l, p_link_node);
+void link_list_append(link_list *l, p_link_node);
 void link_list_append_by_order(link_list *l, p_link_node);
 
 
-inline void link_list_push(link_list *l, p_link_node p);
-inline p_link_node link_list_remove(link_list *l, p_link_node node);
-inline p_link_node link_list_first(link_list *l);
-inline p_link_node link_list_tail(link_list *l);
-inline p_link_node link_list_pop_first(link_list *l);
-inline p_link_node link_list_pop_tail(link_list *l);
-inline p_link_node link_list_get_next(link_list *l, p_link_node p);
-inline bool link_list_is_empty(link_list *l);
+void link_list_push(link_list *l, p_link_node p);
+p_link_node link_list_remove(link_list *l, p_link_node node);
+p_link_node link_list_first(link_list *l);
+p_link_node link_list_tail(link_list *l);
+p_link_node link_list_pop_first(link_list *l);
+p_link_node link_list_pop_tail(link_list *l);
+p_link_node link_list_get_next(link_list *l, p_link_node p);
+bool link_list_is_empty(link_list *l);
 
 #endif /* TC_LINK_LIST_INCLUDED */
 
