@@ -32,7 +32,7 @@ tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
         return TC_ERROR;
     }
 
-    status = pcap_set_timeout(*pd, 1000);
+    status = pcap_set_timeout(*pd, 10);
     if (status != 0) {
         tc_log_info(LOG_ERR, 0, "pcap_set_timeout error:%s",
                 pcap_statustostr(status));
