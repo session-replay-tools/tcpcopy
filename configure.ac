@@ -81,33 +81,9 @@ if test "x$advanced" = "xfalse";then
     AC_MSG_CHECKING([for the kernel version])
     AC_CHECK_HEADERS([linux/version.h], [], 
                      [AC_MSG_ERROR([linux/version.h not found.])], [])
-    AC_TRY_RUN([
-        #include <stdlib.h>
-        #include <stdio.h>
-        #include <linux/version.h>
-        int main (void) {
-            FILE *fp = fopen ("linuxinfo", "w");
-            if (!fp) return 1;
-            #if defined(LINUX_VERSION_CODE)
-               fprintf (fp, "%d.%d\n", LINUX_VERSION_CODE >> 16, (LINUX_VERSION_CODE >> 8) & 0xFF);
-            #else
-               fprintf (fp, "0.0\n"); 
-            #endif
-               fclose (fp);
-               return 0;
-        }
-        ], [
-             major=`cat linuxinfo | cut -d'.' -f1`
-             minor=`cat linuxinfo | cut -d'.' -f2`
-        ], [
-             major="0"
-             minor="0"
-        ], [
-             major="0"
-             minor="0"
-        ])
 
-    rm -f linuxinfo
+    major=`uname -r | cut -d. -f1`;
+    minor=`uname -r | cut -d. -f2`;
 
     if test $major -gt 3; then
         enable_nfqueue=yes
@@ -307,7 +283,7 @@ if test "x$enable_nfqueue" = "xyes";then
     LIBS="$LIBS -lnfnetlink -lnetfilter_queue "
 fi
 
-CFLAGS="-g -D_FILE_OFFSET_BITS=64 -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
+CFLAGS="-g -O2 -std=gnu99 -D_FILE_OFFSET_BITS=64 -Wall -Wunused-function -pedantic -I../communication -I../core -I../event -I../interception -I../digest -I../mysql -I../tcpcopy -I../util"
 
 AM_CONDITIONAL(ADVANCED, [test "x$advanced" = "xtrue"])
 AM_CONDITIONAL(UDPCOPY, [test "x$udp" = "xtrue"])

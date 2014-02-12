@@ -19,14 +19,6 @@ hash_node_malloc(uint64_t key, void *data)
     return hn;
 }
 
-static uint32_t
-get_slot(uint64_t key, uint32_t size)
-{
-    uint32_t trim_key = key & (0xFFFFFFFF);
-
-    return trim_key % size;
-}
-
 static p_link_node
 hash_find_node(hash_table *table, uint64_t key)
 {
@@ -84,14 +76,6 @@ hash_create(size_t size)
     ht->timeout = DEFAULT_TIMEOUT;
 
     return ht;
-}
-
-link_list *
-get_link_list(hash_table *table, uint64_t key)
-{
-    uint32_t slot = get_slot(key, table->size);
-
-    return table->lists[slot];
 }
 
 void *

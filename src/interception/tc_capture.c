@@ -15,8 +15,8 @@ static int tc_msg_event_process(tc_event_t *rev);
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int             fd;
     tc_event_t     *ev;
+    register int    fd;
     tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
@@ -63,7 +63,7 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    int             fd, version;
+    register int    fd, version;
     msg_client_t    msg;
     tunnel_basic_t *tunnel;
 
@@ -161,9 +161,9 @@ interception_push(tc_event_timer_t *evt)
 
 static int resp_dispose(tc_ip_header_t *ip_header)
 {
-    int                  i, passed;
     uint16_t             port, size_ip, size_tcp, tot_len;
     uint32_t             ip_addr;
+    register int         i, passed;
     ip_port_pair_t      *pair;
     tc_tcp_header_t     *tcp_header;
 
@@ -252,14 +252,15 @@ tc_process_resp_packet(tc_event_t *rev)
 #if (TCPCOPY_PCAP)
     pcap_t              *pcap;
 #else
-    int                  recv_len;
     char                 recv_buf[RESP_RECV_BUF_SIZE];
+    register int         recv_len;
     tc_ip_header_t      *ip_header;
 #endif
 
 #if (TCPCOPY_PCAP)
     pcap = pcap_map[rev->fd];
-    pcap_dispatch(pcap, 1,(pcap_handler) pcap_packet_callback, (u_char *) pcap);
+    pcap_dispatch(pcap, 10, (pcap_handler) pcap_packet_callback, 
+            (u_char *) pcap);
 #else
     recv_len = recvfrom(rev->fd, recv_buf, 
             RESP_RECV_BUF_SIZE, 0, NULL, NULL);

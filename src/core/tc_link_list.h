@@ -18,22 +18,121 @@ typedef struct link_list_s{
 
 
 p_link_node link_node_malloc(void *data);
-void link_node_internal_free(p_link_node p);
-
 link_list *link_list_create();
 int link_list_clear(link_list *l);
-void link_list_append(link_list *l, p_link_node);
 void link_list_append_by_order(link_list *l, p_link_node);
 
 
-void link_list_push(link_list *l, p_link_node p);
-p_link_node link_list_remove(link_list *l, p_link_node node);
-p_link_node link_list_first(link_list *l);
-p_link_node link_list_tail(link_list *l);
-p_link_node link_list_pop_first(link_list *l);
-p_link_node link_list_pop_tail(link_list *l);
-p_link_node link_list_get_next(link_list *l, p_link_node p);
-bool link_list_is_empty(link_list *l);
+static inline void link_node_internal_free(p_link_node p)
+{
+    if (p->data != NULL) {
+        free(p->data);
+        p->data = NULL;
+    }
+}
+
+static inline void 
+link_list_append(link_list *l, p_link_node p)
+{
+    p_link_node node;
+
+    node         = l->head.prev;
+    node->next   = p;
+    p->prev      = node;
+    l->head.prev = p;
+    p->next      = &(l->head);
+    l->size++;
+}
+
+static inline void 
+link_list_push(link_list *l, p_link_node p)
+{
+    p_link_node node;
+
+    node         = l->head.next;
+    node->prev   = p;
+    p->next      = node;
+    l->head.next = p;
+    p->prev      = &(l->head);
+    l->size++;
+}
+
+static inline p_link_node 
+link_list_remove(link_list *l, p_link_node node)
+{
+    p_link_node next, prev;
+
+    next = node->next;
+    prev = node->prev;
+    next->prev = prev;
+    prev->next = next;
+    l->size--;
+    return node;
+}
+
+static inline p_link_node 
+link_list_first(link_list *l)
+{
+    if (l == NULL || l->head.next == &(l->head)) {
+        return NULL;
+    }
+
+    return l->head.next;
+}
+
+static inline p_link_node 
+link_list_tail(link_list *l)
+{
+    if (l == NULL || l->head.next == &(l->head)) {
+        return NULL;
+    }
+
+    return l->head.prev;
+}
+
+static inline p_link_node
+link_list_pop_first(link_list *l)
+{
+    p_link_node first = link_list_first(l);
+
+    if (!first) {
+        return first;
+    }
+
+    return link_list_remove(l, first);
+}
+
+static inline p_link_node
+link_list_pop_tail(link_list *l)
+{
+    p_link_node tail = link_list_tail(l);
+
+    if (!tail) {
+        return tail;
+    }
+
+    return link_list_remove(l, tail);
+}
+
+static inline p_link_node
+link_list_get_next(link_list *l, p_link_node p)
+{
+    if (p->next == &(l->head)) {
+        return NULL;
+    }
+
+    return p->next;
+} 
+
+static inline bool
+link_list_is_empty(link_list *l)
+{
+    if (l->head.next == &(l->head)) {
+        return true;
+    }
+
+    return false;
+}
 
 #endif /* TC_LINK_LIST_INCLUDED */
 

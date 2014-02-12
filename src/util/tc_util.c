@@ -3,30 +3,6 @@
 #include <tcpcopy.h>
 
 
-uint64_t
-get_key(uint32_t ip, uint16_t port)
-{
-    uint64_t value = ((uint64_t) ip ) << 16;
-
-    value += port;
-
-    return value;
-}
-
-uint16_t
-get_appropriate_port(uint16_t orig_port, uint16_t add)
-{
-    uint16_t dest_port = orig_port;
-
-    if (dest_port < (65536 - add)) {
-        dest_port += add;
-    } else {
-        dest_port  = 1024 + add;
-    }
-
-    return dest_port;
-}
-
 static unsigned int seed = 0;
 
 uint16_t
@@ -41,16 +17,6 @@ get_port_by_rand_addition(uint16_t orig_port)
     }    
     port_add = (uint16_t) (4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
     port_add = port_add + 32768;
-
-    return get_appropriate_port(ntohs(orig_port), port_add);
-}
-
-uint16_t
-get_port_from_shift(uint16_t orig_port, uint16_t rand_port, int shift_factor)
-{
-    uint16_t        port_add;
-
-    port_add = (shift_factor << 11) + rand_port;
 
     return get_appropriate_port(ntohs(orig_port), port_add);
 }
@@ -122,12 +88,6 @@ cp_fr_ip_pack(tc_ip_header_t *ip_header)
     }    
 
     return frame;
-}
-
-bool
-tcp_seq_before(uint32_t seq1, uint32_t seq2)
-{
-    return (int32_t)(seq1-seq2) < 0;
 }
 
 unsigned short
@@ -349,16 +309,6 @@ get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len,
 
     return ptr;
 
-}
-#endif
-
-#if (TCPCOPY_PCAP_SEND)
-void
-fill_frame(struct ethernet_hdr *hdr, unsigned char *smac, unsigned char *dmac)
-{
-    memcpy(hdr->ether_shost, smac, ETHER_ADDR_LEN);
-    memcpy(hdr->ether_dhost, dmac, ETHER_ADDR_LEN);
-    hdr->ether_type = htons(ETH_P_IP); 
 }
 #endif
 

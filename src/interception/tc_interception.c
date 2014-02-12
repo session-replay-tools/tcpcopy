@@ -16,8 +16,8 @@ static int tc_msg_event_process(tc_event_t *rev);
 static int
 tc_msg_event_accept(tc_event_t *rev)
 {
-    int             fd;
     tc_event_t     *ev;
+    register int    fd;
     tunnel_basic_t *tunnel;
 
     if ((fd = tc_socket_accept(rev->fd)) == TC_INVALID_SOCKET) {
@@ -64,7 +64,7 @@ tc_msg_event_accept(tc_event_t *rev)
 static int 
 tc_msg_event_process(tc_event_t *rev)
 {
-    int             fd, version;
+    register int    fd, version;
     msg_client_t    msg;
     tunnel_basic_t *tunnel;
 
@@ -167,8 +167,9 @@ interception_push(tc_event_timer_t *evt)
 static int tc_nfq_process_packet(struct nfq_q_handle *qh, 
         struct nfgenmsg *nfmsg, struct nfq_data *nfa, void *data)
 {
-    int                          i, id = 0, payload_len = 0, ret,
+    int                          id = 0, payload_len = 0, ret,
                                  pass_through_flag = 0;
+    register int                 i;
     unsigned char               *payload;
     tc_ip_header_t              *ip_hdr;
     struct nfqnl_msg_packet_hdr *ph;
@@ -280,8 +281,8 @@ dispose_netlink_packet(int fd, int verdict, unsigned long packet_id)
 static int
 tc_nl_event_process(tc_event_t *rev)
 {
-    int             i, pass_through_flag = 0;
     char            buffer[65536];
+    register int    i, pass_through_flag = 0;
     unsigned long   packet_id;
     tc_ip_header_t *ip_hdr;
 

@@ -248,7 +248,7 @@ tc_process_pcap_socket_packet(tc_event_t *rev)
     pcap_t *pcap;
 
     pcap = pcap_map[rev->fd];
-    pcap_dispatch(pcap, 1,(pcap_handler) pcap_retrieve, (u_char *) pcap);
+    pcap_dispatch(pcap, 1, (pcap_handler) pcap_retrieve, (u_char *) pcap);
 
     return TC_OK;
 }

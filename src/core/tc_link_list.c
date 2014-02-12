@@ -15,15 +15,6 @@ link_node_malloc(void *data)
     return p;
 }
 
-void
-link_node_internal_free(p_link_node p)
-{
-    if (p->data != NULL) {
-        free(p->data);
-        p->data = NULL;
-    }
-}
-
 link_list *
 link_list_create()
 {
@@ -63,19 +54,6 @@ link_list_clear(link_list *l)
 
 }
 
-void
-link_list_append(link_list *l, p_link_node p)
-{
-    p_link_node node;
-
-    node         = l->head.prev;
-    node->next   = p;
-    p->prev      = node;
-    l->head.prev = p;
-    p->next      = &(l->head);
-    l->size++;
-}
-
 /* append by order */
 void
 link_list_append_by_order(link_list *l, p_link_node p)
@@ -100,94 +78,4 @@ link_list_append_by_order(link_list *l, p_link_node p)
     }
 }
 
-
-void
-link_list_push(link_list *l, p_link_node p)
-{
-    p_link_node node;
-
-    node         = l->head.next;
-    node->prev   = p;
-    p->next      = node;
-    l->head.next = p;
-    p->prev      = &(l->head);
-    l->size++;
-}
-
-p_link_node
-link_list_remove(link_list *l, p_link_node node)
-{
-    p_link_node next, prev;
-
-    next = node->next;
-    prev = node->prev;
-    next->prev = prev;
-    prev->next = next;
-    l->size--;
-    return node;
-}
-
-p_link_node
-link_list_first(link_list *l)
-{
-    if (l == NULL || l->head.next == &(l->head)) {
-        return NULL;
-    }
-
-    return l->head.next;
-}
-
-p_link_node
-link_list_tail(link_list *l)
-{
-    if (l == NULL || l->head.next == &(l->head)) {
-        return NULL;
-    }
-
-    return l->head.prev;
-}
-
-p_link_node
-link_list_pop_first(link_list *l)
-{
-    p_link_node first = link_list_first(l);
-
-    if (!first) {
-        return first;
-    }
-
-    return link_list_remove(l, first);
-}
-
-p_link_node
-link_list_pop_tail(link_list *l)
-{
-    p_link_node tail = link_list_tail(l);
-
-    if (!tail) {
-        return tail;
-    }
-
-    return link_list_remove(l, tail);
-}
-
-p_link_node
-link_list_get_next(link_list *l, p_link_node p)
-{
-    if (p->next == &(l->head)) {
-        return NULL;
-    }
-
-    return p->next;
-} 
-
-bool
-link_list_is_empty(link_list *l)
-{
-    if (l->head.next == &(l->head)) {
-        return true;
-    }
-
-    return false;
-}
 

@@ -70,7 +70,7 @@ tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
 
     *ebuf = '\0';
 
-    *pd = pcap_open_live(device, snap_len, 0, 1000, ebuf);
+    *pd = pcap_open_live(device, snap_len, 0, 10, ebuf);
     if (*pd == NULL) {
         tc_log_info(LOG_ERR, 0, "pcap_open_live error:%s", ebuf);
         return TC_ERROR;
