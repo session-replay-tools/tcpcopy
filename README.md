@@ -105,7 +105,7 @@ Two quick start options are available:
 
 ##Running TCPCopy
 
-###Traditional usage guide
+###Traditional architecture:
     Assume TCPCopy with "./configure" is configured
 
 	After installing TCPCopy, you have to deploy the TCPCopy client (tcpcopy) on the online source
@@ -129,7 +129,7 @@ Two quick start options are available:
        ./tcpcopy -x localServerPort-targetServerIP:targetServerPort
 
 
-###Advanced usage guide:
+###Advanced architecture:
 	Assume tcpcopy with "./configure --enable-advanced" is configured on the online
 	server and intercept with "./configure --enable-advanced --enable-pcap" is configured  
 	on the assistant server.
