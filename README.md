@@ -281,7 +281,7 @@ Here is an example.
 + 2013.09  v0.9.2  add the compatibility check and fix several bugs.
 + 2013.10  v0.9.5  fix many problems including the timestamp problem 
 + 2013.11  v0.9.6  support setting the maximal length of the nfnetlink queue and fix some bugs
-
++ 2014.02  v0.9.7  fix several issues including the kernel version problem and the gnu99 problem
 
 
 ##Bugs and feature requests
