@@ -276,7 +276,7 @@ if test "x$enable_dlinject" = "xyes";then
 fi
 
 if test "x$enable_mysql" = "xyes";then
-    LIBS="$LIBS -lssl"
+    LIBS="$LIBS -lssl -lcrypto"
 fi
 
 if test "x$enable_nfqueue" = "xyes";then
