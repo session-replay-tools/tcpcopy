@@ -714,7 +714,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
 
         tc_log_debug1(LOG_DEBUG, 0, "this time reading:%d", n);
         if ((len -= n) == 0) {
-            tc_log_debug1(LOG_DEBUG, 0, "remain readed:%d", len);
+            tc_log_debug1(LOG_DEBUG, 0, "remain read:%d", len);
             break;
         }
 
@@ -723,7 +723,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
                     n, *num, len);
             break;
         }
-        tc_log_debug1(LOG_DEBUG, 0, "remain readed:%d", len);
+        tc_log_debug1(LOG_DEBUG, 0, "remain needs to be read:%d", len);
     }
 
     return TC_OK;
@@ -762,7 +762,7 @@ tc_socket_send(int fd, char *buffer, int len)
                 tc_log_info(LOG_NOTICE, errno, "fd:%d EAGAIN", fd);
                 cnt++;
             } else {
-                tc_log_info(LOG_ERR, errno, "fd:%d", fd);
+                tc_log_info(LOG_ERR, errno, "send fd:%d", fd);
                 return TC_ERROR;
             }
 
