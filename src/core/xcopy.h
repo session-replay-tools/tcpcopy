@@ -173,6 +173,8 @@
 #define COMB_MAX_NUM 16
 #endif
 #define COMB_LENGTH (COMB_MAX_NUM * MSG_SERVER_SIZE)
+#define TIME_DRIVEN 1
+#define NUM_DRIVEN 2
 #endif
 
 #define SRC_DIRECTION 0
