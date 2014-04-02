@@ -1514,14 +1514,6 @@ check_session_obsolete(session_t *s, time_t cur, time_t threshold_time,
         }
     }
 
-#if (TCPCOPY_MYSQL_BASIC)
-    result = check_overwhelming(s, "mysql special", threshold, 
-            s->mysql_special_packets->size);
-    if (NOT_YET_OBSOLETE != result) {
-        return result;
-    }
-#endif
-
     return NOT_YET_OBSOLETE;
 }
 
@@ -2201,9 +2193,11 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
                 }
             }
 
-            save_packet(s->mysql_special_packets, ip_header, tcp_header);
+            if (s->mysql_special_packets->size < MAX_SP_SIZE) {
+                save_packet(s->mysql_special_packets, ip_header, tcp_header);
+                tc_log_debug1(LOG_DEBUG, 0, "push statement:%u", s->src_h_port);
+            }
 
-            tc_log_debug1(LOG_DEBUG, 0, "push statement:%u", s->src_h_port);
 
             list = (link_list *) hash_find(mysql_table, s->src_h_port);
             if (!list) {

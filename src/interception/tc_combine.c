@@ -50,8 +50,11 @@ buffer_and_send(int fd, msg_server_t *msg)
             }
         }
 
-        if (aggr->num == COMB_MAX_NUM) {
+        if (aggr->num >= srv_settings.cur_combined_num) {
             is_send = 1;
+            if (srv_settings.cur_combined_num < COMB_MAX_NUM) {
+                srv_settings.cur_combined_num++;
+            }
         } else if (aggr->access_time < tc_current_time_sec) {
             is_send = 1;
         } else if (aggr->access_time == tc_current_time_sec) {
@@ -62,6 +65,11 @@ buffer_and_send(int fd, msg_server_t *msg)
 
         if (is_send) {
             tc_log_debug1(LOG_DEBUG, 0, "combined send:%d", aggr->num);
+            if (aggr->num < srv_settings.cur_combined_num) {
+                if (srv_settings.cur_combined_num > 1) {
+                    srv_settings.cur_combined_num--;
+                }
+            }
             aggr->num = htons(aggr->num);
             p = (unsigned char *) (&(aggr->num));
             bytes = aggr->cur_write - aggr->aggr_resp + sizeof(aggr->num);

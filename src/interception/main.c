@@ -476,6 +476,7 @@ settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.bound_ip = NULL;
+    srv_settings.cur_combined_num = COMB_MAX_NUM; 
 #if (TCPCOPY_SINGLE)
     srv_settings.conn_protected = false;
 #endif

@@ -71,6 +71,7 @@ typedef struct xcopy_srv_settings {
     size_t               hash_size;      /* hash size for kinds of table */
     uint16_t             port;           /* TCP port number to listen on */
     unsigned int         do_daemonize:1; /* daemon flag */
+    unsigned int         cur_combined_num:5;
 #if (!INTERCEPT_ADVANCED)
     passed_ip_addr_t     passed_ips;     /* passed ip list */
 #endif
