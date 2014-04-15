@@ -203,10 +203,6 @@ typedef struct session_s{
     link_list *unsend_packets;
     link_list *next_sess_packs;
     link_list *unack_packets;
-#if (TCPCOPY_MYSQL_BASIC)
-    /* mysql special packets for reconnection */
-    link_list *mysql_special_packets;
-#endif
 #if (TCPCOPY_MYSQL_ADVANCED)
     char mysql_scramble[SCRAMBLE_LENGTH + 1];
     char mysql_seed323[SEED_323_LENGTH + 1];

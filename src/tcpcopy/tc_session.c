@@ -45,6 +45,7 @@ static uint64_t conn_cnt             = 0;
 static uint64_t retrans_succ_cnt     = 0;
 /* total retransmission */
 static uint64_t retrans_cnt          = 0;
+static uint64_t frag_cnt             = 0;
 static uint64_t clt_con_retrans_cnt  = 0;
 /* total reconnections for backend */
 static uint64_t recon_for_closed_cnt = 0;
@@ -558,13 +559,6 @@ session_rel_dynamic_mem(session_t *s)
         s->unack_packets = NULL;
     }
 
-#if (TCPCOPY_MYSQL_BASIC)
-    if (s->mysql_special_packets != NULL) {
-        link_list_clear(s->mysql_special_packets);
-        free(s->mysql_special_packets);
-        s->mysql_special_packets = NULL;
-    }
-#endif
 }
 
 
@@ -721,20 +715,6 @@ session_init(session_t *s, int flag)
     } else {
         s->unack_packets = link_list_create();
     }
-
-#if (TCPCOPY_MYSQL_BASIC)
-    if (flag == SESS_CREATE) {
-        s->mysql_special_packets = link_list_create();
-    } else {
-        if (s->mysql_special_packets) {
-            if (s->mysql_special_packets->size > 0) {
-                link_list_clear(s->mysql_special_packets);
-            }
-        } else {
-            s->mysql_special_packets = link_list_create();
-        }
-    }
-#endif
 
     s->create_time      = tc_time();
     s->last_update_time = s->create_time;
@@ -2182,7 +2162,9 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
             if (command == COM_STMT_PREPARE) {
                 s->sm.mysql_prepare_stat = 1;
             } else {
-                if (command == COM_QUERY && s->sm.mysql_prepare_stat) {
+                if ((command == COM_QUERY || command == COM_STMT_EXECUTE) && 
+                        s->sm.mysql_prepare_stat) 
+                {
                     if (s->mysql_execute_times > 0) {
                         s->sm.mysql_first_execution = 0;
                     }
@@ -2192,12 +2174,6 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
                     return false;
                 }
             }
-
-            if (s->mysql_special_packets->size < MAX_SP_SIZE) {
-                save_packet(s->mysql_special_packets, ip_header, tcp_header);
-                tc_log_debug1(LOG_DEBUG, 0, "push statement:%u", s->src_h_port);
-            }
-
 
             list = (link_list *) hash_find(mysql_table, s->src_h_port);
             if (!list) {
@@ -2212,6 +2188,11 @@ mysql_check_reconnection(session_t *s, tc_ip_header_t *ip_header,
                 }
             }
 
+            if (list->size > MAX_SP_SIZE) {
+                return false;
+            }
+
+            tc_log_debug1(LOG_DEBUG, 0, "push statement:%u", s->src_h_port);
             save_packet(list, ip_header, tcp_header);
             return true;
         }
@@ -2240,6 +2221,7 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
 #else
     /* valid only for mysql skip-grant-tables*/
     if (fir_auth_u_p == NULL) {
+        tc_log_debug0(LOG_DEBUG, 0, "fir auth u null");
         return false;
     }
 #endif
@@ -2262,7 +2244,8 @@ check_mysql_padding(tc_ip_header_t *ip_header, tc_tcp_header_t *tcp_header)
         /* skip packet number */
         payload = payload + 1;
         command = payload[0];
-        if (command == COM_QUERY) {
+        tc_log_debug1(LOG_DEBUG, 0, "command:%u", command);
+        if (command == COM_QUERY || command == COM_STMT_EXECUTE) {
             return true;
         }
     }
@@ -3451,8 +3434,7 @@ is_packet_needed(unsigned char *packet)
 
     frag_off = ntohs(ip_header->frag_off);
     if (frag_off != IP_DF) {
-        tc_log_info(LOG_WARN, 0, 
-                "frag_off is not IP_DF,use raw socket instead of pcap");
+        frag_cnt++;
         return is_needed;
     }
 
@@ -3545,8 +3527,8 @@ output_stat()
     tc_log_info(LOG_NOTICE, 0, "successful retransmit:%llu", retrans_succ_cnt);
     tc_log_info(LOG_NOTICE, 0, "syn cnt:%llu,all clt packs:%llu,clt cont:%llu",
             clt_syn_cnt, clt_packs_cnt, clt_cont_cnt);
-    tc_log_info(LOG_NOTICE, 0, "total client content retransmit:%llu",
-            clt_con_retrans_cnt);
+    tc_log_info(LOG_NOTICE, 0, "total client content retransmit:%llu,frag:%llu",
+            clt_con_retrans_cnt, frag_cnt);
     tc_log_info(LOG_NOTICE, 0, "total captured pakcets:%llu", captured_cnt);
 #if (TCPCOPY_MYSQL_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "dropped client packets:%llu", clt_dropped_cnt);

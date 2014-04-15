@@ -61,7 +61,8 @@ buffer_and_send(int fd, msg_server_t *msg)
         }
 
         if (is_send) {
-            tc_log_debug1(LOG_DEBUG, 0, "combined send:%d", aggr->num);
+            tc_log_debug2(LOG_DEBUG, 0, "combined send:%u, max:%u", 
+                    aggr->num, srv_settings.cur_combined_num);
             if (is_send == TIME_DRIVEN) {
                 if (aggr->num < srv_settings.cur_combined_num) {
                     if (srv_settings.cur_combined_num > 1) {

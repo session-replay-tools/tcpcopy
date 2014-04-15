@@ -186,6 +186,9 @@ usage(void)
            "               Format:\n"
            "               ip_addr1, ip_addr2 ...\n");
 #endif
+#if (INTERCEPT_COMBINED)
+    printf("-n <num>       set the maximal num of combined packets.\n");
+#endif
     printf("-p <num>       set the TCP port number to listen on. The default number is 36524.\n"
            "-s <num>       set the hash table size for intercept. The default value is 65536.\n"
            "-l <file>      save log information in <file>\n");
@@ -215,11 +218,17 @@ usage(void)
 static int
 read_args(int argc, char **argv) {
     int  c;
+#if (INTERCEPT_COMBINED)
+    int num;
+#endif
 
     opterr = 0;
     while (-1 != (c = getopt(argc, argv,
 #if (!INTERCEPT_ADVANCED)
          "x:" /* ip list passed through ip firewall */
+#endif
+#if (INTERCEPT_COMBINED)
+         "n:"
 #endif
          "p:" /* TCP port number to listen on */
          "t:" /* router item timeout */
@@ -249,6 +258,14 @@ read_args(int argc, char **argv) {
 #if (!INTERCEPT_ADVANCED)
             case 'x':
                 srv_settings.raw_ip_list = optarg;
+                break;
+#endif
+#if (INTERCEPT_COMBINED)
+            case 'n':
+                num = atoi(optarg);
+                if (num >=0 && num < COMB_MAX_NUM) {
+                    srv_settings.cur_combined_num = num;
+                }
                 break;
 #endif
             case 'p':
@@ -314,6 +331,7 @@ read_args(int argc, char **argv) {
                                 optopt);
                         break;
 
+                    case 'n':
                     case 'p':
 #if (INTERCEPT_NFQUEUE)
                     case 'q':
@@ -476,7 +494,9 @@ settings_init(void)
     srv_settings.port = SERVER_PORT;
     srv_settings.hash_size = 65536;
     srv_settings.bound_ip = NULL;
+#if (INTERCEPT_COMBINED)
     srv_settings.cur_combined_num = COMB_MAX_NUM; 
+#endif
 #if (TCPCOPY_SINGLE)
     srv_settings.conn_protected = false;
 #endif

@@ -124,7 +124,7 @@
 #endif
 
 #define CHECK_INTERVAL  1
-#define OUTPUT_INTERVAL  60000
+#define OUTPUT_INTERVAL  30000
 #define RETRY_INTERVAL  12000
 #define DEFAULT_SESSION_TIMEOUT 120
 #define OFFLINE_TAIL_TIMEOUT 120 
@@ -227,6 +227,7 @@
 /* mysql constants */
 #if (TCPCOPY_MYSQL_BASIC)
 #define COM_STMT_PREPARE 22
+#define COM_STMT_EXECUTE 23
 #define COM_QUERY 3
 #define MAX_SP_SIZE 1024
 #endif
