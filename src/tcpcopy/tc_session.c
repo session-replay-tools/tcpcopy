@@ -2408,6 +2408,7 @@ retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
                 }
                 s->wscale = (uint16_t) p[2];
                 p += opt_len;
+                break;
             case TCPOPT_TIMESTAMP:
                 if ((p + 1) >= end) {
                     return;
@@ -2436,6 +2437,7 @@ retrieve_options(session_t *s, int direction, tc_tcp_header_t *tcp_header)
                     s->ts_value = ts_value;
                 }
                 p += opt_len;
+                break;
             case TCPOPT_NOP:
                 p = p + 1; 
                 break;
@@ -3435,7 +3437,6 @@ is_packet_needed(unsigned char *packet)
     frag_off = ntohs(ip_header->frag_off);
     if (frag_off != IP_DF) {
         frag_cnt++;
-        return is_needed;
     }
 
     tot_len    = ntohs(ip_header->tot_len);
