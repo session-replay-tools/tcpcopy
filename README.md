@@ -283,6 +283,7 @@ Here is an example.
 + 2013.11  v0.9.6  support setting the maximal length of the nfnetlink queue and fix some bugs
 + 2014.02  v0.9.7  fix several issues including the kernel version problem and the gnu99 problem
 + 2014.03  v0.9.8  fix issues when replicating requests across network segments
++ 2014.05  v0.9.9  remove the check for frag_off
 
 
 ##Bugs and feature requests
