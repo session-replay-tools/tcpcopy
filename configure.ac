@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.59)
-AC_INIT([TCPCopy], [0.9.9], [wangbin579@gmail.com], [tcpcopy])
+AC_INIT([TCPCopy], [0.9.10], [wangbin579@gmail.com], [tcpcopy])
 AC_CONFIG_SRCDIR([src/interception/main.c])
 AC_CONFIG_HEADER([src/core/config.h])
 AM_INIT_AUTOMAKE
@@ -212,6 +212,11 @@ fi
 AC_ARG_ENABLE(single, AS_HELP_STRING([--enable-single],[run tcpcopy at non-distributed mode]),,single=no)
 if test "x$enable_single" = "xyes";then
     AC_DEFINE(TCPCOPY_SINGLE, 1, [Define if --enable-single])
+fi
+
+AC_ARG_ENABLE(dnat, AS_HELP_STRING([--enable-dnat],[run tcpcopy at non-distributed mode]),,dnat=no)
+if test "x$enable_dnat" = "xyes";then
+    AC_DEFINE(TCPCOPY_DNAT, 1, [Define if --enable-dnat])
 fi
 
 AC_ARG_ENABLE(combined, AS_HELP_STRING([--disable-combined],[disable combined response mode]),,combined=yes)

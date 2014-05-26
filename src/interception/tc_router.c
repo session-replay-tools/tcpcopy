@@ -136,7 +136,11 @@ router_add(int old, uint32_t clt_ip, uint16_t clt_port, uint32_t target_ip,
 
     table->total_sessions++;
 
+#if (TCPCOPY_DNAT)
+    key = get_route_key(old, clt_ip, clt_port, 0, target_port);
+#else
     key = get_route_key(old, clt_ip, clt_port, target_ip, target_port);
+#endif
 
 #if (INTERCEPT_MILLION_SUPPORT)
     high_key =(uint32_t) (key << 32);
@@ -314,8 +318,13 @@ router_update(bool old, tc_ip_header_t *ip_header)
     }
 
 #else
+#if (TCPCOPY_DNAT)
+    key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
+            0, tcp_header->source);
+#else
     key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
             ip_header->saddr, tcp_header->source);
+#endif
     fd  = router_get(key);
     if (fd <= 0) {
         if (tcp_header->syn || tcp_header->rst) {

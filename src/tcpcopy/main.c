@@ -411,6 +411,9 @@ output_for_debug(int argc, char **argv)
 #if (TCPCOPY_PCAP_SEND)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP_SEND mode");
 #endif
+#if (TCPCOPY_DNAT)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_DNAT mode");
+#endif
 #if (TCPCOPY_MILLION_SUPPORT)
     tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MILLION_SUPPORT mode");
 #endif

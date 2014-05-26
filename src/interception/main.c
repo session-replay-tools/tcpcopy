@@ -528,6 +528,9 @@ output_for_debug()
 #if (INTERCEPT_COMBINED)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_COMBINED mode");
 #endif
+#if (TCPCOPY_DNAT)
+    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_DNAT mode");
+#endif
 #if (INTERCEPT_ADVANCED)
     tc_log_info(LOG_NOTICE, 0, "INTERCEPT_ADVANCED mode");
 #endif
