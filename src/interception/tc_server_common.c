@@ -62,7 +62,6 @@ bool  tc_intercept_check_tunnel_for_single(int fd)
             return false;
         }
         srv_settings.s_fd_num = 0;
-        srv_settings.s_fd_index = 0;
         srv_settings.accepted_tunnel_time = tc_current_time_sec;
     }
 

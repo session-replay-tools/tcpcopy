@@ -259,16 +259,24 @@ static int router_get(uint32_t key)
 #endif
 
 
+#if (TCPCOPY_SINGLE)
+static inline int 
+choose_fd(uint32_t key)
+{
+    int index = ((int) (key & 0x000000FF)) % srv_settings.s_fd_num;
+
+    return srv_settings.s_router_fds[index];
+}
+#endif
+
 void
 router_update(bool old, tc_ip_header_t *ip_header)
 {
     int                     fd;
-#if (!TCPCOPY_SINGLE)
 #if (INTERCEPT_MILLION_SUPPORT)
     uint64_t                key;
 #else
     uint32_t                key;
-#endif
 #endif
     uint32_t                size_ip, size_tcp, tot_len;
     msg_server_t            msg;
@@ -302,29 +310,29 @@ router_update(bool old, tc_ip_header_t *ip_header)
         }
     }
 #endif 
-    
-#if (TCPCOPY_SINGLE)
-    if (srv_settings.s_fd_num > 0) {
-        fd = srv_settings.s_router_fds[srv_settings.s_fd_index];
-        if (fd <= 0) {
-            tc_log_info(LOG_WARN, 0, "fd is not valid");
-            return;
-        }
-        srv_settings.s_fd_index = (srv_settings.s_fd_index + 1) % 
-            srv_settings.s_fd_num;
-    } else {
-        tc_log_debug0(LOG_DEBUG, 0, "no valid fd for sending resp");
-        return;
-    }
 
-#else
 #if (TCPCOPY_DNAT)
     key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
             0, tcp_header->source);
 #else
     key = get_route_key(old, ip_header->daddr, tcp_header->dest, 
             ip_header->saddr, tcp_header->source);
-#endif
+#endif   
+
+#if (TCPCOPY_SINGLE)
+    if (srv_settings.s_fd_num > 0) {
+        fd = choose_fd(key); 
+        if (fd <= 0) {
+            tc_log_info(LOG_WARN, 0, "fd is not valid");
+            return;
+        }
+    } else {
+        tc_log_debug0(LOG_DEBUG, 0, "no valid fd for sending resp");
+        return;
+    }
+
+#else
+
     fd  = router_get(key);
     if (fd <= 0) {
         if (tcp_header->syn || tcp_header->rst) {
