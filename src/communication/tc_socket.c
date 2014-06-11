@@ -642,7 +642,7 @@ tc_socket_recv(int fd, char *buffer, ssize_t len)
             if (errno == EAGAIN || errno == EINTR) {
                 cnt++;
                 if (cnt % MAX_READ_LOG_TRIES == 0) {
-                    tc_log_info(LOG_ERR, 0, "recv tries:%d,fd:%d", cnt, fd);
+                    tc_log_info(LOG_NOTICE, 0, "recv tries:%d,fd:%d", cnt, fd);
                 }
                 continue;
             } else {
@@ -684,7 +684,7 @@ tc_socket_cmb_recv(int fd, int *num, char *buffer)
             if (errno == EAGAIN || errno == EINTR) {
                 cnt++;
                 if (cnt % MAX_READ_LOG_TRIES == 0) {
-                    tc_log_info(LOG_ERR, 0, "recv tries:%d,fd:%d", cnt, fd);
+                    tc_log_info(LOG_NOTICE, 0, "recv tries:%d,fd:%d", cnt, fd);
                 }
                 continue;
             } else {
