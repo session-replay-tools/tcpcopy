@@ -58,7 +58,7 @@ Figure 4 shows the advanced architecture of using TCPCopy to do realistic testin
 
 Two quick start options are available:
 
-* [Download the latest release](https://github.com/wangbin579/tcpcopy/releases/tag/0.9.0).
+* [Download the latest release](https://github.com/wangbin579/tcpcopy/releases/tag/).
 * Clone the repo: `git clone git://github.com/wangbin579/tcpcopy.git`.
 
 
