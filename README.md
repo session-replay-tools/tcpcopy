@@ -138,7 +138,7 @@ Two quick start options are available:
 	a) On the test server which runs test server applications (root privilege is required):
 	    Set route command appropriately to route response packets to the assistant server
 
-        For example:
+        Take a web application as an example:
 
 	    Assume 61.135.233.219 is the actual IP address which is the default gateway, while 
 		61.135.233.161 is the IP address of the assistant server. We set the following route 
