@@ -142,7 +142,7 @@ Two quick start options are available:
 
 	    Assume 61.135.233.219 is the actual IP address which is the default gateway, while 
 		61.135.233.161 is the IP address of the assistant server. We set the following route 
-		commands to route all extenal responses to the assistant server.
+		commands to route all external responses to the assistant server.
 
            route del default gw 61.135.233.219
            route add default gw 61.135.233.161
