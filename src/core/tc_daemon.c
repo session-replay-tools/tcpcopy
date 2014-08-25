@@ -2,7 +2,7 @@
 #include <xcopy.h>
 
 int
-daemonize()
+daemonize(void)
 {
     int fd;
 

@@ -1,0 +1,9 @@
+
+
+cat << END >> $TC_AUTO_CONFIG_H
+
+#ifndef $tc_param
+#define $tc_param  $tc_value
+#endif
+
+END

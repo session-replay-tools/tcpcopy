@@ -1,0 +1,84 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+
+echo $tc_n "checking for $tc_type size ...$tc_c"
+
+cat << END >> $TC_AUTOCONF_ERR
+
+----------------------------------------
+checking for $tc_type size
+
+END
+
+tc_size=
+
+cat << END > $TC_AUTOTEST.c
+
+#include <sys/types.h>
+#include <sys/time.h>
+$TC_INCLUDE_UNISTD_H
+#include <signal.h>
+#include <stdio.h>
+#include <sys/resource.h>
+$TC_INCLUDE_INTTYPES_H
+$TC_INCLUDE_AUTO_CONFIG_H
+
+int main() {
+    printf("%d", (int) sizeof($tc_type));
+    return 0;
+}
+
+END
+
+
+tc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS \
+          -o $TC_AUTOTEST $TC_AUTOTEST.c $TC_LD_OPT $tc_feature_libs"
+
+eval "$tc_test >> $TC_AUTOCONF_ERR 2>&1"
+
+
+if [ -x $TC_AUTOTEST ]; then
+    tc_size=`$TC_AUTOTEST`
+    echo " $tc_size bytes"
+fi
+
+
+rm -f $TC_AUTOTEST
+
+
+case $tc_size in
+    4)
+        if [ "$tc_type"="long" ]; then
+            tc_max_value=2147483647L
+        else
+            tc_max_value=2147483647
+        fi
+
+        tc_max_len='(sizeof("-2147483648") - 1)'
+    ;;
+
+    8)
+        if [ "$tc_type"="long long" ]; then
+            tc_max_value=9223372036854775807LL
+        else
+            tc_max_value=9223372036854775807L
+        fi
+
+        tc_max_len='(sizeof("-9223372036854775808") - 1)'
+    ;;
+
+    *)
+        echo
+        echo "$0: error: can not detect $tc_type size"
+
+        echo "----------"    >> $TC_AUTOCONF_ERR
+        cat $TC_AUTOTEST.c  >> $TC_AUTOCONF_ERR
+        echo "----------"    >> $TC_AUTOCONF_ERR
+        echo $tc_test       >> $TC_AUTOCONF_ERR
+        echo "----------"    >> $TC_AUTOCONF_ERR
+
+        exit 1
+esac
+

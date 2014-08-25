@@ -2,7 +2,8 @@
 #define  TC_EVP_INCLUDED
 
 
-#if (TCPCOPY_DIGEST) 
+#if (TC_DIGEST) 
+#define ALGO_SHA1 "sha1"
 int tc_init_digests();
 int tc_destroy_digests();
 int tc_init_sha1();

@@ -1,0 +1,70 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+
+tc_feature="C compiler"
+tc_feature_name=
+tc_feature_run=yes
+tc_feature_incs=
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test=
+. auto/feature
+
+if [ $tc_found = no ]; then
+    echo
+    echo $0: error: C compiler $CC is not found
+    echo
+    exit 1
+fi
+
+
+
+if [ "$CC" = cl ]; then
+    if `$TC_WINE $CC -v 2>&1 \
+        | grep '^Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 16' \
+        >/dev/null 2>&1`; then
+
+        TC_CC_NAME=msvc10
+        echo " + using Microsoft Visual C++ 10 compiler"
+
+    elif `$TC_WINE $CC -v 2>&1 \
+        | grep '^Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 14' \
+        >/dev/null 2>&1`; then
+
+        TC_CC_NAME=msvc8
+        echo " + using Microsoft Visual C++ 8 compiler"
+
+    elif `$TC_WINE $CC -v 2>&1 \
+        | grep '^Microsoft (R) 32-bit C/C++ Optimizing Compiler Version 13' \
+        >/dev/null 2>&1`; then
+
+        TC_CC_NAME=msvc7
+        echo " + using Microsoft Visual C++ 7 compiler"
+
+    else
+        TC_CC_NAME=msvc
+        echo " + using Microsoft Visual C++ compiler"
+    fi
+
+elif `$CC -V 2>&1 | grep '^Intel(R) C' >/dev/null 2>&1`; then
+    TC_CC_NAME=icc
+    echo " + using Intel C++ compiler"
+
+elif `$CC -v 2>&1 | grep 'gcc version' >/dev/null 2>&1`; then
+    TC_CC_NAME=gcc
+    echo " + using GNU C compiler"
+
+elif `$CC -v 2>&1 | grep 'clang version' >/dev/null 2>&1`; then
+    TC_CC_NAME=clang
+    echo " + using Clang C compiler"
+
+elif `$CC -V 2>&1 | grep '^aCC: ' >/dev/null 2>&1`; then
+    TC_CC_NAME=acc
+    echo " + using HP aC++ compiler"
+
+else
+    TC_CC_NAME=unknown
+
+fi

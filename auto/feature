@@ -1,0 +1,120 @@
+
+
+echo $tc_n "checking for $tc_feature ...$tc_c"
+
+cat << END >> $TC_AUTOCONF_ERR
+
+----------------------------------------
+checking for $tc_feature
+
+END
+
+tc_found=no
+
+if test -n "$tc_feature_name"; then
+    tc_have_feature=`echo $tc_feature_name \
+                   | tr abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ`
+fi
+
+if test -n "$tc_feature_path"; then
+    for tc_temp in $tc_feature_path; do
+        tc_feature_inc_path="$tc_feature_inc_path -I $tc_temp"
+    done
+fi
+
+cat << END > $TC_AUTOTEST.c
+
+#include <sys/types.h>
+$TC_INCLUDE_UNISTD_H
+$tc_feature_incs
+
+int main() {
+    $tc_feature_test;
+    return 0;
+}
+
+END
+
+
+tc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS $tc_feature_inc_path \
+          -o $TC_AUTOTEST $TC_AUTOTEST.c $TC_TEST_LD_OPT $tc_feature_libs"
+
+tc_feature_inc_path=
+
+eval "/bin/sh -c \"$tc_test\" >> $TC_AUTOCONF_ERR 2>&1"
+
+
+if [ -x $TC_AUTOTEST ]; then
+
+    case "$tc_feature_run" in
+
+        yes)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $TC_AUTOTEST >> $TC_AUTOCONF_ERR 2>&1; then
+                echo " found"
+                tc_found=yes
+
+                if test -n "$tc_feature_name"; then
+                    have=$tc_have_feature . auto/have
+                fi
+
+            else
+                echo " found but is not working"
+            fi
+        ;;
+
+        value)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $TC_AUTOTEST >> $TC_AUTOCONF_ERR 2>&1; then
+                echo " found"
+                tc_found=yes
+
+                cat << END >> $TC_AUTO_CONFIG_H
+
+#ifndef $tc_feature_name
+#define $tc_feature_name  `$TC_AUTOTEST`
+#endif
+
+END
+            else
+                echo " found but is not working"
+            fi
+        ;;
+
+        bug)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $TC_AUTOTEST >> $TC_AUTOCONF_ERR 2>&1; then
+                echo " not found"
+
+            else
+                echo " found"
+                tc_found=yes
+
+                if test -n "$tc_feature_name"; then
+                    have=$tc_have_feature . auto/have
+                fi
+            fi
+        ;;
+
+        *)
+            echo " found"
+            tc_found=yes
+
+            if test -n "$tc_feature_name"; then
+                have=$tc_have_feature . auto/have
+            fi
+        ;;
+
+    esac
+
+else
+    echo " not found"
+
+    echo "----------"    >> $TC_AUTOCONF_ERR
+    cat $TC_AUTOTEST.c  >> $TC_AUTOCONF_ERR
+    echo "----------"    >> $TC_AUTOCONF_ERR
+    echo $tc_test       >> $TC_AUTOCONF_ERR
+    echo "----------"    >> $TC_AUTOCONF_ERR
+fi
+
+rm $TC_AUTOTEST*

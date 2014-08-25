@@ -1,106 +1,37 @@
 
 #include <xcopy.h>
-#include <tcpcopy.h>
-
-
-static unsigned int seed = 0;
-
-uint16_t
-get_port_by_rand_addition(uint16_t orig_port)
-{
-    struct timeval  tp;
-    uint16_t        port_add;
-
-    if (0 == seed) {    
-        gettimeofday(&tp, NULL);
-        seed = tp.tv_usec;
-    }    
-    port_add = (uint16_t) (4096*(rand_r(&seed)/(RAND_MAX + 1.0)));
-    port_add = port_add + 32768;
-
-    return get_appropriate_port(ntohs(orig_port), port_add);
-}
-
-ip_port_pair_mapping_t *
-get_test_pair(ip_port_pair_mappings_t *transfer, uint32_t ip, uint16_t port)
-{
-    int                     i;
-    ip_port_pair_mapping_t *pair, **mappings;
-
-    pair     = NULL;
-    mappings = transfer->mappings;
-    for (i = 0; i < transfer->num; i++) {
-        pair = mappings[i];
-        if (ip == pair->online_ip && port == pair->online_port) {
-            return pair;
-        } else if (pair->online_ip == 0 && port == pair->online_port) {
-            return pair;
-        }
-    }
-    return NULL;
-}
-
-int
-check_pack_src(ip_port_pair_mappings_t *transfer, uint32_t ip,
-        uint16_t port, int src_flag)
-{
-    int                     i, ret;
-    ip_port_pair_mapping_t *pair, **mappings;
-
-    ret = UNKNOWN;
-    mappings = transfer->mappings;
-
-    for (i = 0; i < transfer->num; i++) {
-
-        pair = mappings[i];
-        if (CHECK_DEST == src_flag) {
-            if (ip == pair->online_ip && port == pair->online_port) {
-                ret = LOCAL;
-                break;
-            } else if (0 == pair->online_ip && port == pair->online_port) {
-                ret = LOCAL;
-                break;
-            }
-        } else if (CHECK_SRC == src_flag) {
-            if (ip == pair->target_ip && port == pair->target_port) {
-                ret = REMOTE;
-                break;
-            }
-        }
-    }
-
-    return ret;
-}
 
 unsigned char *
-cp_fr_ip_pack(tc_ip_header_t *ip_header)
+cp_fr_ip_pack(tc_pool_t *pool, tc_iph_t *ip)
 {
     int            frame_len;
     uint16_t       tot_len;
     unsigned char *frame;
     
-    tot_len   = ntohs(ip_header->tot_len);
+    tot_len   = ntohs(ip->tot_len);
     frame_len = ETHERNET_HDR_LEN + tot_len;
-    frame     = (unsigned char *) malloc(frame_len);
+
+    frame = (unsigned char *) tc_palloc(pool, frame_len);
 
     if (frame != NULL) {    
-        memcpy(frame + ETHERNET_HDR_LEN, ip_header, tot_len);
+        memcpy(frame + ETHERNET_HDR_LEN, ip, tot_len);
     }    
 
     return frame;
 }
 
+
 unsigned short
-csum(unsigned short *packet, int pack_len) 
+csum(unsigned short *pack, int len) 
 { 
     register unsigned long sum = 0; 
 
-    while (pack_len > 1) {
-        sum += *(packet++); 
-        pack_len -= 2; 
+    while (len > 1) {
+        sum += *(pack++); 
+        len -= 2; 
     } 
-    if (pack_len > 0) {
-        sum += *(unsigned char *) packet; 
+    if (len > 0) {
+        sum += *(unsigned char *) pack; 
     }
     while (sum >> 16) {
         sum = (sum & 0xffff) + (sum >> 16); 
@@ -112,21 +43,23 @@ csum(unsigned short *packet, int pack_len)
 
 static unsigned short buf[32768]; 
 
+
 unsigned short
-tcpcsum(unsigned char *iphdr, unsigned short *packet, int pack_len)
+tcpcsum(unsigned char *iphdr, unsigned short *pack, int len)
 {       
     unsigned short        res;
 
     memcpy(buf, iphdr + 12, 8); 
     *(buf + 4) = htons((unsigned short) (*(iphdr + 9)));
-    *(buf + 5) = htons((unsigned short) pack_len);
-    memcpy(buf + 6, packet, pack_len);
-    res = csum(buf, pack_len + 12);
+    *(buf + 5) = htons((unsigned short) len);
+    memcpy(buf + 6, pack, len);
+    res = csum(buf, len + 12);
 
     return res; 
 }  
 
-#if (TCPCOPY_UDP)
+
+#if (TC_UDP)
 static int
 do_checksum_math(u_int16_t *data, int len)
 {   
@@ -150,25 +83,26 @@ do_checksum_math(u_int16_t *data, int len)
     return (sum);
 } 
 
-void udpcsum(tc_ip_header_t *ip_header, tc_udp_header_t *udp_packet)
+
+void udpcsum(tc_iph_t *ip, tc_udpt_t *udp)
 {       
     int            sum;
     uint16_t       len;
     unsigned char *ip_src;
 
-    udp_packet->check = 0;
+    udp->check = 0;
 
-    len    = ntohs(udp_packet->len);
-    ip_src = (unsigned char *) (&ip_header->saddr);
+    len    = ntohs(udp->len);
+    ip_src = (unsigned char *) (&ip->saddr);
     sum    = do_checksum_math((u_int16_t *) ip_src, 8);
     sum   += ntohs(IPPROTO_UDP + len);
-    sum   += do_checksum_math((u_int16_t *) udp_packet, len);
-    udp_packet->check = CHECKSUM_CARRY(sum);
+    sum   += do_checksum_math((u_int16_t *) udp, len);
+    udp->check = CHECKSUM_CARRY(sum);
 
 }
 #endif
 
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
 int
 retrieve_devices(char *raw_device, devices_t *devices)
 {
@@ -205,13 +139,14 @@ retrieve_devices(char *raw_device, devices_t *devices)
     return 1;
 }
 
+
 char *
 construct_filter(int flag, uint32_t ip, uint16_t port, char *filter)
 {
     char          *pt, direction[16];
     struct in_addr net_address;
 
-    memset(direction, 0, 16);
+    tc_memzero(direction, 16);
     if (flag == SRC_DIRECTION) {
         strcpy(direction, "src");
     } else if (flag == DST_DIRECTION) {
@@ -243,9 +178,9 @@ construct_filter(int flag, uint32_t ip, uint16_t port, char *filter)
 }
 #endif
 
-#if (TCPCOPY_PCAP || TCPCOPY_OFFLINE)
+#if (TC_PCAP || TC_OFFLINE)
 int
-get_l2_len(const unsigned char *frame, const int pkt_len, const int datalink)
+get_l2_len(const unsigned char *frame, const int datalink)
 {
     struct ethernet_hdr *eth_hdr;
 
@@ -279,19 +214,19 @@ get_l2_len(const unsigned char *frame, const int pkt_len, const int datalink)
     return -1;
 }
 
+
 #ifdef FORCE_ALIGN
 static unsigned char pcap_ip_buf[65536];
 #endif
 
 unsigned char *
-get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len, 
-        int *p_l2_len)
+get_ip_data(pcap_t *pcap, unsigned char *frame, const int pkt_len, int *pl2_len)
 {
     int      l2_len;
     u_char  *ptr;
 
-    l2_len    = get_l2_len(frame, pkt_len, pcap_datalink(pcap));
-    *p_l2_len = l2_len;
+    l2_len   = get_l2_len(frame, pcap_datalink(pcap));
+    *pl2_len = l2_len;
 
     if (pkt_len <= l2_len) {
         return NULL;

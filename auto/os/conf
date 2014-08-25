@@ -1,0 +1,39 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+echo "checking for $TC_SYSTEM specific features"
+
+case "$TC_PLATFORM" in
+
+    Linux:*)
+        . auto/os/linux
+    ;;
+
+esac
+
+
+case "$TC_MACHINE" in
+
+    i386 | i686 | i86pc)
+        have=TC_HAVE_NONALIGNED . auto/have
+        TC_MACH_CACHE_LINE=32
+    ;;
+
+    amd64 | x86_64)
+        have=TC_HAVE_NONALIGNED . auto/have
+        TC_MACH_CACHE_LINE=64
+    ;;
+
+    *)
+        have=TC_ALIGNMENT value=16 . auto/define
+        TC_MACH_CACHE_LINE=32
+    ;;
+
+esac
+
+if test -z "$TC_CPU_CACHE_LINE"; then
+    TC_CPU_CACHE_LINE=$TC_MACH_CACHE_LINE
+fi
+
+have=TC_CPU_CACHE_LINE value=$TC_CPU_CACHE_LINE . auto/define

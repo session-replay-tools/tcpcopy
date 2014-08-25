@@ -1,0 +1,263 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+
+tc_feature="F_READAHEAD"
+tc_feature_name="TC_HAVE_F_READAHEAD"
+tc_feature_run=no
+tc_feature_incs="#include <fcntl.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="fcntl(0, F_READAHEAD, 1);"
+. auto/feature
+
+
+tc_feature="O_DIRECT"
+tc_feature_name="TC_HAVE_O_DIRECT"
+tc_feature_run=no
+tc_feature_incs="#include <fcntl.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="fcntl(0, F_SETFL, O_DIRECT);"
+. auto/feature
+
+
+tc_feature="F_NOCACHE"
+tc_feature_name="TC_HAVE_F_NOCACHE"
+tc_feature_run=no
+tc_feature_incs="#include <fcntl.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="fcntl(0, F_NOCACHE, 1);"
+. auto/feature
+
+
+tc_feature="statfs()"
+tc_feature_name="TC_HAVE_STATFS"
+tc_feature_run=no
+tc_feature_incs="$TC_INCLUDE_SYS_PARAM_H
+                  $TC_INCLUDE_SYS_MOUNT_H
+                  $TC_INCLUDE_SYS_VFS_H"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="struct statfs  fs;
+                  statfs(\".\", &fs);"
+. auto/feature
+
+
+tc_feature="SO_SETFIB"
+tc_feature_name="TC_HAVE_SETFIB"
+tc_feature_run=no
+tc_feature_incs="#include <sys/socket.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="setsockopt(0, SOL_SOCKET, SO_SETFIB, NULL, 4)"
+. auto/feature
+
+
+tc_feature="SO_ACCEPTFILTER"
+tc_feature_name="TC_HAVE_DEFERRED_ACCEPT"
+tc_feature_run=no
+tc_feature_incs="#include <sys/socket.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="setsockopt(0, SOL_SOCKET, SO_ACCEPTFILTER, NULL, 0)"
+. auto/feature
+
+
+tc_feature="TCP_DEFER_ACCEPT"
+tc_feature_name="TC_HAVE_DEFERRED_ACCEPT"
+tc_feature_run=no
+tc_feature_incs="#include <sys/socket.h>
+                  #include <netinet/in.h>
+                  #include <netinet/tcp.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="setsockopt(0, IPPROTO_TCP, TCP_DEFER_ACCEPT, NULL, 0)"
+. auto/feature
+
+
+tc_feature="TCP_KEEPIDLE, TCP_KEEPINTVL, TCP_KEEPCNT"
+tc_feature_name="TC_HAVE_KEEPALIVE_TUNABLE"
+tc_feature_run=no
+tc_feature_incs="#include <sys/socket.h>
+                  #include <netinet/in.h>
+                  #include <netinet/tcp.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="setsockopt(0, IPPROTO_TCP, TCP_KEEPIDLE, NULL, 0);
+                  setsockopt(0, IPPROTO_TCP, TCP_KEEPINTVL, NULL, 0);
+                  setsockopt(0, IPPROTO_TCP, TCP_KEEPCNT, NULL, 0)"
+. auto/feature
+
+
+tc_feature="TCP_INFO"
+tc_feature_name="TC_HAVE_TCP_INFO"
+tc_feature_run=no
+tc_feature_incs="#include <sys/socket.h>
+                  #include <netinet/in.h>
+                  #include <netinet/tcp.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="socklen_t optlen = sizeof(struct tcp_info);
+                  struct tcp_info ti;
+                  ti.tcpi_rtt = 0;
+                  ti.tcpi_rttvar = 0;
+                  ti.tcpi_snd_cwnd = 0;
+                  ti.tcpi_rcv_space = 0;
+                  getsockopt(0, IPPROTO_TCP, TCP_INFO, &ti, &optlen)"
+. auto/feature
+
+
+# C types
+
+tc_type="int"; . auto/types/sizeof
+
+tc_type="long"; . auto/types/sizeof
+
+tc_type="long long"; . auto/types/sizeof
+
+tc_type="void *"; . auto/types/sizeof; tc_ptr_size=$tc_size
+tc_param=TC_PTR_SIZE; tc_value=$tc_size; . auto/types/value
+
+
+# POSIX types
+
+case "$TC_AUTO_CONFIG_H" in
+    /*)
+        TC_INCLUDE_AUTO_CONFIG_H="#include \"$TC_AUTO_CONFIG_H\""
+    ;;
+    *)
+        TC_INCLUDE_AUTO_CONFIG_H="#include \"../$TC_AUTO_CONFIG_H\""
+    ;;
+esac
+
+tc_type="uint64_t"; tc_types="u_int64_t"; . auto/types/typedef
+
+tc_type="sig_atomic_t"; tc_types="int"; . auto/types/typedef
+. auto/types/sizeof
+tc_param=TC_SIG_ATOMIC_T_SIZE; tc_value=$tc_size; . auto/types/value
+
+tc_type="socklen_t"; tc_types="int"; . auto/types/typedef
+
+tc_type="in_addr_t"; tc_types="uint32_t"; . auto/types/typedef
+
+tc_type="in_port_t"; tc_types="u_short"; . auto/types/typedef
+
+tc_type="rlim_t"; tc_types="int"; . auto/types/typedef
+
+. auto/types/uintptr_t
+
+tc_type="size_t"; . auto/types/sizeof
+tc_param=TC_MAX_SIZE_T_VALUE; tc_value=$tc_max_value; . auto/types/value
+tc_param=TC_SIZE_T_LEN; tc_value=$tc_max_len; . auto/types/value
+
+tc_type="off_t"; . auto/types/sizeof
+tc_param=TC_MAX_OFF_T_VALUE; tc_value=$tc_max_value; . auto/types/value
+tc_param=TC_OFF_T_LEN; tc_value=$tc_max_len; . auto/types/value
+
+tc_type="time_t"; . auto/types/sizeof
+tc_param=TC_TIME_T_SIZE; tc_value=$tc_size; . auto/types/value
+tc_param=TC_TIME_T_LEN; tc_value=$tc_max_len; . auto/types/value
+
+
+tc_feature="pread()"
+tc_feature_name="TC_HAVE_PREAD"
+tc_feature_run=no
+tc_feature_incs=
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="char buf[1]; ssize_t n; n = pread(0, buf, 1, 0);
+                  if (n == -1) return 1"
+. auto/feature
+
+
+tc_feature="pwrite()"
+tc_feature_name="TC_HAVE_PWRITE"
+tc_feature_run=no
+tc_feature_incs=
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="char buf[1]; ssize_t n; n = pwrite(1, buf, 1, 0);
+                  if (n == -1) return 1"
+. auto/feature
+
+
+tc_feature="posix_memalign()"
+tc_feature_name="TC_HAVE_POSIX_MEMALIGN"
+tc_feature_run=no
+tc_feature_incs="#include <stdlib.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="void *p; int n; n = posix_memalign(&p, 4096, 4096);
+                  if (n != 0) return 1"
+. auto/feature
+
+
+tc_feature="memalign()"
+tc_feature_name="TC_HAVE_MEMALIGN"
+tc_feature_run=no
+tc_feature_incs="#include <stdlib.h>
+                  #include <malloc.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="void *p; p = memalign(4096, 4096);
+                  if (p == NULL) return 1"
+. auto/feature
+
+
+tc_feature="mmap(MAP_ANON|MAP_SHARED)"
+tc_feature_name="TC_HAVE_MAP_ANON"
+tc_feature_run=yes
+tc_feature_incs="#include <sys/mman.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="void *p;
+                  p = mmap(NULL, 4096, PROT_READ|PROT_WRITE,
+                           MAP_ANON|MAP_SHARED, -1, 0);
+                  if (p == MAP_FAILED) return 1;"
+. auto/feature
+
+
+tc_feature='mmap("/dev/zero", MAP_SHARED)'
+tc_feature_name="TC_HAVE_MAP_DEVZERO"
+tc_feature_run=yes
+tc_feature_incs="#include <sys/mman.h>
+                  #include <sys/stat.h>
+                  #include <fcntl.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test='void *p; int  fd;
+                  fd = open("/dev/zero", O_RDWR);
+                  p = mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+                  if (p == MAP_FAILED) return 1;'
+. auto/feature
+
+
+tc_feature="openat(), fstatat()"
+tc_feature_name="TC_HAVE_OPENAT"
+tc_feature_run=no
+tc_feature_incs="#include <sys/types.h>
+                  #include <sys/stat.h>
+                  #include <fcntl.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="struct stat sb;
+                  openat(AT_FDCWD, \".\", O_RDONLY|O_NOFOLLOW);
+                  fstatat(AT_FDCWD, \".\", &sb, AT_SYMLINK_NOFOLLOW);"
+. auto/feature
+
+
+tc_feature="getaddrinfo()"
+tc_feature_name="TC_HAVE_GETADDRINFO"
+tc_feature_run=no
+tc_feature_incs="#include <sys/types.h>
+                  #include <sys/socket.h>
+                  #include <netdb.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test='struct addrinfo *res;
+                  if (getaddrinfo("localhost", NULL, NULL, &res) != 0) return 1;
+                  freeaddrinfo(res)'
+. auto/feature

@@ -8,9 +8,9 @@ typedef struct tc_select_multiplex_io_s   tc_select_multiplex_io_t;
 struct tc_select_multiplex_io_s {
     int             max_fd;
     int             last;
+    tc_event_t    **evs;
     fd_set          r_set;
     fd_set          w_set;
-    tc_event_t    **evs;
 };
 
 

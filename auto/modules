@@ -1,0 +1,53 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+if test -n "$TC_ADDONS"; then
+
+    echo configuring additional modules
+
+    for tc_addon_dir in $TC_ADDONS
+    do
+        echo "adding module in $tc_addon_dir"
+
+        if test -f $tc_addon_dir/config; then
+            . $tc_addon_dir/config
+
+            echo " + $tc_addon_name was configured"
+
+        else
+            echo "$0: error: no $tc_addon_dir/config was found"
+            exit 1
+        fi
+    done
+fi
+
+
+modules="$PROTOCOL_MODULES"
+
+cat << END                                    > $TC_MODULES_C
+
+#include <xcopy.h>
+
+$TC_PRAGMA
+
+END
+
+for mod in $modules
+do
+    echo "extern tc_module_t  $mod;"         >> $TC_MODULES_C
+done
+
+echo                                          >> $TC_MODULES_C
+echo 'tc_module_t *tc_modules[] = {'        >> $TC_MODULES_C
+
+for mod in $modules
+do
+    echo "    &$mod,"                         >> $TC_MODULES_C
+done
+
+cat << END                                    >> $TC_MODULES_C
+    NULL
+};
+
+END

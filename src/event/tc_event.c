@@ -5,9 +5,6 @@ tc_atomic_t  tc_over = 0;
 
 static tc_event_t *ev_mark[MAX_FD_NUM];
 
-static long tc_event_timer_find(tc_event_loop_t *loop);
-static void tc_event_timer_run(tc_event_loop_t *loop);
-
 static tc_event_actions_t tc_event_actions = {
     tc_select_create,
     tc_select_destroy,
@@ -19,25 +16,32 @@ static tc_event_actions_t tc_event_actions = {
 
 int tc_event_loop_init(tc_event_loop_t *loop, int size)
 {
+    tc_pool_t          *pool;
     tc_event_actions_t *actions;
 
-    actions = &tc_event_actions;
+    pool = tc_create_pool(TC_DEFAULT_POOL_SIZE, 0, 0);
 
-    loop->size = size;
-    loop->actions = actions;
-    loop->active_events = NULL;
-    loop->timers = NULL;
+    if (pool != NULL) {
+        actions = &tc_event_actions;
 
-    if (actions->create(loop) == TC_EVENT_ERROR) {
+        loop->actions = actions;
+        loop->active_events = NULL;
+        loop->pool = pool;
+        loop->size = size;
+
+        if (actions->create(loop) == TC_EVENT_ERROR) {
+            return TC_EVENT_ERROR;
+        }
+
+        return TC_EVENT_OK;
+    } else {
         return TC_EVENT_ERROR;
     }
-
-    return TC_EVENT_OK;
 }
+
 
 int tc_event_loop_finish(tc_event_loop_t *loop)
 {
-    tc_event_timer_t   *timer, *curr;
     tc_event_actions_t *actions;
 
     actions = loop->actions;
@@ -49,15 +53,10 @@ int tc_event_loop_finish(tc_event_loop_t *loop)
         loop->actions = NULL;
     }
 
-    /* destroy all timers */
-    for (timer = loop->timers; timer; ) {
-        curr = timer;
-        timer = timer->next;
-
-        free(curr);
+    if (loop->pool) {
+        tc_destroy_pool(loop->pool);
+        loop->pool = NULL;
     }
-
-    loop->timers = NULL;
 
     return TC_EVENT_OK;
 }
@@ -114,35 +113,37 @@ int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events)
 }
 
 
-int tc_event_process_cycle(tc_event_loop_t *loop)
+int tc_event_proc_cycle(tc_event_loop_t *loop)
 {
     int                  ret;
     long                 timeout;
+    tc_msec_t            delta;
     tc_event_t          *act_event, *act_next;
     tc_event_actions_t  *actions;
 
     actions = loop->actions;
 
     for ( ;; ) {
-        timeout = tc_event_timer_find(loop);
+        timeout = tc_event_find_timer();
         if (timeout == 0 || timeout > 1000) {
             timeout = 500;
         }
 
         loop->active_events = NULL;
 
+        delta = tc_current_time_msec;   
         ret = actions->poll(loop, timeout);
-
         if (tc_over) {
             goto FINISH;
         }
 
-        if (tc_update_time) {
-            tc_time_update();
-            tc_update_time = 0;
-        }
+        tc_time_update();
 
-        tc_event_timer_run(loop);
+        delta = tc_current_time_msec - delta;   
+
+        if (delta) {
+            tc_event_expire_timers();
+        }
 
         if (ret == TC_EVENT_ERROR || ret == TC_EVENT_AGAIN) {
             continue;
@@ -173,35 +174,35 @@ FINISH:
     return TC_EVENT_OK;
 }
 
-tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
+
+tc_event_t *tc_event_create(tc_pool_t *pool, int fd, tc_event_handler_pt reader,
         tc_event_handler_pt writer)
 {
     tc_event_t *ev;
 
-    ev = malloc(sizeof(tc_event_t));
-    if (ev == NULL) {
-        return NULL;
-    }
+    ev = tc_palloc(pool, sizeof(tc_event_t));
 
-    ev->events = 0;
-    ev->reg_evs = 0;
-    ev->index = -1;
-    ev->fd = fd;
-    ev->next = NULL;
-    ev->read_handler = reader;
-    ev->write_handler = writer;
+    if (ev != NULL) {
+        ev->events = 0;
+        ev->reg_evs = 0;
+        ev->index = -1;
+        ev->fd = fd;
+        ev->next = NULL;
+        ev->read_handler = reader;
+        ev->write_handler = writer;
+    }
 
     return ev;
 }
 
-static void tc_event_destroy_with_no_delay(tc_event_t *ev)
+static void tc_event_destroy_with_no_delay(tc_pool_t *pool, tc_event_t *ev)
 {
     tc_log_info(LOG_NOTICE, 0, "destroy event:%d", ev->fd);
     ev_mark[ev->fd] = NULL;
     ev->loop = NULL;
     ev->read_handler = NULL;
     ev->write_handler = NULL;
-    free(ev);
+    tc_pfree(pool, ev);
 }
 
 void tc_event_destroy(tc_event_t *ev, int delayed)
@@ -213,103 +214,15 @@ void tc_event_destroy(tc_event_t *ev, int delayed)
     }
 
     if (ev_mark[ev->fd] != NULL && ev != ev_mark[ev->fd]) {
-        tc_log_info(LOG_NOTICE, 0, "destroy previous event:%d", ev->fd);
-        tc_event_destroy_with_no_delay(ev_mark[ev->fd]);
+        tc_log_info(LOG_NOTICE, 0, "destroy prev ev:%d", ev->fd);
+        tc_event_destroy_with_no_delay(ev->loop->pool, ev_mark[ev->fd]);
     }
 
     if (delayed) {
-        tc_log_info(LOG_NOTICE, 0, "delayed destroy event:%d", ev->fd);
+        tc_log_info(LOG_NOTICE, 0, "delayed destroy ev:%d", ev->fd);
         ev_mark[ev->fd] = ev;
     } else {
-        tc_event_destroy_with_no_delay(ev);
+        tc_event_destroy_with_no_delay(ev->loop->pool, ev);
     }
 }
-
-void finally_release_obsolete_events()
-{
-    int i;
-
-    for (i = 0; i < MAX_FD_NUM; i++) {
-        if (ev_mark[i] != NULL) {
-            tc_log_info(LOG_NOTICE, 0, "destroy previous event:%d", ev_mark[i]->fd);
-            free(ev_mark[i]);
-            ev_mark[i] = NULL;
-        }
-    }
-}
-
-int tc_event_timer_add(tc_event_loop_t *loop, long msec,
-        tc_event_timer_handler_pt handler)
-{
-    tc_event_timer_t *timer;
-
-    timer = malloc(sizeof(tc_event_timer_t));
-    if (timer == NULL) {
-        return TC_EVENT_ERROR;
-    }
-
-
-    timer->handler = handler;
-    timer->msec = tc_current_time_msec + msec;
-
-    timer->next = loop->timers;
-    loop->timers = timer;
-
-    return TC_EVENT_OK;
-}
-
-static long tc_event_timer_find(tc_event_loop_t *loop)
-{
-    long              min;
-    tc_event_timer_t *timer;
-
-    min   = 0;
-    timer = loop->timers;
-
-    if (timer) {
-        min   = timer->msec;
-        timer = timer->next;
-
-        for (; timer; timer = timer->next) {
-            if (timer->msec < min) {
-                min = timer->msec;
-            }
-        }
-    }
-
-    if (min > 0) {
-        min -= tc_current_time_msec;
-    }
-
-    return min < 0 ? 0 : min;
-}
-
-static void tc_event_timer_run(tc_event_loop_t *loop)
-{
-    tc_event_timer_t *timer, *prev, *next;
-
-    prev = NULL;
-
-    for (timer = loop->timers; timer; ) {
-        if (timer->msec <= tc_current_time_msec && timer->handler) {
-            timer->handler(timer);
-        } else if (timer->handler == NULL) {
-            if (prev) {
-                prev->next = timer->next;
-            } else {
-                loop->timers = timer->next;
-            }
-
-            next = timer->next;
-            free(timer);
-            timer = next;
-
-            continue;
-        }
-
-        prev = timer;
-        timer = timer->next;
-    }
-}
-
 

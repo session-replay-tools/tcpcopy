@@ -12,24 +12,15 @@ typedef struct link_node_s
 }link_node_t, link_node, *p_link_node;
 
 typedef struct link_list_s{
-    int size;
     link_node head;
+    int size;
 }link_list_t, link_list;
 
 
-p_link_node link_node_malloc(void *data);
-link_list *link_list_create();
-int link_list_clear(link_list *l);
+p_link_node link_node_malloc(tc_pool_t *pool, void *data);
+link_list *link_list_create(tc_pool_t *pool);
 void link_list_append_by_order(link_list *l, p_link_node);
 
-
-static inline void link_node_internal_free(p_link_node p)
-{
-    if (p->data != NULL) {
-        free(p->data);
-        p->data = NULL;
-    }
-}
 
 static inline void 
 link_list_append(link_list *l, p_link_node p)
@@ -44,6 +35,7 @@ link_list_append(link_list *l, p_link_node p)
     l->size++;
 }
 
+
 static inline void 
 link_list_push(link_list *l, p_link_node p)
 {
@@ -56,6 +48,7 @@ link_list_push(link_list *l, p_link_node p)
     p->prev      = &(l->head);
     l->size++;
 }
+
 
 static inline p_link_node 
 link_list_remove(link_list *l, p_link_node node)
@@ -70,6 +63,7 @@ link_list_remove(link_list *l, p_link_node node)
     return node;
 }
 
+
 static inline p_link_node 
 link_list_first(link_list *l)
 {
@@ -79,6 +73,7 @@ link_list_first(link_list *l)
 
     return l->head.next;
 }
+
 
 static inline p_link_node 
 link_list_tail(link_list *l)
@@ -90,29 +85,6 @@ link_list_tail(link_list *l)
     return l->head.prev;
 }
 
-static inline p_link_node
-link_list_pop_first(link_list *l)
-{
-    p_link_node first = link_list_first(l);
-
-    if (!first) {
-        return first;
-    }
-
-    return link_list_remove(l, first);
-}
-
-static inline p_link_node
-link_list_pop_tail(link_list *l)
-{
-    p_link_node tail = link_list_tail(l);
-
-    if (!tail) {
-        return tail;
-    }
-
-    return link_list_remove(l, tail);
-}
 
 static inline p_link_node
 link_list_get_next(link_list *l, p_link_node p)
@@ -123,16 +95,6 @@ link_list_get_next(link_list *l, p_link_node p)
 
     return p->next;
 } 
-
-static inline bool
-link_list_is_empty(link_list *l)
-{
-    if (l->head.next == &(l->head)) {
-        return true;
-    }
-
-    return false;
-}
 
 #endif /* TC_LINK_LIST_INCLUDED */
 

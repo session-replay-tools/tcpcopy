@@ -1,7 +1,6 @@
 #include <xcopy.h>
-#include "tc_evp.h"
 
-#if (TCPCOPY_DIGEST) 
+#if (TC_DIGEST) 
 
 #include <openssl/evp.h>
 
@@ -19,6 +18,7 @@ tc_init_digests()
     return 1;
 }
 
+
 int 
 tc_destroy_digests()
 {
@@ -34,10 +34,10 @@ tc_destroy_digests()
 int
 tc_init_sha1()
 {
-    md = EVP_get_digestbyname(MYSQL_SHA1);
+    md = EVP_get_digestbyname(ALGO_SHA1);
 
     if (!md) {
-        tc_log_info(LOG_ERR, 0, "%s is not supported", MYSQL_SHA1);
+        tc_log_info(LOG_ERR, 0, "%s is not supported", ALGO_SHA1);
         return 0;
     }
 
@@ -46,6 +46,7 @@ tc_init_sha1()
 
     return 1;
 }
+
 
 int 
 tc_destroy_sha1()
@@ -58,10 +59,12 @@ tc_destroy_sha1()
     return 1;
 }
 
-static void tc_tailor(unsigned char *dest, unsigned int dest_len,
+
+static void 
+tc_tailor(unsigned char *dest, unsigned int dest_len,
         const unsigned char *hash, unsigned int hash_len)
 {
-    int i;
+    unsigned int i;
 
     if (dest_len > hash_len) {
         return;
@@ -71,6 +74,7 @@ static void tc_tailor(unsigned char *dest, unsigned int dest_len,
         dest[i] = hash[i];
     }
 }
+
 
 int 
 tc_sha1_digest_one(unsigned char *dest, unsigned int dest_len, 
@@ -92,6 +96,7 @@ tc_sha1_digest_one(unsigned char *dest, unsigned int dest_len,
     return 1;
 }
 
+
 int 
 tc_sha1_digest_two(unsigned char *dest, unsigned int dest_len, 
         const unsigned char *seed1, unsigned int seed1_len, 
@@ -101,6 +106,7 @@ tc_sha1_digest_two(unsigned char *dest, unsigned int dest_len,
     unsigned char sha1_value[EVP_MAX_MD_SIZE];
 
     if (!sha1_init) {
+        tc_log_info(LOG_ERR, 0, "%s not init", ALGO_SHA1);
         return 0;
     }
 

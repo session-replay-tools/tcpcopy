@@ -1,0 +1,77 @@
+
+# clang
+
+
+TC_CLANG_VER=`$CC -v 2>&1 | grep 'clang version' 2>&1 \
+                           | sed -e 's/^.*clang version \(.*\)/\1/'`
+
+echo " + clang version: $TC_CLANG_VER"
+
+have=TC_COMPILER value="\"clang $TC_CLANG_VER\"" . auto/define
+
+
+CC_TEST_FLAGS="-pipe"
+
+
+# optimizations
+
+#TC_CLANG_OPT="-O2"
+#TC_CLANG_OPT="-Oz"
+TC_CLANG_OPT="-O"
+
+case $CPU in
+    pentium)
+        # optimize for Pentium
+        CPU_OPT="-march=pentium"
+        TC_CPU_CACHE_LINE=32
+    ;;
+
+    pentiumpro | pentium3)
+        # optimize for Pentium Pro, Pentium II and Pentium III
+        CPU_OPT="-march=pentiumpro"
+        TC_CPU_CACHE_LINE=32
+    ;;
+
+    pentium4)
+        # optimize for Pentium 4
+        CPU_OPT="-march=pentium4"
+        TC_CPU_CACHE_LINE=128
+    ;;
+
+    athlon)
+        # optimize for Athlon
+        CPU_OPT="-march=athlon"
+        TC_CPU_CACHE_LINE=64
+    ;;
+
+    opteron)
+        # optimize for Opteron
+        CPU_OPT="-march=opteron"
+        TC_CPU_CACHE_LINE=64
+    ;;
+
+esac
+
+CC_AUX_FLAGS="$CC_AUX_FLAGS $CPU_OPT"
+
+
+CFLAGS="$CFLAGS -pipe $CPU_OPT"
+
+CFLAGS="$CFLAGS -std=gnu99 -D_FILE_OFFSET_BITS=64"
+
+# warnings
+
+CFLAGS="$CFLAGS $TC_CLANG_OPT -Wall -Wextra -Wpointer-arith"
+#CFLAGS="$CFLAGS -Wmissing-prototypes"
+
+# we have a lot of unused function arguments
+CFLAGS="$CFLAGS -Wno-unused-parameter"
+
+CFLAGS="$CFLAGS -W -Wall -Wunused-function -pedantic"
+
+# debug
+CFLAGS="$CFLAGS -g"
+
+if [ ".$CPP" = "." ]; then
+    CPP="$CC -E"
+fi

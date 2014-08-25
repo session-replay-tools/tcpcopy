@@ -1,0 +1,128 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+LINK="\$(CC)"
+
+tc_include_opt="-I "
+tc_compile_opt="-c"
+tc_objout="-o "
+tc_binout="-o "
+tc_objext="o"
+
+tc_long_start=
+tc_long_end=
+
+tc_regex_dirsep="\/"
+tc_dirsep='/'
+
+tc_regex_cont=' \\\
+	'
+tc_cont=' \
+	'
+tc_tab=' \
+		'
+tc_spacer=
+
+tc_long_regex_cont=$tc_regex_cont
+tc_long_cont=$tc_cont
+
+. auto/cc/name
+
+if test -n "$CFLAGS"; then
+
+    CC_TEST_FLAGS="$CFLAGS $TC_CC_OPT"
+
+else
+
+    case $TC_CC_NAME in
+        gcc)
+            . auto/cc/gcc
+        ;;
+
+        clang)
+
+            . auto/cc/clang
+        ;;
+
+        icc)
+            . auto/cc/icc
+        ;;
+
+        acc)
+
+            . auto/cc/acc
+        ;;
+
+    esac
+
+    CC_TEST_FLAGS="$CC_TEST_FLAGS $TC_CC_OPT"
+
+fi
+
+CFLAGS="$CFLAGS $TC_CC_OPT"
+TC_TEST_LD_OPT="$TC_LD_OPT"
+
+if [ "$TC_PLATFORM" != win32 ]; then
+
+    if test -n "$TC_LD_OPT"; then
+        tc_feature=--with-ld-opt=\"$TC_LD_OPT\"
+        tc_feature_name=
+        tc_feature_run=no
+        tc_feature_incs=
+        tc_feature_path=
+        tc_feature_libs=
+        tc_feature_test=
+        . auto/feature
+
+        if [ $tc_found = no ]; then
+            echo $0: error: the invalid value in --with-ld-opt=\"$TC_LD_OPT\"
+            echo
+            exit 1
+        fi
+    fi
+
+
+    tc_feature="gcc builtin atomic operations"
+    tc_feature_name=TC_HAVE_GCC_ATOMIC
+    tc_feature_run=yes
+    tc_feature_incs=
+    tc_feature_path=
+    tc_feature_libs=
+    tc_feature_test="long  n = 0;
+                      if (!__sync_bool_compare_and_swap(&n, 0, 1))
+                          return 1;
+                      if (__sync_fetch_and_add(&n, 1) != 1)
+                          return 1;
+                      if (n != 2)
+                          return 1;
+                      __sync_synchronize();"
+    . auto/feature
+
+
+    tc_feature="C99 variadic macros"
+    tc_feature_name="TC_HAVE_C99_VARIADIC_MACROS"
+    tc_feature_run=yes
+    tc_feature_incs="#include <stdio.h>
+#define var(dummy, ...)  sprintf(__VA_ARGS__)"
+    tc_feature_path=
+    tc_feature_libs=
+    tc_feature_test="char  buf[30]; buf[0] = '0';
+    var(0, buf, \"%d\", 1);
+    if (buf[0] != '1') return 1"
+    . auto/feature
+
+
+    tc_feature="gcc variadic macros"
+    tc_feature_name="TC_HAVE_GCC_VARIADIC_MACROS"
+    tc_feature_run=yes
+    tc_feature_incs="#include <stdio.h>
+#define var(dummy, args...)  sprintf(args)"
+    tc_feature_path=
+    tc_feature_libs=
+    tc_feature_test="char  buf[30]; buf[0] = '0';
+                      var(0, buf, \"%d\", 1);
+                      if (buf[0] != '1') return 1"
+    . auto/feature
+
+fi

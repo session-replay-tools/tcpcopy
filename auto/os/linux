@@ -1,0 +1,21 @@
+have=TC_LINUX . auto/have_headers
+
+CORE_INCS="$CORE_INCS"
+CORE_DEPS="$CORE_DEPS $LINUX_DEPS"
+CORE_SRCS="$CORE_SRCS $LINUX_SRCS"
+
+tc_spacer='
+'
+
+cc_aux_flags="$CC_AUX_FLAGS"
+CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+
+# Linux kernel version
+
+version=$((`uname -r \
+    | sed -n -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/ \
+                                                 \1*256*256+\2*256+\3/p' \
+             -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1*256*256+\2*256/p'`))
+
+version=${version:-0}
+

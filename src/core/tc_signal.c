@@ -24,7 +24,7 @@ set_signal_handler(signal_t *signals)
     struct sigaction sa;
 
     for (sig = signals; sig->signo != 0; sig++) {
-        memset(&sa, 0, sizeof(sa));
+        tc_memzero(&sa, sizeof(sa));
         sa.sa_handler = sig->handler;
         sa.sa_flags = sig->flags;
         sigemptyset(&sa.sa_mask);

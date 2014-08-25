@@ -1,0 +1,95 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+case ".$TC_SBIN_PATH" in
+    ./*)
+    ;;
+
+    .)
+        TC_SBIN_PATH=$TC_PREFIX/sbin/tcpcopy
+    ;;
+
+    *)
+        TC_SBIN_PATH=$TC_PREFIX/$TC_SBIN_PATH
+    ;;
+esac
+
+
+case ".$TC_CONF_PATH" in
+    ./*)
+    ;;
+
+    *)
+        TC_CONF_PATH=$TC_PREFIX/$TC_CONF_PATH
+    ;;
+esac
+
+
+TC_CONF_PREFIX=`dirname $TC_CONF_PATH`
+
+
+case ".$TC_PID_PATH" in
+    ./*)
+    ;;
+
+    *)
+        TC_PID_PATH=$TC_PREFIX/$TC_PID_PATH
+    ;;
+esac
+
+case ".$TC_ERROR_LOG_PATH" in
+    ./* | .)
+    ;;  
+
+    *)  
+        TC_ERROR_LOG_PATH=$TC_PREFIX/$TC_ERROR_LOG_PATH
+    ;;  
+esac
+
+cat << END                                                    >> $TC_MAKEFILE
+
+install:	$TC_OBJS${tc_dirsep}tcpcopy
+	test -d '\$(DESTDIR)$TC_PREFIX' || mkdir -p '\$(DESTDIR)$TC_PREFIX'
+
+	test -d '\$(DESTDIR)`dirname "$TC_SBIN_PATH"`' \
+		|| mkdir -p '\$(DESTDIR)`dirname "$TC_SBIN_PATH"`'
+	test ! -f '\$(DESTDIR)$TC_SBIN_PATH' \
+		|| mv '\$(DESTDIR)$TC_SBIN_PATH' \
+			'\$(DESTDIR)$TC_SBIN_PATH.old'
+	cp $TC_OBJS/tcpcopy '\$(DESTDIR)$TC_SBIN_PATH'
+
+	test -d '\$(DESTDIR)$TC_CONF_PREFIX' \
+		|| mkdir -p '\$(DESTDIR)$TC_CONF_PREFIX'
+
+	test -f '\$(DESTDIR)$TC_CONF_PATH' \
+		|| cp conf/plugin.conf '\$(DESTDIR)$TC_CONF_PATH'
+	cp conf/plugin.conf '\$(DESTDIR)$TC_CONF_PREFIX/plugin.conf.default'
+
+	test -d '\$(DESTDIR)`dirname "$TC_PID_PATH"`' \
+		|| mkdir -p '\$(DESTDIR)`dirname "$TC_PID_PATH"`'
+
+END
+
+
+if test -n "$TC_ERROR_LOG_PATH"; then
+    cat << END                                                >> $TC_MAKEFILE
+
+	test -d '\$(DESTDIR)`dirname "$TC_ERROR_LOG_PATH"`' || \
+		mkdir -p '\$(DESTDIR)`dirname "$TC_ERROR_LOG_PATH"`'
+END
+
+fi
+
+
+# create Makefile
+
+cat << END >> Makefile
+
+build:
+	\$(MAKE) -f $TC_MAKEFILE
+
+install:
+	\$(MAKE) -f $TC_MAKEFILE install
+END
+

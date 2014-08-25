@@ -18,7 +18,6 @@
 #define tc_event_push_active_event(head, ev) \
     ev->next = head; head = ev; 
 
-
 typedef struct tc_event_loop_s tc_event_loop_t;
 typedef struct tc_event_s      tc_event_t;
 typedef struct tc_event_timer_s tc_event_timer_t;
@@ -53,34 +52,36 @@ struct tc_event_s {
     tc_event_t          *next;
 };
 
+typedef tc_rbtree_key_t      tc_msec_t;
+typedef tc_rbtree_key_int_t  tc_msec_int_t;
+typedef struct tm            tc_tm_t;
+
 struct tc_event_timer_s {
-    long                       msec;
+    unsigned                   timer_set:1;
+    void                      *data;
+    tc_pool_t                 *pool;
+    tc_rbtree_node_t           timer;
     tc_event_timer_handler_pt  handler;
-    tc_event_timer_t          *next;
 };
 
 struct tc_event_loop_s {
-    void               *io;
     int                 size;
+    void               *io;
+    tc_pool_t          *pool;
     tc_event_t         *active_events;
     tc_event_actions_t *actions;
-    tc_event_timer_t   *timers;
 };
 
 
 int tc_event_loop_init(tc_event_loop_t *loop, int size);
 int tc_event_loop_finish(tc_event_loop_t *loop);
-int tc_event_process_cycle(tc_event_loop_t *loop);
+int tc_event_proc_cycle(tc_event_loop_t *loop);
 int tc_event_add(tc_event_loop_t *loop, tc_event_t *ev, int events);
 int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events);
 
-tc_event_t *tc_event_create(int fd, tc_event_handler_pt reader,
+tc_event_t *tc_event_create(tc_pool_t *pool, int fd, tc_event_handler_pt reader,
         tc_event_handler_pt writer);
 void tc_event_destroy(tc_event_t *ev, int delayed);
-
-int tc_event_timer_add(tc_event_loop_t *loop, long timer,
-        tc_event_timer_handler_pt handler);
-void finally_release_obsolete_events();
 
 extern tc_atomic_t  tc_over;
 

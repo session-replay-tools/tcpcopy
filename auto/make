@@ -1,0 +1,231 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+echo "creating $TC_MAKEFILE"
+
+mkdir -p $TC_OBJS/src/core $TC_OBJS/src/util\
+         $TC_OBJS/src/event $TC_OBJS/src/digest\
+         $TC_OBJS/src/communication\
+         $TC_OBJS/src/tcpcopy
+
+tc_objs_dir=$TC_OBJS$tc_regex_dirsep
+
+
+cat << END                                                     > $TC_MAKEFILE
+
+CC =	$CC
+CFLAGS = $CFLAGS
+CPP =	$CPP
+LINK =	$LINK
+
+END
+
+
+tc_incs=`echo $CORE_INCS $DIGEST_INCS $EVENT_INCS $COMMUNICATION_INCS $UTIL_INCS\
+        $TCPCOPY_INCS $TC_OBJS\
+        | sed -e "s/  *\([^ ][^ ]*\)/$tc_regex_cont$tc_include_opt\1/g" \
+        -e "s/\//$tc_regex_dirsep/g"`
+
+cat << END                                                    >> $TC_MAKEFILE
+
+ALL_INCS = $tc_include_opt$tc_incs
+
+END
+
+
+# the core dependences and include paths
+
+tc_deps=`echo $CORE_DEPS $DIGEST_DEPS $EVENT_DEPS $COMMUNICATION_DEPS $UTIL_DEPS\
+        $TCPCOPY_DEPS $TC_AUTO_CONFIG_H $TC_PCH \
+        | sed -e "s/  *\([^ ][^ ]*\)/$tc_regex_cont\1/g" \
+        -e "s/\//$tc_regex_dirsep/g"`
+
+tc_incs=`echo $CORE_INCS $DIGEST_INCS $EVENT_INCS $COMMUNICATION_INCS $UTIL_INCS\
+        $TCPCOPY_INCS $TC_OBJS\
+    | sed -e "s/  *\([^ ][^ ]*\)/$tc_regex_cont$tc_include_opt\1/g" \
+          -e "s/\//$tc_regex_dirsep/g"`
+
+cat << END                                                    >> $TC_MAKEFILE
+
+
+CORE_DEPS = $tc_deps
+
+
+CORE_INCS = $tc_include_opt$tc_incs
+
+END
+
+tc_common_srcs="$CORE_SRCS $DIGEST_SRCS $EVENT_SRCS $COMMUNICATION_SRCS $UTIL_SRCS"
+tc_client_srcs="$tc_common_srcs $TCPCOPY_SRCS"
+
+tc_client_with_no_plugin="$tc_client_srcs"
+
+if test -n "$TC_ADDON_SRCS"; then
+
+cat << END                                                >> $TC_MAKEFILE
+
+ADDON_DEPS = \$(CORE_DEPS) $TC_ADDON_DEPS
+
+END
+
+fi
+
+
+# tcpcopy
+
+tc_client_srcs=`echo $tc_client_srcs | sed -e "s/\//$tc_regex_dirsep/g"`
+
+for tc_src in $TC_ADDON_SRCS
+do
+    tc_obj="addon/`basename \`dirname $tc_src\``"
+
+    test -d $TC_OBJS/$tc_obj || mkdir -p $TC_OBJS/$tc_obj
+
+    tc_obj=`echo $tc_obj/\`basename $tc_src\` \
+        | sed -e "s/\//$tc_regex_dirsep/g"`
+
+    tc_client_srcs="$tc_client_srcs $tc_obj"
+done
+
+tc_all_objs=`echo $tc_client_srcs \
+    | sed -e "s#\([^ ]*\.\)cpp#$TC_OBJS\/\1$tc_objext#g" \
+          -e "s#\([^ ]*\.\)cc#$TC_OBJS\/\1$tc_objext#g" \
+          -e "s#\([^ ]*\.\)c#$TC_OBJS\/\1$tc_objext#g" \
+          -e "s#\([^ ]*\.\)S#$TC_OBJS\/\1$tc_objext#g"`
+
+tc_modules_c=`echo $TC_MODULES_C | sed -e "s/\//$tc_regex_dirsep/g"`
+
+tc_modules_obj=`echo $tc_modules_c | sed -e "s/\(.*\.\)c/\1$tc_objext/"`
+
+
+if test -n "$TC_RES"; then
+   tc_res=$TC_RES
+else
+   tc_res="$TC_RC $TC_ICONS"
+   tc_rcc=`echo $TC_RCC | sed -e "s/\//$tc_regex_dirsep/g"`
+fi
+
+tc_deps=`echo $tc_all_objs $tc_modules_obj $tc_res $LINK_DEPS \
+    | sed -e "s/  *\([^ ][^ ]*\)/$tc_regex_cont\1/g" \
+          -e "s/\//$tc_regex_dirsep/g"`
+
+tc_objs=`echo $tc_all_objs $tc_modules_obj \
+    | sed -e "s/  *\([^ ][^ ]*\)/$tc_long_regex_cont\1/g" \
+          -e "s/\//$tc_regex_dirsep/g"`
+
+if test -n "$TC_LD_OPT$CORE_LIBS"; then
+    tc_libs=`echo $TC_LD_OPT $CORE_LIBS \
+        | sed -e "s/\//$tc_regex_dirsep/g" -e "s/^/$tc_long_regex_cont/"`
+fi
+
+tc_link=${CORE_LINK:+`echo $CORE_LINK \
+    | sed -e "s/\//$tc_regex_dirsep/g" -e "s/^/$tc_long_regex_cont/"`}
+
+
+cat << END                                                    >> $TC_MAKEFILE
+
+$TC_OBJS${tc_dirsep}tcpcopy:	$tc_deps$tc_spacer
+	\$(LINK) ${tc_long_start}${tc_binout}$TC_OBJS${tc_dirsep}tcpcopy$tc_long_cont$tc_objs$tc_libs$tc_link
+	$tc_rcc
+${tc_long_end}
+END
+
+# tc_modules.c
+
+tc_cc="\$(CC) $tc_compile_opt \$(CFLAGS) \$(CORE_INCS)"
+
+cat << END                                                    >> $TC_MAKEFILE
+
+$tc_modules_obj:	\$(CORE_DEPS)$tc_cont$tc_modules_c
+	$tc_cc$tc_tab$tc_objout$tc_modules_obj$tc_tab$tc_modules_c$TC_AUX
+
+END
+
+
+# the sources with no plugin
+
+for tc_src in $tc_client_with_no_plugin
+do
+    tc_src=`echo $tc_src | sed -e "s/\//$tc_regex_dirsep/g"`
+    tc_obj=`echo $tc_src \
+        | sed -e "s#^\(.*\.\)cpp\\$#$tc_objs_dir\1$tc_objext#g" \
+              -e "s#^\(.*\.\)cc\\$#$tc_objs_dir\1$tc_objext#g" \
+              -e "s#^\(.*\.\)c\\$#$tc_objs_dir\1$tc_objext#g" \
+              -e "s#^\(.*\.\)S\\$#$tc_objs_dir\1$tc_objext#g"`
+
+    cat << END                                                >> $TC_MAKEFILE
+
+$tc_obj:	\$(CORE_DEPS)$tc_cont$tc_src
+	$tc_cc$tc_tab$tc_objout$tc_obj$tc_tab$tc_src$TC_AUX
+
+END
+
+done
+
+
+# the addons sources
+
+if test -n "$TC_ADDON_SRCS"; then
+
+    tc_cc="\$(CC) $tc_compile_opt \$(CFLAGS) $tc_use_pch \$(ALL_INCS)"
+
+    for tc_src in $TC_ADDON_SRCS
+    do
+        tc_obj="addon/`basename \`dirname $tc_src\``"
+
+        tc_obj=`echo $tc_obj/\`basename $tc_src\` \
+            | sed -e "s/\//$tc_regex_dirsep/g"`
+
+        tc_obj=`echo $tc_obj \
+            | sed -e "s#^\(.*\.\)cpp\\$#$tc_objs_dir\1$tc_objext#g" \
+                  -e "s#^\(.*\.\)cc\\$#$tc_objs_dir\1$tc_objext#g" \
+                  -e "s#^\(.*\.\)c\\$#$tc_objs_dir\1$tc_objext#g" \
+                  -e "s#^\(.*\.\)S\\$#$tc_objs_dir\1$tc_objext#g"`
+
+        tc_src=`echo $tc_src | sed -e "s/\//$tc_regex_dirsep/g"`
+
+        cat << END                                            >> $TC_MAKEFILE
+
+$tc_obj:	\$(ADDON_DEPS)$tc_cont$tc_src
+	$tc_cc$tc_tab$tc_objout$tc_obj$tc_tab$tc_src$TC_AUX
+
+END
+     done
+
+fi
+
+
+# the addons config.make
+
+if test -n "$TC_ADDONS"; then
+
+    for tc_addon_dir in $TC_ADDONS
+    do
+        if test -f $tc_addon_dir/config.make; then
+            . $tc_addon_dir/config.make
+        fi
+    done
+fi
+
+
+# the precompiled headers
+
+if test -n "$TC_PCH"; then
+    echo "#include <tc_config.h>" > $TC_OBJS/tc_pch.c
+
+    tc_pch="src/core/tc_config.h $OS_CONFIG $TC_OBJS/tc_auto_config.h"
+    tc_pch=`echo "$TC_PCH:	$tc_pch" | sed -e "s/\//$tc_regex_dirsep/g"`
+
+    tc_src="\$(CC) \$(CFLAGS) $TC_BUILD_PCH $tc_compile_opt \$(ALL_INCS)"
+    tc_src="$tc_src $tc_objout$TC_OBJS/tc_pch.obj $TC_OBJS/tc_pch.c"
+    tc_src=`echo $tc_src | sed -e "s/\//$tc_regex_dirsep/g"`
+
+    cat << END                                                >> $TC_MAKEFILE
+
+$tc_pch
+	$tc_src
+
+END
+
+fi

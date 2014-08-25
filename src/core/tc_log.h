@@ -13,20 +13,15 @@
 #define LOG_INFO              7
 #define LOG_DEBUG             8
 
-#define LOG_MAX_LEN        2048
+#define LOG_MAX_LEN 512
 
-int tc_log_init();
-void tc_log_end();
+int tc_log_init(const char *);
+void tc_log_end(void);
 
 void tc_log_info(int level, int err, const char *fmt, ...);
-void tc_log_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
-        tc_tcp_header_t *tcp_header);
-#if (TCPCOPY_UDP)
-void tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
-        tc_udp_header_t *udp_header);
-#endif
+void tc_log_trace(int level, int err, int flag, tc_iph_t *ip, tc_tcph_t *tcp);
 
-#if (TCPCOPY_DEBUG)
+#if (TC_DEBUG)
 
 #define tc_log_debug0(level, err, fmt)                                       \
     tc_log_info(level, err, (const char *) fmt)
@@ -55,8 +50,8 @@ void tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
 #define tc_log_debug8(level, err, fmt, a1, a2, a3, a4, a5, a6, a7, a8)       \
     tc_log_info(level, err, (const char *) fmt, a1, a2, a3, a4, a5, a6, a7, a8)
 
-#define tc_log_debug_trace(level, err, flag, ip_header, tcp_header)          \
-    tc_log_trace(level, err, flag, ip_header, tcp_header)
+#define tc_log_debug_trace(level, err, flag, ip, tcp)          \
+    tc_log_trace(level, err, flag, ip, tcp)
 
 #else
 
@@ -69,9 +64,9 @@ void tc_log_udp_trace(int level, int err, int flag, tc_ip_header_t *ip_header,
 #define tc_log_debug6(level, err, fmt, a1, a2, a3, a4, a5, a6)
 #define tc_log_debug7(level, err, fmt, a1, a2, a3, a4, a5, a6, a7)
 #define tc_log_debug8(level, err, fmt, a1, a2, a3, a4, a5, a6, a7, a8)
-#define tc_log_debug_trace(level, err, flag, ip_header, tcp_header)
+#define tc_log_debug_trace(level, err, flag, ip, tcp)
 
-#endif /* TCPCOPY_DEBUG */
+#endif /* TC_DEBUG */
 
 #endif /* TC_LOG_INCLUDED */
 

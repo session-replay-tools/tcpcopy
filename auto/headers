@@ -1,0 +1,10 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+tc_include="unistd.h";      . auto/include
+tc_include="limits.h";      . auto/include
+tc_include="inttypes.h";    . auto/include
+if [ $TC_PCAP_NEEDED = YES ]; then
+    tc_include="pcap.h";    . auto/include
+fi

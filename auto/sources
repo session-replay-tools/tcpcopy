@@ -1,0 +1,84 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+CORE_INCS="src/core"
+
+CORE_DEPS="src/core/xcopy.h \
+           src/core/tc_config.h \
+           src/core/tc_alloc.h \
+           src/core/tc_palloc.h \
+           src/core/tc_array.h \
+           src/core/tc_link_list.h \
+           src/core/tc_hash.h \
+           src/core/tc_conf_file.h \
+           src/core/tc_rbtree.h \
+           src/core/tc_log.h \
+           src/core/tc_time.h \
+           src/core/tc_signal.h"
+
+
+CORE_SRCS="src/core/tc_alloc.c \
+           src/core/tc_log.c \
+           src/core/tc_palloc.c \
+           src/core/tc_array.c \
+           src/core/tc_link_list.c \
+           src/core/tc_hash.c \
+           src/core/tc_signal.c \
+           src/core/tc_time.c \
+           src/core/tc_conf_file.c \
+           src/core/tc_rbtree.c \
+           src/core/tc_daemon.c"
+
+EVENT_INCS="src/event"
+
+EVENT_DEPS="src/event/tc_event.h \
+            src/event/tc_event_timer.h \
+            src/event/tc_select_module.h"
+
+EVENT_SRCS="src/event/tc_event.c \
+            src/event/tc_event_timer.c \
+            src/event/tc_select_module.c"
+
+
+COMMUNICATION_INCS="src/communication"
+
+COMMUNICATION_DEPS="src/communication/tc_socket.h" 
+
+COMMUNICATION_SRCS="src/communication/tc_socket.c" 
+
+
+DIGEST_INCS="src/digest"
+
+DIGEST_DEPS="src/digest/tc_evp.h" 
+
+DIGEST_SRCS="src/digest/tc_evp.c" 
+
+
+UTIL_INCS="src/util"
+
+UTIL_DEPS="src/util/tc_util.h" 
+
+UTIL_SRCS="src/util/tc_util.c" 
+
+TCPCOPY_INCS="src/tcpcopy"
+
+TCPCOPY_DEPS="src/tcpcopy/tcpcopy.h \
+              src/tcpcopy/tc_manager.h \
+              src/tcpcopy/tc_message_module.h \
+              src/tcpcopy/tc_packets_module.h \
+              src/tcpcopy/tc_session.h"
+
+if [ $TC_UDP = YES ]; then
+TCPCOPY_SRCS="src/tcpcopy/tc_manager.c \
+              src/tcpcopy/tc_packets_module.c \
+              src/tcpcopy/tc_message_module.c \
+              src/tcpcopy/tc_udp_session.c \
+              src/tcpcopy/main.c"
+else
+TCPCOPY_SRCS="src/tcpcopy/tc_manager.c \
+              src/tcpcopy/tc_packets_module.c \
+              src/tcpcopy/tc_message_module.c \
+              src/tcpcopy/tc_session.c \
+              src/tcpcopy/main.c"
+fi

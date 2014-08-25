@@ -1,30 +1,29 @@
 /*
- *  TCPCopy
+ *  TCPCopy 1.0 series
  *  A request replication tool for TCP based applications 
  *  Or
  *  A TCP stream replay tool(from client side)
  *
- *  Copyright 2011 Netease, Inc.  All rights reserved.
+ *  Copyright 2014 Netease, Inc.  All rights reserved.
  *  Use and distribution licensed under the BSD license.
  *  See the LICENSE file for full text.
  *
  *  Authors:
  *      Bin Wang <wangbin579@gmail.com>
- *      Bo  Wang <wangbo@corp.netease.com>
  */
 
 #include <xcopy.h>
 #include <tcpcopy.h>
 
 /* global variables for TCPCopy client */
+int                tc_raw_socket_out;
+tc_stat_t          tc_stat;
+hash_table        *sess_table;
+tc_event_loop_t    event_loop;
 xcopy_clt_settings clt_settings;
 
-int tc_raw_socket_out;
-tc_event_loop_t event_loop;
-
-#if (TCPCOPY_SIGACTION)
+#if (TC_SIGACTION)
 static signal_t signals[] = {
-    { SIGALRM, "SIGALRM", 0,    tc_time_sig_alarm },
     { SIGINT,  "SIGINT",  0,    tcp_copy_over },
     { SIGPIPE, "SIGPIPE", 0,    tcp_copy_over },
     { SIGHUP,  "SIGHUP",  0,    tcp_copy_over },
@@ -37,7 +36,7 @@ static void
 usage(void)
 {
     printf("tcpcopy " VERSION "\n");
-#if (!TCPCOPY_PCAP_SEND)
+#if (!TC_PCAP_SND)
     printf("-x <transfer,> use <transfer,> to specify the IPs and ports of the source and target\n"
            "               servers. Suppose 'sourceIP' and 'sourcePort' are the IP and port \n"
            "               number of the source server you want to copy from, 'targetIP' and \n");
@@ -60,13 +59,14 @@ usage(void)
     printf("               Note that sourceMac is the MAC address of the interface where \n"
            "               packets are going out and targetMac is the next hop's MAC address.\n");
 #endif
+    printf("-H <ip_addr>   change the localhost IP address to the given IP address\n");
     printf("-c <ip_addr,>  change the client IP to one of IP addresses when sending to the\n"
            "               target server. For example,\n"
-           "               './tcpcopy -x 8080-192.168.0.2:8080 -c 192.168.0.1' would copy\n"
+           "               './tcpcopy -x 8080-192.168.0.2:8080 -c 62.135.200.*' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
-           "               '192.168.0.1'.\n");
-#if (TCPCOPY_OFFLINE)
+           "               one of net 62.135.200.0/24.\n");
+#if (TC_OFFLINE)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
            "               enable-offline mode).\n");
@@ -74,29 +74,17 @@ usage(void)
     printf("-I <num>       set the threshold interval for offline replay acceleration\n"
            "               in millisecond.\n");
 #endif
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
     printf("-i <device,>   The name of the interface to listen on. This is usually a driver\n"
            "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
     printf("-F <filter>    user filter (same as pcap filter)\n");
     printf("-B <num>       buffer size for pcap capture in megabytes(default 16M)\n");
 #endif
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
     printf("-o <device,>   The name of the interface to send. This is usually a driver\n"
            "               name followed by a unit number, for example eth0 for the first\n"
            "               Ethernet interface.\n");
-#endif
-#if (TCPCOPY_MYSQL_ADVANCED)
-    printf("-u <pair,>     set the user-password pairs to guarantee the copied mysql requests\n"
-           "               pass the user authentication of the target mysql server. The format\n"
-           "               of <pair,> could be: 'user1@psw1,user2@psw2,...'. The user name and \n"
-           "               her/his password are segmented by '@', and the users are segmented \n"
-           "               by ','. It should be noted that the user name of the target mysql\n");
-    printf("               server should be the same as that of the online source mysql server\n"
-           "               and meanwhile their privileges should be the same, whereas the \n"
-           "               password of the target mysql server could be different from that\n"
-           "               of the source mysql server which could protect the password of \n"
-           "               the source server.\n");
 #endif
     printf("-n <num>       use <num> to set the replication times when you want to get a \n"
            "               copied data stream that is several times as large as the online data.\n"
@@ -116,17 +104,22 @@ usage(void)
     printf("-m <num>       set the maximum memory allowed to use for tcpcopy in megabytes, \n"
            "               to prevent tcpcopy occupying too much memory and influencing the\n"
            "               online system. When the memory exceeds this limit, tcpcopy would quit\n"
-           "               automatically. The parameter is effective only when the kernel \n"
-           "               version is 2.6.32 or above. The default value is 512.\n");
+           "               automatically. The parameter is effective only when the kernel \n");
+#if (TC_MILLION_SUPPORT)
+    printf("               version is 2.6.32 or above. The default value is 4096.\n");
+#else
+    printf("               version is 2.6.32 or above. The default value is 1024.\n");
+#endif
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
     printf("-S <num>       MSS value sent back(default 1460)\n");
+    printf("-R <num>       set default rtt value\n");
+    printf("-U <num>       set user session pool size in kilobytes(default 1).\n"
+           "               The maximum value allowed is 63.\n");
     printf("-C <num>       parallel connections between tcpcopy and intercept.\n"
            "               The maximum value allowed is 16(default 2 connections).\n");
-#if (TCPCOPY_DR)
     printf("-s <server,>   intercept server list\n"
            "               Format:\n"
            "               ip_addr1:port1, ip_addr2:port2, ...\n");
-#endif
     printf("-t <num>       set the session timeout limit. If tcpcopy does not receive response\n"
            "               from the target server within the timeout limit, the session would \n"
            "               be dropped by tcpcopy. When the response from the target server is\n"
@@ -137,9 +130,9 @@ usage(void)
            "-r <num>       set the percentage of sessions transfered (integer range:1~100)\n"
            "-p <num>       set the target server listening port. The default value is 36524.\n");
     printf("-P <file>      save PID in <file>, only used with -d option\n");
-#if (TCPCOPY_DR)
+    printf("-O             only replay full session\n");
+    printf("-g             gradully replay\n");
     printf("-L             lonely for tcpcopy when intercept is closed\n");
-#endif
     printf("-h             print this help and exit\n"
            "-v             version\n"
            "-d             run as a daemon\n");
@@ -155,22 +148,19 @@ read_args(int argc, char **argv)
     opterr = 0;
     while (-1 != (c = getopt(argc, argv,
          "x:" /* <transfer,> */
-         "c:" /* the localhost client ip will be changed to this ip address */
-#if (TCPCOPY_OFFLINE)
+         "c:" 
+#if (TC_OFFLINE)
          "i:" /* input pcap file */
          "a:" /* accelerated times */
          "I:" /* threshold interval time for acceleratation */
 #endif
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
          "i:" /* <device,> */
          "F:" /* <filter> */
          "B:" 
 #endif
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
          "o:" /* <device,> */
-#endif
-#if (TCPCOPY_MYSQL_ADVANCED)
-         "u:" /* user password pair for mysql */
 #endif
          "n:" /* set the replication times */
          "f:" /* use this parameter to reduce port conflications */
@@ -179,29 +169,32 @@ read_args(int argc, char **argv)
          "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
+         "U:" 
+         "R:" 
          "S:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
          "k:" /* set the session keepalive timeout limit */
-#if (TCPCOPY_DR)
          "s:" /* real servers running intercept*/
-#endif
          "l:" /* error log file */
          "P:" /* save PID in file */
-#if (TCPCOPY_DR)
          "L"  /* lonely */
-#endif
+         "O"  
+         "g"  
          "h"  /* help, licence info */
          "v"  /* version */
          "d"  /* daemon mode */
         ))) {
         switch (c) {
             case 'x':
-                clt_settings.raw_transfer = optarg;
+                clt_settings.raw_tf = optarg;
                 break;
             case 'c':
                 clt_settings.raw_clt_tf_ip = optarg;
                 break;
-#if (TCPCOPY_OFFLINE)
+            case 'H':
+                clt_settings.localhost_tf_ip = inet_addr(optarg);
+                break;
+#if (TC_OFFLINE)
             case 'i':
                 clt_settings.pcap_file = optarg;
                 break;
@@ -212,12 +205,12 @@ read_args(int argc, char **argv)
                 clt_settings.interval = atoi(optarg);
                 break;
 #endif
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
             case 'o':
                 clt_settings.output_if_name = optarg;
                 break;
 #endif
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
             case 'i':
                 clt_settings.raw_device = optarg;
                 break;
@@ -229,11 +222,6 @@ read_args(int argc, char **argv)
                 break;
 
 #endif
-#if (TCPCOPY_MYSQL_ADVANCED)
-            case 'u':
-                clt_settings.user_pwd = optarg;
-                break;
-#endif
             case 'n':
                 clt_settings.replica_num = atoi(optarg);
                 break;
@@ -244,10 +232,16 @@ read_args(int argc, char **argv)
                 clt_settings.max_rss = 1024 * atoi(optarg);
                 break;
             case 'C':
-                clt_settings.par_connections = atoi(optarg);
+                clt_settings.par_conns = atoi(optarg);
+                break;
+            case 'U':
+                clt_settings.s_pool_size = 1024 * atoi(optarg);
                 break;
             case 'l':
                 clt_settings.log_path = optarg;
+                break;
+            case 'R':
+                clt_settings.default_rtt = atoi(optarg);
                 break;
             case 'M':
                 clt_settings.mtu = atoi(optarg);
@@ -255,16 +249,17 @@ read_args(int argc, char **argv)
             case 'S':
                 clt_settings.mss = atoi(optarg);
                 break;
-#if (TCPCOPY_DR)
             case 's':
                 clt_settings.raw_rs_list = optarg;
                 break;
-#endif
             case 't':
-                clt_settings.session_timeout = atoi(optarg);
+                clt_settings.sess_timeout = atoi(optarg);
                 break;
             case 'k':
-                clt_settings.session_keepalive_timeout = atoi(optarg);
+                clt_settings.sess_keepalive_timeout = atoi(optarg);
+                break;
+            case 'g':
+                clt_settings.gradully = 1;
                 break;
             case 'h':
                 usage();
@@ -275,11 +270,12 @@ read_args(int argc, char **argv)
             case 'd':
                 clt_settings.do_daemonize = 1;
                 break;
-#if (TCPCOPY_DR)
             case 'L':
                 clt_settings.lonely = 1;
                 break;
-#endif 
+            case 'O':
+                clt_settings.only_replay_full = 1;
+                break;
             case 'p':
                 clt_settings.srv_port = atoi(optarg);
                 break;
@@ -292,17 +288,14 @@ read_args(int argc, char **argv)
             case '?':
                 switch (optopt) {    
                     case 'x':
-#if (TCPCOPY_MYSQL_ADVANCED)
-                    case 'u':
-#endif
                         fprintf(stderr, "tcpcopy: option -%c require a string\n", 
                                 optopt);
                         break;
                     case 'c':
-                        fprintf(stderr, "tcpcopy: option -%c require a ip address\n", 
+                        fprintf(stderr, "tcpcopy: option -%c require a ip address or a sub net\n", 
                                 optopt);
                         break;
-#if (TCPCOPY_OFFLINE)
+#if (TC_OFFLINE)
                     case 'i':
 #endif
                     case 'l':
@@ -310,38 +303,36 @@ read_args(int argc, char **argv)
                         fprintf(stderr, "tcpcopy: option -%c require a file name\n", 
                                 optopt);
                         break;
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
                     case 'i':
                         fprintf(stderr, "tcpcopy: option -%c require a device name\n",
                                 optopt);
                         break;
 #endif
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
                     case 'o':
                         fprintf(stderr, "tcpcopy: option -%c require a device name\n",
                                 optopt);
                         break;
 #endif
-#if (TCPCOPY_DR)
                     case 's':
                         fprintf(stderr, "tcpcopy: option -%c require an ip address list\n",
                                 optopt);
                         break;
-#endif
-
                     case 'n':
                     case 'f':
                     case 'C':
-#if (TCPCOPY_OFFLINE)
+#if (TC_OFFLINE)
                     case 'a':
                     case 'I':
 #endif
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
                     case 'B':
 #endif
                     case 'm':
                     case 'M':
                     case 'S':
+                    case 'U':
                     case 't':
                     case 'k':
                     case 'p':
@@ -367,7 +358,7 @@ read_args(int argc, char **argv)
 }
 
 static void
-output_for_debug(int argc, char **argv)
+output_for_debug()
 {
     /* print out version info */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
@@ -375,53 +366,39 @@ output_for_debug(int argc, char **argv)
             INTERNAL_VERSION);
 
     /* print out target info */
-    tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_transfer);
+    tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_tf);
 
     /* print out working mode info */
-#if (TCPCOPY_MYSQL_SKIP)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_SKIP mode");
+#if (TC_OFFLINE)
+    tc_log_info(LOG_NOTICE, 0, "TC_OFFLINE mode");
 #endif
-#if (TCPCOPY_MYSQL_NO_SKIP)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MYSQL_NO_SKIP mode");
+#if (TC_PCAP)
+    tc_log_info(LOG_NOTICE, 0, "TC_PCAP mode");
 #endif
-#if (TCPCOPY_OFFLINE)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_OFFLINE mode");
+#if (TC_SINGLE)
+    tc_log_info(LOG_NOTICE, 0, "TC_SINGLE mode");
 #endif
-#if (TCPCOPY_PCAP)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP mode");
+#if (TC_UDP)
+    tc_log_info(LOG_NOTICE, 0, "TC_UDP mode");
 #endif
-#if (TCPCOPY_SINGLE)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_SINGLE mode");
+#if (TC_COMBINED)
+    tc_log_info(LOG_NOTICE, 0, "TC_COMBINED mode");
 #endif
-#if (TCPCOPY_DR)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_DR mode");
+#if (TC_PCAP_SND)
+    tc_log_info(LOG_NOTICE, 0, "TC_PCAP_SND mode");
 #endif
-#if (TCPCOPY_PAPER)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PAPER mode");
+#if (TC_MILLION_SUPPORT)
+    tc_log_info(LOG_NOTICE, 0, "TC_MILLION_SUPPORT mode");
 #endif
-#if (TCPCOPY_UDP)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_UDP mode");
+#if (TC_PLUGIN)
+    tc_log_info(LOG_NOTICE, 0, "TC_PLUGIN mode");
 #endif
-#if (TCPCOPY_COMBINED)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_COMBINED mode");
+#if (TC_PAYLOAD)
+    tc_log_info(LOG_NOTICE, 0, "TC_PAYLOAD is true");
 #endif
-#if (TCPCOPY_ADVANCED)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_ADVANCED mode");
+#if (TC_DETECT_MEMORY)
+    tc_log_info(LOG_NOTICE, 0, "TC_DETECT_MEMORY is true");
 #endif
-#if (TCPCOPY_PCAP_SEND)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_PCAP_SEND mode");
-#endif
-#if (TCPCOPY_DNAT)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_DNAT mode");
-#endif
-#if (TCPCOPY_MILLION_SUPPORT)
-    tc_log_info(LOG_NOTICE, 0, "TCPCOPY_MILLION_SUPPORT mode");
-#endif
-#if (HAVE_PCAP_CREATE)
-    tc_log_info(LOG_NOTICE, 0, "HAVE_PCAP_CREATE is true, new pap");
-#endif
-
-
 }
 
 
@@ -498,12 +475,13 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port,
  * 2) 80-192.168.0.2:8080
  */
 static int
-parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
+parse_target(transfer_map_t *ip_port, char *addr)
 {
     char   *seq, *addr1, *addr2;
 
     if ((seq = strchr(addr, '-')) == NULL) {
         tc_log_info(LOG_WARN, 0, "target \"%s\" is invalid", addr);
+        fprintf(stderr, "target \"%s\" is invalid\n", addr);
         return -1;
     } else {
         *seq = '\0';
@@ -520,17 +498,16 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
     if (ip_port->target_ip == LOCALHOST) {
         clt_settings.target_localhost = 1;
         tc_log_info(LOG_WARN, 0, "target host is 127.0.0.1");
-        tc_log_info(LOG_WARN, 0, 
-                "only client requests from localhost are valid");
     }
 
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
     if (clt_settings.user_filter == NULL && ip_port->online_ip == 0) {
         if (ip_port->online_port == ip_port->target_port) 
         {
             tc_log_info(LOG_WARN, 0, "captured port and target port are equal");
             tc_log_info(LOG_ERR, 0, 
                     "set pcap filter to capture online inbound packets");
+            fprintf(stderr, "set -F argument to capture packets\n");
             return -1;
         }
     }
@@ -547,51 +524,48 @@ parse_target(ip_port_pair_mapping_t *ip_port, char *addr)
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
 static int
-retrieve_target_addresses(char *raw_transfer,
-        ip_port_pair_mappings_t *transfer)
+retr_target_addrs(char *raw_tf, transfer_maps_t *tf)
 {
     int   i;
     char *p, *seq;
 
-    if (raw_transfer == NULL) {
+    if (raw_tf == NULL) {
         tc_log_info(LOG_ERR, 0, "it must have -x argument");
         fprintf(stderr, "no -x argument\n");
         return -1;
     }
 
-    for (transfer->num = 1, p = raw_transfer; *p; p++) {
+    for (tf->num = 1, p = raw_tf; *p; p++) {
         if (*p == ',') {
-            transfer->num++;
+            tf->num++;
         }
     }
 
-    transfer->mappings = malloc(transfer->num *
-                                sizeof(ip_port_pair_mapping_t *));
-    if (transfer->mappings == NULL) {
+    tf->map = tc_palloc(clt_settings.pool, tf->num * sizeof(transfer_map_t *));
+    if (tf->map == NULL) {
         return -1;
     }
-    memset(transfer->mappings, 0 , 
-            transfer->num * sizeof(ip_port_pair_mapping_t *));
+    tc_memzero(tf->map, tf->num * sizeof(transfer_map_t *));
 
-    for (i = 0; i < transfer->num; i++) {
-        transfer->mappings[i] = malloc(sizeof(ip_port_pair_mapping_t));
-        if (transfer->mappings[i] == NULL) {
+    for (i = 0; i < tf->num; i++) {
+        tf->map[i] = tc_palloc(clt_settings.pool, sizeof(transfer_map_t));
+        if (tf->map[i] == NULL) {
             return -1;
         }
-        memset(transfer->mappings[i], 0, sizeof(ip_port_pair_mapping_t));
+        tc_memzero(tf->map[i], sizeof(transfer_map_t));
     }
 
-    p = raw_transfer;
+    p = raw_tf;
     i = 0;
     for ( ;; ) {
         if ((seq = strchr(p, ',')) == NULL) {
-            if (parse_target(transfer->mappings[i++], p) == -1) {
+            if (parse_target(tf->map[i++], p) == -1) {
                 return -1;
             }
             break;
         } else {
             *seq = '\0';
-            if (parse_target(transfer->mappings[i++], p) == -1) {
+            if (parse_target(tf->map[i++], p) == -1) {
                 return -1;
             }
 
@@ -603,7 +577,7 @@ retrieve_target_addresses(char *raw_transfer,
     return 0;
 }
 
-#if (TCPCOPY_DR)
+
 static int retrieve_real_servers() 
 {
     int          count = 0;
@@ -635,8 +609,8 @@ static int retrieve_real_servers()
             *split = ',';
         }
 
-        clt_settings.real_servers.ips[count] = ip;
-        clt_settings.real_servers.ports[count++] = port;
+        clt_settings.real_servers.conns[count].ip = ip;
+        clt_settings.real_servers.conns[count++].port = port;
 
         if (count == MAX_REAL_SERVERS) {
             tc_log_info(LOG_WARN, 0, "reach the limit for real servers");
@@ -656,28 +630,28 @@ static int retrieve_real_servers()
     return 1;
 
 }
-#endif
 
-#if (TCPCOPY_PCAP)
+
+#if (TC_PCAP)
 static void 
 extract_filter()
 {
-    int                      i, cnt = 0;
-    char                    *pt;
-    ip_port_pair_mapping_t  *pair, **mappings;
+    int              i, cnt = 0;
+    char            *pt;
+    transfer_map_t  *pair, **map;
 
     pt = clt_settings.filter;
-#if (TCPCOPY_UDP)
+#if (TC_UDP)
     strcpy(pt, "udp and (");
 #else
     strcpy(pt, "tcp and (");
 #endif
     pt = pt + strlen(pt);
  
-    mappings = clt_settings.transfer.mappings;
+    map = clt_settings.transfer.map;
 
     for (i = 0; i < clt_settings.transfer.num; i++) {
-        pair = mappings[i];
+        pair = map[i];
         if (pair->online_ip > 0 || pair->online_port > 0) {
             if (cnt >= MAX_FILTER_ITEMS) {
                 break;
@@ -687,8 +661,8 @@ extract_filter()
                 strcpy(pt, " or ");
             }
             pt = pt + strlen(pt);
-            pt = construct_filter(DST_DIRECTION,
-                    pair->online_ip, pair->online_port, pt);
+            pt = construct_filter(DST_DIRECTION, pair->online_ip, 
+                    pair->online_port, pt);
         }
     }
     strcpy(pt, ")");
@@ -701,12 +675,28 @@ extract_filter()
 }
 #endif
 
+
+static bool 
+check_client_ip_valid(uint32_t ip)
+{
+    int   i;
+
+    for (i = 0; i < clt_settings.transfer.num; i++) {
+        if (ip == clt_settings.transfer.map[i]->target_ip) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+
 static int 
 retrieve_clt_tf_ips() 
 {
-    int          count = 0;
-    char        *split, *p;
-    uint32_t     ip;
+    int          count = 0, len, i;
+    char        *split, *p, tmp_ip[32], *q; 
+    uint32_t     ip; 
 
     p = clt_settings.raw_clt_tf_ip;
 
@@ -714,28 +704,59 @@ retrieve_clt_tf_ips()
         split = strchr(p, ',');
         if (split != NULL) {
             *split = '\0';
-        }
+        }   
 
-        ip = inet_addr(p);
+        len = strlen(p);
+        if (len == 0) {
+            tc_log_info(LOG_WARN, 0, "ip is empty");
+            break;
+        }   
+
+        if (p[len - 1] == 'x') {
+            strncpy(tmp_ip, p, len -1);
+            q = tmp_ip + len - 1;
+            for (i = 1; i < 255; i++) {
+                sprintf(q, "%d", i);
+                ip = inet_addr(tmp_ip);
+                tc_log_debug1(LOG_DEBUG, 0, "clt ip addr:%s", tmp_ip);
+                if (check_client_ip_valid(ip)) {
+                    clt_settings.clt_tf_ip[count++] = ip; 
+                    if (count == M_IP_NUM) {
+                        tc_log_info(LOG_WARN, 0, "reach limit for clt ips");
+                        break;
+                    }
+                }
+            }
+        } else if (p[len - 1] == '*') {
+            tc_log_info(LOG_ERR, 0, "%s not valid, use x instead of *", p);
+            fprintf(stderr, "%s not valid, use x instead of *\n", p);
+        } else {
+            ip = inet_addr(p);
+            if (check_client_ip_valid(ip)) {
+                clt_settings.clt_tf_ip[count++] = ip; 
+                if (count == M_IP_NUM) {
+                    tc_log_info(LOG_WARN, 0, "reach limit for clt ips");
+                    break;
+                }   
+            }
+        }
 
         if (split != NULL) {
             *split = ',';
-        }
-
-        clt_settings.clt_tf_ip[count++] = ip;
+        }   
 
         if (count == M_IP_NUM) {
             tc_log_info(LOG_WARN, 0, "reach the limit for clt_tf_ip");
             break;
-        }
+        }   
 
         if (split == NULL) {
             break;
         } else {
             p = split + 1;
-        }
+        }   
 
-    }
+    }   
 
     clt_settings.clt_tf_ip_num = count;
 
@@ -743,16 +764,52 @@ retrieve_clt_tf_ips()
 }
 
 
+static void 
+read_conf_file()
+{
+#if (TC_PLUGIN)
+    tc_buf_t         b;
+    tc_conf_file_t   conf_file;
+
+    tc_memzero(&conf_file, sizeof(tc_conf_file_t));
+    tc_memzero(&b, sizeof(tc_buf_t));
+
+    clt_settings.cf = tc_palloc(clt_settings.pool, sizeof(tc_conf_t));
+
+    conf_file.file.fd = -1;
+    conf_file.line = 0;
+
+    clt_settings.cf->conf_file = &conf_file;
+    clt_settings.cf->pool = clt_settings.pool;
+
+    clt_settings.cf->args = tc_array_create(clt_settings.pool, 10, 
+            sizeof(tc_str_t));
+
+    if (clt_settings.conf_file == NULL) {
+        clt_settings.conf_file = TC_CONF_PATH;
+    }
+
+    clt_settings.conf_file = tc_conf_full_name(clt_settings.pool, TC_PREFIX, 
+            clt_settings.conf_file);
+
+    tc_conf_parse(clt_settings.plugin, clt_settings.pool, clt_settings.cf,
+            clt_settings.conf_file);
+
+    clt_settings.cf->conf_file = NULL;
+#endif
+}
+
+
 static int
 set_details()
 {
-#if (!TCPCOPY_PCAP)
-    int            rand_port;
-#else
-    int            len, rand_port;
-#endif
+    int            mtu_list[] = {576, 1492, 1500, 0};
+    int            i, len, index, offset, rand_port;
     unsigned int   seed;
+    unsigned char  value;
     struct timeval tp;
+
+    for (i = tc_pagesize; i >>= 1; tc_pagesize_shift++) { /* void */ }
 
     /* generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
@@ -760,19 +817,43 @@ set_details()
     rand_port = (int) ((rand_r(&seed) / (RAND_MAX + 1.0)) * 512);
     clt_settings.rand_port_shifted = rand_port;
 
-    if (clt_settings.session_timeout < 0) {
-        clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    if (clt_settings.sess_timeout < 0) {
+        clt_settings.sess_timeout = DEFAULT_SESS_TIMEOUT;
     }
     tc_log_info(LOG_NOTICE, 0, "session timeout:%d", 
-            clt_settings.session_timeout);
+            clt_settings.sess_timeout);
 
-    if (clt_settings.session_keepalive_timeout <= 0) {
-        clt_settings.session_keepalive_timeout = clt_settings.session_timeout + 
+    if (clt_settings.sess_keepalive_timeout <= 0) {
+        clt_settings.sess_keepalive_timeout = clt_settings.sess_timeout + 
             SESS_KEEPLIVE_ADD;
     }
     tc_log_info(LOG_NOTICE, 0, "keepalive timeout:%d", 
-            clt_settings.session_keepalive_timeout);
+            clt_settings.sess_keepalive_timeout);
 
+#if (!TC_UDP)
+    if (clt_settings.s_pool_size == 0) {
+        clt_settings.s_pool_size = TC_DEFAULT_UPOOL_SIZE;
+    }
+    tc_log_info(LOG_NOTICE, 0, "min sess pool size:%d", TC_MIN_SESS_POOL_SIZE);
+    tc_log_info(LOG_NOTICE, 0, "sess pool size:%d", clt_settings.s_pool_size);
+
+    if (clt_settings.s_pool_size < TC_MIN_SESS_POOL_SIZE) {
+        tc_log_info(LOG_NOTICE, 0, "sess pool size is too small");
+    }
+#endif
+
+    if (clt_settings.replica_num > 1) {
+        tc_log_info(LOG_NOTICE, 0, "repl num:%d", clt_settings.replica_num);
+    }
+    
+    if (clt_settings.gradully) {
+        tc_log_info(LOG_NOTICE, 0, "gradully replay");
+    }
+
+    /* set the ip port pair mapping according to settings */
+    if (retr_target_addrs(clt_settings.raw_tf, &clt_settings.transfer) == -1) {
+        return -1;
+    }
 
     if (clt_settings.raw_clt_tf_ip != NULL) {
         /* print out raw_clt_tf_ip */
@@ -781,26 +862,42 @@ set_details()
         retrieve_clt_tf_ips();
     }
 
-    /* set the ip port pair mapping according to settings */
-    if (retrieve_target_addresses(clt_settings.raw_transfer,
-                              &clt_settings.transfer) == -1)
-    {
-        return -1;
-    }
-
-    if (clt_settings.percentage < 0 || clt_settings.percentage > 99) {
+    if (clt_settings.percentage > 99) {
         clt_settings.percentage = 0;
     }
 
-    if (clt_settings.par_connections <= 0) {
-        clt_settings.par_connections = 1;
-    } else if (clt_settings.par_connections > MAX_CONNECTION_NUM) {
-        clt_settings.par_connections = MAX_CONNECTION_NUM;
+#if (!TC_UDP)
+    if (sizeof(tc_sess_t) > TC_UPOOL_MAXV) {
+        tc_log_info(LOG_NOTICE, 0, "TC_UPOOL_MAXV is too small");
+    }
+#endif
+
+    if (clt_settings.par_conns <= 0) {
+        clt_settings.par_conns = 1;
+    } else if (clt_settings.par_conns > MAX_CONN_NUM) {
+        clt_settings.par_conns = MAX_CONN_NUM;
     }
     tc_log_info(LOG_NOTICE, 0, "parallel connections per target:%d",
-            clt_settings.par_connections);
+            clt_settings.par_conns);
 
-#if (TCPCOPY_OFFLINE)
+    len = sizeof(mtu_list) / sizeof(int) - 1;
+    for (i = 0; i < len; i++) {
+        if (mtu_list[i] == clt_settings.mtu) {
+            break;
+        }
+    }
+    if (i == len) {
+        mtu_list[len++] = clt_settings.mtu;
+    }
+    for (i = 0; i < len; i++) {
+        index = mtu_list[i] >> 3;
+        offset = mtu_list[i] - (index << 3);
+        value = clt_settings.candidate_mtu[index];
+        value = value | (1 << offset);
+        clt_settings.candidate_mtu[index] = value;
+    }
+
+#if (TC_OFFLINE)
     if (clt_settings.pcap_file == NULL) {
         tc_log_info(LOG_ERR, 0, "it must have -i argument for offline");
         fprintf(stderr, "no -i argument\n");
@@ -819,17 +916,18 @@ set_details()
     }
 #endif
 
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
     if (clt_settings.output_if_name != NULL) {
         tc_log_info(LOG_NOTICE, 0, "output device:%s", 
                 clt_settings.output_if_name);
     } else {
-        tc_log_info(LOG_ERR, 0, "output device is null");
+        tc_log_info(LOG_ERR, 0, "no -o argument");
+        fprintf(stderr, "no -o argument\n");
         return -1;
     }
 #endif
 
-#if (TCPCOPY_PCAP)
+#if (TC_PCAP)
     if (clt_settings.raw_device != NULL) {
         tc_log_info(LOG_NOTICE, 0, "device:%s", clt_settings.raw_device);
         if (strcmp(clt_settings.raw_device, DEFAULT_DEVICE) == 0) {
@@ -853,31 +951,23 @@ set_details()
     }
 #endif
 
-#if (TCPCOPY_MYSQL_ADVANCED)
-    if (clt_settings.user_pwd != NULL) {
-        tc_log_info(LOG_NOTICE, 0, "-u argument:%s",clt_settings.user_pwd);
-        if (retrieve_mysql_user_pwd_info(clt_settings.user_pwd) == -1) {
-            tc_log_info(LOG_ERR, 0, "wrong -u argument");
-            return -1;
-        }
-    } else {
-        tc_log_info(LOG_ERR, 0, "it must have -u argument");
-        fprintf(stderr, "no -u argument\n");
-        return -1;
-    }
-#endif
-
-#if (TCPCOPY_DR)
     /* retrieve real server ip addresses  */
     if (clt_settings.raw_rs_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "s parameter:%s", 
                 clt_settings.raw_rs_list);
         retrieve_real_servers();
     } else {
-        tc_log_info(LOG_WARN, 0, "no real server ip addresses");
+        tc_log_info(LOG_WARN, 0, "no -s parameter(intercept addresses)");
+        fprintf(stderr, "tcpcopy needs -s paramter(intercept addresses)\n");
         return -1;
     }
+
+#if (TC_PLUGIN)
+    /* support only one additional module*/
+    clt_settings.plugin = tc_modules[0];
 #endif
+
+    read_conf_file();
 
     /* daemonize */
     if (clt_settings.do_daemonize) {
@@ -903,31 +993,24 @@ settings_init()
     clt_settings.max_rss = MAX_MEMORY_SIZE;
     clt_settings.srv_port = SERVER_PORT;
     clt_settings.percentage = 0;
-    clt_settings.session_keepalive_timeout = 0;
-    clt_settings.par_connections = 2;
-    clt_settings.session_timeout = DEFAULT_SESSION_TIMEOUT;
+    clt_settings.sess_keepalive_timeout = 0;
+    clt_settings.par_conns = 2;
+    clt_settings.sess_timeout = DEFAULT_SESS_TIMEOUT;
+    clt_settings.s_pool_size = TC_DEFAULT_UPOOL_SIZE;
     
-#if (TCPCOPY_PCAP)
-    clt_settings.buffer_size = TCPCOPY_PCAP_BUF_SIZE;
+#if (TC_PCAP)
+    clt_settings.buffer_size = TC_PCAP_BUF_SIZE;
 #endif
-#if (TCPCOPY_PCAP_SEND)
+#if (TC_PCAP_SND)
     clt_settings.output_if_name = NULL;
 #endif
 
-    tc_raw_socket_out = TC_INVALID_SOCKET;
+    tc_pagesize = getpagesize();
+    tc_cacheline_size = TC_CPU_CACHE_LINE; 
 
+    tc_raw_socket_out = TC_INVALID_SOCK;
 }
 
-static int 
-set_timer()
-{
-    if (tc_time_set_timer(TIMER_INTERVAL) == TC_ERROR) {
-        tc_log_info(LOG_ERR, 0, "set timer error");
-        return -1;
-    }
-
-    return 0;
-}
 
 /*
  * main entry point
@@ -939,12 +1022,11 @@ main(int argc, char **argv)
 
     settings_init();
 
-#if (TCPCOPY_SIGACTION)
+#if (TC_SIGACTION)
     if (set_signal_handler(signals) == -1) {
         return -1;
     }
 #else
-    signal(SIGALRM, tc_time_sig_alarm);
     signal(SIGINT,  tcp_copy_over);
     signal(SIGPIPE, tcp_copy_over);
     signal(SIGHUP,  tcp_copy_over);
@@ -957,32 +1039,32 @@ main(int argc, char **argv)
         return -1;
     }
     
-    if (clt_settings.log_path == NULL) {
-        clt_settings.log_path = "error_tcpcopy.log";
-    }   
-
     if (tc_log_init(clt_settings.log_path) == -1) {
         return -1;
     }
 
+    clt_settings.pool = tc_create_pool(TC_DEFAULT_POOL_SIZE, 0, 0);
+
+    if (clt_settings.pool == NULL) {
+        return -1;
+    }
+
     /* output debug info */
-    output_for_debug(argc, argv);
+    output_for_debug();
 
     /* set details for running */
     if (set_details() == -1) {
         return -1;
     }
 
-#if (TCPCOPY_MYSQL_ADVANCED) 
-    tc_init_digests();
+#if (TC_DIGEST)
+    tc_init_digests(); 
     if (!tc_init_sha1()) {
         return -1;
     }
 #endif
 
-    if (set_timer() == -1) {
-        return -1;
-    }
+    tc_event_timer_init();
 
     ret = tc_event_loop_init(&event_loop, MAX_FD_NUM);
     if (ret == TC_EVENT_ERROR) {
@@ -992,18 +1074,19 @@ main(int argc, char **argv)
 
     if (is_continue) {
         ret = tcp_copy_init(&event_loop);
-        if (ret == TC_ERROR) {
+        if (ret == TC_ERR) {
             is_continue = 0;
         }   
     }
 
     if (is_continue) {
         /* run now */
-        tc_event_process_cycle(&event_loop);
+        tc_event_proc_cycle(&event_loop);
     }
 
     tcp_copy_release_resources();
 
     return 0;
 }
+
 

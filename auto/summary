@@ -1,0 +1,24 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+echo
+echo "Configuration summary"
+
+
+echo
+
+
+cat << END
+  tcpcopy path prefix: "$TC_PREFIX"
+  tcpcopy binary file: "$TC_SBIN_PATH"
+  tcpcopy configuration prefix: "$TC_CONF_PREFIX"
+  tcpcopy configuration file: "$TC_CONF_PATH"
+  tcpcopy pid file: "$TC_PID_PATH"
+END
+
+if test -n "$TC_ERROR_LOG_PATH"; then
+  echo "  tcpcopy error log file: \"$TC_ERROR_LOG_PATH\""
+else
+  echo "  tcpcopy logs errors to stderr"
+fi

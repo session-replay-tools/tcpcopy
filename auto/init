@@ -1,0 +1,46 @@
+
+# Copyright (C) bin wang
+# Copyright (C) NetEase, Inc.
+
+TC_MAKEFILE=$TC_OBJS/Makefile
+TC_MODULES_C=$TC_OBJS/tc_modules.c
+
+TC_AUTO_HEADERS_H=$TC_OBJS/tc_auto_headers.h
+TC_AUTO_CONFIG_H=$TC_OBJS/tc_auto_config.h
+
+TC_AUTOTEST=$TC_OBJS/autotest
+TC_AUTOCONF_ERR=$TC_OBJS/autoconf.err
+
+TC_ERR=$TC_OBJS/autoconf.err
+MAKEFILE=$TC_OBJS/Makefile
+
+
+TC_PCH=
+TC_USE_PCH=
+
+if echo "test\c" | grep c >/dev/null; then
+
+    if echo -n test | grep n >/dev/null; then
+        tc_n=
+        tc_c=
+
+    else
+        tc_n=-n
+        tc_c=
+    fi
+
+else
+    tc_n=
+    tc_c='\c'
+fi
+
+
+# create Makefile
+
+cat << END > Makefile
+
+default:	build
+
+clean:
+	rm -rf Makefile $TC_OBJS
+END
