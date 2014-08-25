@@ -108,7 +108,6 @@ cat << END
   --with-debug                       enable debug logging
 
   --offline                          run tcpcopy at offline mode
-  --traditional                      run tcpcopy at traditional mode
   --single                           run tcpcopy at non-distributed mode
   --pcap-capture                     capture packets at the data link 
   --pcap-send                        send packets at the data link 
