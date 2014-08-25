@@ -1,0 +1,140 @@
+#!/bin/sh
+
+LC_ALL=C
+export LC_ALL
+
+. auto/options
+. auto/init
+. auto/sources
+
+test -d $TC_OBJS || mkdir $TC_OBJS
+
+echo > $TC_AUTO_HEADERS_H
+echo > $TC_AUTOCONF_ERR
+
+echo "#define TC_CONFIGURE \"$TC_CONFIGURE\"" > $TC_AUTO_CONFIG_H
+
+if test -z "$TC_PLATFORM"; then
+    echo "checking for OS"
+
+    TC_SYSTEM=`uname -s 2>/dev/null`
+    TC_RELEASE=`uname -r 2>/dev/null`
+    TC_MACHINE=`uname -m 2>/dev/null`
+
+    echo " + $TC_SYSTEM $TC_RELEASE $TC_MACHINE"
+
+    TC_PLATFORM="$TC_SYSTEM:$TC_RELEASE:$TC_MACHINE";
+
+else
+    echo "building for $TC_PLATFORM"
+    TC_SYSTEM=$TC_PLATFORM
+fi
+
+
+case "$TC_PLATFORM" in
+
+    Linux:*)
+    . auto/os/linux
+    ;;  
+
+    *) 
+    echo "error: Linux only!"
+    exit 1
+esac
+
+
+if [ $TC_DEBUG = YES ]; then
+    have=TC_DEBUG . auto/have
+    have=TC_DETECT_MEMORY . auto/have
+else 
+    if [ $TC_DETECT_MEMORY = YES ]; then
+        have=TC_DETECT_MEMORY . auto/have
+    fi
+fi
+
+if [ $TC_SINGLE = YES ]; then
+    have=TC_SINGLE . auto/have
+fi
+
+if [ $TC_OFFLINE = YES ]; then
+    TC_PCAP_NEEDED=YES
+    have=TC_OFFLINE . auto/have
+fi
+
+if [ $TC_PCAP_CAPTURE = YES ]; then
+    TC_PCAP_NEEDED=YES
+    have=TC_PCAP . auto/have
+fi
+
+if [ $TC_PCAP_SEND = YES ]; then
+    TC_PCAP_NEEDED=YES
+    have=TC_PCAP_SND . auto/have
+fi
+
+if [ $TC_PCAP_NEEDED = YES ]; then
+    CORE_LIBS="$CORE_LIBS -lpcap" 
+fi
+
+if [ $TC_MILLION_SUPPORT = YES ]; then
+    have=TC_MILLION_SUPPORT . auto/have
+fi
+
+if test -n "$TC_ADDONS"; then
+    have=TC_PLUGIN . auto/have
+fi
+
+if [ $TC_COMBINED = YES ]; then
+    have=TC_COMBINED . auto/have
+fi
+
+if [ $TC_UDP = YES ]; then
+    have=TC_UDP . auto/have
+fi
+
+if [ $TC_DNAT = YES ]; then
+    have=TC_DNAT . auto/have
+fi
+
+. auto/cc/conf
+. auto/headers
+. auto/os/conf
+. auto/linux
+. auto/modules
+
+
+if [ $TC_PAYLOAD = YES ]; then
+    have=TC_PAYLOAD . auto/have
+fi
+
+if [ $TC_DIGEST = YES ]; then
+    have=TC_DIGEST . auto/have
+    CORE_LIBS="$CORE_LIBS -lcrypto -lm" 
+fi
+
+case ".$TC_PREFIX" in
+    .)
+        TC_PREFIX=${TC_PREFIX:-/usr/local/tcpcopy}
+        have=TC_PREFIX value="\"$TC_PREFIX/\"" . auto/define
+    ;;
+
+    .!)
+        TC_PREFIX=
+    ;;
+
+    *)
+        have=TC_PREFIX value="\"$TC_PREFIX/\"" . auto/define
+    ;;
+esac
+
+if [ ".$TC_CONF_PREFIX" != "." ]; then
+    have=TC_CONF_PREFIX value="\"$TC_CONF_PREFIX/\"" . auto/define
+fi
+
+have=TC_SBIN_PATH value="\"$TC_SBIN_PATH\"" . auto/define
+have=TC_CONF_PATH value="\"$TC_CONF_PATH\"" . auto/define
+have=TC_PID_PATH value="\"$TC_PID_PATH\"" . auto/define
+have=TC_ERROR_LOG_PATH value="\"$TC_ERROR_LOG_PATH\"" . auto/define
+
+. auto/make
+. auto/install
+. auto/summary
