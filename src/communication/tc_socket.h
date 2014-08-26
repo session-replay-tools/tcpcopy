@@ -6,7 +6,6 @@
 #include <xcopy.h>
 
 #define tc_socket_close(fd) close(fd)
-#define tc_socket_accept(fd) accept(fd, NULL, NULL) 
 
 #if (TC_PCAP)
 int tc_pcap_socket_in_init(pcap_t **pd, char *device, 
