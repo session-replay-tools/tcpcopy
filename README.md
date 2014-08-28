@@ -54,6 +54,7 @@ Two quick start options are available for *tcpcopy*:
 
 ###Configure Options for intercept
     --single            run intercept at non-distributed mode
+    --with-pfring=PATH  set path to PF_RING library sources
     --with-debug        compile intercept with debug support (saved in a log file)
 
 
@@ -69,6 +70,7 @@ Two quick start options are available for *tcpcopy*:
     --offline                   replay TCP streams from the pcap file
     --pcap-capture              capture packets at the data link
     --pcap-send                 send packets at the data link layer instead of the IP layer
+    --with-pfring=PATH          set path to PF_RING library sources
     --set-protocol-module=PATH  set tcpcopy to work for an external protocol module
     --single                    if intercept is configured with "--single" option, 
                                 so does tcpcopy
