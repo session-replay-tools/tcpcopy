@@ -64,9 +64,6 @@ fi
 if [ $TC_PCAP_CAPTURE = YES ]; then
     TC_PCAP_NEEDED=YES
     have=TC_PCAP . auto/have
-    if [ $TC_PFRING = YES ]; then
-        have=TC_HAVE_PF_RING . auto/have
-    fi
 fi
 
 if [ $TC_PCAP_SEND = YES ]; then
@@ -75,7 +72,14 @@ if [ $TC_PCAP_SEND = YES ]; then
 fi
 
 if [ $TC_PCAP_NEEDED = YES ]; then
-    CORE_LIBS="$CORE_LIBS -lpcap" 
+    if [ $TC_PF_RING_DIR != NONE ]; then
+        have=TC_HAVE_PF_RING . auto/have
+        CORE_LIBS="$CORE_LIBS $TC_PF_RING_DIR/userland/libpcap/libpcap.a"
+        CORE_LIBS="$CORE_LIBS $TC_PF_RING_DIR/userland/lib/libpfring.a"
+        CORE_LIBS="$CORE_LIBS -lpthread -lnuma"
+    else
+        CORE_LIBS="$CORE_LIBS -lpcap" 
+    fi
 fi
 
 if [ $TC_MILLION_SUPPORT = YES ]; then
