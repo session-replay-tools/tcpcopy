@@ -396,6 +396,9 @@ output_for_debug()
 #if (TC_PAYLOAD)
     tc_log_info(LOG_NOTICE, 0, "TC_PAYLOAD is true");
 #endif
+#if (TC_HAVE_PF_RING)
+    tc_log_info(LOG_NOTICE, 0, "TC_HAVE_PF_RING is true");
+#endif
 #if (TC_DETECT_MEMORY)
     tc_log_info(LOG_NOTICE, 0, "TC_DETECT_MEMORY is true");
 #endif

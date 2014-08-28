@@ -25,6 +25,7 @@ TC_PAYLOAD=NO
 TC_DIGEST=NO
 TC_DNAT=NO
 TC_DEBUG=NO
+TC_PFRING=NO
 TC_DETECT_MEMORY=NO
 TC_PCAP_NEEDED=NO
 
@@ -73,6 +74,7 @@ do
         --udp)                           TC_UDP=YES                ;;
 
         --with-debug)                    TC_DEBUG=YES              ;;
+        --with-pfring)                   TC_PFRING=YES              ;;
         --with-detect-memory)            TC_DETECT_MEMORY=YES      ;;
 
         *)
@@ -106,6 +108,7 @@ cat << END
   --with-cc-opt=OPTIONS              set additional C compiler options
   --with-ld-opt=OPTIONS              set additional linker options
   --with-debug                       enable debug logging
+  --with-pfring                      add additional restrictions for using PF_RING(maximum snaplen 8192)
 
   --offline                          run tcpcopy at offline mode
   --single                           run tcpcopy at non-distributed mode

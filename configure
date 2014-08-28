@@ -64,6 +64,9 @@ fi
 if [ $TC_PCAP_CAPTURE = YES ]; then
     TC_PCAP_NEEDED=YES
     have=TC_PCAP . auto/have
+    if [ $TC_PFRING = YES ]; then
+        have=TC_HAVE_PF_RING . auto/have
+    fi
 fi
 
 if [ $TC_PCAP_SEND = YES ]; then
