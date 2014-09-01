@@ -80,6 +80,7 @@ usage(void)
            "               Ethernet interface.\n");
     printf("-F <filter>    user filter (same as pcap filter)\n");
     printf("-B <num>       buffer size for pcap capture in megabytes(default 16M)\n");
+    printf("-S <snaplen>   capture <snaplen> bytes per packet\n");
 #endif
 #if (TC_PCAP_SND)
     printf("-o <device,>   The name of the interface to send. This is usually a driver\n"
@@ -111,7 +112,7 @@ usage(void)
     printf("               version is 2.6.32 or above. The default value is 1024.\n");
 #endif
     printf("-M <num>       MTU value sent to backend (default 1500)\n");
-    printf("-S <num>       MSS value sent back(default 1460)\n");
+    printf("-D <num>       MSS value sent back(default 1460)\n");
     printf("-R <num>       set default rtt value\n");
     printf("-U <num>       set user session pool size in kilobytes(default 1).\n"
            "               The maximum value allowed is 63.\n");
@@ -169,9 +170,10 @@ read_args(int argc, char **argv)
          "p:" /* target server port to listen on */
          "r:" /* percentage of sessions transfered */
          "M:" /* MTU sent to backend */
+         "S:" 
          "U:" 
          "R:" 
-         "S:" /* mss value sent to backend */
+         "D:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
          "k:" /* set the session keepalive timeout limit */
          "s:" /* real servers running intercept*/
@@ -220,6 +222,9 @@ read_args(int argc, char **argv)
             case 'B':
                 clt_settings.buffer_size = 1024 * 1024 * atoi(optarg);
                 break;
+            case 'S':
+                clt_settings.snaplen = atoi(optarg);
+                break;
 
 #endif
             case 'n':
@@ -246,7 +251,7 @@ read_args(int argc, char **argv)
             case 'M':
                 clt_settings.mtu = atoi(optarg);
                 break;
-            case 'S':
+            case 'D':
                 clt_settings.mss = atoi(optarg);
                 break;
             case 's':
@@ -328,10 +333,11 @@ read_args(int argc, char **argv)
 #endif
 #if (TC_PCAP)
                     case 'B':
+                    case 'S':
 #endif
                     case 'm':
                     case 'M':
-                    case 'S':
+                    case 'D':
                     case 'U':
                     case 't':
                     case 'k':
@@ -951,6 +957,10 @@ set_details()
 
     } else {
         extract_filter();
+    }
+
+    if (clt_settings.snaplen > PCAP_RCV_BUF_SIZE) {
+        clt_settings.snaplen = PCAP_RCV_BUF_SIZE;
     }
 #endif
 

@@ -108,6 +108,7 @@ typedef struct xcopy_clt_settings {
 
 #if (TC_PCAP)
     int           buffer_size;
+    int           snaplen;
     char         *raw_device;
     devices_t     devices;
 #endif

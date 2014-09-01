@@ -32,7 +32,8 @@ device_set(tc_event_loop_t *event_loop, device_t *device)
     tc_event_t *ev;
 
     fd = tc_pcap_socket_in_init(&(device->pcap), device->name,
-            PCAP_RCV_BUF_SIZE, clt_settings.buffer_size, clt_settings.filter);
+            clt_settings.snaplen, clt_settings.buffer_size, 
+            clt_settings.filter);
     if (fd == TC_INVALID_SOCK) {
         return TC_ERR;
     }
