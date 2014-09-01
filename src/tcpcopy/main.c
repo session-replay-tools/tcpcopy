@@ -1012,6 +1012,7 @@ settings_init()
     clt_settings.s_pool_size = TC_DEFAULT_UPOOL_SIZE;
     
 #if (TC_PCAP)
+    clt_settings.snaplen = PCAP_RCV_BUF_SIZE;
     clt_settings.buffer_size = TC_PCAP_BUF_SIZE;
 #endif
 #if (TC_PCAP_SND)
