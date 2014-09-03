@@ -23,29 +23,6 @@ tc_feature_test="fcntl(0, F_SETFL, O_DIRECT);"
 . auto/feature
 
 
-tc_feature="F_NOCACHE"
-tc_feature_name="TC_HAVE_F_NOCACHE"
-tc_feature_run=no
-tc_feature_incs="#include <fcntl.h>"
-tc_feature_path=
-tc_feature_libs=
-tc_feature_test="fcntl(0, F_NOCACHE, 1);"
-. auto/feature
-
-
-tc_feature="statfs()"
-tc_feature_name="TC_HAVE_STATFS"
-tc_feature_run=no
-tc_feature_incs="$TC_INCLUDE_SYS_PARAM_H
-                  $TC_INCLUDE_SYS_MOUNT_H
-                  $TC_INCLUDE_SYS_VFS_H"
-tc_feature_path=
-tc_feature_libs=
-tc_feature_test="struct statfs  fs;
-                  statfs(\".\", &fs);"
-. auto/feature
-
-
 tc_feature="SO_SETFIB"
 tc_feature_name="TC_HAVE_SETFIB"
 tc_feature_run=no
