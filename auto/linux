@@ -3,16 +3,6 @@
 # Copyright (C) NetEase, Inc.
 
 
-tc_feature="F_READAHEAD"
-tc_feature_name="TC_HAVE_F_READAHEAD"
-tc_feature_run=no
-tc_feature_incs="#include <fcntl.h>"
-tc_feature_path=
-tc_feature_libs=
-tc_feature_test="fcntl(0, F_READAHEAD, 1);"
-. auto/feature
-
-
 tc_feature="O_DIRECT"
 tc_feature_name="TC_HAVE_O_DIRECT"
 tc_feature_run=no
@@ -20,26 +10,6 @@ tc_feature_incs="#include <fcntl.h>"
 tc_feature_path=
 tc_feature_libs=
 tc_feature_test="fcntl(0, F_SETFL, O_DIRECT);"
-. auto/feature
-
-
-tc_feature="SO_SETFIB"
-tc_feature_name="TC_HAVE_SETFIB"
-tc_feature_run=no
-tc_feature_incs="#include <sys/socket.h>"
-tc_feature_path=
-tc_feature_libs=
-tc_feature_test="setsockopt(0, SOL_SOCKET, SO_SETFIB, NULL, 4)"
-. auto/feature
-
-
-tc_feature="SO_ACCEPTFILTER"
-tc_feature_name="TC_HAVE_DEFERRED_ACCEPT"
-tc_feature_run=no
-tc_feature_incs="#include <sys/socket.h>"
-tc_feature_path=
-tc_feature_libs=
-tc_feature_test="setsockopt(0, SOL_SOCKET, SO_ACCEPTFILTER, NULL, 0)"
 . auto/feature
 
 
