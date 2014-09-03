@@ -4,8 +4,8 @@
 #include <xcopy.h>
 
 typedef struct signal_s{
-    char *signame;
     int   signo;
+    char *signame;
     int   flags;
     void  (*handler)(int signo);
 }signal_t;
