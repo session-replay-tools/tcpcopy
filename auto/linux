@@ -131,6 +131,18 @@ tc_feature_test="char buf[1]; ssize_t n; n = pwrite(1, buf, 1, 0);
 . auto/feature
 
 
+tc_feature="sigaction()"
+tc_feature_name="TC_SIGACTION"
+tc_feature_run=no
+tc_feature_incs="#include <signal.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="struct sigaction sa; int n; sa.sa_handler=SIG_IGN;
+                  sa.sa_flags=0; n = sigemptyset(&sa.sa_mask);
+                  if (n == -1) return 1"
+. auto/feature
+
+
 tc_feature="posix_memalign()"
 tc_feature_name="TC_HAVE_POSIX_MEMALIGN"
 tc_feature_run=no
