@@ -6,11 +6,19 @@ tc_atomic_t  tc_over = 0;
 static tc_event_t *ev_mark[MAX_FD_NUM];
 
 static tc_event_actions_t tc_event_actions = {
+#ifdef TC_HAVE_EPOLL
+    tc_epoll_create,
+    tc_epoll_destroy,
+    tc_epoll_add_event,
+    tc_epoll_del_event,
+    tc_epoll_polling
+#else
     tc_select_create,
     tc_select_destroy,
     tc_select_add_event,
     tc_select_del_event,
-    tc_select_polling 
+    tc_select_polling
+#endif
 };
 
 

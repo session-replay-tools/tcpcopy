@@ -31,15 +31,17 @@ CORE_SRCS="src/core/tc_alloc.c \
            src/core/tc_daemon.c"
 
 EVENT_INCS="src/event"
-
 EVENT_DEPS="src/event/tc_event.h \
-            src/event/tc_event_timer.h \
-            src/event/tc_select_module.h"
+            src/event/tc_event_timer.h"
 
 EVENT_SRCS="src/event/tc_event.c \
-            src/event/tc_event_timer.c \
-            src/event/tc_select_module.c"
+            src/event/tc_event_timer.c"
 
+SELECT_DEPS="src/event/tc_select_module.h"
+SELECT_SRCS="src/event/tc_select_module.c"
+
+EPOLL_DEPS="src/event/tc_epoll_module.h"
+EPOLL_SRCS="src/event/tc_epoll_module.c"
 
 COMMUNICATION_INCS="src/communication"
 
