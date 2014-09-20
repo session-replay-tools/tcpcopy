@@ -11,7 +11,7 @@ TCPCopy has little influence on the production system except occupying additiona
 
 ##Scenarios
 * Distributed stress testing
-  - Use to copy real-world data to stress test your server software. Bugs that only can be produced in high-stress situations can be found
+  - Use tcpcopy to copy real-world data to stress test your server software. Bugs that only can be produced in high-stress situations can be found
 * Live testing
   - Prove the new system is stable and find bugs that only occur in the real world
 * Regression testing
