@@ -6,10 +6,10 @@
 typedef struct tc_epoll_multiplex_io_s   tc_epoll_multiplex_io_t;
 
 struct tc_epoll_multiplex_io_s {
-    struct epoll_event  *events;
-    int                  efd;
     int                  last;
     tc_event_t         **evs;
+    int                  efd;
+    struct epoll_event  *events;
 };
 
 int tc_epoll_create(tc_event_loop_t *loop);
