@@ -6,7 +6,7 @@
 typedef struct tc_epoll_multiplex_io_s   tc_epoll_multiplex_io_t;
 
 struct tc_epoll_multiplex_io_s {
-    int                  last;
+    int                  max_fd;
     tc_event_t         **evs;
     int                  efd;
     struct epoll_event  *events;

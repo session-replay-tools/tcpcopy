@@ -30,6 +30,7 @@ int tc_epoll_create(tc_event_loop_t *loop)
         goto bad;
     }
 
+    io->max_fd = -1;
     io->efd = efd;
     io->events = events;
     io->evs = evs;
@@ -57,7 +58,7 @@ int tc_epoll_destroy(tc_event_loop_t *loop)
 
     io = loop->io;
 
-    for (i = 0; i < io->last; i++) {
+    for (i = 0; i <= io->max_fd; i++) {
         event = io->evs[i];
         if (event->fd > 0) {
             tc_log_info(LOG_NOTICE, 0, "tc_epoll_destroy, close fd:%d",
@@ -72,6 +73,7 @@ int tc_epoll_destroy(tc_event_loop_t *loop)
         close(io->efd);
         io->efd = -1;
     }
+    io->max_fd = -1;
 
     tc_pfree(loop->pool, io->events);
     tc_pfree(loop->pool, io->evs);
@@ -87,7 +89,7 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
 
     io = loop->io;
 
-    if (io->last >= loop->size || ev->fd >= loop->size) {
+    if (io->max_fd >= loop->size || ev->fd >= loop->size) {
         /* too many */
         errno = ERANGE;
         return TC_EVENT_ERROR;
@@ -96,6 +98,7 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
     if ((events == TC_EVENT_READ && ev->read_handler
             && ev->write_handler == NULL))
     {
+        event.data.u64 = 0;
         event.data.fd = ev->fd;
         event.events = EPOLLIN;
         if(epoll_ctl(io->efd, EPOLL_CTL_ADD, ev->fd, &event) == -1) {
@@ -104,6 +107,7 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
         }
     } else if (events == TC_EVENT_WRITE && ev->write_handler
             && ev->read_handler == NULL) {
+        event.data.u64 = 0;
         event.data.fd = ev->fd;
         event.events = EPOLLOUT;
         if(epoll_ctl(io->efd, EPOLL_CTL_ADD, ev->fd, &event) == -1) {
@@ -115,49 +119,51 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
     }
 
     io->evs[ev->fd] = ev;
-    if(ev->fd >= io->last)
-        io->last = ev->fd;
+    if(ev->fd >= io->max_fd)
+        io->max_fd = ev->fd;
 
     return TC_EVENT_OK;
 }
 
-int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
+int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int delevents)
 {
-    //tc_event_t               *last_ev;
     tc_epoll_multiplex_io_t  *io;
     struct epoll_event        event;
+    int events = ev->reg_evs & (~delevents);
 
     io = loop->io;
 
     if (events == TC_EVENT_NONE)
         return TC_EVENT_OK;
 
-    if (ev->fd >= loop->size || ev->fd > io->last) {
+    if (ev->fd >= loop->size || ev->fd > io->max_fd) {
         errno = ERANGE;
         return TC_EVENT_ERROR;
     }
 
     if (events == TC_EVENT_READ || events == TC_EVENT_WRITE) {
+        event.events = 0;
+        if (events & TC_EVENT_READ) event.events |= EPOLLIN;
+        if (events & TC_EVENT_WRITE) event.events |= EPOLLOUT;
+        event.data.u64 = 0;
         event.data.fd = ev->fd;
-        //TODO: check diff of the below two module
-        //event.events = EPOLLIN | EPOLLET;
-        event.events = EPOLLIN;
-        if(epoll_ctl(io->efd, EPOLL_CTL_DEL, ev->fd, &event) == -1) {
-            tc_log_info(LOG_ALERT, 0, "epoll_ctl DEL fd failed.");
-            return TC_EVENT_ERROR;
+        if (events != TC_EVENT_NONE) {
+            epoll_ctl(io->efd, EPOLL_CTL_MOD, ev->fd, &event);
+        } else {
+            epoll_ctl(io->efd, EPOLL_CTL_DEL, ev->fd, &event);
         }
     } else {
         return TC_EVENT_ERROR;
     }
 
-    ev->events = ev->events & (~events);
-    if (ev->fd == io->last && ev->events == TC_EVENT_NONE) {
-        /* update the last fd */
+    events = ev->reg_evs & (~delevents);
+    if (ev->fd == io->max_fd && events == TC_EVENT_NONE) {
+        /* update the max_fd fd */
         int j;
 
-        for (j = io->last-1; j >= 0; j--)
-            if ((io->evs[j])->events != TC_EVENT_NONE) break;
-        io->last = j;
+        for (j = io->max_fd-1; j >= 0; j--)
+            if ((io->evs[j])->reg_evs != TC_EVENT_NONE) break;
+        io->max_fd = j;
     }
 
     return TC_EVENT_OK;
