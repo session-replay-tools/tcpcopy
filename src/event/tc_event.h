@@ -16,7 +16,7 @@
 #define TC_EVENT_WRITE 2
 
 #define tc_event_push_active_event(head, ev) \
-    ev->next = head; head = ev; 
+    ev->next = head; head = ev;
 
 typedef struct tc_event_loop_s tc_event_loop_t;
 typedef struct tc_event_s      tc_event_t;
@@ -37,7 +37,7 @@ typedef struct {
     ev_create_pt        create;
     ev_destroy_pt       destroy;
     ev_add_event_pt     add;
-    ev_delete_event_pt  del;    
+    ev_delete_event_pt  del;
     ev_event_poll_pt    poll;
 } tc_event_actions_t;
 

@@ -114,7 +114,7 @@ int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events)
     }
 
     if (events & TC_EVENT_WRITE) {
-        ev->reg_evs &= ~TC_EVENT_WRITE; 
+        ev->reg_evs &= ~TC_EVENT_WRITE;
     }
 
     return TC_EVENT_OK;
@@ -139,7 +139,7 @@ int tc_event_proc_cycle(tc_event_loop_t *loop)
 
         loop->active_events = NULL;
 
-        delta = tc_current_time_msec;   
+        delta = tc_current_time_msec;
         ret = actions->poll(loop, timeout);
         if (tc_over) {
             goto FINISH;
@@ -147,7 +147,7 @@ int tc_event_proc_cycle(tc_event_loop_t *loop)
 
         tc_time_update();
 
-        delta = tc_current_time_msec - delta;   
+        delta = tc_current_time_msec - delta;
 
         if (delta) {
             tc_event_expire_timers();
