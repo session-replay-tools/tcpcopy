@@ -4,7 +4,7 @@ TCPCopy is a TCP stream replay tool to support real testing of Internet server a
 
 
 ##Description
-Although the real live flow is important for the test of Internet server applications, it is hard to simulate it as online environments are too complex. To support more realistic testing of Internet server applications, we propose a live flow reproduction tool – TCPCopy, which could generate the test workload that is similar to the production workload. Currently, TCPCopy has been widely used by companies in China.   
+Although the real live flow is important for the test of Internet server applications, it is hard to simulate it as online environments are too complex. To support more realistic testing of Internet server applications, we develop a live flow reproduction tool – TCPCopy, which could generate the test workload that is similar to the production workload. Currently, TCPCopy has been widely used by companies in China.   
 
 TCPCopy has little influence on the production system except occupying additional CPU, memory and bandwidth. Moreover, the reproduced workload is similar to the production workload in request diversity, network latency and resource occupation.
 
@@ -22,13 +22,13 @@ TCPCopy has little influence on the production system except occupying additiona
 
 ![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/tcpcopy.GIF)
 
-As shown in Figure 1, TCPCopy consists of two parts:  *tcpcopy* and *intercept*. While *tcpcopy* runs on the online server and captures the online requests, *intercept* runs on the assistant server and does some assistant work, such as passing response info to *tcpcopy*.
+As shown in Figure 1, TCPCopy consists of two parts:  *tcpcopy* and *intercept*. While *tcpcopy* runs on the online server and captures the online requests, *intercept* runs on the assistant server and does some assistant work, such as passing response info to *tcpcopy*. It should be noted that the test application runs on the target server. 
 
-*tcpcopy* utilizes raw socket input technique by default to capture the online packets at the network layer and does the necessary processing (including TCP interaction simulation, network latency control, and common upper-layer interaction simulation), and uses raw socket output technique by default to send packets to the target server(pink arrows).
+*tcpcopy* utilizes raw socket input technique by default to capture the online packets at the network layer and does the necessary processing (including TCP interaction simulation, network latency control, and common upper-layer interaction simulation), and uses raw socket output technique by default to send packets to the target server (shown by pink arrows in the figure).
 
-The only operation needed on the target server for TCPCopy is setting appropriate route commands to route response packets(green arrows) to the assistant server. 
+The only operation needed on the target server for TCPCopy is setting appropriate route commands to route response packets (shown by green arrows in the figure) to the assistant server. 
 
-*intercept* is responsible for passing the response header(by default) to *tcpcopy*. By capturing the reponse packets, *intercept* will extract response header information and send the response header to *tcpcopy* using a special channel(purple arrows). When *tcpcopy* receives the response header, it utilizes the header information to modify the attributes of online packets and continues to send another packet. It should be noticed that the responses from the target server are routed to the assistant server which should act as a black hole.
+*intercept* is responsible for passing the response header(by default) to *tcpcopy*. By capturing the reponse packets, *intercept* will extract response header information and send the response header to *tcpcopy* using a special channel(shown by purple arrows in the figure). When *tcpcopy* receives the response header, it utilizes the header information to modify the attributes of online packets and continues to send another packet. It should be noticed that the responses from the target server are routed to the assistant server which should act as a black hole.
 
 
 ##Quick start
@@ -72,14 +72,15 @@ Two quick start options are available for *tcpcopy*:
     --pcap-send                 send packets at the data link layer instead of the IP layer
     --with-pfring=PATH          set path to PF_RING library sources
     --set-protocol-module=PATH  set tcpcopy to work for an external protocol module
-    --single                    if intercept is configured with "--single" option, 
-                                so does tcpcopy
+    --single                    if intercept and tcpcopy are both configured with "--single" option, 
+                                only one tcpcopy works together with intercept, 
+                                and better performance is achieved.
     --with-debug                compile tcpcopy with debug support (saved in a log file)
 
 
    
 ##Running TCPCopy
-Assume *tcpcopy* with "./configure" is configured and *intercept* with "configure" is configured.
+Assume *tcpcopy* and *intercept* are both configured with "./configure".
  
 ###1) On the target server which runs server applications:
       Set route commands appropriately to route response packets to the assistant server
@@ -119,14 +120,14 @@ Assume *tcpcopy* with "./configure" is configured and *intercept* with "configur
         target server '61.135.233.160', and connect 61.135.233.161 for asking intercept to 
         pass response packets to it.
         
-        Although "-c" parameter is optional, it is set here in order to simplifying route 
+        Although "-c" parameter is optional, it is set here in order to simplify route 
         commands.
 
 ##Note
 1. It is tested on Linux only (kernal 2.6 or above)
 2. TCPCopy may lose packets hence lose requests
 3. Root privilege is required
-4. TCPCopy does only support client-initiated connections now
+4. TCPCopy only supports client-initiated connections now
 5. TCPCopy does not support replay for server applications which use SSL/TLS
 6. Please execute "./tcpcopy -h" or "./intercept -h" for more details.
 
@@ -136,9 +137,9 @@ There are several factors that could influence TCPCopy, which will be introduced
 ###1. Capture Interface
 *tcpcopy* utilizes raw socket input interface by default to capture packets at the network layer on the online server. The system kernel may lose some packets when the system is busy. 
 
-If you configure *tcpcopy* with "--pcap-capture", then *tcpcopy* could capture packets at the data link layer and could also filter packets in the kernel. With PF_RING, *tcpcopy* would lose less packets when pcap capturing.
+If you configure *tcpcopy* with "--pcap-capture", then *tcpcopy* could capture packets at the data link layer and could also filter packets in the kernel. With PF_RING, *tcpcopy* would lose less packets when using pcap capturing.
 
-Maybe the best way to capturing requests is using switch to mirror ingress packets to divide the huge traffic to several machines.
+Maybe the best way to capture requests is to mirror ingress packets by switch and then divide the huge traffic to several machines by load balancer.
 
 ###2. Sending Interface
 *tcpcopy* utilizes raw socket output interface by default to send packets at the network layer to a target server. 
