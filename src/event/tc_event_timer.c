@@ -62,13 +62,13 @@ tc_event_expire_timers(void)
         /* node->key <= tc_current_time */
 
         if ((tc_msec_int_t) (node->key - tc_current_time_msec) <= 0) {
-            ev = (tc_event_timer_t *) ((char *) node - 
+            ev = (tc_event_timer_t *) ((char *) node -
                     offsetof(tc_event_timer_t, timer));
 
 #if (TC_DEBUG)
             tc_log_debug1(LOG_DEBUG, 0, "del timer:%llu", ev);
 #endif
-            tc_rbtree_delete(&tc_event_timer_rbtree, &ev->timer); 
+            tc_rbtree_delete(&tc_event_timer_rbtree, &ev->timer);
 
             ev->timer_set = 0;
 
