@@ -220,3 +220,28 @@ tc_feature_test='struct addrinfo *res;
                   if (getaddrinfo("localhost", NULL, NULL, &res) != 0) return 1;
                   freeaddrinfo(res)'
 . auto/feature
+
+# epoll, EPOLLET version
+
+tc_feature="epoll"
+tc_feature_name="TC_HAVE_EPOLL"
+tc_feature_run=yes
+tc_feature_incs="#include <sys/epoll.h>"
+tc_feature_path=
+tc_feature_libs=
+tc_feature_test="int efd = 0;
+                  struct epoll_event ee;
+                  ee.events = EPOLLIN|EPOLLOUT|EPOLLET;
+                  ee.data.ptr = NULL;
+                  efd = epoll_create(100);
+                  if (efd == -1) return 1;"
+. auto/feature
+
+if [ $tc_found = yes ]; then
+    EVENT_DEPS="$EVENT_DEPS $EPOLL_DEPS"
+    EVENT_SRCS="$EVENT_SRCS $EPOLL_SRCS"
+else
+    EVENT_DEPS="$EVENT_DEPS $SELECT_DEPS"
+    EVENT_SRCS="$EVENT_SRCS $SELECT_SRCS" 
+fi
+

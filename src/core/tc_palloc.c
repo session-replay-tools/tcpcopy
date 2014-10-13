@@ -309,6 +309,9 @@ tc_pfree(tc_pool_t *pool, void *p)
     tc_pool_large_t   *l, *prev;
     tc_mem_hid_info_t *act_p;
     
+    if (p == NULL)
+        return TC_OK;
+
     act_p = (tc_mem_hid_info_t *) ((u_char *) p - MEM_HID_INFO_SZ);
 
     if (act_p->large) {

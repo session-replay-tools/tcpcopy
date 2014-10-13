@@ -6,11 +6,19 @@ tc_atomic_t  tc_over = 0;
 static tc_event_t *ev_mark[MAX_FD_NUM];
 
 static tc_event_actions_t tc_event_actions = {
+#ifdef TC_HAVE_EPOLL
+    tc_epoll_create,
+    tc_epoll_destroy,
+    tc_epoll_add_event,
+    tc_epoll_del_event,
+    tc_epoll_polling
+#else
     tc_select_create,
     tc_select_destroy,
     tc_select_add_event,
     tc_select_del_event,
-    tc_select_polling 
+    tc_select_polling
+#endif
 };
 
 
@@ -106,7 +114,7 @@ int tc_event_del(tc_event_loop_t *loop, tc_event_t *ev, int events)
     }
 
     if (events & TC_EVENT_WRITE) {
-        ev->reg_evs &= ~TC_EVENT_WRITE; 
+        ev->reg_evs &= ~TC_EVENT_WRITE;
     }
 
     return TC_EVENT_OK;
@@ -131,7 +139,7 @@ int tc_event_proc_cycle(tc_event_loop_t *loop)
 
         loop->active_events = NULL;
 
-        delta = tc_current_time_msec;   
+        delta = tc_current_time_msec;
         ret = actions->poll(loop, timeout);
         if (tc_over) {
             goto FINISH;
@@ -139,7 +147,7 @@ int tc_event_proc_cycle(tc_event_loop_t *loop)
 
         tc_time_update();
 
-        delta = tc_current_time_msec - delta;   
+        delta = tc_current_time_msec - delta;
 
         if (delta) {
             tc_event_expire_timers();
