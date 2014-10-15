@@ -1892,10 +1892,6 @@ proc_clt_after_filter(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
 /*
  * processing client packets
- * TODO 
- * 1)TCP Keepalive feature needs to be checked
- * 2)TCP is always allowed to send 1 byte of data 
- *   beyond the end of a closed window which confuses TCPCopy.
  * 
  */
 static int

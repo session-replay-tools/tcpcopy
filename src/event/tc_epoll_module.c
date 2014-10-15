@@ -3,10 +3,10 @@
 
 int tc_epoll_create(tc_event_loop_t *loop)
 {
+    int                        efd = -1;
     tc_event_t               **evs;
+    struct epoll_event        *events = NULL;
     tc_epoll_multiplex_io_t   *io;
-    struct epoll_event        *events;
-    int                        efd;
 
     evs = tc_palloc(loop->pool, loop->size * sizeof(tc_event_t *));
     if (evs == NULL) {
@@ -50,6 +50,7 @@ bad:
     return TC_EVENT_ERROR;
 }
 
+
 int tc_epoll_destroy(tc_event_loop_t *loop)
 {
     int                       i;
@@ -82,15 +83,17 @@ int tc_epoll_destroy(tc_event_loop_t *loop)
     return TC_EVENT_OK;
 }
 
+
 int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
 {
-    tc_epoll_multiplex_io_t *io;
     struct epoll_event       event;
+    tc_epoll_multiplex_io_t *io;
 
     io = loop->io;
 
-    if (events == TC_EVENT_NONE)
+    if (events == TC_EVENT_NONE) {
         return TC_EVENT_OK;
+    }
 
     if (io->max_fd >= loop->size || ev->fd >= loop->size) {
         /* too many */
@@ -109,7 +112,8 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
             return TC_EVENT_ERROR;
         }
     } else if (events == TC_EVENT_WRITE && ev->write_handler
-            && ev->read_handler == NULL) {
+            && ev->read_handler == NULL) 
+    {
         event.data.u64 = 0;
         event.data.fd = ev->fd;
         event.events = EPOLLOUT;
@@ -122,17 +126,22 @@ int tc_epoll_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
     }
 
     io->evs[ev->fd] = ev;
-    if(ev->fd >= io->max_fd)
+
+    if(ev->fd >= io->max_fd) {
         io->max_fd = ev->fd;
+    }
 
     return TC_EVENT_OK;
 }
 
+
 int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int delevents)
 {
-    tc_epoll_multiplex_io_t  *io;
+    int                       events;
     struct epoll_event        event;
-    int events = ev->reg_evs & (~delevents);
+    tc_epoll_multiplex_io_t  *io;
+
+    events = ev->reg_evs & (~ delevents);
 
     io = loop->io;
 
@@ -142,36 +151,47 @@ int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int delevents)
     }
 
     event.events = 0;
-    if (events & TC_EVENT_READ) event.events |= EPOLLIN;
-    if (events & TC_EVENT_WRITE) event.events |= EPOLLOUT;
+    if (events & TC_EVENT_READ) {
+        event.events |= EPOLLIN;
+    }
+
+    if (events & TC_EVENT_WRITE) {
+        event.events |= EPOLLOUT;
+    }
+
     event.data.u64 = 0;
     event.data.fd = ev->fd;
+
     if (events != TC_EVENT_NONE) {
         epoll_ctl(io->efd, EPOLL_CTL_MOD, ev->fd, &event);
     } else {
         epoll_ctl(io->efd, EPOLL_CTL_DEL, ev->fd, &event);
     }
 
-    events = ev->reg_evs & (~delevents);
+    events = ev->reg_evs & (~ delevents);
     if (ev->fd == io->max_fd && events == TC_EVENT_NONE) {
         /* update the max_fd fd */
         int j;
 
-        for (j = io->max_fd-1; j >= 0; j--)
-            if ((io->evs[j])->reg_evs != TC_EVENT_NONE) break;
+        for (j = io->max_fd - 1; j >= 0; j--) {
+            if ((io->evs[j])->reg_evs != TC_EVENT_NONE) {
+                break;
+            }
+        }
         io->max_fd = j;
     }
 
     return TC_EVENT_OK;
 }
 
+
 int tc_epoll_polling(tc_event_loop_t *loop, long to)
 {
     int                         i, ret;
-    tc_event_t                **evs;
     long                        timeout;
-    tc_epoll_multiplex_io_t    *io;
+    tc_event_t                **evs;
     struct epoll_event         *events;
+    tc_epoll_multiplex_io_t    *io;
 
     io = loop->io;
     evs = io->evs;
