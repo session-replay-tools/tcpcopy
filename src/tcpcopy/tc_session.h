@@ -31,6 +31,7 @@ typedef struct sess_state_machine_s{
     uint32_t conflict:1;
     uint32_t record_req_hop_seq:1;
     uint32_t recheck_hop:1;
+
     uint32_t renew_hop:1;
     uint32_t rcv_rep_af_hop:1;
     uint32_t recon:1;
@@ -39,6 +40,7 @@ typedef struct sess_state_machine_s{
     uint32_t window_full:1;
     uint32_t internal_usage:1;
     uint32_t timeout:1;
+
     uint32_t delay_snd:1;
     uint32_t req_ack_snd:1;
     uint32_t fake_syn:1;
@@ -47,7 +49,9 @@ typedef struct sess_state_machine_s{
     uint32_t already_retrans:1;
     uint32_t sess_over:1;
     uint32_t src_closed:1;
+
     uint32_t dst_closed:1;
+    uint32_t last_ack:1;
     uint32_t set_rto:1;
     uint32_t snd_after_set_rto:1;
     uint32_t timer_type:3;

@@ -1581,8 +1581,13 @@ tc_proc_outgress(unsigned char *pack)
                     sess_post_disp(s, false);
                 }
             } else {
-                if (!tcp->rst) {
-                    send_faked_rst(s, ip, tcp);
+                if (!s->sm.last_ack) {
+                    s->sm.last_ack = 1;
+                    tc_log_debug1(LOG_INFO, 0, "last ack:%u", ntohs(s->src_port));
+                } else {
+                    if (!tcp->rst) {
+                        send_faked_rst(s, ip, tcp);
+                    }
                 }
             }
         } else {
@@ -1703,6 +1708,9 @@ proc_clt_fin(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
             } else {
                 if (s->rep_ack_seq == s->cur_pack.seq) {
                     send_pack(s, ip, tcp, true);
+                    if (s->sm.dst_closed) {
+                        s->sm.sess_over = 1;
+                    }
                     return PACK_SLIDE;
                 }
             }
