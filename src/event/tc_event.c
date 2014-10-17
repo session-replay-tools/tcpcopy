@@ -161,13 +161,17 @@ int tc_event_proc_cycle(tc_event_loop_t *loop)
             act_next = act_event->next;
 
             if (act_event->events & TC_EVENT_READ) {
-                if (act_event->read_handler(act_event) == TC_ERR_EXIT) {
+                if (act_event->read_handler &&
+                        act_event->read_handler(act_event) == TC_ERR_EXIT)
+                {
                     goto FINISH;
                 }
             }
 
             if (act_event->events & TC_EVENT_WRITE) {
-                if (act_event->write_handler(act_event) == TC_ERR_EXIT) {
+                if (act_event->write_handler &&
+                        act_event->write_handler(act_event) == TC_ERR_EXIT)
+                {
                     goto FINISH;
                 }
             }

@@ -219,10 +219,15 @@ int tc_epoll_polling(tc_event_loop_t *loop, long to)
         /* clear the active events, and reset */
         evs[fd]->events = TC_EVENT_NONE;
 
-        if (e->events & EPOLLIN) mask |= TC_EVENT_READ;
-        if (e->events & EPOLLOUT) mask |= TC_EVENT_WRITE;
-        if (e->events & EPOLLERR) mask |= TC_EVENT_WRITE;
-        if (e->events & EPOLLHUP) mask |= TC_EVENT_WRITE;
+        if (e->events & EPOLLIN) {
+            mask |= TC_EVENT_READ;
+        }
+
+        if ((e->events & EPOLLOUT) || (e->events & EPOLLERR) || 
+                (e->events & EPOLLHUP)) 
+        {
+            mask |= TC_EVENT_WRITE;
+        }
 
         evs[fd]->events |= mask;
         tc_event_push_active_event(loop->active_events, evs[fd]);

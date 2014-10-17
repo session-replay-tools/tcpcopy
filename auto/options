@@ -24,6 +24,7 @@ TC_UDP=NO
 TC_PAYLOAD=NO
 TC_DIGEST=NO
 TC_DNAT=NO
+TC_EPOLL=YES
 TC_DEBUG=NO
 TC_PF_RING_DIR=NONE
 TC_DETECT_MEMORY=NO
@@ -69,6 +70,7 @@ do
         --pcap-capture)                  TC_PCAP_CAPTURE=YES       ;;
         --pcap-send)                     TC_PCAP_SEND=YES          ;;
         --million)                       TC_MILLION_SUPPORT=YES    ;;
+        --select)                        TC_EPOLL=NO               ;;
         --dnat)                          TC_DNAT=YES               ;;
         --disable-combined)              TC_COMBINED=NO            ;;
         --udp)                           TC_UDP=YES                ;;
@@ -115,6 +117,7 @@ cat << END
   --pcap-capture                     capture packets at the data link 
   --pcap-send                        send packets at the data link 
   --million                          support comet
+  --select                           use select module
   --dnat                             support dnat
   --disable-combined                 disable combined response mode        
   --udp                              udpcopy
