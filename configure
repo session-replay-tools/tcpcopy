@@ -76,7 +76,7 @@ if [ $TC_PCAP_NEEDED = YES ]; then
         have=TC_HAVE_PF_RING . auto/have
         CORE_LIBS="$CORE_LIBS $TC_PF_RING_DIR/userland/libpcap/libpcap.a"
         CORE_LIBS="$CORE_LIBS $TC_PF_RING_DIR/userland/lib/libpfring.a"
-        CORE_LIBS="$CORE_LIBS -lpthread -lnuma"
+        CORE_LIBS="$CORE_LIBS -lrt -lpthread -lnuma"
     else
         CORE_LIBS="$CORE_LIBS -lpcap" 
     fi
