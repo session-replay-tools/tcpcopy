@@ -174,7 +174,7 @@ int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int delevents)
         int j;
 
         for (j = io->max_fd - 1; j >= 0; j--) {
-            if ((io->evs[j])->reg_evs != TC_EVENT_NONE) {
+            if (io->evs[j] && (io->evs[j])->reg_evs != TC_EVENT_NONE) {
                 break;
             }
         }
