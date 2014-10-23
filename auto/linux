@@ -251,3 +251,20 @@ else
     EVENT_SRCS="$EVENT_SRCS $SELECT_SRCS" 
 fi  
 
+
+if [ $TC_PCAP_NEEDED = YES ]; then
+    tc_feature="pcap_create()"
+    tc_feature_name="HAVE_PCAP_CREATE"
+    tc_feature_run=yes
+    tc_feature_incs="#include <pcap.h>"
+    tc_feature_path=
+    tc_feature_libs='-lpcap'
+    tc_feature_test='char   ebuf[PCAP_ERRBUF_SIZE];;
+                  if (pcap_create("lo", ebuf) == NULL) return 1;'
+    . auto/feature
+
+    if [ $tc_found = no ]; then
+        echo "only pcap 1.0.0 or higher is supported"
+        exit 1
+    fi
+fi
