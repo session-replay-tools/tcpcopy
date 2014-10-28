@@ -79,7 +79,11 @@ tc_packets_init(tc_event_loop_t *event_loop)
         tc_raw_socket_out = fd;
     }
 #else
-    tc_pcap_snd_init(clt_settings.output_if_name, clt_settings.mtu);
+    if (tc_pcap_snd_init(clt_settings.output_if_name, clt_settings.mtu) !=
+            TC_OK) 
+    {
+        return TC_ERR;
+    }
 #endif
 
 #if (TC_PCAP)
