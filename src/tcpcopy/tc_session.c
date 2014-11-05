@@ -274,6 +274,10 @@ sess_create(tc_iph_t *ip, tc_tcph_t *tcp)
             tc_log_info(LOG_WARN, 0, "use -H to avoid this warning");
         }
 
+        if (s->src_addr == s->dst_addr) {
+            tc_log_info(LOG_WARN, 0, "src host equal to dst host");
+        }
+
         tc_log_debug2(LOG_INFO, 0, "pl:%llu, p:%u", pool, ntohs(s->src_port));
 
 #if (TC_DETECT_MEMORY)
