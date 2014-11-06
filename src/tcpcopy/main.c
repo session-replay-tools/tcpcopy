@@ -776,7 +776,7 @@ retrieve_clt_tf_ips()
 }
 
 
-static void 
+static int
 read_conf_file()
 {
 #if (TC_PLUGIN)
@@ -804,11 +804,15 @@ read_conf_file()
     clt_settings.conf_file = tc_conf_full_name(clt_settings.pool, TC_PREFIX, 
             clt_settings.conf_file);
 
-    tc_conf_parse(clt_settings.plugin, clt_settings.pool, clt_settings.cf,
-            clt_settings.conf_file);
+    if (tc_conf_parse(clt_settings.plugin, clt_settings.pool, clt_settings.cf,
+            clt_settings.conf_file) != TC_OK) {
+        return TC_ERR;
+    }
 
     clt_settings.cf->conf_file = NULL;
 #endif
+
+    return TC_OK;
 }
 
 
@@ -983,7 +987,9 @@ set_details()
     clt_settings.plugin = tc_modules[0];
 #endif
 
-    read_conf_file();
+    if (read_conf_file() != TC_OK) {
+        return -1;
+    }
 
     /* daemonize */
     if (clt_settings.do_daemonize) {
