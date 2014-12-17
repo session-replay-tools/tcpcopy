@@ -62,7 +62,7 @@ usage(void)
     printf("-H <ip_addr>   change the localhost IP address to the given IP address\n");
     printf("-c <ip_addr,>  change the client IP to one of IP addresses when sending to the\n"
            "               target server. For example,\n"
-           "               './tcpcopy -x 8080-192.168.0.2:8080 -c 62.135.200.*' would copy\n"
+           "               './tcpcopy -x 8080-192.168.0.2:8080 -c 62.135.200.x' would copy\n"
            "               requests from port '8080' of current online server to the target port\n"
            "               '8080' of target server '192.168.0.2' and modify the client IP to be\n"
            "               one of net 62.135.200.0/24.\n");
