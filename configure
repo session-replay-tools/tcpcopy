@@ -114,6 +114,7 @@ if [ $TC_PAYLOAD = YES ]; then
 fi
 
 if [ $TC_DIGEST = YES ]; then
+    tc_include="openssl/evp.h";    . auto/include
     have=TC_DIGEST . auto/have
     CORE_LIBS="$CORE_LIBS -lcrypto -lm" 
 fi
