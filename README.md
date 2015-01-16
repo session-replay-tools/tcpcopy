@@ -129,7 +129,8 @@ Assume *tcpcopy* and *intercept* are both configured with "./configure".
 3. Root privilege is required
 4. TCPCopy only supports client-initiated connections now
 5. TCPCopy does not support replay for server applications which use SSL/TLS
-6. Please execute "./tcpcopy -h" or "./intercept -h" for more details.
+6. ip_forward should not be set on the assistant server 
+7. Please execute "./tcpcopy -h" or "./intercept -h" for more details.
 
 ##Influential Factors
 There are several factors that could influence TCPCopy, which will be introduced in detail in the following sections.
