@@ -207,7 +207,7 @@ tc_conf_read_token(tc_conf_t *cf)
     off_t        file_size;
     size_t       len;
     ssize_t      n, size;
-    int          found, need_space, last_space, sharp_comment, variable;
+    int          found, need_space, last_space, sharp_comment;
     int          quoted, s_quoted, d_quoted, start_line;
     tc_str_t    *word;
     tc_buf_t    *b;
@@ -216,7 +216,6 @@ tc_conf_read_token(tc_conf_t *cf)
     need_space = 0;
     last_space = 1;
     sharp_comment = 0;
-    variable = 0;
     quoted = 0;
     s_quoted = 0;
     d_quoted = 0;
@@ -377,15 +376,12 @@ tc_conf_read_token(tc_conf_t *cf)
 
         } else {
 
-            variable = 0;
-
             if (ch == '\\') {
                 quoted = 1;
                 continue;
             }
 
             if (ch == '$') {
-                variable = 1;
                 continue;
             }
 
