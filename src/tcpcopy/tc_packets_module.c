@@ -158,7 +158,7 @@ static void
 pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         unsigned char *frame)
 {
-    int                  l2_len, ip_pack_len, frame_len;
+    int                  l2_len, ip_pack_len;
     pcap_t              *pcap;
     unsigned char       *ip_data; 
     struct ethernet_hdr *ether;
@@ -171,7 +171,6 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
     ip_data = NULL;
     pcap = (pcap_t *) args;
     
-    frame_len = pkt_hdr->len;
     l2_len    = get_l2_len(frame, pcap_datalink(pcap));
 
     if (l2_len != ETHERNET_HDR_LEN) {
