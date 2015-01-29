@@ -379,6 +379,7 @@ output_for_debug()
     tc_log_info(LOG_NOTICE, 0, "TC_OFFLINE mode");
 #endif
 #if (TC_PCAP)
+    tc_log_info(LOG_NOTICE, 0, "pcap version:%s", pcap_lib_version());
     tc_log_info(LOG_NOTICE, 0, "TC_PCAP mode");
 #endif
 #if (TC_SINGLE)
