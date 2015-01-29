@@ -47,6 +47,15 @@ tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
 
     tc_log_info(LOG_NOTICE, 0, "pcap_set_buffer_size:%d", buf_size);
 
+#if (HAVE_SET_IMMEDIATE_MODE)
+    status = pcap_set_immediate_mode(*pd, 1);
+     if (status != 0) {
+         tc_log_info(LOG_ERR, 0, "pcap_set_immediate_mode error:%s",
+                 pcap_statustostr(status));
+         return TC_ERR;
+     }
+#endif
+
     status = pcap_activate(*pd);
     if (status < 0) {
         tc_log_info(LOG_ERR, 0, "pcap_activate error:%s",

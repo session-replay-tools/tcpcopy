@@ -259,8 +259,8 @@ if [ $TC_PCAP_NEEDED = YES ]; then
     tc_feature_incs="#include <pcap.h>"
     tc_feature_path=
     tc_feature_libs='-lpcap'
-    tc_feature_test='char   ebuf[PCAP_ERRBUF_SIZE];;
-                  if (pcap_create("lo", ebuf) == NULL) return 1;'
+    tc_feature_test='char   ebuf[PCAP_ERRBUF_SIZE];
+                     if (pcap_create("lo", ebuf) == NULL) return 1;'
     . auto/feature
 
     if [ $tc_found = no ]; then
@@ -268,3 +268,18 @@ if [ $TC_PCAP_NEEDED = YES ]; then
         exit 1
     fi
 fi
+
+
+if [ $TC_PCAP_NEEDED = YES ]; then
+    tc_feature="pcap_set_immediate_mode()"
+    tc_feature_name="HAVE_SET_IMMEDIATE_MODE"
+    tc_feature_run=yes
+    tc_feature_incs="#include <pcap.h>"
+    tc_feature_path=
+    tc_feature_libs='-lpcap'
+    tc_feature_test='char    ebuf[PCAP_ERRBUF_SIZE];
+                     if (pcap_set_immediate_mode(pcap_create("lo", ebuf), 1) != 0)  
+                         return 1;' 
+    . auto/feature
+fi
+

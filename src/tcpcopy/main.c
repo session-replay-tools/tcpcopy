@@ -380,6 +380,9 @@ output_for_debug()
 #endif
 #if (TC_PCAP)
     tc_log_info(LOG_NOTICE, 0, "pcap version:%s", pcap_lib_version());
+#if (HAVE_SET_IMMEDIATE_MODE)
+    tc_log_info(LOG_NOTICE, 0, "HAVE_SET_IMMEDIATE_MODE is true");
+#endif
     tc_log_info(LOG_NOTICE, 0, "TC_PCAP mode");
 #endif
 #if (TC_SINGLE)
