@@ -91,7 +91,7 @@ Assume *tcpcopy* and *intercept* are both configured with "./configure".
          following route command to route all responses to the 62.135.200.x's clients 
          to the assistant server.
 
-           route add -net 62.135.200.0 netmask 255.255.255.0 gw 65.135.233.161
+           route add -net 62.135.200.0 netmask 255.255.255.0 gw 61.135.233.161
 
 ###2) On the assistant server which runs intercept(root privilege is required):
 
