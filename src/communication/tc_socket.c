@@ -24,11 +24,10 @@ tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
         return TC_ERR;
     }
 
-    status = pcap_set_promisc(*pd, 0);
+    status = pcap_set_promisc(*pd, 1);
     if (status != 0) {
         tc_log_info(LOG_ERR, 0, "pcap_set_promisc error:%s",
                 pcap_statustostr(status));
-        return TC_ERR;
     }
 
     status = pcap_set_timeout(*pd, 10);
