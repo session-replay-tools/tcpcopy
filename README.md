@@ -93,7 +93,7 @@ Assume *tcpcopy* and *intercept* are both configured with "./configure".
 
            route add -net 62.135.200.0 netmask 255.255.255.0 gw 61.135.233.161
 
-###2) On the assistant server which runs intercept(root privilege is required):
+###2) On the assistant server which runs intercept(root privilege or the CAP_NET_RAW capability is required):
 
        ./intercept -F <filter> -i <device,>
        
@@ -106,7 +106,7 @@ Assume *tcpcopy* and *intercept* are both configured with "./configure".
           on port 8080 from device eth0 
     
 	
-###3) On the online source server (root privilege is required):
+###3) On the online source server (root privilege or the CAP_NET_RAW capability is required):
       
       ./tcpcopy -x localServerPort-targetServerIP:targetServerPort -s <intercept server,> 
       [-c <ip range,>]
@@ -126,7 +126,7 @@ Assume *tcpcopy* and *intercept* are both configured with "./configure".
 ##Note
 1. It is tested on Linux only (kernal 2.6 or above)
 2. TCPCopy may lose packets hence lose requests
-3. Root privilege is required
+3. Root privilege or the CAP_NET_RAW capability(e.g. setcap CAP_NET_RAW=ep tcpcopy) is required
 4. TCPCopy only supports client-initiated connections now
 5. TCPCopy does not support replay for server applications which use SSL/TLS
 6. ip_forward should not be set on the assistant server 
