@@ -393,7 +393,7 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
 
             pack_len = 0;
             for (i = 0 ; i < packet_num; i++) {
-                tcp->seq = htonl(seq + i * max_payload);
+                tcp->seq = htonl(seq);
                 if (i != last) {
                     pack_len  = clt_settings.mtu;
                 } else {
@@ -412,6 +412,8 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
                 if (replica_num > 1) {
                     replicate_packs((tc_iph_t *) p, (tc_tcph_t *) (p + size_ip), replica_num);
                 }
+
+                seq = seq + payload_len;
             }
         }
     }
