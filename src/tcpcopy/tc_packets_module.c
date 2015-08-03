@@ -405,13 +405,12 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
                 p = (char *) pack_buffer2;
                 /* copy header here */
                 memcpy(p, (char *) packet, head_len);
-                p +=  head_len;
                 /* copy payload here */
-                memcpy(p, (char *) (packet + index), payload_len);
+                memcpy(p + head_len, (char *) (packet + index), payload_len);
                 index = index + payload_len;
-                packet_valid = tc_proc_ingress(ip, tcp);
+                packet_valid = tc_proc_ingress((tc_iph_t *) p, (tc_tcph_t *) (p + size_ip));
                 if (replica_num > 1) {
-                    replicate_packs(ip, tcp, replica_num);
+                    replicate_packs((tc_iph_t *) p, (tc_tcph_t *) (p + size_ip), replica_num);
                 }
             }
         }
