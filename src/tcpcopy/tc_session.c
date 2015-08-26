@@ -439,7 +439,7 @@ retrans_ip_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
     }
 
     if (tcp->ack) {
-        tcp->ack_seq = s->target_ack_seq;
+        tcp->ack_seq = htonl(s->target_ack_seq);
     }
 
     /* set the destination ip and port */
@@ -550,7 +550,7 @@ send_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp, bool client)
     }
 
     if (tcp->ack) {
-        tcp->ack_seq = s->target_ack_seq;
+        tcp->ack_seq = htonl(s->target_ack_seq);
     }
 
     size_ip = ip->ihl << 2;
@@ -727,9 +727,9 @@ send_faked_rst(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
     f_tcp->ack     = 1;
 
     if (s->cur_pack.cont_len == 0) {   
-        s->target_ack_seq = tcp->seq;
+        s->target_ack_seq = ntohl(tcp->seq);
     } else {
-        s->target_ack_seq = htonl(ntohl(tcp->seq) + s->cur_pack.cont_len);
+        s->target_ack_seq = ntohl(tcp->seq) + s->cur_pack.cont_len;
     }
 
     f_tcp->seq = tcp->ack_seq;
@@ -1398,17 +1398,17 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
             tc_stat.resp_cont_cnt++;
             s->rep_rcv_con_time = tc_time();
             cur_target_ack_seq = s->cur_pack.seq + s->cur_pack.cont_len;
-            last_target_ack_seq = ntohl(s->target_ack_seq);
+            last_target_ack_seq = s->target_ack_seq;
 
             if (after(cur_target_ack_seq, last_target_ack_seq) || tcp->fin) {
-                s->target_ack_seq = htonl(cur_target_ack_seq);
+                s->target_ack_seq = cur_target_ack_seq;
             } else {
                 tc_log_debug1(LOG_NOTICE, 0, "retrans from server:%u", 
                         ntohs(s->src_port));
                 shrink_rtt(s);
             }
         } else {
-            s->target_ack_seq = tcp->seq;
+            s->target_ack_seq = ntohl(tcp->seq);
         }
 
         if (check_bak_ack(s, ip, tcp) != PACK_STOP) {
@@ -1465,7 +1465,7 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
                 }
             }
         } else {
-            s->target_ack_seq = htonl(ntohl(s->target_ack_seq) + 1);
+            s->target_ack_seq = s->target_ack_seq + 1;
             if (tcp->syn) {
                 proc_bak_syn(s, tcp);
             } else if (tcp->fin) {
@@ -2258,7 +2258,7 @@ proc_clt_pack_from_buffer(tc_sess_t *s)
         ln = link_list_first(s->slide_win_packs); 
     }
 
-    while (ln ) {
+    while (ln) {
 
         s->frame = ln->data;
         ip  = (tc_iph_t *) ((char *) s->frame + ETHERNET_HDR_LEN);
