@@ -380,7 +380,7 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
             cont_len    = tot_len - size_tcp - size_ip;
             head_len    = size_ip + size_tcp;
             max_payload = clt_settings.mtu - head_len;
-            packet_num  = (cont_len + max_payload - 1)/max_payload;
+            packet_num  = (cont_len + max_payload - 1) / max_payload;
             seq         = ntohl(tcp->seq);
             last        = packet_num - 1;
             id          = ip->id;
