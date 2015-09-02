@@ -170,6 +170,11 @@ bool tc_proc_ingress(tc_iph_t *ip, tc_udpt_t *udp)
     tot_len    = ntohs(ip->tot_len);
 
     test = get_test_pair(&(clt_settings.transfer), ip->daddr, udp->dest);
+    if (test == NULL) {
+        tc_log_info(LOG_ERR, 0, "retrieve test pair error");
+        return false;
+    }
+
     ip->daddr = test->target_ip;
     udp->dest = test->target_port;
     udpcsum(ip, udp);

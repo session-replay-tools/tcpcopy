@@ -253,9 +253,12 @@ static void
 replicate_packs(tc_iph_t *ip, tc_udpt_t *udp_header, int replica_num)
 {
     int       i;
-    uint16_t  orig_port, addition, dest_port, rand_port;
+    uint16_t  orig_port, addition, dest_port, rand_port, online_port;
+    uint32_t  online_ip;
 
-    orig_port  = ntohs(udp_header->source);
+    online_ip   = ip->daddr;
+    online_port = udp_header->dest;
+    orig_port   = ntohs(udp_header->source);
 
     tc_log_debug1(LOG_DEBUG, 0, "orig port:%u", orig_port);
 
@@ -268,6 +271,8 @@ replicate_packs(tc_iph_t *ip, tc_udpt_t *udp_header, int replica_num)
 
         udp_header->source = htons(dest_port);
         tc_proc_ingress(ip, udp_header);
+        ip->daddr = online_ip;
+        udp_header->dest = online_port;
     }
 }
 
@@ -277,7 +282,8 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
 {
     int        replica_num;
     bool       packet_valid;
-    uint16_t   size_ip;
+    uint16_t   size_ip, online_port;
+    uint32_t   online_ip;
     tc_iph_t  *ip;
     tc_udpt_t *udp_header;
 
@@ -295,8 +301,13 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
         size_ip     = ip->ihl << 2;
         udp_header  = (tc_udpt_t *) ((char *) ip + size_ip);
 
+        online_ip   = ip->daddr;
+        online_port = udp_header->dest;
+
         packet_valid = tc_proc_ingress(ip, udp_header);
-          
+        
+        ip->daddr = online_ip;
+        udp_header->dest = online_port;
         if (replica_num > 1) {
             replicate_packs(ip, udp_header, replica_num);
         }

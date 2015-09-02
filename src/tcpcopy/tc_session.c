@@ -263,6 +263,11 @@ sess_create(tc_iph_t *ip, tc_tcph_t *tcp)
         s->online_port    = tcp->dest;
         test = get_test_pair(&(clt_settings.transfer), s->online_addr, 
                 s->online_port);
+        if (test == NULL) {
+            tc_log_info(LOG_ERR, 0, "retrieve test pair error");
+            tc_destroy_pool(s->pool);
+            return NULL;
+        }
         s->dst_addr       = test->target_ip;
         s->dst_port       = test->target_port;
 #if (TC_PCAP_SND)
@@ -2361,7 +2366,7 @@ tc_proc_ingress(tc_iph_t *ip, tc_tcph_t *tcp)
                 }
                 s = sess_add(key, ip, tcp);
                 if (s == NULL) {
-                    return true;
+                    return false;
                 }
                 s->rtt = rtt;
                 proc_clt_pack_directly(s, ip, tcp);
@@ -2384,7 +2389,7 @@ tc_proc_ingress(tc_iph_t *ip, tc_tcph_t *tcp)
 
         s = sess_add(key, ip, tcp);
         if (s == NULL) {
-            return true;
+            return false;
         }
 
 #if (!TC_SINGLE)
