@@ -32,6 +32,13 @@ reconstruct_sess(tc_sess_t *s)
 #if (TC_DETECT_MEMORY)
     s->sm.active_timer_cnt = 2;
 #endif
+
+#if (TC_PLUGIN)
+    if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_created) {
+        clt_settings.plugin->proc_when_sess_created(s);
+    }
+#endif
+
     tc_log_debug2(LOG_INFO, 0, "rtt:%ld,p:%u", s->rtt, ntohs(s->src_port));
     utimer_disp(s, s->rtt, TYPE_RECONSTRUCT);
 }
@@ -297,7 +304,7 @@ sess_create(tc_iph_t *ip, tc_tcph_t *tcp)
 #if (TC_PLUGIN)
         if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_created)
         {
-            clt_settings.plugin->proc_when_sess_created(s, ip, tcp);
+            clt_settings.plugin->proc_when_sess_created(s);
         }
 #endif
     }

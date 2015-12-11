@@ -177,6 +177,6 @@ Have a bug or a feature request? [Please open a new issue](https://github.com/se
 
 ## Copyright and license
 
-Copyright 2014 under [the BSD license](LICENSE).
+Copyright 2016 under [the BSD license](LICENSE).
 
 

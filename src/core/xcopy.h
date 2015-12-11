@@ -323,7 +323,7 @@ struct tc_module_s{
     bool     (*check_padding)(tc_iph_t *, tc_tcph_t *); 
     int      (*prepare_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
     bool     (*check_pack_for_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
-    int      (*proc_when_sess_created)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
+    int      (*proc_when_sess_created)(tc_sess_t *);
     int      (*proc_when_sess_destroyed)(tc_sess_t *);
     int      (*proc_greet)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
     int      (*proc_auth)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
