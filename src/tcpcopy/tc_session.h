@@ -76,7 +76,7 @@ struct tc_sess_s {
 
     pack_info_t cur_pack;
 
-    /* ack sequence that is sent to backend (network byte order) */
+    /* ack sequence that is sent to backend (host byte order) */
     uint32_t target_ack_seq;
     /* next sequence that is sent to backend (host byte order) */
     uint32_t target_nxt_seq;
