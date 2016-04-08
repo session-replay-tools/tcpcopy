@@ -150,6 +150,7 @@ read_args(int argc, char **argv)
     while (-1 != (c = getopt(argc, argv,
          "x:" /* <transfer,> */
          "c:" 
+         "H:" 
 #if (TC_OFFLINE)
          "i:" /* input pcap file */
          "a:" /* accelerated times */
@@ -176,7 +177,7 @@ read_args(int argc, char **argv)
          "D:" /* mss value sent to backend */
          "t:" /* set the session timeout limit */
          "k:" /* set the session keepalive timeout limit */
-         "s:" /* real servers running intercept*/
+         "s:" /* real servers running intercept */
          "l:" /* error log file */
          "P:" /* save PID in file */
          "L"  /* lonely */

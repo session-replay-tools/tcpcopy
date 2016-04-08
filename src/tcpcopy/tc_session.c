@@ -282,7 +282,7 @@ sess_create(tc_iph_t *ip, tc_tcph_t *tcp)
         s->dst_mac        = test->dst_mac;
 #endif
         if (s->src_addr == LOCALHOST && s->dst_addr != LOCALHOST) {
-            tc_log_info(LOG_WARN, 0, "src host localost but dst host not");
+            tc_log_info(LOG_WARN, 0, "src host localhost but dst host not");
             tc_log_info(LOG_WARN, 0, "use -H to avoid this warning");
         }
 
