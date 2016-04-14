@@ -92,10 +92,8 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
     }
 
     if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
-        net = 0;
-        netmask = 0;
         tc_log_info(LOG_WARN, 0, "lookupnet:%s", ebuf);
-        return TC_INVALID_SOCK;
+        netmask = PCAP_NETMASK_UNKNOWN;
     }
 
     if (pcap_compile(*pd, &fp, pcap_filter, 0, netmask) == -1) {
