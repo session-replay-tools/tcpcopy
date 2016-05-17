@@ -131,13 +131,13 @@ connect_to_server(tc_event_loop_t *ev_lp)
     for (i = 0; i < clt_settings.real_servers.num; i++) {
 
         conns = &(clt_settings.real_servers.conns[i]);
-        target_ip = conns[i].ip;
-        target_port = conns[i].port;
+        target_ip = conns->ip;
+        target_port = conns->port;
         if (target_port == 0) {
             target_port = clt_settings.srv_port;
         }
 
-        if (conns[i].active != 0) {
+        if (conns->active != 0) {
             continue;
         }
 
@@ -153,8 +153,8 @@ connect_to_server(tc_event_loop_t *ev_lp)
              }
         }
 
-        clt_settings.real_servers.conns[i].num = 0;
-        clt_settings.real_servers.conns[i].remained_num = 0;
+        conns->num = 0;
+        conns->remained_num = 0;
 
         for (j = 0; j < clt_settings.par_conns; j++) {
             fd = tc_message_init(ev_lp, target_ip, target_port);
@@ -168,12 +168,12 @@ connect_to_server(tc_event_loop_t *ev_lp)
 
             if (j == 0) {
                 clt_settings.real_servers.active_num++;
-                conns[i].active = 1;
+                conns->active = 1;
             }
 
-            clt_settings.real_servers.conns[i].fds[j] = fd;
-            clt_settings.real_servers.conns[i].num++;
-            clt_settings.real_servers.conns[i].remained_num++;
+            conns->fds[j] = fd;
+            conns->num++;
+            conns->remained_num++;
         }
     }
 
