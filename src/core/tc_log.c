@@ -78,7 +78,7 @@ tc_log_init(const char *file)
     log_fd = open(file, O_RDWR|O_CREAT|O_APPEND, 0644);
 
     if (log_fd == -1) {
-        fprintf(stderr, "Open log file error: %s\n", strerror(errno));
+        fprintf(stderr, "Open log file:%s error: %s\n", file, strerror(errno));
     }
 
     return log_fd;
