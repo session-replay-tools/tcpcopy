@@ -1647,6 +1647,12 @@ proc_clt_rst(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     s->sm.sess_over = 1;
 
+#if (TC_PLUGIN)
+    if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_destroyed) {
+        clt_settings.plugin->proc_when_sess_destroyed(s);
+    }
+#endif
+
     return PACK_SLIDE;
 }
 
@@ -1955,6 +1961,13 @@ proc_clt_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     if (tcp->fin) {
         status = proc_clt_fin(s, ip, tcp);
+#if (TC_PLUGIN)
+        if (status != PACK_STOP) {
+            if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_destroyed) {
+                clt_settings.plugin->proc_when_sess_destroyed(s);
+            }
+        }
+#endif
         if (status != PACK_CONTINUE) {
             return status;
         }
