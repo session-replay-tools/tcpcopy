@@ -50,6 +50,9 @@ typedef struct sess_state_machine_s{
     uint32_t sess_over:1;
     uint32_t src_closed:1;
 
+#if (TC_PLUGIN)
+    uint32_t clt_fin_or_rst_received:1;
+#endif
     uint32_t dst_closed:1;
     uint32_t last_ack:1;
     uint32_t set_rto:1;

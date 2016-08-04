@@ -98,6 +98,14 @@ sess_post_disp(tc_sess_t *s,  bool complete)
         }
     } 
 
+#if (TC_PLUGIN)
+    if (s->sm.clt_fin_or_rst_received) {
+        if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_destroyed) {
+            clt_settings.plugin->proc_when_sess_destroyed(s);
+        }
+    }
+#endif
+
     if (!hash_del(sess_table, s->pool, s->hash_key)) {
         tc_log_info(LOG_ERR, 0, "wrong del:%u", ntohs(s->src_port));
     }
@@ -1647,12 +1655,6 @@ proc_clt_rst(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     s->sm.sess_over = 1;
 
-#if (TC_PLUGIN)
-    if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_destroyed) {
-        clt_settings.plugin->proc_when_sess_destroyed(s);
-    }
-#endif
-
     return PACK_SLIDE;
 }
 
@@ -1961,13 +1963,6 @@ proc_clt_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     if (tcp->fin) {
         status = proc_clt_fin(s, ip, tcp);
-#if (TC_PLUGIN)
-        if (status != PACK_STOP) {
-            if (clt_settings.plugin && clt_settings.plugin->proc_when_sess_destroyed) {
-                clt_settings.plugin->proc_when_sess_destroyed(s);
-            }
-        }
-#endif
         if (status != PACK_CONTINUE) {
             return status;
         }
@@ -2231,6 +2226,11 @@ proc_clt_pack_directly(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     tc_log_debug_trace(LOG_DEBUG, 0, TC_CLT, ip, tcp);
 
+#if (TC_PLUGIN)
+    if (tcp->fin || tcp->rst) {
+        s->sm.clt_fin_or_rst_received = 1;
+    }
+#endif
     seq  = ntohl(tcp->seq);
     diff = tc_time() - s->create_time;
     if (diff < TCP_MS_TIMEOUT && (s->sm.state & SYN_SENT)) {
