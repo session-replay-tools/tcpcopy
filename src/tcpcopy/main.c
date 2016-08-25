@@ -69,7 +69,7 @@ usage(void)
 #if (TC_OFFLINE)
     printf("-i <file>      set the pcap file used for tcpcopy to <file> (only valid for the\n"
            "               offline version of tcpcopy when it is configured to run at\n"
-           "               enable-offline mode).\n");
+           "               --offline mode).\n");
     printf("-a <num>       accelerated times for offline replay\n");
     printf("-I <num>       set the threshold interval for offline replay acceleration\n"
            "               in millisecond.\n");
