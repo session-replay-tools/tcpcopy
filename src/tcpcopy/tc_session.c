@@ -2391,6 +2391,15 @@ tc_proc_ingress(tc_iph_t *ip, tc_tcph_t *tcp)
                 s->rtt = rtt;
                 proc_clt_pack_directly(s, ip, tcp);
             } else {
+#if (TC_PLUGIN)
+                if (tcp->fin || tcp->rst) {
+                    if (clt_settings.plugin && 
+                            clt_settings.plugin->finally_release_resources) 
+                    {
+                        clt_settings.plugin->finally_release_resources(key);
+                    }
+                }
+#endif
                 return false;
             }
         }
