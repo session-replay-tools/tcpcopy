@@ -9,6 +9,7 @@ hash_node_malloc(tc_pool_t *pool, uint64_t key, void *data)
     if (hn != NULL) {
         hn->key  = key;
         hn->data = data;
+        hn->access_time = tc_time();
     } else {
         tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
     }
@@ -29,6 +30,7 @@ hash_find_node(hash_table *table, uint64_t key)
 
         hn = (hash_node *) ln->data;
         if (hn->key == key) {
+            hn->access_time = tc_time();
             if (!first) {
                 /* put the lastest item to the head of the linked list */
                 link_list_remove(l, ln);

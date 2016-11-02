@@ -6,6 +6,7 @@
 typedef struct hash_node_s{
     uint64_t    key;
     void       *data;
+    time_t      access_time;
 }hash_node_t, hash_node;
 
 typedef struct hash_table_s{

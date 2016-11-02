@@ -1,6 +1,23 @@
 
 #include <xcopy.h>
 #include <tcpcopy.h>
+#include <malloc.h>
+
+#if (TC_PLUGIN)
+static void
+remove_obso_resource(tc_event_timer_t *evt)
+{
+    if (clt_settings.plugin && 
+            clt_settings.plugin->remove_obsolete_resources) 
+    {
+        clt_settings.plugin->remove_obsolete_resources();
+        if (evt) {
+            tc_event_update_timer(evt, 3600000);
+        }
+    }
+}
+#endif
+
 
 /* check resource usage, such as memory usage and cpu usage */
 static void
@@ -8,6 +25,15 @@ check_resource_usage(tc_event_timer_t *evt)
 {
     int           ret, who;
     struct rusage usage;
+    struct mallinfo m;
+
+#if (TC_PLUGIN)
+    if (clt_settings.plugin && 
+            clt_settings.plugin->remove_obsolete_resources) 
+    {
+        clt_settings.plugin->remove_obsolete_resources();
+    }
+#endif
 
     who = RUSAGE_SELF;
 
@@ -25,14 +51,24 @@ check_resource_usage(tc_event_timer_t *evt)
     /* maximum resident set size (in kilobytes) */
     /* only valid since Linux 2.6.32 */
     tc_log_info(LOG_NOTICE, 0, "max memory size:%ld", usage.ru_maxrss);
-    tc_log_info(LOG_NOTICE, 0, "voluntary ctx switches:%ld", usage.ru_nvcsw);
-    tc_log_info(LOG_NOTICE, 0, "involuntary ctx switches:%ld", usage.ru_nivcsw);
 
     if (usage.ru_maxrss > (long int) clt_settings.max_rss) {
         tc_log_info(LOG_WARN, 0, "occupies too much memory, limit:%ld",
                  clt_settings.max_rss);
         /* biggest signal number + 1 */
         tc_over = SIGRTMAX;
+    }
+
+    m = mallinfo();
+    tc_log_info(LOG_NOTICE, 0, "Total allocated space (bytes): %d", m.uordblks);
+    tc_log_info(LOG_NOTICE, 0, "Total free space (bytes): %d", m.fordblks);
+    tc_log_info(LOG_NOTICE, 0, "Top-most, releasable space (bytes): %d", m.keepcost);
+
+    if (m.fordblks > m.uordblks) {
+        if (usage.ru_maxrss < (long int) (clt_settings.max_rss >> 2)) {
+            tc_log_info(LOG_NOTICE, 0, "call malloc_trim");
+            malloc_trim(0);
+        }
     }
 
     if (evt) {
@@ -193,7 +229,6 @@ restore_work(tc_event_timer_t *evt)
 int
 tcp_copy_init(tc_event_loop_t *ev_lp)
 {
-
     tc_event_add_timer(ev_lp->pool, 60000, NULL, check_resource_usage);
     tc_event_add_timer(ev_lp->pool, OUTPUT_INTERVAL, NULL, tc_interval_disp);
 
@@ -223,8 +258,10 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
     if (clt_settings.plugin && clt_settings.plugin->init_module) {
         clt_settings.plugin->init_module(&clt_settings);
     }
+    if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
+        tc_event_add_timer(ev_lp->pool, 3600000, NULL, remove_obso_resource);
+    }
 #endif
-
     return TC_OK;
 }
 

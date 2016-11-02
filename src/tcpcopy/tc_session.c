@@ -1892,9 +1892,12 @@ is_continuous_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 }
 
 
-static void
+static int
 proc_clt_after_filter(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 {
+#if (TC_PLUGIN)
+    int status;
+#endif
     if (!s->sm.candidate_rep_wait) {
         if (s->sm.rtt_cal == RTT_FIRST_RECORED) {
             calculate_rtt(s);
@@ -1904,21 +1907,28 @@ proc_clt_after_filter(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
             s->sm.candidate_rep_wait = 1;
 #if (TC_PLUGIN)
             if (clt_settings.plugin && clt_settings.plugin->proc_auth) {
-                clt_settings.plugin->proc_auth(s, ip, tcp);
+                status = clt_settings.plugin->proc_auth(s, ip, tcp);
+                if (status != PACK_CONTINUE) {
+                    tc_log_info(LOG_INFO, 0, "we can not continue:%u", 
+                            ntohs(s->src_port));
+                    return status;
+                }
             }
 #endif
             send_pack(s, ip, tcp, true);
-            return;
+            return PACK_CONTINUE;
         } else if (s->sm.state == SYN_CONFIRM) {
             if (s->req_exp_seq == s->cur_pack.seq) {
                 s->sm.state |= ESTABLISHED;
                 send_pack(s, ip, tcp, true);
-                return;
+                return PACK_CONTINUE;
             }
         }
     }
 
     tc_log_debug1(LOG_DEBUG, 0, "drop pack:%u", ntohs(s->src_port));
+
+    return PACK_CONTINUE;
 }
 
 
@@ -2016,7 +2026,11 @@ proc_clt_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
         tc_log_debug1(LOG_INFO, 0, "new req from clt:%u", ntohs(s->src_port));
     }
 
-    proc_clt_after_filter(s, ip, tcp);
+    status = proc_clt_after_filter(s, ip, tcp);
+    if (status != PACK_CONTINUE) {
+        return  status;
+    }
+
     return PACK_NEXT;
 }
 

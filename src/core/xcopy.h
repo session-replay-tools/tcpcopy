@@ -104,6 +104,7 @@ typedef struct tc_sess_s        tc_sess_t;
 
 
 #define MAX_REAL_SERVERS 32
+#define MAX_IDLE_TIME 28800
 
 #define TIMER_DEFAULT_TIMEOUT 60000
 #define TCP_MS_TIMEOUT 6000
@@ -131,7 +132,7 @@ typedef struct tc_sess_s        tc_sess_t;
 #define SESS_KEEPLIVE_ADD 120
 #endif
 
-#define MAX_SLIDE_WIN_THRESH 32768
+#define MAX_SLIDE_WIN_THRESH 1024
 #define SND_TOO_SLOW_THRESH 64
 
 #define REL_CNT_MAX_VALUE 63
@@ -320,6 +321,7 @@ struct tc_module_s{
     tc_cmd_t  *cmds;
     int      (*init_module)();
     void     (*exit_module)();
+    void     (*remove_obsolete_resources)();
     bool     (*check_padding)(tc_iph_t *, tc_tcph_t *); 
     int      (*prepare_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
     bool     (*check_pack_for_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 

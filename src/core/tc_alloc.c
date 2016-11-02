@@ -11,6 +11,14 @@ tc_alloc(size_t size)
 {
     void  *p;
 
+    if (size > 512) {
+        if (size < 1024) {
+            size = 1024;
+        } else if (size < 2048) {
+            size = 2048;
+        }
+    }
+
     p = malloc(size);
     if (p == NULL) {
         tc_log_info(LOG_EMERG, errno,
