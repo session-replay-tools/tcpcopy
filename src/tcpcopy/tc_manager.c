@@ -12,7 +12,7 @@ remove_obso_resource(tc_event_timer_t *evt)
     {
         clt_settings.plugin->remove_obsolete_resources();
         if (evt) {
-            tc_event_update_timer(evt, 3600000);
+            tc_event_update_timer(evt, MAX_IDLE_TIME);
         }
     }
 }
@@ -65,9 +65,12 @@ check_resource_usage(tc_event_timer_t *evt)
     tc_log_info(LOG_NOTICE, 0, "Top-most, releasable space (bytes): %d", m.keepcost);
 
     if (m.fordblks > m.uordblks) {
-        if (usage.ru_maxrss < (long int) (clt_settings.max_rss >> 2)) {
+        if (usage.ru_maxrss > (long int) (clt_settings.max_rss >> 2)) {
             tc_log_info(LOG_NOTICE, 0, "call malloc_trim");
             malloc_trim(0);
+            m = mallinfo();
+            tc_log_info(LOG_NOTICE, 0, "New total free space (bytes): %d", m.fordblks);
+            tc_log_info(LOG_NOTICE, 0, "New top-most, releasable space (bytes): %d", m.keepcost);
         }
     }
 
@@ -259,7 +262,7 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
         clt_settings.plugin->init_module(&clt_settings);
     }
     if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
-        tc_event_add_timer(ev_lp->pool, 3600000, NULL, remove_obso_resource);
+        tc_event_add_timer(ev_lp->pool, (MAX_IDLE_TIME << 1), NULL, remove_obso_resource);
     }
 #endif
     return TC_OK;
