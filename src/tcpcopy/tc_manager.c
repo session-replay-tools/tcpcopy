@@ -10,7 +10,7 @@ remove_obso_resource(tc_event_timer_t *evt)
     if (clt_settings.plugin && 
             clt_settings.plugin->remove_obsolete_resources) 
     {
-        clt_settings.plugin->remove_obsolete_resources();
+        clt_settings.plugin->remove_obsolete_resources(0);
         if (evt) {
             tc_event_update_timer(evt, MAX_IDLE_TIME);
         }
@@ -28,10 +28,10 @@ check_resource_usage(tc_event_timer_t *evt)
     struct mallinfo m;
 
 #if (TC_PLUGIN)
-    if (clt_settings.plugin && 
+    if (evt == NULL && clt_settings.plugin && 
             clt_settings.plugin->remove_obsolete_resources) 
     {
-        clt_settings.plugin->remove_obsolete_resources();
+        clt_settings.plugin->remove_obsolete_resources(1);
     }
 #endif
 

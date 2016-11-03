@@ -321,7 +321,7 @@ struct tc_module_s{
     tc_cmd_t  *cmds;
     int      (*init_module)();
     void     (*exit_module)();
-    void     (*remove_obsolete_resources)();
+    void     (*remove_obsolete_resources)(int);
     bool     (*check_padding)(tc_iph_t *, tc_tcph_t *); 
     int      (*prepare_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 
     bool     (*check_pack_for_renew)(tc_sess_t *, tc_iph_t *, tc_tcph_t *); 

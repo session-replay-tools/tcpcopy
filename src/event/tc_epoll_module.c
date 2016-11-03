@@ -8,7 +8,7 @@ int tc_epoll_create(tc_event_loop_t *loop)
     struct epoll_event        *events = NULL;
     tc_epoll_multiplex_io_t   *io;
 
-    evs = tc_palloc(loop->pool, loop->size * sizeof(tc_event_t *));
+    evs = tc_pcalloc(loop->pool, loop->size * sizeof(tc_event_t *));
     if (evs == NULL) {
         return TC_EVENT_ERROR;
     }
@@ -61,13 +61,19 @@ int tc_epoll_destroy(tc_event_loop_t *loop)
 
     for (i = 0; i <= io->max_fd; i++) {
         event = io->evs[i];
-        if (event != NULL && event->fd > 0) {
-            tc_log_info(LOG_NOTICE, 0, "tc_epoll_destroy, close fd:%d",
-                    event->fd);
-            tc_socket_close(event->fd);
-            event->fd = -1;
+        if (event != NULL) {
+            if (event->fd > 0) {
+                tc_log_info(LOG_NOTICE, 0, "tc_epoll_destroy, close fd:%d",
+                        event->fd);
+                tc_socket_close(event->fd);
+                event->fd = -1;
+                tc_pfree(loop->pool, event);
+            } else {
+                tc_log_info(LOG_WARN, 0, "tc_epoll_destroy, fd < 0:%d",
+                        event->fd);
+                tc_pfree(loop->pool, event);
+            }
         }
-        tc_pfree(loop->pool, event);
     }
 
     if (io->efd) {

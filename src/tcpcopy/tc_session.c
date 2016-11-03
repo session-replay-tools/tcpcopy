@@ -131,7 +131,10 @@ sess_post_disp(tc_sess_t *s,  bool complete)
         tc_log_info(LOG_ERR, 0, "possible timer memory leak:%d, %u", 
                 s->sm.active_timer_cnt, ntohs(s->src_port));
     }
+    tc_log_info(LOG_INFO, 0, "session :%p destroyed, time diff:%d", 
+            s, tc_time() - s->create_time);
 #endif
+
     tc_destroy_pool(s->pool);
 }
 

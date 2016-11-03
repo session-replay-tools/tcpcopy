@@ -84,27 +84,32 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
     }
 
 
+    rc = TC_OK;
+
     for ( ;; ) {
         rc = tc_conf_read_token(cf);
 
         if (rc == TC_ERR) {
-            return TC_ERR;
+            break;
         }
 
         if (rc == TC_CONF_FILE_DONE) {
-            return TC_OK;
+            rc = TC_OK;
+            break;
         }
 
         if (plugin->cmds) {
             rc = tc_conf_handler(plugin->cmds, cf, rc);
 
             if (rc == TC_ERR) {
-                return TC_ERR;
+                break;
             }
         }
     }
 
-    return TC_OK;
+    tc_free(buf.start);
+
+    return rc;
 }
 
 
