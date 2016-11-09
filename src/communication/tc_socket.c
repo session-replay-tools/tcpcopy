@@ -14,6 +14,7 @@ tc_pcap_open(pcap_t **pd, char *device, int snap_len, int buf_size)
     *pd = pcap_create(device, ebuf);
     if (*pd == NULL) {
         tc_log_info(LOG_ERR, 0, "pcap create error:%s", ebuf);
+        fprintf(stderr, "pcap create error:%s\n", ebuf);
         return TC_ERR;
     }
 
@@ -148,6 +149,7 @@ tc_raw_socket_in_init(int type)
 
     if (fd == -1) {
         tc_log_info(LOG_ERR, errno, "Create raw socket to input failed");   
+        fprintf(stderr, "Create raw socket to input failed:%s\n", strerror(errno));
         return TC_INVALID_SOCK;
     }
 
@@ -180,6 +182,7 @@ tc_raw_socket_out_init(void)
 
     if (fd == -1) {
         tc_log_info(LOG_ERR, errno, "Create raw socket to output failed");
+        fprintf(stderr, "Create raw socket to output failed: %s\n", strerror(errno));
         return TC_INVALID_SOCK;
     } 
 
@@ -212,6 +215,8 @@ tc_pcap_snd_init(char *if_name, int mtu)
     if (pcap_errbuf[0] != '\0') {
         tc_log_info(LOG_ERR, errno, "pcap open %s, failed:%s", 
                 if_name, pcap_errbuf);
+        fprintf(stderr, "pcap open %s, failed: %s, err:%s\n", 
+                if_name, pcap_errbuf, strerror(errno));
         return TC_ERR;
     }
 
@@ -372,6 +377,8 @@ tc_socket_connect(int fd, uint32_t ip, uint16_t port)
     if (connect(fd, (struct sockaddr *) &remote_addr, len) == -1) {
         tc_log_info(LOG_ERR, errno, "Can not connect to remote server(%s:%d)",
                 inet_ntoa(remote_addr.sin_addr), port);
+        fprintf(stderr, "Can not connect to remote server(%s:%d), err:%s\n", 
+                inet_ntoa(remote_addr.sin_addr), port, strerror(errno));
         tc_socket_close(fd);
         return TC_ERR;
     } else {

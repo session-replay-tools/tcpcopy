@@ -127,6 +127,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
 
     if (!work) {
         tc_log_info(LOG_ERR, 0, "no device available for snooping packets");
+        fprintf(stderr, "no device available for snooping packets\n");
         return TC_ERR;
     }
 

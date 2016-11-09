@@ -21,7 +21,7 @@ extern tc_rbtree_t  tc_event_timer_rbtree;
 static inline void
 tc_event_del_timer(tc_event_timer_t *ev)
 {
-    tc_log_debug2(LOG_DEBUG, 0, "pool:%llu, del timer:%llu", ev->pool, ev); 
+    tc_log_debug2(LOG_DEBUG, 0, "pool:%p, del timer:%p", ev->pool, ev); 
     tc_rbtree_delete(&tc_event_timer_rbtree, &ev->timer);
     ev->timer_set = 0;
 }
@@ -45,7 +45,7 @@ tc_event_update_timer(tc_event_timer_t *ev, tc_msec_t timer)
 
         ev->timer.key = key;
 
-        tc_log_debug2(LOG_DEBUG, 0, "pool:%llu, up timer:%llu", ev->pool, ev);
+        tc_log_debug2(LOG_DEBUG, 0, "pool:%p, up timer:%p", ev->pool, ev);
         tc_rbtree_insert(&tc_event_timer_rbtree, &ev->timer);
 
         ev->timer_set = 1;
@@ -71,7 +71,7 @@ tc_event_add_timer(tc_pool_t *pool, tc_msec_t timer, void *data,
 
         tc_rbtree_insert(&tc_event_timer_rbtree, &ev->timer);
 
-        tc_log_debug2(LOG_DEBUG, 0, "pool:%llu, add timer:%llu", pool, 
+        tc_log_debug2(LOG_DEBUG, 0, "pool:%p, add timer:%p", pool, 
                 &ev->timer); 
 
         ev->timer_set = 1;

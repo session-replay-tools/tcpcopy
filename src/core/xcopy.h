@@ -80,6 +80,7 @@ typedef struct tc_sess_s        tc_sess_t;
 
 #define TC_UPOOL_MAXV 511
 #define TC_DEFAULT_POOL_SIZE   (16 * 1024)
+#define TC_PLUGIN_POOL_SIZE   (32 * 1024)
 #define TC_DEFAULT_UPOOL_SIZE   1024
 
 #define MEM_HID_INFO_SZ sizeof(tc_mem_hid_info_t)
@@ -105,6 +106,7 @@ typedef struct tc_sess_s        tc_sess_t;
 
 #define MAX_REAL_SERVERS 32
 #define MAX_IDLE_TIME 28800
+#define MAX_IDLE_MS_TIME (MAX_IDLE_TIME * 1000)
 
 #define TIMER_DEFAULT_TIMEOUT 60000
 #define TCP_MS_TIMEOUT 6000

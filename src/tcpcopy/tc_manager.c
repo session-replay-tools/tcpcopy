@@ -12,7 +12,7 @@ remove_obso_resource(tc_event_timer_t *evt)
     {
         clt_settings.plugin->remove_obsolete_resources(0);
         if (evt) {
-            tc_event_update_timer(evt, MAX_IDLE_TIME);
+            tc_event_update_timer(evt, MAX_IDLE_MS_TIME);
         }
     }
 }
@@ -26,14 +26,6 @@ check_resource_usage(tc_event_timer_t *evt)
     int           ret, who;
     struct rusage usage;
     struct mallinfo m;
-
-#if (TC_PLUGIN)
-    if (evt == NULL && clt_settings.plugin && 
-            clt_settings.plugin->remove_obsolete_resources) 
-    {
-        clt_settings.plugin->remove_obsolete_resources(1);
-    }
-#endif
 
     who = RUSAGE_SELF;
 
@@ -92,7 +84,6 @@ tcp_copy_release_resources(void)
 
     tc_dest_sess_table();
 
-    check_resource_usage(NULL);
 #if (TC_PLUGIN)
     if (clt_settings.plugin && clt_settings.plugin->exit_module) {
         clt_settings.plugin->exit_module(&clt_settings);
@@ -131,7 +122,10 @@ tcp_copy_release_resources(void)
 #if (TC_PCAP_SND)
     tc_pcap_over();
 #endif
+
     tc_destroy_pool(clt_settings.pool);
+
+    check_resource_usage(NULL);
 
     tc_log_end();
 }
@@ -262,7 +256,8 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
         clt_settings.plugin->init_module(&clt_settings);
     }
     if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
-        tc_event_add_timer(ev_lp->pool, (MAX_IDLE_TIME << 1), NULL, remove_obso_resource);
+        tc_event_add_timer(ev_lp->pool, (MAX_IDLE_MS_TIME << 1), 
+                NULL, remove_obso_resource);
     }
 #endif
     return TC_OK;

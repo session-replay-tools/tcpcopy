@@ -66,7 +66,7 @@ tc_event_expire_timers(void)
                     offsetof(tc_event_timer_t, timer));
 
 #if (TC_DEBUG)
-            tc_log_debug1(LOG_DEBUG, 0, "del timer:%llu", ev);
+            tc_log_debug1(LOG_DEBUG, 0, "del timer:%p", ev);
 #endif
             tc_rbtree_delete(&tc_event_timer_rbtree, &ev->timer);
 

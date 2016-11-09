@@ -174,7 +174,7 @@ tc_check_block_free(tc_pool_t *root, tc_pool_t *p)
             p->sh_num.fn = i;
             hid->try_rel_cnt++;
             if (hid->try_rel_cnt == REL_CNT_MAX_VALUE) {
-                tc_log_info(LOG_INFO, 0, "pool:%llu,block:%llu,len:%u occupy", 
+                tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,len:%u occupy", 
                         root, p, hid->len);
             }
             return false;
@@ -209,7 +209,7 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
             m = (u_char *) p;
             new = p;
             pool->d.next = p->d.next;
-            tc_log_debug2(LOG_INFO, 0, "pool:%llu recycle:%llu", pool, p);
+            tc_log_debug2(LOG_INFO, 0, "pool:%p recycle:%p", pool, p);
         }
     }
 

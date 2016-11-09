@@ -54,6 +54,7 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
         fd = open((const char *) filename, O_RDONLY, 0);
         if (fd == -1) {
             tc_log_info(LOG_ERR, errno, "open %s failed", filename);
+            fprintf(stderr, "open %s failed:%s\n", filename, strerror(errno));
             return TC_ERR;
         }
 
@@ -61,6 +62,7 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
 
         if (fstat(fd, &cf->conf_file->file.info) == -1) {
             tc_log_info(LOG_ERR, errno, "fstat %s failed", filename);
+            fprintf(stderr, "fstat %s failed:%s\n", filename, strerror(errno));
             return TC_ERR;
         }
 
@@ -170,11 +172,14 @@ tc_conf_handler(tc_cmd_t *cmd, tc_conf_t *cf, int last)
         tc_log_info(LOG_ERR, 0,
                 "\"%s\" directive is not allowed here", name->data);
 
+        fprintf(stderr, "\"%s\" directive is not allowed here", name->data);
+
         return TC_ERR;
     }
 
-    tc_log_info(LOG_ERR, 0,
-            "unknown directive \"%s\"", name->data);
+    tc_log_info(LOG_ERR, 0, "unknown directive \"%s\"", name->data);
+        
+    fprintf(stderr, "unknown directive \"%s\"", name->data);
 
     return TC_ERR;
 
@@ -182,6 +187,8 @@ invalid:
 
     tc_log_info(LOG_ERR, 0,
             "invalid number of arguments in \"%s\" directive",
+            name->data);
+    fprintf(stderr, "invalid number of arguments in \"%s\" directive", 
             name->data);
 
     return TC_ERR;
@@ -195,6 +202,7 @@ tc_read_file(tc_file_t *file, unsigned char *buf, size_t size, off_t offset)
     n = pread(file->fd, buf, size, offset);
     if (n == -1) {
         tc_log_info(LOG_ERR, errno, "pread() failed");
+        fprintf(stderr, "pread() failed:%s", strerror(errno));
         return TC_ERR;
     }
 
@@ -243,6 +251,8 @@ tc_conf_read_token(tc_conf_t *cf)
                     tc_log_info(LOG_ERR, 0,
                                   "unexpected end of file, "
                                   "expecting \";\"");
+                    fprintf(stderr, 
+                            "unexpected end of config file, expecting \";\"");
                     return TC_ERR;
                 }
 

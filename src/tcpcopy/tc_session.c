@@ -47,6 +47,8 @@ reconstruct_sess(tc_sess_t *s)
 static void
 sess_post_disp(tc_sess_t *s,  bool complete)
 {
+    int diff;
+
     tc_log_debug1(LOG_DEBUG, 0, "sess post disp:%u", ntohs(s->src_port));
 
 #if (TC_DETECT_MEMORY)
@@ -131,9 +133,14 @@ sess_post_disp(tc_sess_t *s,  bool complete)
         tc_log_info(LOG_ERR, 0, "possible timer memory leak:%d, %u", 
                 s->sm.active_timer_cnt, ntohs(s->src_port));
     }
-    tc_log_info(LOG_INFO, 0, "session :%p destroyed, time diff:%d", 
-            s, tc_time() - s->create_time);
 #endif
+    
+    diff = tc_time() - s->req_snd_con_time;
+
+    if (diff > 3600) {
+        tc_log_info(LOG_WARN, 0, "session destroyed,time diff:%d, p%u",
+                diff, ntohs(s->src_port));
+    }
 
     tc_destroy_pool(s->pool);
 }
@@ -1149,17 +1156,17 @@ tc_lantency_ctl(tc_event_timer_t *ev)
                 s->sm.set_rto = 0;
                 if (before(s->rep_ack_seq, s->target_nxt_seq)) {
                     retrans_pack(s, s->rep_ack_seq);
-                    tc_log_debug1(LOG_INFO, 0, "rto:%llu", ntohs(s->src_port));
+                    tc_log_debug1(LOG_INFO, 0, "rto:%u", ntohs(s->src_port));
                 }
             }
         } else if (s->sm.timer_type == TYPE_RECONSTRUCT) {
             proc_clt_pack_from_buffer(s);
         } else if (s->sm.timer_type == TYPE_DEFAULT) {
         } else {
-            tc_log_info(LOG_ERR, 0, "unknown ttype:%llu", ntohs(s->src_port));
+            tc_log_info(LOG_ERR, 0, "unknown type:%u", ntohs(s->src_port));
         }
     } else {
-        tc_log_info(LOG_ERR, 0, "sesson already deleted:%llu", ev);
+        tc_log_info(LOG_ERR, 0, "sesson already deleted:%p", ev);
     }
 }
 
