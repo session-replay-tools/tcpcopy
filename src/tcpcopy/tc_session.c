@@ -1370,15 +1370,17 @@ check_pack_full(tc_sess_t *s, tc_iph_t *ip)
 static inline int
 check_resp_greet(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 {
-    if (s->sm.state < SND_REQ && !s->sm.rcv_rep_greet) {
-        s->sm.rcv_rep_greet = 1;
-        s->sm.need_rep_greet = 0;
-        s->sm.candidate_rep_wait = 0;
+    if (s->sm.state < SND_REQ) {
+        if (!s->sm.rcv_rep_greet) {
+            s->sm.rcv_rep_greet = 1;
+            s->sm.need_rep_greet = 0;
+            s->sm.candidate_rep_wait = 0;
 #if (TC_PLUGIN)
-        if (clt_settings.plugin && clt_settings.plugin->proc_greet) {
-            clt_settings.plugin->proc_greet(s, ip, tcp);
-        }
+            if (clt_settings.plugin && clt_settings.plugin->proc_greet) {
+                clt_settings.plugin->proc_greet(s, ip, tcp);
+            }
 #endif
+        } 
         return PACK_STOP;
     }
 
@@ -1477,15 +1479,16 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
                 check_pack_full(s, ip);
 
-                if (s->sm.internal_usage && before(s->req_con_snd_seq,
-                            s->max_con_seq)) 
+
+                if ((s->sm.internal_usage && 
+                            before(s->req_con_snd_seq, s->max_con_seq)))
                 {
                     s->sm.candidate_rep_wait = 0;
                     proc_clt_pack_from_buffer(s);
                     s->sm.rep_payload_type = 0;
                 } else {
-                    utimer_disp(s, s->rtt, TYPE_DELAY_ACK);
                     s->sm.candidate_rep_wait = 1;
+                    utimer_disp(s, s->rtt, TYPE_DELAY_ACK);
                 }
 
             } else {
@@ -1936,6 +1939,10 @@ proc_clt_after_filter(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
         }
     }
 
+    if (s->cur_pack.cont_len > 0) {
+        tc_log_info(LOG_WARN, 0, "drop content pack:%u", ntohs(s->src_port));
+    } 
+
     tc_log_debug1(LOG_DEBUG, 0, "drop pack:%u", ntohs(s->src_port));
 
     return PACK_CONTINUE;
@@ -2001,7 +2008,8 @@ proc_clt_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
     if (cont_len > 0) {
         s->req_con_ack_seq = s->req_con_cur_ack_seq;
         s->req_con_cur_ack_seq  = ntohl(tcp->ack_seq);
-        tc_log_debug2(LOG_INFO, 0, "con:%d,p:%u", cont_len, ntohs(s->src_port));
+        tc_log_debug3(LOG_INFO, 0, "state:%d, con len:%d,p:%u", 
+                s->sm.state, cont_len, ntohs(s->src_port));
 
         s->sm.state |= ESTABLISHED;
 

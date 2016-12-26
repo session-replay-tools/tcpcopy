@@ -105,7 +105,7 @@ typedef struct tc_sess_s        tc_sess_t;
 
 
 #define MAX_REAL_SERVERS 32
-#define MAX_IDLE_TIME 28800
+#define MAX_IDLE_TIME 86400
 #define MAX_IDLE_MS_TIME (MAX_IDLE_TIME * 1000)
 
 #define TIMER_DEFAULT_TIMEOUT 60000
