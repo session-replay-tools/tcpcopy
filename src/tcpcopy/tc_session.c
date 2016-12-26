@@ -1380,7 +1380,12 @@ check_resp_greet(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
                 clt_settings.plugin->proc_greet(s, ip, tcp);
             }
 #endif
-        } 
+        } else {
+            tc_log_debug1(LOG_DEBUG, 0, "retransmit greet packet:%u", 
+                    ntohs(s->src_port));
+            proc_clt_pack_from_buffer(s);
+        }
+
         return PACK_STOP;
     }
 
