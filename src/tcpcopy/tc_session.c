@@ -852,7 +852,7 @@ send_faked_syn(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
     s->cur_pack.cont_len = 0;
     s->frame = frame;
-    send_pack(s, f_ip, f_tcp, true);
+    send_pack(s, f_ip, f_tcp, false);
 }
 
 
@@ -1791,7 +1791,7 @@ is_wait_greet(tc_sess_t *s)
         return true;
     }
     
-    if (s->sm.req_ack_snd) {
+    if (s->sm.req_ack_snd && s->sm.state >= ESTABLISHED) {
 
         if (after(s->cur_pack.ack_seq, s->req_ack_snd_seq) && 
                 s->cur_pack.seq == s->req_exp_seq) 
