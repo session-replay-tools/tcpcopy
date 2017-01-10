@@ -94,7 +94,7 @@ tc_pcap_socket_in_init(pcap_t **pd, char *device,
 
     if (pcap_lookupnet(device, &net, &netmask, ebuf) < 0) {
         tc_log_info(LOG_WARN, 0, "lookupnet:%s", ebuf);
-        netmask = PCAP_NETMASK_UNKNOWN;
+        return TC_INVALID_SOCK;
     }
 
     if (pcap_compile(*pd, &fp, pcap_filter, 0, netmask) == -1) {
@@ -228,9 +228,6 @@ int
 tc_pcap_snd(unsigned char *frame, size_t len)
 {
     int   send_len;
-    char  pcap_errbuf[PCAP_ERRBUF_SIZE];
-
-    pcap_errbuf[0]='\0';
 
     send_len = pcap_inject(pcap, frame, len);
     if (send_len == -1) {
