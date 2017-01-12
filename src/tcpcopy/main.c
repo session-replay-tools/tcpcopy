@@ -439,7 +439,7 @@ char_to_data(const char ch)
 
 static int 
 parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port, 
-        unsigned char *mac)
+        unsigned char *mac, int *mac_set)
 {
     int      i, len;
     char    *p, *seq, *before_mac, *ip_s, *port_s;
@@ -474,6 +474,8 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port,
             return -1;
         }
 
+        *mac_set = 1;
+
         for (i = 0; i < ETHER_ADDR_LEN; ++i) {
             mac[i]  = char_to_data(*p++) << 4;
             mac[i] += char_to_data(*p++);
@@ -494,6 +496,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port,
 static int
 parse_target(transfer_map_t *ip_port, char *addr)
 {
+    int     mac_set;
     char   *seq, *addr1, *addr2;
 
     if ((seq = strchr(addr, '-')) == NULL) {
@@ -507,10 +510,29 @@ parse_target(transfer_map_t *ip_port, char *addr)
     addr1 = addr;
     addr2 = seq + 1;
 
+    mac_set = 0;
     parse_ip_port_pair(addr1, &ip_port->online_ip, &ip_port->online_port,
-            ip_port->src_mac);
+            ip_port->src_mac, &mac_set);
+
+#if (TC_PCAP_SND)
+    if (!mac_set) {
+        tc_log_info(LOG_WARN, 0, "src mac address is invalid or not set");
+        fprintf(stderr, "src mac address is invalid or not set\n");
+        return -1;
+    }
+#endif
+
+    mac_set = 0;
     parse_ip_port_pair(addr2, &ip_port->target_ip, &ip_port->target_port,
-            ip_port->dst_mac);
+            ip_port->dst_mac, &mac_set);
+
+#if (TC_PCAP_SND)
+    if (!mac_set) {
+        tc_log_info(LOG_WARN, 0, "dst mac address is invalid or not set");
+        fprintf(stderr, "dst mac address is invalid or not set\n");
+        return -1;
+    }
+#endif
 
     if (ip_port->target_ip == LOCALHOST) {
         clt_settings.target_localhost = 1;
