@@ -198,7 +198,7 @@ fill_pro_common_header(tc_iph_t *ip, tc_tcph_t *tcp)
 int
 tc_init_sess_table(void)
 {
-    tc_pool_t *pool = tc_create_pool(TC_DEFAULT_POOL_SIZE, 0, 0);
+    tc_pool_t *pool = tc_create_pool(TC_DEFAULT_LR_POOL_SIZE, 0, 0);
     if (pool != NULL) {
         sess_table = hash_create(pool, 65536);
         if (sess_table != NULL) {

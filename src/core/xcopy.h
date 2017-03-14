@@ -80,8 +80,9 @@ typedef struct tc_sess_s        tc_sess_t;
 
 #define TC_UPOOL_MAXV 511
 #define TC_DEFAULT_POOL_SIZE   (16 * 1024)
-#define TC_PLUGIN_POOL_SIZE   (32 * 1024)
 #define TC_DEFAULT_UPOOL_SIZE   1024
+#define TC_DEFAULT_LR_POOL_SIZE (4 *1024 * 1024)
+#define TC_PLUGIN_POOL_SIZE TC_DEFAULT_LR_POOL_SIZE
 
 #define MEM_HID_INFO_SZ sizeof(tc_mem_hid_info_t)
 #define TC_POOL_ALIGNMENT       16

@@ -173,10 +173,12 @@ tc_check_block_free(tc_pool_t *root, tc_pool_t *p)
             p->sh_pt.fp = hid;
             p->sh_num.fn = i;
             hid->try_rel_cnt++;
+#if (TC_DEBUG)
             if (hid->try_rel_cnt == REL_CNT_MAX_VALUE) {
-                tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,len:%u occupy", 
+                tc_log_debug3(LOG_INFO, 0, "pool:%p,block:%p,len:%u occupy", 
                         root, p, hid->len);
             }
+#endif
             return false;
         }
         m += hid->len;
