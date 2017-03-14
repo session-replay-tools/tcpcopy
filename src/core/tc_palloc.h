@@ -36,8 +36,8 @@ struct tc_pool_s {
         int max;
         int fn;
     } sh_num;
-    unsigned int           main_size:16;
-    unsigned int           sub_size:16;
+    int                    main_size;
+    int                    sub_size;
     tc_pool_t             *current;
     union {
         tc_mem_hid_info_t *fp;
