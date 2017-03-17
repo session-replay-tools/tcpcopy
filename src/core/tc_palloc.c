@@ -23,8 +23,9 @@ tc_create_pool(int size, int sub_size, int pool_max)
         p->d.next = NULL;
         p->d.failed = 0;
         p->d.objs   = 0;
-        p->d.cand_recycle = 0;
         p->d.need_check = 0;
+        p->d.cand_recycle = 0;
+        p->d.is_traced = 0;
         p->main_size = size;
         if (sub_size > (int) TC_MIN_POOL_SIZE) {
             p->sub_size = sub_size;
@@ -161,6 +162,11 @@ tc_check_block_free(tc_pool_t *root, tc_pool_t *p)
     if (p->sh_pt.fp) {
         m = (u_char *) p->sh_pt.fp;
         i = p->sh_num.fn;
+#if (TC_DETECT_MEMORY)
+        tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,m from last:%p, i:%d", 
+                root, p, m, i);
+#endif
+ 
     } else {
         m = ((u_char *) p) + sizeof(tc_pool_t);
         m = tc_align_ptr(m, TC_ALIGNMENT);
@@ -173,9 +179,9 @@ tc_check_block_free(tc_pool_t *root, tc_pool_t *p)
             p->sh_pt.fp = hid;
             p->sh_num.fn = i;
             hid->try_rel_cnt++;
-#if (TC_DEBUG)
+#if (TC_DETECT_MEMORY)
             if (hid->try_rel_cnt == REL_CNT_MAX_VALUE) {
-                tc_log_debug3(LOG_INFO, 0, "pool:%p,block:%p,len:%u occupy", 
+                tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,len:%u occupy", 
                         root, p, hid->len);
             }
 #endif
@@ -233,8 +239,9 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
     new->d.next = NULL;
     new->d.failed = 0;
     new->d.objs = 1;
-    new->d.cand_recycle = 0;
     new->d.need_check = 1;
+    new->d.cand_recycle = 0;
+    new->d.is_traced = 0;
     new->sh_pt.fp = NULL;
     new->sh_num.fn = 0;
 

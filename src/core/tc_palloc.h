@@ -17,6 +17,7 @@ typedef struct {
     uint32_t try_rel_cnt:6;
     uint32_t large:1;
     uint32_t released:1;
+    uint32_t padding;
 } tc_mem_hid_info_t;
 
 typedef struct {
@@ -27,6 +28,7 @@ typedef struct {
     uint32_t             failed:8;
     uint32_t             need_check:1;
     uint32_t             cand_recycle:1;
+    uint32_t             is_traced:1;
 } tc_pool_data_t;
 
 
