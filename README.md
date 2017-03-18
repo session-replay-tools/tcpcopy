@@ -47,7 +47,7 @@ Two quick start options are available for *tcpcopy*:
 ## Getting intercept installed on the assistant server
 1. cd intercept
 2. ./configure 
-    choose appropriate configure options if needed
+   - choose appropriate configure options if needed
 3. make
 4. make install
 
@@ -61,7 +61,7 @@ Two quick start options are available for *tcpcopy*:
 ## Getting tcpcopy installed on the online server
 1. cd tcpcopy
 2. ./configure 
-    choose appropriate configure options if needed
+    - choose appropriate configure options if needed
 3. make
 4. make install
 
