@@ -154,7 +154,7 @@ To solve this problem, we suggest deploying *tcpcopy*, *target applications* and
 
 Note that deploying the target server's application on one virtual machine in the same segment may face the above problems.
 
-#### 4. OS of the Target Server
+### 4. OS of the Target Server
 The target server may set rpfilter, which would check whether the source IP address in the packet is forged. If yes, the packet will be dropped at the network layer.
 
 If the target server could not receive any requests although packets can be captured by tcpdump on the target server, you should check if you have any corresponding rpfilter settings. If set, you have to remove the related settings to let the packets pass through the network layer.
