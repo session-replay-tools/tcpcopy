@@ -4,7 +4,7 @@ TCPCopy is a TCP stream replay tool to support real testing of Internet server a
 
 
 ## Description
-Although the real live flow is important for the test of Internet server applications, it is hard to simulate it as online environments are too complex. To support more realistic testing of Internet server applications, we develop a live flow reproduction tool – TCPCopy, which could generate the test workload that is similar to the production workload. Currently, TCPCopy has been widely used by companies in China.   
+Although the real live flow is important for the test of Internet server applications, it is hard to simulate it as online environments are too complex. To support more realistic testing of Internet server applications, we develop a live flow reproduction tool - TCPCopy, which could generate the test workload that is similar to the production workload. Currently, TCPCopy has been widely used by companies in China.   
 
 TCPCopy has little influence on the production system except occupying additional CPU, memory and bandwidth. Moreover, the reproduced workload is similar to the production workload in request diversity, network latency and resource occupation.
 
@@ -148,9 +148,9 @@ Maybe the best way to capture requests is to mirror ingress packets by switch an
 If you want to avoid ip_conntrack problems or get better performance, configure *tcpcopy* with "--pcap-send", then with appropriate parameters *tcpcopy* could send packets at the data link layer to a target server.
 
 ### 3.On the Way to the Target Server 
-When a packet is sent by *tcpcopy*, it may encounter many challenges before reaching the target server. As the source IP address in the packet is still the end-user’s IP address(by default) other than the online server’s, some security devices may take it for an invalid or forged packet and drop it. In this case, when you use tcpdump to capture packets on the target server, no packets from the expected end-users will be captured. To know whether you are under such circumstances, you can choose a target server in the same network segment to do a test. If packets could be sent to the target server successfully in the same network segment but unsuccessfully across network segments, your packets may be dropped halfway. 
+When a packet is sent by *tcpcopy*, it may encounter many challenges before reaching the target server. As the source IP address in the packet is still the end-user's IP address(by default) other than the online server's, some security devices may take it for an invalid or forged packet and drop it. In this case, when you use tcpdump to capture packets on the target server, no packets from the expected end-users will be captured. To know whether you are under such circumstances, you can choose a target server in the same network segment to do a test. If packets could be sent to the target server successfully in the same network segment but unsuccessfully across network segments, your packets may be dropped halfway. 
 
-To solve this problem, we suggest deploying *tcpcopy*, *target applications* and *intercept* on servers in the same network segment. There’s also another solution with the help of a proxy in the same network segment. *tcpcopy* could send packets to the proxy and then the proxy would send the corresponding requests to the target server in another network segment.
+To solve this problem, we suggest deploying *tcpcopy*, *target applications* and *intercept* on servers in the same network segment. There's also another solution with the help of a proxy in the same network segment. *tcpcopy* could send packets to the proxy and then the proxy would send the corresponding requests to the target server in another network segment.
 
 Note that deploying the target server's application on one virtual machine in the same segment may face the above problems.
 
