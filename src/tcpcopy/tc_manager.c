@@ -256,7 +256,7 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
         clt_settings.plugin->init_module(&clt_settings);
     }
     if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
-        tc_event_add_timer(ev_lp->pool, (MAX_IDLE_MS_TIME << 1), 
+        tc_event_add_timer(ev_lp->pool, MAX_IDLE_MS_TIME, 
                 NULL, remove_obso_resource);
     }
 #endif

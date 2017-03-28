@@ -200,6 +200,9 @@ tc_init_sess_table(void)
 {
     tc_pool_t *pool = tc_create_pool(TC_LR_POOL_SIZE, TC_LR_POOL_SUB_SIZE, 0);
     if (pool != NULL) {
+#if (TC_DETECT_MEMORY)
+        pool->d.is_traced = 1;
+#endif
         sess_table = hash_create(pool, 65536);
         if (sess_table != NULL) {
             return TC_OK;

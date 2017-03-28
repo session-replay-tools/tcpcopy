@@ -163,8 +163,10 @@ tc_check_block_free(tc_pool_t *root, tc_pool_t *p)
         m = (u_char *) p->sh_pt.fp;
         i = p->sh_num.fn;
 #if (TC_DETECT_MEMORY)
-        tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,m from last:%p, i:%d", 
-                root, p, m, i);
+        if (root->d.is_traced) {
+            tc_log_info(LOG_INFO, 0, "pool:%p,block:%p,m from last:%p, i:%d", 
+                    root, p, m, i);
+        }
 #endif
  
     } else {
@@ -217,7 +219,11 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
             m = (u_char *) p;
             new = p;
             pool->d.next = p->d.next;
-            tc_log_debug2(LOG_INFO, 0, "pool:%p recycle:%p", pool, p);
+#if (TC_DETECT_MEMORY)
+            if (pool->d.is_traced) {
+                tc_log_info(LOG_INFO, 0, "pool:%p recycle:%p", pool, p);
+            }
+#endif
         }
     }
 
@@ -232,6 +238,14 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
         if (m == NULL) {
             return NULL;
         }
+
+#if (TC_DETECT_MEMORY)
+        if (pool->d.is_traced) {
+            tc_log_info(LOG_INFO, 0, "pare pool:%p, create pool:%p, size:%d", 
+                    pool, m, (int) psize);
+        }
+#endif
+
         new = (tc_pool_t *) m;
         new->d.end  = m + psize;
     }
