@@ -9,6 +9,7 @@ hash_node_malloc(tc_pool_t *pool, uint64_t key, void *data)
     if (hn != NULL) {
         hn->key  = key;
         hn->data = data;
+        hn->create_time = tc_time();
         hn->access_time = tc_time();
     } else {
         tc_log_info(LOG_ERR, errno, "can't malloc memory for hash node");
@@ -19,7 +20,7 @@ hash_node_malloc(tc_pool_t *pool, uint64_t key, void *data)
 
 
 static p_link_node
-hash_find_node(hash_table *table, uint64_t key)
+hash_find_link_node(hash_table *table, uint64_t key)
 {
     bool         first = true;
     hash_node   *hn;
@@ -76,11 +77,26 @@ void *
 hash_find(hash_table *table, uint64_t key)
 {
     hash_node   *hn;
-    p_link_node  ln = hash_find_node(table, key);
+    p_link_node  ln = hash_find_link_node(table, key);
 
     if (ln != NULL) {
         hn = (hash_node *) ln->data;
         return hn->data;
+    }
+
+    return NULL;
+}
+
+
+hash_node *
+hash_find_node(hash_table *table, uint64_t key)
+{
+    hash_node   *hn;
+    p_link_node  ln = hash_find_link_node(table, key);
+
+    if (ln != NULL) {
+        hn = (hash_node *) ln->data;
+        return hn;
     }
 
     return NULL;
@@ -94,7 +110,7 @@ hash_add(hash_table *table, tc_pool_t *pool, uint64_t key, void *data)
     link_list   *l;
     p_link_node  ln;
 
-    ln = hash_find_node(table, key);
+    ln = hash_find_link_node(table, key);
     if (ln == NULL) {
         tmp = hash_node_malloc(pool, key, data);
         if (tmp != NULL) {
@@ -122,7 +138,7 @@ bool
 hash_del(hash_table *table, tc_pool_t *pool, uint64_t key)
 {
     link_list  *l  = get_link_list(table, key);
-    p_link_node ln = hash_find_node(table, key);
+    p_link_node ln = hash_find_link_node(table, key);
 
     if (ln != NULL) {
         table->total--;

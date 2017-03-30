@@ -6,6 +6,7 @@
 typedef struct hash_node_s{
     uint64_t    key;
     void       *data;
+    time_t      create_time;
     time_t      access_time;
 }hash_node_t, hash_node;
 
@@ -37,6 +38,7 @@ get_link_list(hash_table *table, uint64_t key)
 
 bool hash_add(hash_table*, tc_pool_t*, uint64_t, void *);
 void *hash_find(hash_table*, uint64_t);
+hash_node *hash_find_node(hash_table *, uint64_t);
 bool hash_del(hash_table*, tc_pool_t*, uint64_t);
 
 #endif /* TC_HASH_INCLUDED */
