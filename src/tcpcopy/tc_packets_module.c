@@ -440,24 +440,9 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
 
 
 #if (TC_OFFLINE)
-int
-tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
+static int tc_open_and_read_pcap_file(char *pcap_file)
 {
-#if (!TC_PCAP_SND)
-    int  fd;
-#endif
     char ebuf[PCAP_ERRBUF_SIZE];
-
-#if (!TC_PCAP_SND)
-    /* init the raw socket to send */
-    if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCK) {
-        return TC_ERR;
-    } else {
-        tc_raw_socket_out = fd;
-    }
-#else
-    tc_pcap_snd_init(clt_settings.output_if_name, clt_settings.mtu);
-#endif
 
     if (pcap_file == NULL) {
         return TC_ERR;
@@ -470,9 +455,40 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
     }
 
     gettimeofday(&base_time, NULL);
+    first_pack_time = base_time;
+    last_pack_time  = base_time;
+
+    accumulated_diff = 0;
+    adj_v_pack_df = 0;
+
     tc_log_info(LOG_NOTICE, 0, "open pcap success:%s", pcap_file);
     tc_log_info(LOG_NOTICE, 0, "send the first packets here");
     send_packets_from_pcap(1);
+
+    return TC_OK;
+}
+
+int
+tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
+{
+#if (!TC_PCAP_SND)
+    int  fd;
+#endif
+
+#if (!TC_PCAP_SND)
+    /* init the raw socket to send */
+    if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCK) {
+        return TC_ERR;
+    } else {
+        tc_raw_socket_out = fd;
+    }
+#else
+    tc_pcap_snd_init(clt_settings.output_if_name, clt_settings.mtu);
+#endif
+
+    if (tc_open_and_read_pcap_file(pcap_file) == TC_ERR) {
+        return TC_ERR;
+    }
 
     /* register a timer for offline */
     tc_event_add_timer(event_loop->pool, OFFLINE_ACTIVATE_INTERVAL, 
@@ -485,15 +501,34 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
 static void
 proc_offline_pack(tc_event_timer_t *evt)
 {
-    int diff;  
+    int   diff;  
+    char *pcap_file;
 
     if (!read_pcap_over) {
         send_packets_from_pcap(0);
     } else {
         diff = tc_time() - read_pcap_over_time;
         if (diff > OFFLINE_TAIL_TIMEOUT) {
-            tc_over = SIGRTMAX;
-            tc_log_info(LOG_NOTICE, 0, "offline replay is complete");
+            tc_log_info(LOG_INFO, 0, "replay times:%d", 
+                    clt_settings.replay_times);
+            clt_settings.replay_times--;
+            if (clt_settings.replay_times > 0) {
+                if (clt_settings.pcap != NULL) {
+                    pcap_close(clt_settings.pcap);
+                    clt_settings.pcap = NULL;
+                }
+
+                pcap_file = clt_settings.pcap_file;
+                if (tc_open_and_read_pcap_file(pcap_file) != TC_OK) {
+                    tc_over = SIGRTMAX;
+                    tc_log_info(LOG_NOTICE, 0, "read pcap file err, quit");
+                } else {
+                    read_pcap_over = false;
+                }
+            } else {
+                tc_over = SIGRTMAX;
+                tc_log_info(LOG_NOTICE, 0, "offline replay is complete");
+            }
         }
     }
 

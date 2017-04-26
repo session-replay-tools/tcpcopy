@@ -101,6 +101,7 @@ typedef struct xcopy_clt_settings {
 
 #if (TC_OFFLINE)
     int           accelerated_times;    /* accelerated times */
+    int           replay_times;
     pcap_t       *pcap;
     long          pcap_time;
     uint64_t      interval;            

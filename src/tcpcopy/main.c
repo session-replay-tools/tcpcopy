@@ -73,6 +73,7 @@ usage(void)
     printf("-a <num>       accelerated times for offline replay\n");
     printf("-I <num>       set the threshold interval for offline replay acceleration\n"
            "               in millisecond.\n");
+    printf("-T <num>       replay times for offline replay\n");
 #endif
 #if (TC_PCAP)
     printf("-i <device,>   The name of the interface to listen on. This is usually a driver\n"
@@ -155,6 +156,7 @@ read_args(int argc, char **argv)
          "i:" /* input pcap file */
          "a:" /* accelerated times */
          "I:" /* threshold interval time for acceleratation */
+         "T:" /* replay times */
 #endif
 #if (TC_PCAP)
          "i:" /* <device,> */
@@ -206,6 +208,9 @@ read_args(int argc, char **argv)
                 break;
             case 'I':
                 clt_settings.interval = atoi(optarg);
+                break;
+            case 'T':
+                clt_settings.replay_times = atoi(optarg);
                 break;
 #endif
 #if (TC_PCAP_SND)
@@ -956,6 +961,10 @@ set_details()
 
     if (clt_settings.interval > 0) {
         clt_settings.interval = clt_settings.interval * 1000;
+    }
+
+    if (clt_settings.replay_times < 1) {
+        clt_settings.replay_times = 1;
     }
 #endif
 
