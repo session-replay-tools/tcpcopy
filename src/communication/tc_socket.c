@@ -227,12 +227,37 @@ tc_pcap_snd_init(char *if_name, int mtu)
 int
 tc_pcap_snd(unsigned char *frame, size_t len)
 {
-    int   send_len;
+    int   send_len, try_snd_times = 0, need_retry;
 
-    send_len = pcap_inject(pcap, frame, len);
-    if (send_len == -1) {
-        return TC_ERR;
-    }
+    do {
+        need_retry = 0;
+        try_snd_times++;
+        send_len = pcap_inject(pcap, frame, len);
+        if (send_len == -1) {
+            switch(errno) {
+                case EAGAIN:
+                    tc_log_info(LOG_NOTICE, errno, "pcap_inject EAGAIN");
+                    need_retry = 1;
+                    break;
+                case ENOBUFS:
+                    tc_log_info(LOG_NOTICE, errno, "pcap_inject ENOBUFS");
+                    need_retry = 1;
+                    break;
+                default:
+                    break;
+            }
+
+            if (!need_retry) {
+                return TC_ERR;
+            }
+
+            if (try_snd_times > MAX_WRITE_TRIES) {
+                tc_log_info(LOG_ERR, 0, "pcap inject too many times");
+                return TC_ERR;
+            }
+        }
+
+    } while (need_retry);
 
     return TC_OK;
 }
