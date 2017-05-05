@@ -79,7 +79,7 @@ Two quick start options are available for *tcpcopy*:
 
 
    
-##Running TCPCopy
+## Running TCPCopy
 Assume *tcpcopy* and *intercept* are both configured with "./configure".
  
 ### 1) On the target server which runs server applications:
