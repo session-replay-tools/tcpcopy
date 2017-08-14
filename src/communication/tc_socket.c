@@ -159,6 +159,7 @@ tc_raw_socket_in_init(int type)
     ret = setsockopt(fd, SOL_SOCKET, SO_RCVBUF, &recv_buf_opt, opt_len);
     if (ret == -1) {
         tc_log_info(LOG_ERR, errno, "Set raw socket(%d)'s recv buffer failed");
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
@@ -191,6 +192,7 @@ tc_raw_socket_out_init(void)
      * It does not need setting for linux, but *BSD needs
      */
     if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
+        tc_socket_close(fd);
         tc_log_info(LOG_ERR, errno,
                     "Set raw socket(%d) option \"IP_HDRINCL\" failed", fd);
         return TC_INVALID_SOCK;
@@ -227,12 +229,37 @@ tc_pcap_snd_init(char *if_name, int mtu)
 int
 tc_pcap_snd(unsigned char *frame, size_t len)
 {
-    int   send_len;
+    int   send_len, try_snd_times = 0, need_retry;
 
-    send_len = pcap_inject(pcap, frame, len);
-    if (send_len == -1) {
-        return TC_ERR;
-    }
+    do {
+        need_retry = 0;
+        try_snd_times++;
+        send_len = pcap_inject(pcap, frame, len);
+        if (send_len == -1) {
+            switch(errno) {
+                case EAGAIN:
+                    tc_log_info(LOG_NOTICE, errno, "pcap_inject EAGAIN");
+                    need_retry = 1;
+                    break;
+                case ENOBUFS:
+                    tc_log_info(LOG_NOTICE, errno, "pcap_inject ENOBUFS");
+                    need_retry = 1;
+                    break;
+                default:
+                    break;
+            }
+
+            if (!need_retry) {
+                return TC_ERR;
+            }
+
+            if (try_snd_times > MAX_WRITE_TRIES) {
+                tc_log_info(LOG_ERR, 0, "pcap inject too many times");
+                return TC_ERR;
+            }
+        }
+
+    } while (need_retry);
 
     return TC_OK;
 }

@@ -61,6 +61,7 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
         cf->conf_file = &conf_file;
 
         if (fstat(fd, &cf->conf_file->file.info) == -1) {
+            tc_socket_close(fd);
             tc_log_info(LOG_ERR, errno, "fstat %s failed", filename);
             fprintf(stderr, "fstat %s failed:%s\n", filename, strerror(errno));
             return TC_ERR;
@@ -70,6 +71,7 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
         buf.start = tc_alloc(TC_CONF_BUFFER);
         
         if (buf.start == NULL) {
+            tc_socket_close(fd);
             return TC_ERR;
         }
 
@@ -110,6 +112,7 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
     }
 
     tc_free(buf.start);
+    tc_socket_close(fd);
 
     return rc;
 }
@@ -118,12 +121,9 @@ tc_conf_parse(tc_module_t *plugin, tc_pool_t *pool, tc_conf_t *cf,
 static int
 tc_conf_handler(tc_cmd_t *cmd, tc_conf_t *cf, int last)
 {
-    int             found;
     tc_str_t       *name;
 
     name = cf->args->elts;
-
-    found = 0;
 
     for ( /* void */ ; cmd->name.len; cmd++) {
 
@@ -134,9 +134,6 @@ tc_conf_handler(tc_cmd_t *cmd, tc_conf_t *cf, int last)
         if (strcmp((char *) name->data, (char *) cmd->name.data) != 0) {
             continue;
         }
-
-        found = 1;
-
 
         if (cmd->type & TC_CONF_FLAG) {
 
@@ -166,15 +163,6 @@ tc_conf_handler(tc_cmd_t *cmd, tc_conf_t *cf, int last)
         }
 
         return cmd->set(cf, cmd);
-    }
-
-    if (found) {
-        tc_log_info(LOG_ERR, 0,
-                "\"%s\" directive is not allowed here", name->data);
-
-        fprintf(stderr, "\"%s\" directive is not allowed here", name->data);
-
-        return TC_ERR;
     }
 
     tc_log_info(LOG_ERR, 0, "unknown directive \"%s\"", name->data);

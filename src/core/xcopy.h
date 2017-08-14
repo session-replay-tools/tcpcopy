@@ -199,7 +199,7 @@ typedef struct tc_sess_s        tc_sess_t;
 #define TC_CONF_TAKE2       0x00000004
 #define TC_CONF_TAKE3       0x00000008
 
-#define TC_CONF_MAX_ARGS    8
+#define TC_CONF_MAX_ARGS    4
 
 #define TC_CONF_TAKE12      (TC_CONF_TAKE1|TC_CONF_TAKE2)
 #define TC_CONF_TAKE13      (TC_CONF_TAKE1|TC_CONF_TAKE3)

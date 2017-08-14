@@ -271,16 +271,18 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
 
     current = pool->current;
 
-    for (p = current; p->d.next; p = p->d.next) {
-        if (p->d.failed++ > 4) {
-            if (p->d.need_check) {
-                p->d.cand_recycle = 1;
+    if (current) {
+        for (p = current; p->d.next; p = p->d.next) {
+            if (p->d.failed++ > 4) {
+                if (p->d.need_check) {
+                    p->d.cand_recycle = 1;
+                }
+                current = p->d.next;
             }
-            current = p->d.next;
         }
-    }
 
-    p->d.next = new;
+        p->d.next = new;
+    }
 
     pool->current = current ? current : new;
 
@@ -292,25 +294,10 @@ static void *
 tc_palloc_large(tc_pool_t *pool, size_t size)
 {
     void              *p;
-    tc_uint_t          n;
     tc_pool_large_t   *large;
 
     p = tc_alloc(size);
     if (p != NULL) {
-
-        n = 0;
-
-        for (large = pool->sh_pt.large; large; large = large->next) {
-            if (large->alloc == NULL) {
-                large->alloc = p;
-                return p;
-            }
-
-            if (n++ > 3) {
-                break;
-            }
-        }
-
         large = tc_palloc(pool, sizeof(tc_pool_large_t));
         if (large == NULL) {
             tc_free(p);

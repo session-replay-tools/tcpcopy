@@ -17,28 +17,37 @@ tc_message_init(tc_event_loop_t *event_loop, uint32_t ip, uint16_t port)
     }
 
     if (tc_socket_connect(fd, ip, port) == TC_ERR) {
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
     if (tc_socket_set_nodelay(fd) == TC_ERR) {
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
     if (tc_socket_set_nonblocking(fd) == TC_ERR) {
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
     len = (socklen_t) sizeof(struct timeval);
-    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, len);
+    if (setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, len) == -1) {
+        tc_log_info(LOG_ERR, errno, "Set timeout failed");
+        tc_socket_close(fd);
+        return TC_INVALID_SOCK;
+    }
 
     ev = tc_event_create(event_loop->pool, fd, tc_proc_server_msg, NULL);
     if (ev == NULL) {
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
     clt_settings.ev[fd] = ev;
 
     if (tc_event_add(event_loop, ev, TC_EVENT_READ) == TC_EVENT_ERROR) {
+        tc_socket_close(fd);
         return TC_INVALID_SOCK;
     }
 
@@ -55,8 +64,8 @@ tc_proc_server_msg(tc_event_t *rev)
     int            len;
     msg_server_t   msg;
 #else
-    int            num, k;
-    unsigned char *p, resp[COMB_LENGTH + sizeof(uint16_t)];
+    int            num = 0, k;
+    unsigned char *p, resp[COMB_LENGTH + sizeof(uint16_t)] = {0};
 #endif
 
 
