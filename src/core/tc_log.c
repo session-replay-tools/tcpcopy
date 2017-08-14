@@ -35,7 +35,11 @@ tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
         return i;
     }
 
-    return size - 1;
+    if (size >= 1) {
+        return size - 1;
+    } else {
+        return 0;
+    }
 }
 
 
@@ -147,18 +151,18 @@ tc_log_info(int level, int err, const char *fmt, ...)
 void
 tc_log_trace(int level, int err, int flag, tc_iph_t *ip, tc_tcph_t *tcp)
 {
-    char           *tmp_buf, src_ip[64], dst_ip[64];
+    char           *tmp_buf, src_ip[BUF_LEN] = {0}, dst_ip[BUF_LEN] = {0};
     uint32_t        pack_size;
     unsigned int    seq, ack_seq;
     struct in_addr  src_addr, dst_addr;
 
     src_addr.s_addr = ip->saddr;
     tmp_buf = inet_ntoa(src_addr);
-    strcpy(src_ip, tmp_buf);
+    strncpy(src_ip, tmp_buf, BUF_LEN - 1);
 
     dst_addr.s_addr = ip->daddr;
     tmp_buf = inet_ntoa(dst_addr);
-    strcpy(dst_ip, tmp_buf);
+    strncpy(dst_ip, tmp_buf, BUF_LEN - 1);
 
     pack_size = ntohs(ip->tot_len);
     seq = ntohl(tcp->seq);

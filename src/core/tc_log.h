@@ -14,6 +14,7 @@
 #define LOG_DEBUG             8
 
 #define LOG_MAX_LEN 512
+#define BUF_LEN 64
 
 int tc_log_init(const char *);
 void tc_log_end(void);

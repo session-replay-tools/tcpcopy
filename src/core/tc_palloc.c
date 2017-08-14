@@ -271,16 +271,18 @@ tc_palloc_block(tc_pool_t *pool, size_t size)
 
     current = pool->current;
 
-    for (p = current; p->d.next; p = p->d.next) {
-        if (p->d.failed++ > 4) {
-            if (p->d.need_check) {
-                p->d.cand_recycle = 1;
+    if (current) {
+        for (p = current; p->d.next; p = p->d.next) {
+            if (p->d.failed++ > 4) {
+                if (p->d.need_check) {
+                    p->d.cand_recycle = 1;
+                }
+                current = p->d.next;
             }
-            current = p->d.next;
         }
-    }
 
-    p->d.next = new;
+        p->d.next = new;
+    }
 
     pool->current = current ? current : new;
 
