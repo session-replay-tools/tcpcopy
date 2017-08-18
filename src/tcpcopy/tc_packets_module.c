@@ -107,7 +107,8 @@ tc_packets_init(tc_event_loop_t *event_loop)
                 return TC_ERR;
             }
 
-            strcpy(devices->device[i++].name, d->name);
+            strncpy(devices->device[i++].name, d->name,
+                    MAX_DEVICE_NAME_LEN - 1);
         }
         devices->device_num = i;
         pcap_freealldevs(alldevs);
