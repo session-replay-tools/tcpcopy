@@ -1447,9 +1447,12 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
                 shrink_rtt(s);
             }
         } else {
+            s->target_ack_seq = s->cur_pack.seq;
+            /* TODO Regression errors when add the following checking
             if (after(s->cur_pack.seq, s->target_ack_seq)) {
                 s->target_ack_seq = s->cur_pack.seq;
             }
+            */
         }
 
         if (check_bak_ack(s, ip, tcp) != PACK_STOP) {
