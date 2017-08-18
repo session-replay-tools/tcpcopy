@@ -1406,7 +1406,7 @@ check_resp_greet(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 static void
 proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 {
-    uint32_t cur_target_ack_seq, last_target_ack_seq;
+    uint32_t cur_target_ack_seq;
 
     tc_stat.resp_cnt++;
     tc_log_debug_trace(LOG_DEBUG, 0, TC_BAK, ip, tcp);
@@ -1438,9 +1438,8 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
             tc_stat.resp_cont_cnt++;
             s->rep_rcv_con_time = tc_time();
             cur_target_ack_seq = s->cur_pack.seq + s->cur_pack.cont_len;
-            last_target_ack_seq = s->target_ack_seq;
 
-            if (after(cur_target_ack_seq, last_target_ack_seq) || tcp->fin) {
+            if (after(cur_target_ack_seq, s->target_ack_seq) || tcp->fin) {
                 s->target_ack_seq = cur_target_ack_seq;
             } else {
                 tc_log_debug1(LOG_NOTICE, 0, "retrans from server:%u", 
@@ -1448,7 +1447,9 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
                 shrink_rtt(s);
             }
         } else {
-            s->target_ack_seq = ntohl(tcp->seq);
+            if (after(s->cur_pack.seq, s->target_ack_seq)) {
+                s->target_ack_seq = s->cur_pack.seq;
+            }
         }
 
         if (check_bak_ack(s, ip, tcp) != PACK_STOP) {
