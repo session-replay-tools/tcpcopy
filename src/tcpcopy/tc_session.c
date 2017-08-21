@@ -520,6 +520,9 @@ send_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp, bool client)
     if (client) {
         s->req_ack_snd_seq = ntohl(tcp->ack_seq);
         s->sm.req_ack_snd = 1;
+        if (s->sm.fake_syn) {
+            tcp->window = 65535;
+        }
     }
 
     s->target_nxt_seq  = ntohl(tcp->seq);
