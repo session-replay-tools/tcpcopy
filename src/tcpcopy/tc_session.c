@@ -1781,6 +1781,11 @@ proc_clt_fin(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 static inline int 
 continue_diag(tc_sess_t *s)
 {
+    if (clt_settings.not_wait_resp) {
+        s->sm.candidate_rep_wait = 0;
+        return PACK_CONTINUE;
+    }
+
     if (s->req_con_ack_seq != s->req_con_cur_ack_seq) {
         s->cur_pack.new_req_flag = 1;
         tc_log_debug1(LOG_DEBUG, 0, "a new req,p:%u", ntohs(s->src_port));

@@ -134,6 +134,7 @@ usage(void)
     printf("-P <file>      save PID in <file>, only used with -d option\n");
     printf("-O             only replay full session\n");
     printf("-g             gradully replay\n");
+    printf("-W             don't wait response when having a new req\n");
     printf("-L             lonely for tcpcopy when intercept is closed\n");
     printf("-h             print this help and exit\n"
            "-v             version\n"
@@ -183,6 +184,7 @@ read_args(int argc, char **argv)
          "l:" /* error log file */
          "P:" /* save PID in file */
          "L"  /* lonely */
+         "W"
          "O"  
          "g"  
          "h"  /* help, licence info */
@@ -280,6 +282,9 @@ read_args(int argc, char **argv)
                 return -1;
             case 'd':
                 clt_settings.do_daemonize = 1;
+                break;
+            case 'W':
+                clt_settings.not_wait_resp = 1;
                 break;
             case 'L':
                 clt_settings.lonely = 1;

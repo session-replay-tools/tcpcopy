@@ -90,6 +90,7 @@ typedef struct xcopy_clt_settings {
     unsigned int  lonely:1;             /* Lonely for tcpcopy */
     unsigned int  gradully:1;
     unsigned int  target_localhost:1;
+    unsigned int  not_wait_resp:1;
     unsigned int  do_daemonize:1;       /* daemon flag */
     unsigned int  percentage:7;         /* percentage of the full flow that 
                                            will be tranfered to the backend */
