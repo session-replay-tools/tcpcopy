@@ -241,6 +241,16 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
         return TC_ERR;
     }
 
+#if (TC_PLUGIN)
+    if (clt_settings.plugin && clt_settings.plugin->init_module) {
+        clt_settings.plugin->init_module(&clt_settings);
+    }
+    if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
+        tc_event_add_timer(ev_lp->pool, MAX_IDLE_MS_TIME, 
+                NULL, remove_obso_resource);
+    }
+#endif
+
 #if (TC_OFFLINE)
     if (tc_offline_init(ev_lp, clt_settings.pcap_file) == TC_ERR) {
         return TC_ERR;
@@ -251,15 +261,6 @@ tcp_copy_init(tc_event_loop_t *ev_lp)
     }
 #endif
 
-#if (TC_PLUGIN)
-    if (clt_settings.plugin && clt_settings.plugin->init_module) {
-        clt_settings.plugin->init_module(&clt_settings);
-    }
-    if (clt_settings.plugin && clt_settings.plugin->remove_obsolete_resources) {
-        tc_event_add_timer(ev_lp->pool, MAX_IDLE_MS_TIME, 
-                NULL, remove_obso_resource);
-    }
-#endif
     return TC_OK;
 }
 
