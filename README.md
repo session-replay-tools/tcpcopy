@@ -75,6 +75,7 @@ Two quick start options are available for *tcpcopy*:
     --single                    if intercept and tcpcopy are both configured with "--single" option, 
                                 only one tcpcopy works together with intercept, 
                                 and better performance is achieved.
+    --with-tcmalloc             use tcmalloc instead of malloc
     --with-debug                compile tcpcopy with debug support (saved in a log file)
 
 
