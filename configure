@@ -82,6 +82,10 @@ if [ $TC_PCAP_NEEDED = YES ]; then
     fi
 fi
 
+if [ $TC_TCMALLOC = YES ]; then
+    CORE_LIBS="$CORE_LIBS -ltcmalloc"
+fi
+
 if [ $TC_MILLION_SUPPORT = YES ]; then
     have=TC_MILLION_SUPPORT . auto/have
 fi

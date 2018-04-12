@@ -29,6 +29,7 @@ TC_DEBUG=NO
 TC_PF_RING_DIR=NONE
 TC_DETECT_MEMORY=NO
 TC_PCAP_NEEDED=NO
+TC_TCMALLOC=NO
 
 TC_CC_OPT=
 TC_LD_OPT=
@@ -76,6 +77,7 @@ do
         --udp)                           TC_UDP=YES                ;;
 
         --with-debug)                    TC_DEBUG=YES              ;;
+        --with-tcmalloc)                 TC_TCMALLOC=YES           ;;
         --with-pfring=*)                 TC_PF_RING_DIR="$value"   ;;
         --with-detect-memory)            TC_DETECT_MEMORY=YES      ;;
 
@@ -111,6 +113,7 @@ cat << END
   --with-ld-opt=OPTIONS              set additional linker options
   --with-pfring=PATH                 set path to PF_RING library sources
   --with-debug                       enable debug logging
+  --with-tcmalloc                    use tcmalloc instead of malloc
 
   --offline                          run tcpcopy at offline mode
   --single                           run tcpcopy at non-distributed mode
