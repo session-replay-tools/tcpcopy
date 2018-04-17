@@ -1409,6 +1409,7 @@ check_resp_greet(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 static void
 proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 {
+    int win_updated = 0;
     uint32_t cur_target_ack_seq;
 
     tc_stat.resp_cnt++;
@@ -1465,6 +1466,7 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
                 s->rep_ack_seq = s->cur_pack.ack_seq;
                 if (s->sm.state >= ESTABLISHED) {
                     update_retrans_packs(s);
+                    win_updated = 1;
                 }
             }
         } else {
@@ -1495,7 +1497,6 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
                 check_pack_full(s, ip);
 
-
                 if ((s->sm.internal_usage && 
                             before(s->req_con_snd_seq, s->max_con_seq)))
                 {
@@ -1509,6 +1510,13 @@ proc_bak_pack(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 
             } else {
                 s->sm.rep_payload_type = 0;
+                if (win_updated && s->sm.delay_snd) {
+                    tc_log_debug1(LOG_INFO, 0, "send delayed packets:%u",
+                            ntohs(s->src_port));
+                    s->sm.candidate_rep_wait = 0;
+                    s->sm.delay_snd = 0;
+                    proc_clt_pack_from_buffer(s);
+                }
                 if (s->sm.src_closed && s->sm.dst_closed) {
                     s->sm.sess_over = 1;
                 }
