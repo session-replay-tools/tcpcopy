@@ -39,7 +39,7 @@
 #undef TC_PCAP
 #endif
 
-#define VERSION "1.0.0"  
+#define VERSION "1.2.0"
 
 #define INTERNAL_VERSION 6
 
