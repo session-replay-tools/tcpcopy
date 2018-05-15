@@ -28,8 +28,7 @@ tc_check_ingress_pack_needed(tc_iph_t *ip)
     uint16_t      size_ip, size_udp, tot_len;
     tc_udpt_t    *udp;
 
-    /* check if it is a udp packet */
-    if (ip->protocol != IPPROTO_UDP) {
+    if (ip->version != 4 || ip->protocol != IPPROTO_UDP) {
         return is_needed;
     }
 

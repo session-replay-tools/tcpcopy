@@ -2113,6 +2113,11 @@ tc_check_ingress_pack_needed(tc_iph_t *ip)
 
     tc_stat.captured_cnt++;
 
+    if (ip->version != 4) {
+        tc_log_debug1(LOG_INFO, 0, "ip version: %d", ip->version);
+        return is_needed;
+    }
+
     if (ip->protocol != IPPROTO_TCP) {
         return is_needed;
     }
