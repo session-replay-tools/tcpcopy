@@ -50,7 +50,7 @@ esac
 
 #TC_GCC_OPT="-O2"
 #TC_GCC_OPT="-Os"
-#TC_GCC_OPT="-O3"
+TC_GCC_OPT="-O3"
 
 #CFLAGS="$CFLAGS -fomit-frame-pointer"
 
@@ -127,7 +127,7 @@ CFLAGS="$CFLAGS -std=gnu99 -D_FILE_OFFSET_BITS=64"
 # warnings
 
 # -W requires at least -O
-#CFLAGS="$CFLAGS ${TC_GCC_OPT:--O}"
+CFLAGS="$CFLAGS ${TC_GCC_OPT:--O}"
 
 #CFLAGS="$CFLAGS -Wall -Wpointer-arith"
 #CFLAGS="$CFLAGS -Wconversion"
