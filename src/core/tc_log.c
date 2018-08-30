@@ -144,7 +144,9 @@ tc_log_info(int level, int err, const char *fmt, ...)
 
     *p++ = '\n';
 
-    write(log_fd, buffer, p - buffer);
+    if (write(log_fd, buffer, p - buffer) == -1) {
+        fprintf(stderr, "write error: %s\n", strerror(errno));
+    }
 }
 
 
