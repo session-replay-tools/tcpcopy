@@ -175,9 +175,12 @@ You should not set ip_forward true or the assistant server can't act as a black 
 ## Bugs and feature requests
 Have a bug or a feature request? [Please open a new issue](https://github.com/session-replay-tools/tcpcopy/issues). Before opening any issue, please search for existing issues.
 
+## Technical support
+
+![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/tcpcopy_star.png)
 
 ## Copyright and license
 
-Copyright 2016 under [the BSD license](LICENSE).
+Copyright 2019 under [the BSD license](LICENSE).
 
 
