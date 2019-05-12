@@ -177,7 +177,7 @@ Have a bug or a feature request? [Please open a new issue](https://github.com/se
 
 ## Technical support
 
-![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/tcpcopy_star.png)
+![tcpcopy](https://raw.github.com/wangbin579/auxiliary/master/images/tcpcopy_support.png)
 
 ## Copyright and license
 
