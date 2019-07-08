@@ -28,7 +28,7 @@ As shown in Figure 1, TCPCopy consists of two parts:  *tcpcopy* and *intercept*.
 
 The only operation needed on the target server for TCPCopy is setting appropriate route commands to route response packets (shown by green arrows in the figure) to the assistant server. 
 
-*intercept* is responsible for passing the response header(by default) to *tcpcopy*. By capturing the reponse packets, *intercept* will extract response header information and send the response header to *tcpcopy* using a special channel(shown by purple arrows in the figure). When *tcpcopy* receives the response header, it utilizes the header information to modify the attributes of online packets and continues to send another packet. It should be noticed that the responses from the target server are routed to the assistant server which should act as a black hole.
+*intercept* is responsible for passing the response header(by default) to *tcpcopy*. By capturing the response packets, *intercept* will extract response header information and send the response header to *tcpcopy* using a special channel(shown by purple arrows in the figure). When *tcpcopy* receives the response header, it utilizes the header information to modify the attributes of online packets and continues to send another packet. It should be noticed that the responses from the target server are routed to the assistant server which should act as a black hole.
 
 
 ## Quick start
