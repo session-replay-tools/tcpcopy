@@ -139,8 +139,8 @@ struct tc_sess_s {
     /* time of sending the last content packet */
     time_t   req_snd_con_time;
     time_t   pack_lost_time;
-    /* time of last receiving backend content */
-    time_t   rep_rcv_con_time;
+    /* time of last receiving backend packet */
+    time_t rep_rcv_time;
 
     unsigned char *frame;
     unsigned char *src_mac;

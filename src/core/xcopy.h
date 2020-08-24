@@ -39,7 +39,7 @@
 #undef TC_PCAP
 #endif
 
-#define VERSION "1.2.0"
+#define VERSION "1.3.0"
 
 #define INTERNAL_VERSION 6
 
@@ -122,7 +122,7 @@ typedef struct tc_sess_s        tc_sess_t;
 
 #define CHECK_INTERVAL  5
 #define OFFLINE_ACTIVATE_INTERVAL  10
-#define DEFAULT_SESS_TIMEOUT 120
+#define DEFAULT_SESS_TIMEOUT 600
 #define OFFLINE_TAIL_TIMEOUT 120 
 
 #define MAX_WRITE_TRIES 1024
@@ -133,12 +133,12 @@ typedef struct tc_sess_s        tc_sess_t;
 #define CHECK_SESS_TIMEOUT 30000
 #define SESS_KEEPLIVE_ADD 1200
 #else
-#define MAX_MEMORY_SIZE 1048576
+#define MAX_MEMORY_SIZE 2097152
 #define CHECK_SESS_TIMEOUT 6000
 #define SESS_KEEPLIVE_ADD 120
 #endif
 
-#define MAX_SLIDE_WIN_THRESH 1024
+#define MAX_SLIDE_WIN_THRESH 65536
 #define SND_TOO_SLOW_THRESH 64
 
 #define REL_CNT_MAX_VALUE 63

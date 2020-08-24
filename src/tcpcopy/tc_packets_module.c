@@ -418,6 +418,11 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
                 p = (char *) pack_buffer2;
                 /* copy header here */
                 memcpy(p, (char *) packet, head_len);
+                if (tcp->fin) {
+                    if (i != last) {
+                        ((tc_tcph_t *) (p + size_ip))->fin = 0;
+                    }
+                }
                 /* copy payload here */
                 memcpy(p + head_len, (char *) (packet + index), payload_len);
                 index = index + payload_len;

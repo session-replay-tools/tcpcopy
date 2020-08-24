@@ -181,6 +181,6 @@ Have a bug or a feature request? [Please open a new issue](https://github.com/se
 
 ## Copyright and license
 
-Copyright 2019 under [the BSD license](LICENSE).
+Copyright 2020 under [the BSD license](LICENSE).
 
 
