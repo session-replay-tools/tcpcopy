@@ -2287,11 +2287,12 @@ proc_clt_pack_directly(tc_sess_t *s, tc_iph_t *ip, tc_tcph_t *tcp)
 #endif
     seq  = ntohl(tcp->seq);
     diff = tc_time() - s->create_time;
-    if (diff < TCP_MS_TIMEOUT && (s->sm.state & SYN_SENT)) {
-        if (before(seq, s->req_syn_seq)) {
-            tc_log_debug1(LOG_INFO, 0, "timeout pack,p:%u", ntohs(s->src_port));
-            return;
-        }
+    if (diff < TCP_INTERFERENCE_PREVENTION_TIMEOUT &&
+        (s->sm.state & SYN_SENT)) {
+      if (before(seq, s->req_syn_seq)) {
+        tc_log_debug1(LOG_INFO, 0, "timeout pack,p:%u", ntohs(s->src_port));
+        return;
+      }
     }
 
     tc_save_pack(s, s->slide_win_packs, ip, tcp);
