@@ -213,10 +213,10 @@ Assume that during the `tcpcopy` test, the application on the test server does n
 + 2014.09  v1.0    TCPCopy released
 + 2024.09  v1.0    Open source fully uses English
 
-## Bugs and feature requests
+## Bugs and Feature Requests
 Have a bug or a feature request? [Please open a new issue](https://github.com/session-replay-tools/tcpcopy/issues). Before opening any issue, please search for existing issues.
 
-## Copyright and license
+## Copyright and License
 
 Copyright 2024 under [the BSD license](LICENSE).
 
