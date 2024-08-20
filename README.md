@@ -199,10 +199,10 @@ Assume that during the `tcpcopy` test, the application on the test server does n
 
 ### 2. **If the SYN packet does not reach the test server, there are two possible scenarios:**
 
-   #### 2.1 **tcpcopy Packets Captured on the Online Server:**
+   #### 2.1 **`tcpcopy` Packets Captured on the Online Server:**
    If you capture `tcpcopy`'s forwarded packets using `tcpdump` on the online server, but the packets do not reach the test server, it indicates that they were dropped along the way. You can try using the `-c` parameter in `tcpcopy` to modify the client IP address to a valid one. In extreme cases, set the client IP to the IP address of the machine running `tcpcopy` (note: NAT issues may arise, and if `intercept` is running on the test server, ensure the `-c` parameter in `tcpcopy` is not set to the IP address used by `tcpcopy` to connect to `intercept`, or else `tcpcopy` won’t connect to `intercept`).
 
-   #### 2.2 **tcpcopy Packets Not Captured on the Online Server:**
+   #### 2.2 **`tcpcopy` Packets Not Captured on the Online Server:**
    
    - **If no `all clt:xx` information is found in `tcpcopy`'s log,** it indicates that `tcpcopy` is unable to capture packets at the IP layer. In this case, use the `--pcap-capture` option to capture packets at the data link layer. Set the `-F` parameter (e.g., 'tcp and dst port 80 and dst host 10.100.1.2') and the `-i` parameter (network interface) to bypass IP layer capturing.
 
