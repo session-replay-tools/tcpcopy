@@ -173,7 +173,7 @@ The target server might use `rpfilter` to verify the legitimacy of source IP add
 ### 5. Applications on the Target Server
 Applications on the target server may not process all requests promptly. Bugs or limitations in the application can lead to delayed responses or unprocessed requests in the socket buffer.
 
-### 6. OS of the assistant Server
+### 6. OS of the Assistant Server
 Ensure that `ip_forward` is set to false on the assistant server to prevent it from routing packets and ensure it functions as a black hole.
 
 ## Logical Analysis of the Issue Where the Test Server Fails to Receive Data
