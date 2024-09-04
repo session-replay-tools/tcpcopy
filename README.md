@@ -184,13 +184,13 @@ Assume that during the `tcpcopy` test, the application on the test server does n
 
 ### 1. **If the SYN packet reaches the test server, the following scenarios are possible:**
 
-   #### 1.1 **Only SYN Packets Captured:**
+   **1.1 Only SYN Packets Captured:**
    If you use `tcpdump` on the test server and see that the replicated SYN packets are arriving, it indicates that they have reached the data link layer of the test server. If `netstat` shows no connections for the application, it means the packets were dropped at the IP layer. Check if `rpfilter` is configured—if so, remove this setting, and the issue should generally be resolved. If `rpfilter` is not set, confirm that there are no conflicts in the `iptables` settings and adjust the relevant rules if necessary.
 
-   #### 1.2 **SYN Followed by RST Packet:**
+   **1.2 SYN Followed by RST Packet:**
    If the SYN packet is immediately followed by a reset (RST) packet (with less than 1 second between them in the same session), it indicates a routing issue or conflict, causing the response packet to be sent directly back to the real client.
 
-   #### 1.3 **Test Server Responds with the Second Handshake Packet:**
+  **1.3 Test Server Responds with the Second Handshake Packet:**
    Capture packets on the assistant server to check if the second handshake packet has reached it.
 
    - **If the packet hasn't reached the assistant server,** it suggests that the routing setup is not effective, and therefore `intercept` cannot capture the second handshake packet, preventing further replay. A potential solution is to run `intercept` directly on the test server (note: keep the routing setup unchanged, and ensure that the `-c` parameter in `tcpcopy` is not set to the IP address used by `tcpcopy` to connect to `intercept`, or else `tcpcopy` won’t connect to `intercept`).
@@ -199,10 +199,10 @@ Assume that during the `tcpcopy` test, the application on the test server does n
 
 ### 2. **If the SYN packet does not reach the test server, there are two possible scenarios:**
 
-   #### 2.1 **`tcpcopy` Packets Captured on the Online Server:**
+   **2.1 `tcpcopy` Packets Captured on the Online Server:**
    If you capture `tcpcopy`'s forwarded packets using `tcpdump` on the online server, but the packets do not reach the test server, it indicates that they were dropped along the way. You can try using the `-c` parameter in `tcpcopy` to modify the client IP address to a valid one. In extreme cases, set the client IP to the IP address of the machine running `tcpcopy` (note: NAT issues may arise, and if `intercept` is running on the test server, ensure the `-c` parameter in `tcpcopy` is not set to the IP address used by `tcpcopy` to connect to `intercept`, or else `tcpcopy` won’t connect to `intercept`).
 
-   #### 2.2 **`tcpcopy` Packets Not Captured on the Online Server:**
+   **2.2 `tcpcopy` Packets Not Captured on the Online Server:**
    
    - **If no `all clt:xx` information is found in `tcpcopy`'s log,** it indicates that `tcpcopy` is unable to capture packets at the IP layer. In this case, use the `--pcap-capture` option to capture packets at the data link layer. Set the `-F` parameter (e.g., 'tcp and dst port 80 and dst host 10.100.1.2') and the `-i` parameter (network interface) to bypass IP layer capturing.
 
