@@ -220,7 +220,7 @@ We know that the TCP protocol is stateful. Although the packet sending mechanism
 
 As a result, *tcpcopy* implements a simulated TCP state machine, representing the most complex and challenging aspect of its codebase. The relevant code, located in `tcpcopy/src/tcpcopy/tc_session.c`, handles crucial tasks such as simulating TCP interactions, managing network latency, and emulating upper-layer interactions.
 
-![](images/tcp_state_machine.md)
+![](images/tcp_state_machine.png)
 
 Figure 2. Classic TCP state machine overview.
 
