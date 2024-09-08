@@ -15,7 +15,7 @@
 #include <xcopy.h>
 #include <tcpcopy.h>
 
-/* global variables for TCPCopy client */
+/* Global variables for TCPCopy client */
 int                tc_raw_socket_out;
 tc_stat_t          tc_stat;
 hash_table        *sess_table;
@@ -377,15 +377,15 @@ read_args(int argc, char **argv)
 static void
 output_for_debug()
 {
-    /* print out version info */
+    /* Print out version info */
     tc_log_info(LOG_NOTICE, 0, "tcpcopy version:%s", VERSION);
     tc_log_info(LOG_NOTICE, 0, "tcpcopy internal version:%d", 
             INTERNAL_VERSION);
 
-    /* print out target info */
+    /* Print out target info */
     tc_log_info(LOG_NOTICE, 0, "target:%s", clt_settings.raw_tf);
 
-    /* print out working mode info */
+    /* Print out working mode info */
 #if (TC_OFFLINE)
     tc_log_info(LOG_NOTICE, 0, "TC_OFFLINE mode");
 #endif
@@ -499,7 +499,7 @@ parse_ip_port_pair(char *addr, uint32_t *ip, uint16_t *port,
 }
 
 /*
- * two kinds of target formats:
+ * Two kinds of target formats:
  * 1) 192.168.0.1:80-192.168.0.2:8080
  * 2) 80-192.168.0.2:8080
  */
@@ -568,8 +568,8 @@ parse_target(transfer_map_t *ip_port, char *addr)
 }
 
 /*
- * retrieve target addresses
- * format
+ * Retrieve target addresses
+ * Format:
  * 192.168.0.1:80-192.168.0.2:8080,192.168.0.1:8080-192.168.0.3:80
  */
 static int
@@ -864,7 +864,7 @@ set_details()
 
     for (i = tc_pagesize; i >>= 1; tc_pagesize_shift++) { /* void */ }
 
-    /* generate a random port number for avoiding port conflicts */
+    /* Generate a random port number for avoiding port conflicts */
     gettimeofday(&tp, NULL);
     seed = tp.tv_usec;
     rand_port = (int) ((rand_r(&seed) / (RAND_MAX + 1.0)) * 512);
@@ -909,7 +909,7 @@ set_details()
     }
 
     if (clt_settings.raw_clt_tf_ip != NULL) {
-        /* print out raw_clt_tf_ip */
+        /* Print out raw_clt_tf_ip */
         tc_log_info(LOG_NOTICE, 0, "raw_clt_tf_ip:%s", 
                 clt_settings.raw_clt_tf_ip);
         retrieve_clt_tf_ips();
@@ -1012,7 +1012,7 @@ set_details()
     }
 #endif
 
-    /* retrieve real server ip addresses  */
+    /* Retrieve real server ip addresses  */
     if (clt_settings.raw_rs_list != NULL) {
         tc_log_info(LOG_NOTICE, 0, "s parameter:%s", 
                 clt_settings.raw_rs_list);
@@ -1024,7 +1024,7 @@ set_details()
     }
 
 #if (TC_PLUGIN)
-    /* support only one additional module*/
+    /* Support only one additional module*/
     clt_settings.plugin = tc_modules[0];
 #endif
 
@@ -1032,7 +1032,7 @@ set_details()
         return -1;
     }
 
-    /* daemonize */
+    /* Daemonize */
     if (clt_settings.do_daemonize) {
         if (sigignore(SIGHUP) == -1) {
             tc_log_info(LOG_ERR, errno, "Failed to ignore SIGHUP");
@@ -1046,7 +1046,7 @@ set_details()
     return 0;
 }
 
-/* set default values for TCPCopy client */
+/* Set default values for TCPCopy client */
 static void
 settings_init()
 {
@@ -1077,7 +1077,7 @@ settings_init()
 
 
 /*
- * main entry point
+ * Main entry point
  */
 int
 main(int argc, char **argv)
@@ -1113,10 +1113,10 @@ main(int argc, char **argv)
         return -1;
     }
 
-    /* output debug info */
+    /* Output debug info */
     output_for_debug();
 
-    /* set details for running */
+    /* Set details for running */
     if (set_details() == -1) {
         return -1;
     }
@@ -1144,7 +1144,7 @@ main(int argc, char **argv)
     }
 
     if (is_continue) {
-        /* run now */
+        /* Run now */
         tc_event_proc_cycle(&event_loop);
     }
 

@@ -57,7 +57,7 @@ void tc_rbtree_insert_timer_value(tc_rbtree_node_t *root,
 #define tc_rbt_copy_color(n1, n2)      (n1->color = n2->color)
 
 
-/* a sentinel must be black */
+/* A sentinel must be black */
 
 #define tc_rbtree_sentinel_init(node)  tc_rbt_black(node)
 

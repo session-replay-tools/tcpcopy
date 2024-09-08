@@ -11,7 +11,7 @@
 #define FSYN_IP_TS_LEN (IPH_MIN_LEN + (TCPH_DOFF_WS_TS_VALUE << 2))
 
 
-/* global functions */
+/* Global functions */
 int  tc_init_sess_table(void);
 void tc_dest_sess_table(void);
 void tc_save_pack(tc_sess_t *, link_list *, tc_iph_t *, tc_tcph_t *);

@@ -176,7 +176,7 @@ int tc_epoll_del_event(tc_event_loop_t *loop, tc_event_t *ev, int delevents)
 
     events = ev->reg_evs & (~ delevents);
     if (ev->fd == io->max_fd && events == TC_EVENT_NONE) {
-        /* update the max_fd fd */
+        /* Update the max_fd fd */
         int j;
 
         for (j = io->max_fd - 1; j >= 0; j--) {
@@ -222,7 +222,7 @@ int tc_epoll_polling(tc_event_loop_t *loop, long to)
         int mask = 0;
         struct epoll_event *e = events + i;
         int fd = e->data.fd;
-        /* clear the active events, and reset */
+        /* Clear the active events, and reset */
         evs[fd]->events = TC_EVENT_NONE;
 
         if (e->events & EPOLLIN) {

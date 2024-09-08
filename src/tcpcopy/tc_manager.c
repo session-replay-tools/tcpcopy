@@ -19,7 +19,7 @@ remove_obso_resource(tc_event_timer_t *evt)
 #endif
 
 
-/* check resource usage, such as memory usage and cpu usage */
+/* Check resource usage, such as memory usage and cpu usage */
 static void
 check_resource_usage(tc_event_timer_t *evt)
 {
@@ -34,20 +34,20 @@ check_resource_usage(tc_event_timer_t *evt)
         tc_log_info(LOG_ERR, errno, "getrusage");
     }
 
-    /* total amount of user time used */
+    /* Total amount of user time used */
     tc_log_info(LOG_NOTICE, 0, "user time used:%ld", usage.ru_utime.tv_sec);
 
-    /* total amount of system time used */
+    /* Total amount of system time used */
     tc_log_info(LOG_NOTICE, 0, "sys  time used:%ld", usage.ru_stime.tv_sec);
 
-    /* maximum resident set size (in kilobytes) */
-    /* only valid since Linux 2.6.32 */
+    /* Maximum resident set size (in kilobytes) */
+    /* Only valid since Linux 2.6.32 */
     tc_log_info(LOG_NOTICE, 0, "max memory size:%ld", usage.ru_maxrss);
 
     if (usage.ru_maxrss > (long int) clt_settings.max_rss) {
         tc_log_info(LOG_WARN, 0, "occupies too much memory, limit:%ld",
                  clt_settings.max_rss);
-        /* biggest signal number + 1 */
+        /* Biggest signal number + 1 */
         tc_over = SIGRTMAX;
     }
 

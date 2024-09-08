@@ -72,7 +72,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
 #endif
 
 #if (!TC_PCAP_SND)
-    /* init the raw socket to send packets */
+    /* Init the raw socket to send packets */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCK) {
         return TC_ERR;
     } else {
@@ -133,7 +133,7 @@ tc_packets_init(tc_event_loop_t *event_loop)
     }
 
 #else
-    /* init the raw socket to recv packets */
+    /* Init the raw socket to recv packets */
     if ((fd = tc_raw_socket_in_init(COPY_FROM_IP_LAYER)) == TC_INVALID_SOCK) {
         return TC_ERR;
     }
@@ -179,7 +179,7 @@ pcap_retrieve(unsigned char *args, const struct pcap_pkthdr *pkt_hdr,
         if ((size_t) l2_len > ETHERNET_HDR_LEN) {
             ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len); 
         } else if (l2_len == 0) {
-            /* tunnel frames without ethernet header */
+            /* Tunnel frames without ethernet header */
             ip_data = get_ip_data(pcap, frame, pkt_hdr->len, &l2_len); 
         } else {
             tc_log_info(LOG_WARN, 0, "l2 len is %d", l2_len);
@@ -324,7 +324,7 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
 
 #else
 
-/* replicate packets for multiple-copying */
+/* Replicate packets for multiple-copying */
 static void
 replicate_packs(tc_iph_t *ip, tc_tcph_t *tcp, int replica_num)
 {
@@ -416,14 +416,14 @@ dispose_packet(unsigned char *packet, int ip_rcv_len, int *p_valid_flag)
                 ip->tot_len = htons(pack_len);
                 ip->id = id++;
                 p = (char *) pack_buffer2;
-                /* copy header here */
+                /* Copy header here */
                 memcpy(p, (char *) packet, head_len);
                 if (tcp->fin) {
                     if (i != last) {
                         ((tc_tcph_t *) (p + size_ip))->fin = 0;
                     }
                 }
-                /* copy payload here */
+                /* Copy payload here */
                 memcpy(p + head_len, (char *) (packet + index), payload_len);
                 index = index + payload_len;
                 packet_valid = tc_proc_ingress((tc_iph_t *) p, (tc_tcph_t *) (p + size_ip));
@@ -482,7 +482,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
 #endif
 
 #if (!TC_PCAP_SND)
-    /* init the raw socket to send */
+    /* Init the raw socket to send */
     if ((fd = tc_raw_socket_out_init()) == TC_INVALID_SOCK) {
         return TC_ERR;
     } else {
@@ -496,7 +496,7 @@ tc_offline_init(tc_event_loop_t *event_loop, char *pcap_file)
         return TC_ERR;
     }
 
-    /* register a timer for offline */
+    /* Register a timer for offline */
     tc_event_add_timer(event_loop->pool, OFFLINE_ACTIVATE_INTERVAL, 
             NULL, proc_offline_pack);
 
@@ -638,7 +638,7 @@ send_packets_from_pcap(int first)
                                 first = 0;
                             }
 
-                            /* set last valid packet time in pcap file */
+                            /* Set last valid packet time in pcap file */
                             last_v_pack_time = last_pack_time;
 
                             stop = check_read_stop();

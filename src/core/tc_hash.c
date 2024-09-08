@@ -33,7 +33,7 @@ hash_find_link_node(hash_table *table, uint64_t key)
         if (hn->key == key) {
             hn->access_time = tc_time();
             if (!first) {
-                /* put the lastest item to the head of the linked list */
+                /* Put the lastest item to the head of the linked list */
                 link_list_remove(l, ln);
                 link_list_push(l, ln);
             }

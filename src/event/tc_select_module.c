@@ -59,7 +59,7 @@ int tc_select_add_event(tc_event_loop_t *loop, tc_event_t *ev, int events)
     io = loop->io;
 
     if (io->last >= loop->size) {
-        /* too many */
+        /* Too many */
         return TC_EVENT_ERROR;
     }
 
@@ -159,7 +159,7 @@ int tc_select_polling(tc_event_loop_t *loop, long to)
     }
 
     for (i = 0; i < io->last; i++) {
-        /* clear the active events, and reset */
+        /* Clear the active events, and reset */
         evs[i]->events = TC_EVENT_NONE;
 
         if (evs[i]->read_handler) {

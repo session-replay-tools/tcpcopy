@@ -45,7 +45,7 @@ tc_array_push(tc_array_t *a)
 
     if (a->nelts == a->nalloc) {
 
-        /* the array is full */
+        /* The array is full */
 
         size = a->size * a->nalloc;
 
@@ -55,7 +55,7 @@ tc_array_push(tc_array_t *a)
             && p->d.last + a->size <= p->d.end)
         {
             /*
-             * the array allocation is the last in the pool
+             * The array allocation is the last in the pool
              * and there is space for new allocation
              */
 
@@ -63,7 +63,7 @@ tc_array_push(tc_array_t *a)
             a->nalloc++;
 
         } else {
-            /* allocate a new array */
+            /* Allocate a new array */
 
             new = tc_palloc(p, 2 * size);
             if (new == NULL) {
@@ -95,7 +95,7 @@ tc_array_push_n(tc_array_t *a, unsigned int n)
 
     if (a->nelts + n > a->nalloc) {
 
-        /* the array is full */
+        /* The array is full */
 
         p = a->pool;
 
@@ -103,7 +103,7 @@ tc_array_push_n(tc_array_t *a, unsigned int n)
             && p->d.last + size <= p->d.end)
         {
             /*
-             * the array allocation is the last in the pool
+             * The array allocation is the last in the pool
              * and there is space for new allocation
              */
 
@@ -111,7 +111,7 @@ tc_array_push_n(tc_array_t *a, unsigned int n)
             a->nalloc += n;
 
         } else {
-            /* allocate a new array */
+            /* Allocate a new array */
 
             nalloc = 2 * ((n >= a->nalloc) ? n : a->nalloc);
 

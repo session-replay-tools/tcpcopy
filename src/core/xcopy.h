@@ -237,8 +237,9 @@ typedef struct udphdr tc_udpt_t;
 #endif
 
 /* 
- * 40 bytes available for TCP options 
- * we support 24 bytes for TCP options
+ *
+ * 40 bytes are available for TCP options, and we support up to 24 bytes
+ * for these options.
  */
 #define MAX_OPTION_LEN 24
 #define TCPOPT_WSCALE 3
@@ -314,7 +315,7 @@ typedef struct connections_s{
     int fds[MAX_CONN_NUM];
 }conns_t;
 
-/* global functions */
+/* Global functions */
 int daemonize(void);
 static inline int before(uint32_t seq1, uint32_t seq2)
 {

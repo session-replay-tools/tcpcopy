@@ -5,7 +5,7 @@ tc_rbtree_t                   tc_event_timer_rbtree;
 static tc_rbtree_node_t       tc_event_timer_sentinel;
 
 /*
- * the event timer rbtree may contain the duplicate keys, however,
+ * The event timer rbtree may contain the duplicate keys, however,
  * it should not be a problem, because we use the rbtree to find
  * a minimum timer value only
  */

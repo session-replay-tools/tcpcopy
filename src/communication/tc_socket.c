@@ -136,10 +136,10 @@ tc_raw_socket_in_init(int type)
     socklen_t  opt_len;
 
     if (type == COPY_FROM_LINK_LAYER) {
-        /* copy ip datagram from Link layer */
+        /* Copy ip datagram from Link layer */
         fd = socket(AF_PACKET, SOCK_DGRAM, htons(ETH_P_IP));
     } else {
-        /* copy ip datagram from IP layer */
+        /* Copy ip datagram from IP layer */
 #if (TC_UDP)
         fd = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
 #else
@@ -188,7 +188,7 @@ tc_raw_socket_out_init(void)
     } 
 
     /*
-     * tell the IP layer not to prepend its own header.
+     * Tell the IP layer not to prepend its own header.
      * It does not need setting for linux, but *BSD needs
      */
     if (setsockopt(fd, IPPROTO_IP, IP_HDRINCL, &n, sizeof(n)) < 0) {
@@ -277,7 +277,7 @@ int tc_pcap_over(void)
 #endif
 
 /*
- * send the ip packet to the remote test server
+ * Send the ip packet to the remote test server
  * (It will not go through ip fragmentation)
  */
 
