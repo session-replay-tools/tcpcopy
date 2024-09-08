@@ -2,8 +2,6 @@
 
 With the rapid development of internet technology, server-side architectures have become increasingly complex. It is now difficult to rely solely on the personal experience of developers or testers to cover all possible business scenarios. Therefore, real online traffic is crucial for server-side testing. TCPCopy [1] is an open-source traffic replay tool that has been widely adopted by large enterprises. While many use TCPCopy for testing in their projects, they may not fully understand its underlying principles. This article provides a brief introduction to how TCPCopy works, with the hope of assisting readers.
 
-
-
 # Architecture
 
 The architecture of TCPCopy has undergone several upgrades, and this article introduces the latest 1.0 version. As shown in the diagram below, TCPCopy consists of two components: *tcpcopy* and *intercept*. *tcpcopy* runs on the online server, capturing live TCP request packets, modifying the TCP/IP header information, and sending them to the test server, effectively "tricking" the test server. *intercept* runs on an auxiliary server, handling tasks such as relaying response information back to *tcpcopy*.
@@ -24,21 +22,13 @@ The simplified interaction process is as follows:
 
 5. *tcpcopy* receives and processes the returned data.
 
-   
-
-
-
 # Technical Principles
 
 TCPCopy operates in two modes: online and offline. The online mode is primarily used for real-time capturing of live request packets, while the offline mode reads request packets from pcap-format files. Despite the difference in working modes, the core principles remain the same. This section provides a detailed explanation of TCPCopy's core principles from several perspectives.
 
-
-
-## **1. **Packet Capturing and Sending
+## 1. Packet Capturing and Sending
 
 The core functions of *tcpcopy* can be summarized as "capturing" and "sending" packets. Let's begin with packet capturing. How do you capture real traffic from the server? Many people may feel confused when first encountering this question. In fact, Linux operating systems already provide the necessary functionality, and a solid understanding of advanced Linux network programming is all that's needed. The initialization of packet capturing and sending in *tcpcopy* is handled in the `tcpcopy/src/communication/tc_socket.c` file. Next, we will introduce the two methods *tcpcopy* uses for packet capturing and packet sending.
-
-
 
 ### Raw Socket
 
@@ -123,15 +113,11 @@ tc_raw_socket_out_init(void)
 
 ```
 
-
-
 Construct the complete packet and send it to the target server.
 
 - `dst_addr` is filled with the target IP address.
 - The IP header is populated with the source and destination IP addresses.
 - The TCP header is filled with the source port, destination port, and other relevant information.
-
-
 
 ### Pcap
 
@@ -220,8 +206,6 @@ tc_pcap_snd_init(char *if_name, int mtu)
 }
 ```
 
-
-
 ### Raw Socket vs. Pcap
 
 Since *tcpcopy* offers two methods, which one is better?
@@ -229,8 +213,6 @@ Since *tcpcopy* offers two methods, which one is better?
 When capturing packets, we are primarily concerned with the specific packets we need. If the capture configuration is not set correctly, the system kernel might capture too many irrelevant packets, leading to packet loss, especially under high traffic pressure. After extensive testing, it has been found that when using the pcap interface to capture request packets, the packet loss rate in live environments is generally higher than when using raw sockets. Therefore, *tcpcopy* defaults to using raw sockets for packet capture, although the pcap interface can also be used (with the `--enable-pcap` option), which is mainly suited for high-end pfring captures and captures after switch mirroring.
 
 For packet sending, *tcpcopy* uses the raw socket output interface by default, but it can also send packets via pcap_inject (using the `--enable-dlinject` option). The choice of which method to use can be determined based on performance testing in your actual environment.
-
-
 
 ## **2. TCP Protocol Stack**
 
@@ -251,8 +233,6 @@ In *tcpcopy*, a session is defined to maintain information for different connect
 - **RST Packet:** If the current session is waiting for the test server's response, the RST packet is not sent. Otherwise, it's sent.
 - **FIN Packet:** If the current session is waiting for the test server's response, it waits; otherwise, the FIN packet is sent.
 
-
-
 ## **3. Routing**
 
 After *tcpcopy* sends the request packets, their journey may not be entirely smooth:
@@ -261,8 +241,6 @@ After *tcpcopy* sends the request packets, their journey may not be entirely smo
 - If the test server receives the request packet, the response packet will be sent to the forged IP address. To ensure these response packets don't mistakenly go back to the client with the forged IP, proper routing configuration is necessary. If the routing isn't set up correctly, the response packet won't be captured by *intercept*, leading to incomplete data exchange.
 - After *intercept* captures the response packet, it extracts the response packet and discards the actual data, returning only the response headers and other necessary information to *tcpcopy*. When necessary, it also merges the return information to reduce the impact on the network of the machine running *tcpcopy*.
 
-
-
 ## **4. Intercept**
 
 For those new to *tcpcopy*, it might be puzzling—why is *intercept* necessary if we already have *tcpcopy*? While *intercept* may seem redundant, it actually plays a crucial role. You can think of *intercept* as the server-side counterpart of *tcpcopy*, with its name itself explaining its function: an "interceptor." But what exactly does *intercept* need to intercept? The answer is the response packet from the test service.
@@ -270,8 +248,6 @@ For those new to *tcpcopy*, it might be puzzling—why is *intercept* necessary 
 If *intercept* were not used, the response packets from the test server would be sent directly to *tcpcopy*. Since *tcpcopy* is deployed in a live environment, this means the response packets would be sent directly to the production server, significantly increasing its network load and potentially affecting the normal operation of the live service. With *intercept*, by spoofing the source IP, the test service is led to "believe" that these spoofed IP clients are accessing it. *Intercept* also performs aggregation and optimization of the response packet information, further ensuring that the live environment at the network level is not impacted by the test environment.
 
 *intercept* is an independent process that, by default, captures packets using the pcap method. During startup, the `-F` parameter needs to be passed, for example, "tcp and src port 8080," following libpcap's filter syntax. This means that *intercept* does not connect directly to the test service but listens on the specified port, capturing the return data packets from the test service and interacting with *tcpcopy*.
-
-
 
 ## **5. Performance**
 
@@ -296,8 +272,6 @@ static tc_event_actions_t tc_event_actions = {
 #endif
 };
 ```
-
-
 
 # Conclusion
 
