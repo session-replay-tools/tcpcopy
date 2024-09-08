@@ -21,13 +21,15 @@ TCPCopy minimally impacts the production system, consuming only additional CPU, 
 
 ## Architecture 
 
-![tcpcopy](https://github.com/wangbin579/auxiliary/blob/master/images/tcpcopy.png)
+![tcpcopy](doc/tcpcopy.png)
+
+Figure 1. Overview of the TCPCopy Architecture.
 
 As shown in Figure 1, TCPCopy is composed of two components: `tcpcopy` and `intercept`. The `tcpcopy` component runs on the online server, capturing live requests, while `intercept` operates on the assistant server, performing tasks such as passing response information to `tcpcopy`. The test application itself runs on the target server.
 
-By default, `tcpcopy` employs raw socket input to capture online packets at the network layer, handling essential processes like TCP interaction simulation, network latency control, and upper-layer interaction simulation. It then sends packets to the target server using raw socket output (illustrated by light red arrows in the figure).
+By default, `tcpcopy` uses raw sockets to capture packets at the network layer (depicted by the orange arrows in the figure). It handles processes such as TCP interaction simulation, network latency control, and upper-layer interaction simulation. It then sends packets to the target server using raw sockets for output (shown by the light red arrows in the figure).
 
-The only required operation on the target server is configuring route commands to direct response packets (indicated by light green arrows in the figure) to the assistant server.
+The only required task on the target server is configuring route rules to direct response packets (shown by light green arrows in the figure) to the assistant server.
 
 The `intercept` component's role is to forward the response header (by default) to `tcpcopy`. It captures the response packets, extracts the response header information, and sends this information to `tcpcopy` via a dedicated channel (represented by light blue arrows in the figure). Upon receiving the response header, `tcpcopy` uses the information to modify the attributes of online packets and proceeds to send subsequent packets.
 
@@ -111,7 +113,7 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
 
 1. **On the Target Server Running Server Applications:**
 
-   Configure the route commands to direct response packets to the assistant server. For example, if `61.135.233.161` is the IP address of the assistant server, use the following route command to direct all responses from clients in the `62.135.200.x` range to the assistant server:
+   Configure the route rules to direct response packets to the assistant server. For example, if `61.135.233.161` is the IP address of the assistant server, use the following route command to direct all responses from clients in the `62.135.200.x` range to the assistant server:
    
    `route add -net 62.135.200.0 netmask 255.255.255.0 gw 61.135.233.161`
 
@@ -124,7 +126,7 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
    `./intercept -i eth0 -F 'tcp and src port 8080' -d`
 
    In this example, `intercept` will capture response packets from a TCP-based application listening on port 8080, using the eth0 network device.
- 
+
 3. **On the Online Source Server (Root Privilege or CAP_NET_RAW Capability Required):**
 
    `./tcpcopy -x localServerPort-targetServerIP:targetServerPort -s <intercept server> [-c <ip range>]`
@@ -133,7 +135,7 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
 
    `./tcpcopy -x 80-61.135.233.160:8080 -s 61.135.233.161 -c 62.135.200.x`
 
-   In this example, `tcpcopy` captures packets on port 80 from the current server, changes the client IP address to one from the 62.135.200.x range, and sends these packets to port 8080 on the target server (61.135.233.160). It also connects to 61.135.233.161 to request `intercept` to forward response packets. While the `-c parameter` is optional, it is used here to simplify route commands.
+   In this example, `tcpcopy` captures packets on port 80 from the current server, changes the client IP address to one from the 62.135.200.x range, and sends these packets to port 8080 on the target server (61.135.233.160). It also connects to 61.135.233.161 to request `intercept` to forward response packets. While the `-c parameter` is optional, it is used here to simplify route rules.
 
 
 ## Note
@@ -159,7 +161,7 @@ For optimal capture, consider mirroring ingress packets via a switch and distrib
 `tcpcopy` defaults to using a raw socket output interface to send packets at the network layer to the target server. To avoid `ip_conntrack` issues or improve performance, use `--pcap-send` to send packets at the data link layer instead.
 
 
-### 3.On the Way to the Target Server 
+### 3. On the Way to the Target Server 
 Packets sent by `tcpcopy` may face challenges before reaching the target server. If the source IP address is the end-user's IP (by default), security devices may drop the packet as invalid or forged. To test this, use `tcpdump` on the target server. If packets are successfully sent within the same network segment but not across segments, packets may be dropped midway.
 
 To address this, deploy `tcpcopy`, target applications, and `intercept` within the same network segment. Alternatively, use a proxy in the same segment to forward packets to the target server in another segment.
@@ -203,7 +205,7 @@ Assume that during the `tcpcopy` test, the application on the test server does n
    If you capture `tcpcopy`'s forwarded packets using `tcpdump` on the online server, but the packets do not reach the test server, it indicates that they were dropped along the way. You can try using the `-c` parameter in `tcpcopy` to modify the client IP address to a valid one. In extreme cases, set the client IP to the IP address of the machine running `tcpcopy` (note: NAT issues may arise, and if `intercept` is running on the test server, ensure the `-c` parameter in `tcpcopy` is not set to the IP address used by `tcpcopy` to connect to `intercept`, or else `tcpcopy` won’t connect to `intercept`).
 
    **2.2 `tcpcopy` Packets Not Captured on the Online Server:**
-   
+
    - **If no `all clt:xx` information is found in `tcpcopy`'s log,** it indicates that `tcpcopy` is unable to capture packets at the IP layer. In this case, use the `--pcap-capture` option to capture packets at the data link layer. Set the `-F` parameter (e.g., 'tcp and dst port 80 and dst host 10.100.1.2') and the `-i` parameter (network interface) to bypass IP layer capturing.
 
    - **If `all clt:xx`, where `xx > 0`, is seen in `tcpcopy`'s log,** it means `tcpcopy` successfully captured the packet, but it was filtered out by the IP layer on the online server. Check `iptables` restrictions on the output chain, among other settings. If `iptables` is the problem and cannot be modified on the online server, use the `--pcap-send` option to send packets from the data link layer.
@@ -220,4 +222,6 @@ Have a bug or a feature request? [Please open a new issue](https://github.com/se
 
 Copyright 2024 under [the BSD license](LICENSE).
 
+## Acknowledgments
 
+Several individuals have been crucial in the writing of this document by reviewing drafts and offering feedback. I am especially grateful for the contributions of Hongshen Wang. 
