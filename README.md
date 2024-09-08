@@ -2,6 +2,10 @@
 
 TCPCopy is a TCP stream replay tool for realistic testing of Internet server applications. 
 
+## Getting to Know *tcpcopy*
+
+[An Overview of *tcpcopy* for Beginners](Beginners.md)
+
 ## Description
 
 Although real live traffic is crucial for testing Internet server applications, accurately simulating it is challenging due to the complexity of online environments. To enable more realistic testing, TCPCopy was developed as a live flow reproduction tool that generates test workloads closely resembling production workloads. TCPCopy is widely used by companies in China.
@@ -17,10 +21,6 @@ TCPCopy minimally impacts the production system, consuming only additional CPU, 
   - Ensure that recent changes have not introduced new issues.
 * Performance comparison
   - Compare system performance across different versions or configurations.
-
-## Getting to Know *tcpcopy*
-
-[An Overview of *tcpcopy* for Beginners](Beginners)
 
 ## Architecture 
 
