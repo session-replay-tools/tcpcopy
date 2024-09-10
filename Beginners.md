@@ -277,7 +277,7 @@ static tc_event_actions_t tc_event_actions = {
 
 TCPCopy is an excellent open-source project. However, due to the author's limitations, this article only covers the core technical principles of TCPCopy, leaving many details untouched [2]. Nevertheless, I hope this introduction provides some inspiration to those interested in TCPCopy and traffic replay technologies!
 
-# References：
+# References
 
 [1] https://github.com/session-replay-tools/tcpcopy.
 
