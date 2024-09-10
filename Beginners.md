@@ -281,4 +281,4 @@ TCPCopy is an excellent open-source project. However, due to the author's limita
 
 [1] https://github.com/session-replay-tools/tcpcopy.
 
-[2] https://testerhome.com/articles/34737
+[2] https://testerhome.com/articles/34737.
