@@ -2,9 +2,9 @@
 
 TCPCopy is a TCP stream replay tool for realistic testing of Internet server applications. 
 
-## Getting to Know *tcpcopy*
+## Getting to Know TCPCopy
 
-[An Overview of *tcpcopy* for Beginners](Beginners.md)
+[An Overview of TCPCopy for Beginners](Beginners.md)
 
 ## Description
 
