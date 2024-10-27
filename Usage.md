@@ -116,10 +116,10 @@ The command below demonstrates how to run `tcpcopy` to replicate application req
 We assume that the target server and the online server are on the same network segment. The following command demonstrates how to use tcpcopy to capture and send requests.
 
 ```shell
-sudo ./tcpcopy -x 80@00:13:21:B2:5E:42-122.55.176.148:18080@00:0F:1F:03:F2:E6 -s 10.110.12.162 -o eth1 -i eth0
+sudo ./tcpcopy -x 80@00:13:21:B2:5E:42-121.55.111.148:18080@00:0F:1F:03:F2:E6 -s 10.110.12.162 -o eth1 -i eth0
 ```
 
-This command captures requests to port 80 on the online server and forwards them to port 18080 on the target server (IP `122.55.176.148`). Specifically:
+This command captures requests to port 80 on the online server and forwards them to port 18080 on the target server (IP `121.55.111.148`). Specifically:
 
 - `tcpcopy` captures packets on interface `eth0`.
 - Packets are sent from MAC address `00:13:21:B2:5E:42` (associated with `eth1`) and forwarded to the target machine's MAC address `00:0F:1F:03:F2:E6`. Since both are in the same network segment, the next hop MAC is the target machine's MAC.
