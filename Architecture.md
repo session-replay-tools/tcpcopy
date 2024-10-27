@@ -4,15 +4,15 @@ In the field of server-based request replay, there are generally two main approa
 
 For real-time request replication, there are generally two types:
 
-1) Application-layer request replication  
-2) Packet-level request replication  
+- Application-layer request replication
+- Packet-level request replication
 
 Traditional approaches often replicate requests at the application layer, as seen in tools like Oracle Database Replay. Although easier to implement, this approach has several drawbacks:
 
-1) Replicating requests from the application layer requires traversing the entire protocol stack, which can consume resources, such as valuable connection resources.
-2) Testing becomes coupled with the actual application, increasing the potential impact on online systems. Server-based replication, for instance, can cause request processing times to depend on the slowest request (e.g., `max(actual request time, replicated request time)`).
-3) Supporting high-stress replication is difficult and may severely impact online systems, according to feedback from some users.
-4) Network latency is challenging to control.
+- Replicating requests from the application layer requires traversing the entire protocol stack, which can consume resources, such as valuable connection resources.
+- Testing becomes coupled with the actual application, increasing the potential impact on online systems. Server-based replication, for instance, can cause request processing times to depend on the slowest request (e.g., `max(actual request time, replicated request time)`).
+- Supporting high-stress replication is difficult and may severely impact online systems, according to feedback from some users.
+- Network latency is challenging to control.
 
 Packet-level request replication, however, can avoid traversing the entire protocol stack. The shortest path can capture and send packets directly from the data link layer, or alternatively, at the IP layer. As long as TCP is not involved, the impact on online systems is significantly reduced.
 
@@ -42,16 +42,16 @@ Returning to the architecture, this early version generally functioned only with
 
 **Advantages:**  
 
-1) Simple and direct
-2) Suitable for smoke testing
-3) Relatively realistic testing outcomes
+- Simple and direct
+- Suitable for smoke testing
+- Relatively realistic testing outcomes
 
 **Disadvantages:**  
 
-1) Higher impact on the online environment due to response packets returning to the online server (though still less than application-layer replication).  
-2) Network segment limitations.  
-3) For web applications, it is challenging to utilize multiple live flows, which limits its value for stress testing.  
-4) Internal applications are heavily restricted because the client IP of requests cannot match the replicated online server’s IP address.
+- Higher impact on the online environment due to response packets returning to the online server (though still less than application-layer replication).  
+- Network segment limitations.  
+- For web applications, it is challenging to utilize multiple live flows, which limits its value for stress testing.  
+- Internal applications are heavily restricted because the client IP of requests cannot match the replicated online server’s IP address.
 
 ## The Second Architecture
 
@@ -65,9 +65,9 @@ As shown in the diagram, `tcpcopy` now captures packets from the IP layer and al
 
 To analyze the interception of response packets, in theory, we could capture response packets at the IP layer or data link layer on the target server. Let’s examine these options:
 
-1) Capturing at the data link layer: If no routing is configured, the response packet would return to the actual client initiating the request, which would affect the client’s TCP module (frequent resets) and, under high load, could cause unnecessary interference to the switch, router, and even the entire network.
+- Capturing at the data link layer: If no routing is configured, the response packet would return to the actual client initiating the request, which would affect the client’s TCP module (frequent resets) and, under high load, could cause unnecessary interference to the switch, router, and even the entire network.
 
-2) Capturing at the IP layer: The netlink technology offers a solution to the above issues. Netlink is a communication method for interaction between user-space processes and the kernel. Specifically, we can use kernel modules such as ip_queue (for kernel versions below 3.5) or nfqueue (for kernel 3.5 or above) to capture response packets.
+- Capturing at the IP layer: The netlink technology offers a solution to the above issues. Netlink is a communication method for interaction between user-space processes and the kernel. Specifically, we can use kernel modules such as ip_queue (for kernel versions below 3.5) or nfqueue (for kernel 3.5 or above) to capture response packets.
 
 We chose the second method, which captures response packets at the IP layer. Once a response packet is passed to `intercept`, we can retrieve the essential response packet information (generally TCP/IP header information) and transmit it to `tcpcopy`. We can also use a verdict to instruct the kernel on handling these response packets. If there is no whitelist setting, these response packets will be dropped at the IP layer, making them undetectable by tcpdump (which operates at the data link layer).
 
@@ -77,17 +77,17 @@ This design allows for the replication of traffic from multiple online servers o
 
 **Advantages:**
 
-1) Supports replicating traffic from multiple online servers
-2) Minimizes impact on online servers, typically only returning TCP/IP header information
+- Supports replicating traffic from multiple online servers
+- Minimizes impact on online servers, typically only returning TCP/IP header information
 
 **Disadvantages:**
 
-1) More complex than the first architecture
-2) Performance limits are often tied to ip_queue or nfqueue
-3) `intercept` lacks scalability, restricted by ip_queue and nfqueue’s inability to support multi-process response packet capture
-4) `intercept` affects the final test results on the target server, especially under high-stress conditions
-5) Incomplete testing on the target server (no coverage of data link layer egress)
-6) Less convenient for maintenance
+- More complex than the first architecture
+- Performance limits are often tied to ip_queue or nfqueue
+- `intercept` lacks scalability, restricted by ip_queue and nfqueue’s inability to support multi-process response packet capture
+- `intercept` affects the final test results on the target server, especially under high-stress conditions
+- Incomplete testing on the target server (no coverage of data link layer egress)
+- Less convenient for maintenance
 
 ## The Third Architecture
 
@@ -111,20 +111,20 @@ It’s important to note that in certain scenarios, pcap packet capture may expe
 
 **Advantages:**
 
-1. Provides a more realistic testing environment
-2. Highly scalable
-3. Suitable for high concurrency scenarios
-4. Avoids the limitations of ip_queue and nfqueue
-5. Virtually no performance impact on the target server
-6. Easier maintenance on the target server running services
-7. Will not crash alongside the service-running server in the event of a failure
+- Provides a more realistic testing environment
+- Highly scalable
+- Suitable for high concurrency scenarios
+- Avoids the limitations of ip_queue and nfqueue
+- Virtually no performance impact on the target server
+- Easier maintenance on the target server running services
+- Will not crash alongside the service-running server in the event of a failure
 
 **Disadvantages:**
 
-1. More challenging to operate
-2. Requires additional machine resources
-3. Demands more knowledge
-4. The assistant server (running `intercept`) should ideally be on the same network segment as the target server to simplify deployment
+- More challenging to operate
+- Requires additional machine resources
+- Demands more knowledge
+- The assistant server (running `intercept`) should ideally be on the same network segment as the target server to simplify deployment
 
 All three architectures have their merits. Currently, only the second and third architectures are open-source, and tcpcopy defaults to the third architecture. 
 
