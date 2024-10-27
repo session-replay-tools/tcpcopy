@@ -8,7 +8,7 @@ If the reader has not yet read the two articles below, please do so first to fac
 
 Back to the main topic, this article will illustrate the value of TCPCopy through three examples to deepen the user's understanding of it.
 
-## 1. Copying Private Protocols to Test Systems
+## 1. Copying Private Protocols to the Test System
 
 The following example demonstrates how TCPCopy can be configured for a network application. The goal is to replicate online ad server requests to the ad server in a test environment.
 
@@ -23,21 +23,18 @@ The relevant information in the figure is described as follows:
 
 Here are the three main steps for deploying and running TCPCopy:
 
-**1. Set Up Routing on the Test Server**
+**1. Set Up Routing on the Test AD Server**
 
-Below are the routing settings we configured on the test server to prevent responses from returning to the ad clients:
+Below are the routing settings we configured on the test ad server to prevent responses from returning to the ad clients:
 
-route add -host 10.100.10.11 gw 10.100.10.32 
-
-route add -host 10.100.10.12 gw 10.100.10.32 
-
+```shell
+route add -host 10.100.10.11 gw 10.100.10.32
+route add -host 10.100.10.12 gw 10.100.10.32
 route add -host 10.100.10.13 gw 10.100.10.32
-
 route add -host 10.100.10.14 gw 10.100.10.32
-
 route add -host 10.100.10.15 gw 10.100.10.32
-
 route add -host 10.100.10.16 gw 10.100.10.32
+```
 
 **2. Running intercept on the Assistent Server**
 
@@ -49,7 +46,7 @@ Here, we assume the network card interface is set to eth0.
 
 `./tcpcopy -x 11311-10.100.10.31:11311 -s 10.100.10.32 -d`
 
-This completes the TCPCopy deployment, allowing us to replicate requests from four ad servers to a single test system's ad server for various testing purposes, such as performance testing, bug discovery, and stability assessment.
+This completes the TCPCopy deployment, allowing us to replicate requests from four ad servers to a single test ad server for various testing purposes, such as performance testing, bug discovery, and stability assessment.
 
 This configuration is quite classic and well-suited for projects that do not directly interface with external network clients, such as those accessing application servers like Tomcat and Redis.
 
@@ -60,7 +57,7 @@ MySQL is a stateful protocol, so directly using TCPCopy to replicate MySQL reque
 To successfully conduct testing of MySQL applications, consider the following details:
 
 1. Follow the deployment requirements in the documentation precisely.
-2. Ensure the username and permissions configured on the test machine match those on the production machine.  
+2. Ensure the username and permissions configured on the MySQL test server match those on the MySQL online server.  
 3. MySQL must use native password authentication; otherwise, it will not function properly.
 4. Sysbench initiates requests on the production side, and TCPCopy is started before this to capture complete session data packets.
 
@@ -68,7 +65,7 @@ Assume the machine at 172.168.0.15 runs Sysbench, 172.168.0.16 hosts the online 
 
 ![](images/example2.png)
 
-**Set Up Routing on the Test Server**
+**Set Up Routing on the MySQL Test Server**
 
 route add -host 172.168.0.15 gw 172.168.0.18
 
@@ -76,11 +73,9 @@ route add -host 172.168.0.15 gw 172.168.0.18
 
 `./intercept -i eth0 -F 'tcp and src port 3306' -d` 
 
-**Running TCPCopy on the Online MySQL Server**
+**Running TCPCopy on the MySQL Online Server**
 
 `./tcpcopy -x 3306-172.168.0.17:3306 -s 172.168.0.18 -d`
-
-
 
 On 172.168.0.15, the Sysbench script to simulate online requests is as follows:
 
@@ -89,16 +84,16 @@ On 172.168.0.15, the Sysbench script to simulate online requests is as follows:
 **The final results of the request replication are as follows:**
 
 ```shell
-MySQL access log recorded on the online server：
+MySQL access log recorded on the MySQL online server：
 [root@16 tmp]# ll access.log
 -rw-rw---- 1 mysql mysql 1160590772 Feb 14 14:34 access.log
 
-MySQL access log recorded on the test server：
+MySQL access log recorded on the MySQL test server：
 [root@17 tmp]# ll access.log
 -rw-rw---- 1 mysql mysql 1160696291 Feb 14 14:34 access.log
 ```
 
-From the data above, we can see that the MySQL access logs are mostly similar.
+From the data above, we can see that the MySQL access logs are generally similar.
 
 ## 3. Packet Capture and Transmission via the pcap Interface
 
@@ -115,28 +110,28 @@ This configuration allows `tcpcopy` to leverage the `pcap` mechanism to capture 
 The command below demonstrates how to run `tcpcopy` to replicate application requests from an online port to a testing environment:
 
 ```shell
-./tcpcopy -x <online_port>@<online_machine_mac>-<test_machine_ip>:<test_machine_port>@<next_hop_mac> -s <intercept_machine_ip> -o <output_network_interface> -i <capture_network_interface>
+./tcpcopy -x <online_port>@<online_machine_mac>-<target_machine_ip>:<target_machine_port>@<next_hop_mac> -s <intercept_machine_ip> -o <output_network_interface> -i <capture_network_interface>
 ```
 
-We assume that the test server and the online server are on the same network segment. The following command demonstrates how to use tcpcopy to capture and send requests.
+We assume that the target server and the online server are on the same network segment. The following command demonstrates how to use tcpcopy to capture and send requests.
 
 ```shell
 sudo ./tcpcopy -x 80@00:13:21:B2:5E:42-122.55.176.148:18080@00:0F:1F:03:F2:E6 -s 10.110.12.162 -o eth1 -i eth0
 ```
 
-This command captures requests to port 80 on the online machine and forwards them to port 18080 on the test machine (IP `122.55.176.148`). Specifically:
+This command captures requests to port 80 on the online server and forwards them to port 18080 on the target server (IP `122.55.176.148`). Specifically:
 
 - `tcpcopy` captures packets on interface `eth0`.
-- Packets are sent from MAC address `00:13:21:B2:5E:42` (associated with `eth1`) and forwarded to the test machine's MAC address `00:0F:1F:03:F2:E6`. Since both are in the same network segment, the next hop MAC is the test machine's MAC.
+- Packets are sent from MAC address `00:13:21:B2:5E:42` (associated with `eth1`) and forwarded to the target machine's MAC address `00:0F:1F:03:F2:E6`. Since both are in the same network segment, the next hop MAC is the target machine's MAC.
 - `intercept` runs on `10.110.12.162` to capture response packets routed back to the `tcpcopy` system.
 
 ### Key Considerations
 
-1. **Matching Network Interface and MAC Address**: The output network interface specified with `-o` must match the MAC address of the outgoing network adapter, and ideally align with the network interface needed to reach the test machine's IP.
-2. **MAC Address Alignment**: In the same network segment, the destination MAC should match the test machine’s IP; in different segments, use the next hop's MAC address. `tcpdump` can help identify the MAC address if necessary.
-3. **Routing Without IP Layer**: As TCPCopy sends packets from the data link layer, IP-based routing is bypassed, requiring explicit configuration of the MAC addresses to manage packet routing.
+1. **Matching Network Interface and MAC Address**: The output network interface specified with `-o` must match the MAC address of the outgoing network adapter, and ideally align with the network interface needed to reach the target machine's IP.
+2. **MAC Address Alignment**: In the same network segment, the destination MAC should match the target machine’s IP; in different segments, use the next hop's MAC address. `tcpdump` can help identify the MAC address if necessary.
+3. **Routing Without IP Layer**: As `tcpcopy` sends packets from the data link layer, IP-based routing is bypassed, requiring explicit configuration of the MAC addresses to manage packet routing.
 4. Since packet transmission bypasses the IP layer, it avoids various IP layer issues, including IP conntrack-related problems.
-5. his setup enables large-scale replication of online requests, allowing users with the necessary resources to use switch mirroring to replicate traffic.
+5. This setup enables large-scale replication of online requests, allowing users with the necessary resources to use switch mirroring to replicate traffic.
 
 ## Application Scope
 
