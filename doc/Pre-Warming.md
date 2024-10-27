@@ -1,12 +1,12 @@
 # Pre-Warming Data for a Newly Added MySQL Secondary Using TCPCopy
 
-Using TCPCopy to pre-warm data on a newly added MySQL secondary is quite practical. Many users have employed this method, especially for high-load replicas. Adding a cold secondary directly to the cluster can lead to numerous slow queries
+Using TCPCopy to pre-warm data on a newly added MySQL secondary is quite practical. Many users have employed this method, especially for high-load secondaries. Adding a cold secondary directly to the cluster can lead to numerous slow queries
 
 ## Architecture Deployment Diagram
 
 Below is the deployment architecture diagram for pre-warming. It replicates read-only requests from MySQL secondary one to MySQL secondary two to achieve the pre-warming effect.
 
-![](C:\Users\86185\AppData\Roaming\marktext\images\2024-10-27-21-14-11-1730034836403.png)
+![](../images/pre-warming1.png)
 
 ## Deploying TCPCopy
 
@@ -43,7 +43,7 @@ By default, it is installed in `/usr/local/intercept/`.
 
 We assume that all MySQL nodes use port 3306. The client IP addresses accessing the online secondary server fall within the 192.168.0.0 subnet. The online secondary server is at 192.168.2.3, the target server is at 192.168.2.4, and the assistant server is at 192.168.2.5, as shown in the diagram below.：
 
-![](C:\Users\86185\AppData\Roaming\marktext\images\2024-10-27-22-10-46-1730038231179.png)
+![](../images/pre-warming1.png)
 
 ### Routing Setup on the MySQL Secondary Two
 

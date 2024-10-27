@@ -6,7 +6,7 @@ With the rapid development of internet technology, server-side architectures hav
 
 The architecture of TCPCopy has undergone several upgrades, and this article introduces the latest 1.0 version. As shown in the diagram below, TCPCopy consists of two components: *tcpcopy* and *intercept*. *tcpcopy* runs on the online server, capturing live TCP request packets, modifying the TCP/IP header information, and sending them to the test server, effectively "tricking" the test server. *intercept* runs on an auxiliary server, handling tasks such as relaying response information back to *tcpcopy*.
 
-![tcpcopy](images/tcpcopy.png)
+![tcpcopy](../images/tcpcopy.png)
 
 Figure 1. Overview of the TCPCopy Architecture.
 
@@ -220,7 +220,7 @@ We know that the TCP protocol is stateful. Although the packet sending mechanism
 
 As a result, *tcpcopy* implements a simulated TCP state machine, representing the most complex and challenging aspect of its codebase. The relevant code, located in `tcpcopy/src/tcpcopy/tc_session.c`, handles crucial tasks such as simulating TCP interactions, managing network latency, and emulating upper-layer interactions.
 
-![](images/tcp_state_machine.png)
+![](../images/tcp_state_machine.png)
 
 Figure 2. Classic TCP state machine overview.
 

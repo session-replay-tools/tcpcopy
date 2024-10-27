@@ -28,7 +28,7 @@ The three architectures differ primarily in where response packets are intercept
 
 The earliest TCPCopy architecture was as follows:
 
-![](images/first.png)
+![](../images/first.png)
 
 Figure 1. Initial TCPCopy Architecture Diagram.
 
@@ -57,7 +57,7 @@ Returning to the architecture, this early version generally functioned only with
 
 This architecture was initially designed by TCPCopy’s originator Wang Bo (designed in 2010 and handed over to me in June 2011). The general architecture is outlined below:
 
-![](images/second.png)
+![](../images/second.png)
 
 Figure 2. The Second TCPCopy Architecture Diagram.
 
@@ -93,7 +93,7 @@ This design allows for the replication of traffic from multiple online servers o
 
 The following diagram illustrates the latest architecture, designed specifically for extreme testing. This setup offloads `intercept` from the target server and places it on a separate, dedicated assistant server (preferably an idle server on the same network segment). In this setup, response packets are captured at the data link layer instead of the IP layer, significantly reducing interference with the target machine (aside from routing configuration) and greatly enhancing the ability to capture response packets. Consequently, this architecture provides a more realistic testing environment.
 
-![](images/tcpcopy.png)
+![](../images/tcpcopy.png)
 
 Figure 3. The Third TCPCopy Architecture Diagram.
 

@@ -12,7 +12,7 @@ Back to the main topic, this article will illustrate the value of TCPCopy throug
 
 The following example demonstrates how TCPCopy can be configured for a network application. The goal is to replicate online ad server requests to the ad server in a test environment.
 
-![](images/example1.png)
+![](../images/example1.png)
 
 The relevant information in the figure is described as follows:
 
@@ -63,7 +63,7 @@ To successfully conduct testing of MySQL applications, consider the following de
 
 Assume the machine at 172.168.0.15 runs Sysbench, 172.168.0.16 hosts the online MySQL service, 172.168.0.17 runs the test MySQL service, and 172.168.0.18 is designated as the assistent server.
 
-![](images/example2.png)
+![](../images/example2.png)
 
 **Set Up Routing on the MySQL Test Server**
 
