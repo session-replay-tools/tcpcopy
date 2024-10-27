@@ -24,6 +24,8 @@ The TCPCopy architecture has gone through three generations. The core principle 
 
 The three architectures differ primarily in where response packets are intercepted.
 
+## The First Architecture
+
 The earliest TCPCopy architecture was as follows:
 
 ![](images/first.png)
