@@ -1,7 +1,5 @@
 ## A General Overview of TCPCopy Architecture
 
-TCPCopy is a tool for replicating requests, originally designed to capture packets from the data link layer and send them from the IP layer. Its architecture has evolved from a single program into a distributed load testing framework. The latest architecture recommends using `pcap` to capture packets on auxiliary servers, which enhances efficiency and scalability but requires more machine resources and specialized knowledge. Adopting a high-performance bypass mechanism in the third architecture minimizes impact on live services.
-
 In the field of server-based request replay, there are generally two main approaches: offline replay and real-time online replication. Researchers often focus on offline replay, with little exploration in real-time replication. Based on feedback from SIGCOMM reviewers, there seems to be minimal research in real-time replication.
 
 For real-time request replication, there are generally two types:
