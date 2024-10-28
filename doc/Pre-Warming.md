@@ -43,7 +43,7 @@ By default, it is installed in `/usr/local/intercept/`.
 
 We assume that all MySQL nodes use port 3306. The client IP addresses accessing the online secondary server fall within the 192.168.0.0 subnet. The online secondary server is at 192.168.2.3, the target server is at 192.168.2.4, and the assistant server is at 192.168.2.5, as shown in the diagram below.
 
-![](../images/pre-warming1.png)
+![](../images/pre-warming2.png)
 
 ### Routing Setup on the MySQL Secondary Two
 
