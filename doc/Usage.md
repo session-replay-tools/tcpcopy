@@ -2,9 +2,9 @@
 
 If the reader has not yet read the two articles below, please do so first to facilitate understanding of the subsequent examples.
 
-1. [An Overview of TCPCopy for Beginners](https://session-replay-tools.github.io/tcpcopy/Beginners.html)
+1. [An Overview of TCPCopy for Beginners](https://session-replay-tools.github.io/tcpcopy/doc/Beginners.html)
 
-2. [A General Overview of TCPCopy Architecture](https://session-replay-tools.github.io/tcpcopy/Architecture.html)
+2. [A General Overview of TCPCopy Architecture](https://session-replay-tools.github.io/tcpcopy/doc/Architecture.html)
 
 Back to the main topic, this article will illustrate the value of TCPCopy through three examples to deepen the user's understanding of it.
 
