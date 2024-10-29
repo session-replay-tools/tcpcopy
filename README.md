@@ -160,9 +160,10 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
 4. Connection Type: Currently supports only client-initiated connections.
 5. SSL/TLS: Does not support replay for applications using SSL/TLS.
 6. Due to the additional layer of forwarding in tcpcopy, the throughput of a single application connection cannot be too high; otherwise, it won't match the native connection throughput, especially in performance tests like sysbench or ab.
-7. MySQL Session Replay: For details, visit [session-replay-tools](https://github.com/session-replay-tools/).
-8. IP Forwarding: Ensure `ip_forward` is not enabled on the assistant server.
-9. Help: For more information, run `./tcpcopy -h` or `./intercept -h`.
+7. If the volume of replicated requests is too large, tcpcopy may become unstable, with the single thread overwhelmed by packet capture, significantly reducing replication effectiveness. In such cases, other auxiliary methods can be used, such as leveraging switch mirroring with a divide-and-conquer packet capture strategy or using offline replay.
+8. MySQL Session Replay: For details, visit [session-replay-tools](https://github.com/session-replay-tools/).
+9. IP Forwarding: Ensure `ip_forward` is not enabled on the assistant server.
+10. Help: For more information, run `./tcpcopy -h` or `./intercept -h`.
 
 ## Influential Factors
 
