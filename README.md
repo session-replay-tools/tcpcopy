@@ -159,7 +159,7 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
 3. Permissions: Requires root privilege or the `CAP_NET_RAW` capability (e.g., setcap CAP_NET_RAW=ep tcpcopy).
 4. Connection Type: Currently supports only client-initiated connections.
 5. SSL/TLS: Does not support replay for applications using SSL/TLS.
-6. Since packet forwarding is required, the throughput for a single application connection cannot be too high; otherwise, it won't keep up with the production pace. This is the case for tests like sysbench or ab.
+6. Due to the additional layer of forwarding in tcpcopy, the throughput of a single application connection cannot be too high; otherwise, it won't match the native connection throughput, especially in performance tests like sysbench or ab.
 7. MySQL Session Replay: For details, visit [session-replay-tools](https://github.com/session-replay-tools/).
 8. IP Forwarding: Ensure `ip_forward` is not enabled on the assistant server.
 9. Help: For more information, run `./tcpcopy -h` or `./intercept -h`.
