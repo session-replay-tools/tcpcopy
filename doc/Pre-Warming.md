@@ -53,6 +53,8 @@ route add -net 192.168.0.0 netmask 255.255.0.0 gw 192.168.2.5
 
 ### Run `intercept` on the Assistant Server
 
+Please note that `ip_forward` is not enabled on the assistant server.
+
 ```
 ./intercept -i eth0 -F 'tcp and src port 3306' -d
 ```

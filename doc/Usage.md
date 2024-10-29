@@ -42,6 +42,8 @@ route add -host 10.100.10.16 gw 10.100.10.32
 
 Here, we assume the network card interface is set to eth0.
 
+Please note that `ip_forward` is not enabled on the assistant server.
+
 **3. Running tcpcopy on the AD Servers**
 
 `./tcpcopy -x 11311-10.100.10.31:11311 -s 10.100.10.32 -d`
@@ -72,6 +74,8 @@ route add -host 172.168.0.15 gw 172.168.0.18
 **Running intercept on the Assistent Server**
 
 `./intercept -i eth0 -F 'tcp and src port 3306' -d` 
+
+Please note that `ip_forward` is not enabled on the assistant server.
 
 **Running TCPCopy on the MySQL Online Server**
 

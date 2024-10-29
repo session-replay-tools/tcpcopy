@@ -139,6 +139,8 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
    `./intercept -i eth0 -F 'tcp and src port 8080' -d`
    
    In this example, `intercept` will capture response packets from a TCP-based application listening on port 8080, using the eth0 network device.
+   
+   Please note that `ip_forward` is not enabled on the assistant server.
 
 3. **On the Online Source Server (Root Privilege or CAP_NET_RAW Capability Required):**
    
