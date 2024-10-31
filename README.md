@@ -162,8 +162,9 @@ Assume that both `tcpcopy` and `intercept` are configured using `./configure`.
 6. Due to the additional layer of forwarding in tcpcopy, the throughput of a single application connection cannot be too high; otherwise, it won't match the native connection throughput, especially in performance tests like sysbench or ab.
 7. If the volume of replicated requests is too large, tcpcopy may become unstable, with the single thread overwhelmed by packet capture, significantly reducing replication effectiveness. In such cases, other auxiliary methods can be used, such as leveraging switch mirroring with a divide-and-conquer packet capture strategy or using offline replay.
 8. MySQL Session Replay: For details, visit [mysql-replay-module](https://github.com/session-replay-tools/mysql-replay-module) or [mysql-sgt-replay-module](https://github.com/session-replay-tools/mysql-sgt-replay-module).
-9. IP Forwarding: Ensure `ip_forward` is not enabled on the assistant server.
-10. Help: For more information, run `./tcpcopy -h` or `./intercept -h`.
+9. The `./configure --with-resp-payload` option for `intercept` cannot be used together with the `./configure` option for `tcpcopy`.
+10. IP Forwarding: Ensure `ip_forward` is not enabled on the assistant server.
+11. Help: For more information, run `./tcpcopy -h` or `./intercept -h`.
 
 ## Influential Factors
 
