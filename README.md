@@ -241,9 +241,12 @@ Assume that during the `tcpcopy` test, the application on the test server does n
 
 Have a bug or a feature request? [Please open a new issue](https://github.com/session-replay-tools/tcpcopy/issues). Before opening any issue, please search for existing issues.
 
+## Support
+If you’d like to support this project, [donate via PayPal](https://paypal.me/wangbin579).
+
 ## Copyright and License
 
-Copyright 2024 under [the BSD license](LICENSE).
+Copyright 2025 under [the BSD license](LICENSE).
 
 ## Acknowledgments
 
